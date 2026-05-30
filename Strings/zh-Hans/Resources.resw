@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- MainWindow -->
+  <data name="Nav_Gallery.Content" xml:space="preserve">
+    <value>图库</value>
+  </data>
+  <!-- GalleryPage -->
+  <data name="Gallery_Title.Text" xml:space="preserve">
+    <value>图库</value>
+  </data>
+  <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>按路径或文件名搜索…</value>
+  </data>
+  <data name="Gallery_SearchHint.Text" xml:space="preserve">
+    <value>用逗号分隔多个关键词可进行 AND 搜索，例如：作者,文件名</value>
+  </data>
+  <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>随机打开一张卡片</value>
+  </data>
+  <data name="Gallery_SortName.Content" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Gallery_SortDateModified.Content" xml:space="preserve">
+    <value>修改日期</value>
+  </data>
+  <data name="Gallery_SortFileSize.Content" xml:space="preserve">
+    <value>文件大小</value>
+  </data>
+  <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>切换排序方向</value>
+  </data>
+  <data name="Gallery_Empty.Text" xml:space="preserve">
+    <value>未找到场景卡片。请在设置中添加文件夹。</value>
+  </data>
+  <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
+    <value>正在生成缩略图…</value>
+  </data>
+  <!-- DetailPage -->
+  <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>上一张（左方向键）</value>
+  </data>
+  <data name="Detail_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>下一张（右方向键）</value>
+  </data>
+  <data name="Detail_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>随机一张</value>
+  </data>
+  <data name="Detail_FileInfo.Text" xml:space="preserve">
+    <value>文件信息</value>
+  </data>
+  <data name="Detail_FileName.Text" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="Detail_FilePath.Text" xml:space="preserve">
+    <value>文件路径</value>
+  </data>
+  <data name="Detail_FileSize.Text" xml:space="preserve">
+    <value>文件大小</value>
+  </data>
+  <data name="Detail_Resolution.Text" xml:space="preserve">
+    <value>分辨率</value>
+  </data>
+  <data name="Detail_DateModified.Text" xml:space="preserve">
+    <value>修改日期</value>
+  </data>
+  <!-- SettingsPage -->
+  <data name="Settings_Title.Text" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Settings_FoldersHeader.Text" xml:space="preserve">
+    <value>场景卡片文件夹</value>
+  </data>
+  <data name="Settings_FoldersDesc.Text" xml:space="preserve">
+    <value>添加包含 Koikatsu 场景卡片 .png 文件的文件夹。子文件夹会自动扫描。</value>
+  </data>
+  <data name="Settings_AddFolder.Text" xml:space="preserve">
+    <value>添加文件夹</value>
+  </data>
+  <data name="Settings_RemoveFolder.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除文件夹</value>
+  </data>
+  <data name="Settings_NoFolders.Text" xml:space="preserve">
+    <value>尚未配置任何文件夹。</value>
+  </data>
+  <data name="Settings_DisplayHeader.Text" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="Settings_ShowFileNames.Header" xml:space="preserve">
+    <value>在缩略图上显示文件名</value>
+  </data>
+  <data name="Settings_ShowFileNames.OnContent" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="Settings_ShowFileNames.OffContent" xml:space="preserve">
+    <value>隐藏</value>
+  </data>
+  <data name="Settings_ScrollToTop.Header" xml:space="preserve">
+    <value>排序更改时滚动到顶部</value>
+  </data>
+  <data name="Settings_ScrollToTop.OnContent" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="Settings_ScrollToTop.OffContent" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="Settings_CacheHeader.Text" xml:space="preserve">
+    <value>缩略图缓存</value>
+  </data>
+  <data name="Settings_CacheDesc.Text" xml:space="preserve">
+    <value>缩略图会缓存为小型 JPEG 文件以加快加载速度。请选择存储位置。</value>
+  </data>
+  <data name="Settings_CacheFolderLabel.Text" xml:space="preserve">
+    <value>缓存文件夹</value>
+  </data>
+  <data name="Settings_ChangeFolder.Text" xml:space="preserve">
+    <value>更改文件夹</value>
+  </data>
+  <data name="Settings_ResetDefault.Text" xml:space="preserve">
+    <value>恢复默认</value>
+  </data>
+  <data name="Settings_ClearCache.Text" xml:space="preserve">
+    <value>清除缓存</value>
+  </data>
+  <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
+    <value>分辨率筛选</value>
+  </data>
+  <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
+    <value>仅显示符合特定分辨率的场景卡片。禁用则显示全部卡片。</value>
+  </data>
+  <data name="Settings_ResolutionToggle.OnContent" xml:space="preserve">
+    <value>已启用 — 按分辨率筛选</value>
+  </data>
+  <data name="Settings_ResolutionToggle.OffContent" xml:space="preserve">
+    <value>已禁用 — 显示所有分辨率</value>
+  </data>
+  <data name="Settings_ResolutionInput.PlaceholderText" xml:space="preserve">
+    <value>例如 1920x1080</value>
+  </data>
+  <data name="Settings_AddResolution.Text" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Settings_RemoveResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除分辨率</value>
+  </data>
+  <data name="Settings_LanguageHeader.Text" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Settings_LanguageDesc.Text" xml:space="preserve">
+    <value>更改语言需要重启应用才能生效。</value>
+  </data>
+  <data name="Settings_LanguageSystem.Content" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Settings_RestartInfo.Title" xml:space="preserve">
+    <value>需要重启</value>
+  </data>
+  <data name="Settings_RestartInfo.Message" xml:space="preserve">
+    <value>请重启应用以应用新语言。</value>
+  </data>
+  <data name="Settings_RestartButton.Content" xml:space="preserve">
+    <value>立即重启</value>
+  </data>
+</root>

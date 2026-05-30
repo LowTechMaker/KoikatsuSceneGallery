@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "KoikatsuSceneGallery (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "KoikatsuSceneGallery (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

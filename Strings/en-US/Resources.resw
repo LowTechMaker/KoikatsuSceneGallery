@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <!-- MainWindow -->
+  <data name="Nav_Gallery.Content" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <!-- GalleryPage -->
+  <data name="Gallery_Title.Text" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search by path or filename...</value>
+  </data>
+  <data name="Gallery_SearchHint.Text" xml:space="preserve">
+    <value>Separate multiple keywords with commas for AND search, e.g.: author,filename</value>
+  </data>
+  <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open a random card</value>
+  </data>
+  <data name="Gallery_SortName.Content" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Gallery_SortDateModified.Content" xml:space="preserve">
+    <value>Date Modified</value>
+  </data>
+  <data name="Gallery_SortFileSize.Content" xml:space="preserve">
+    <value>File Size</value>
+  </data>
+  <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Toggle sort direction</value>
+  </data>
+  <data name="Gallery_Empty.Text" xml:space="preserve">
+    <value>No scene cards found. Add folders in Settings.</value>
+  </data>
+  <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
+    <value>Generating thumbnails…</value>
+  </data>
+  <!-- DetailPage -->
+  <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Previous (Left Arrow)</value>
+  </data>
+  <data name="Detail_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Next (Right Arrow)</value>
+  </data>
+  <data name="Detail_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Random</value>
+  </data>
+  <data name="Detail_FileInfo.Text" xml:space="preserve">
+    <value>File Info</value>
+  </data>
+  <data name="Detail_FileName.Text" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="Detail_FilePath.Text" xml:space="preserve">
+    <value>File Path</value>
+  </data>
+  <data name="Detail_FileSize.Text" xml:space="preserve">
+    <value>File Size</value>
+  </data>
+  <data name="Detail_Resolution.Text" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="Detail_DateModified.Text" xml:space="preserve">
+    <value>Date Modified</value>
+  </data>
+  <!-- SettingsPage -->
+  <data name="Settings_Title.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings_FoldersHeader.Text" xml:space="preserve">
+    <value>Scene Card Folders</value>
+  </data>
+  <data name="Settings_FoldersDesc.Text" xml:space="preserve">
+    <value>Add folders containing Koikatsu scene card .png files. Subfolders are scanned automatically.</value>
+  </data>
+  <data name="Settings_AddFolder.Text" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
+  <data name="Settings_RemoveFolder.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove folder</value>
+  </data>
+  <data name="Settings_NoFolders.Text" xml:space="preserve">
+    <value>No folders configured.</value>
+  </data>
+  <data name="Settings_DisplayHeader.Text" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Settings_ShowFileNames.Header" xml:space="preserve">
+    <value>File names on thumbnails</value>
+  </data>
+  <data name="Settings_ShowFileNames.OnContent" xml:space="preserve">
+    <value>Shown</value>
+  </data>
+  <data name="Settings_ShowFileNames.OffContent" xml:space="preserve">
+    <value>Hidden</value>
+  </data>
+  <data name="Settings_ScrollToTop.Header" xml:space="preserve">
+    <value>Scroll to top when sorting changes</value>
+  </data>
+  <data name="Settings_ScrollToTop.OnContent" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Settings_ScrollToTop.OffContent" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Settings_CacheHeader.Text" xml:space="preserve">
+    <value>Thumbnail Cache</value>
+  </data>
+  <data name="Settings_CacheDesc.Text" xml:space="preserve">
+    <value>Thumbnails are cached as small JPEG files for faster loading. Choose where to store them.</value>
+  </data>
+  <data name="Settings_CacheFolderLabel.Text" xml:space="preserve">
+    <value>Cache folder</value>
+  </data>
+  <data name="Settings_ChangeFolder.Text" xml:space="preserve">
+    <value>Change Folder</value>
+  </data>
+  <data name="Settings_ResetDefault.Text" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="Settings_ClearCache.Text" xml:space="preserve">
+    <value>Clear Cache</value>
+  </data>
+  <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
+    <value>Resolution Filter</value>
+  </data>
+  <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
+    <value>Only show scene cards matching specific resolutions. Disable to show all cards.</value>
+  </data>
+  <data name="Settings_ResolutionToggle.OnContent" xml:space="preserve">
+    <value>Enabled — filtering by resolution</value>
+  </data>
+  <data name="Settings_ResolutionToggle.OffContent" xml:space="preserve">
+    <value>Disabled — showing all resolutions</value>
+  </data>
+  <data name="Settings_ResolutionInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. 1920x1080</value>
+  </data>
+  <data name="Settings_AddResolution.Text" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Settings_RemoveResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove resolution</value>
+  </data>
+  <data name="Settings_LanguageHeader.Text" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Settings_LanguageDesc.Text" xml:space="preserve">
+    <value>Changing the language requires restarting the app.</value>
+  </data>
+  <data name="Settings_LanguageSystem.Content" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="Settings_RestartInfo.Title" xml:space="preserve">
+    <value>Restart required</value>
+  </data>
+  <data name="Settings_RestartInfo.Message" xml:space="preserve">
+    <value>Restart the app to apply the new language.</value>
+  </data>
+  <data name="Settings_RestartButton.Content" xml:space="preserve">
+    <value>Restart now</value>
+  </data>
+</root>
