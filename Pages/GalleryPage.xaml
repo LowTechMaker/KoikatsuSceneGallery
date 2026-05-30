@@ -23,6 +23,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -116,9 +117,86 @@
             </ToggleButton>
         </Grid>
 
+        <StackPanel
+            Grid.Row="2"
+            Orientation="Horizontal"
+            VerticalAlignment="Center"
+            Spacing="8"
+            Visibility="{x:Bind ViewModel.ShowMetadataFilters, Mode=OneWay}">
+            <TextBlock
+                x:Uid="Gallery_GameFilterLabel"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}" />
+            <ComboBox
+                x:Name="GameFilterComboBox"
+                Width="170"
+                Height="32"
+                SelectedIndex="0"
+                SelectionChanged="GameFilterComboBox_SelectionChanged">
+                <ComboBoxItem x:Uid="Gallery_FilterAll" Tag="All" />
+                <ComboBoxItem Content="Koikatsu" Tag="Koikatsu" />
+                <ComboBoxItem Content="Koikatsu Sunshine" Tag="KoikatsuSunshine" />
+                <ComboBoxItem x:Uid="Gallery_EnvUnknown" Tag="Unknown" />
+            </ComboBox>
+            <TextBlock
+                x:Uid="Gallery_EnvironmentFilterLabel"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}" />
+            <ComboBox
+                x:Name="EnvironmentFilterComboBox"
+                Width="150"
+                Height="32"
+                SelectedIndex="0"
+                SelectionChanged="EnvironmentFilterComboBox_SelectionChanged">
+                <ComboBoxItem x:Uid="Gallery_FilterAll" Tag="All" />
+                <ComboBoxItem Content="Madevil" Tag="Madevil" />
+                <ComboBoxItem x:Uid="Gallery_EnvNonMadevil" Tag="NonMadevil" />
+                <ComboBoxItem x:Uid="Gallery_EnvUnknown" Tag="Unknown" />
+            </ComboBox>
+            <TextBlock
+                x:Uid="Gallery_TimelineFilterLabel"
+                Margin="8,0,0,0"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}" />
+            <ComboBox
+                x:Name="TimelineFilterComboBox"
+                Width="150"
+                Height="32"
+                SelectedIndex="0"
+                SelectionChanged="TimelineFilterComboBox_SelectionChanged">
+                <ComboBoxItem x:Uid="Gallery_FilterAll" Tag="All" />
+                <ComboBoxItem x:Uid="Gallery_TimelineOnly" Tag="Only" />
+                <ComboBoxItem x:Uid="Gallery_TimelineExclude" Tag="Exclude" />
+            </ComboBox>
+            <StackPanel
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Spacing="6"
+                Visibility="{x:Bind ViewModel.IsParsingMetadata, Mode=OneWay}">
+                <ProgressRing
+                    Width="14"
+                    Height="14"
+                    IsActive="True" />
+                <TextBlock
+                    x:Uid="Gallery_AnalyzingLabel"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.PendingMetadataCount, Mode=OneWay}" />
+            </StackPanel>
+        </StackPanel>
+
         <GridView
             x:Name="GalleryGrid"
-            Grid.Row="2"
+            Grid.Row="3"
             CanDragItems="True"
             ContainerContentChanging="GalleryGrid_ContainerContentChanging"
             DragItemsStarting="GalleryGrid_DragItemsStarting"
@@ -168,14 +246,14 @@
         </GridView>
 
         <ProgressRing
-            Grid.Row="2"
+            Grid.Row="3"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
 
         <TextBlock
             x:Uid="Gallery_Empty"
-            Grid.Row="2"
+            Grid.Row="3"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Opacity="0.6"

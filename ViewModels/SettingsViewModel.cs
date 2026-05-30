@@ -28,6 +28,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
     [ObservableProperty]
+    public partial bool PluginAnalysisEnabled { get; set; }
+
+    [ObservableProperty]
     public partial string CacheFolderPath { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -45,6 +48,7 @@ public partial class SettingsViewModel : ObservableObject
 
     public event Action<bool, HashSet<string>>? ResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
+    public event Action<bool>? PluginAnalysisEnabledChanged;
 
     public SettingsViewModel(SettingsService settingsService)
     {
@@ -67,6 +71,17 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnScrollToTopOnSortChanged(bool value)
     {
         _ = SaveConfigAsync();
+    }
+
+    partial void OnPluginAnalysisEnabledChanged(bool value)
+    {
+        // Suppress while LoadAsync seeds the saved value — only react to the
+        // user actually flipping the switch, not to opening the settings page.
+        if (_isLoading)
+            return;
+
+        _ = SaveConfigAsync();
+        PluginAnalysisEnabledChanged?.Invoke(value);
     }
 
     partial void OnSelectedLanguageChanged(string value)
@@ -96,6 +111,7 @@ public partial class SettingsViewModel : ObservableObject
         CacheFolderPath = config.CacheFolderPath;
 
         _isLoading = true;
+        PluginAnalysisEnabled = config.PluginAnalysisEnabled;
         SelectedLanguage = config.Language;
         _isLoading = false;
 
@@ -163,6 +179,12 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ScanMissingMetadata() => App.GalleryViewModel.ScanMissingMetadata();
+
+    [RelayCommand]
+    private void RescanMetadata() => App.GalleryViewModel.RescanAllMetadata();
+
+    [RelayCommand]
     private async Task AddResolution(string input)
     {
         var parsed = ResolutionOption.TryParse(input);
@@ -194,6 +216,7 @@ public partial class SettingsViewModel : ObservableObject
                 AllowedResolutions = [.. AllowedResolutions],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
+                PluginAnalysisEnabled = PluginAnalysisEnabled,
                 CacheFolderPath = CacheFolderPath,
                 Language = SelectedLanguage
             };

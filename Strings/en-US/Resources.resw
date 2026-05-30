@@ -93,6 +93,33 @@
   <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
     <value>Generating thumbnails…</value>
   </data>
+  <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
+    <value>Game:</value>
+  </data>
+  <data name="Gallery_EnvironmentFilterLabel.Text" xml:space="preserve">
+    <value>Environment:</value>
+  </data>
+  <data name="Gallery_TimelineFilterLabel.Text" xml:space="preserve">
+    <value>Timeline:</value>
+  </data>
+  <data name="Gallery_FilterAll.Content" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Gallery_EnvNonMadevil.Content" xml:space="preserve">
+    <value>Non-Madevil</value>
+  </data>
+  <data name="Gallery_EnvUnknown.Content" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Gallery_TimelineOnly.Content" xml:space="preserve">
+    <value>Timeline only</value>
+  </data>
+  <data name="Gallery_TimelineExclude.Content" xml:space="preserve">
+    <value>No Timeline</value>
+  </data>
+  <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
+    <value>Analyzing plugins…</value>
+  </data>
   <!-- DetailPage -->
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Previous (Left Arrow)</value>
@@ -178,6 +205,30 @@
   </data>
   <data name="Settings_ClearCache.Text" xml:space="preserve">
     <value>Clear Cache</value>
+  </data>
+  <data name="Settings_PluginHeader.Text" xml:space="preserve">
+    <value>Plugin Analysis</value>
+  </data>
+  <data name="Settings_PluginDesc.Text" xml:space="preserve">
+    <value>Read embedded plugin data to tag scenes by environment (Madevil / Non-Madevil) and Timeline usage, enabling the gallery filters. Disable to skip all scanning and hide the filters.</value>
+  </data>
+  <data name="Settings_PluginToggle.Header" xml:space="preserve">
+    <value>Analyze scene plugins</value>
+  </data>
+  <data name="Settings_PluginToggle.OnContent" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Settings_PluginToggle.OffContent" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Settings_ScanMissing.Text" xml:space="preserve">
+    <value>Scan unrecorded</value>
+  </data>
+  <data name="Settings_RescanAll.Text" xml:space="preserve">
+    <value>Rescan all</value>
+  </data>
+  <data name="Settings_ScanProgress.Text" xml:space="preserve">
+    <value>Scanning…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
     <value>Resolution Filter</value>

@@ -11,6 +11,8 @@ public sealed partial class SettingsPage : Page
 {
     public SettingsViewModel ViewModel { get; }
 
+    public GalleryViewModel GalleryViewModel => App.GalleryViewModel;
+
     public SettingsPage()
     {
         ViewModel = App.SettingsViewModel;

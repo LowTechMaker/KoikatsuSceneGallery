@@ -17,6 +17,19 @@ public partial class SceneCard : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasThumbnail))]
     public partial string? ThumbnailPath { get; set; }
 
+    /// <summary>True once plugin metadata has been parsed (or read from cache).</summary>
+    [ObservableProperty]
+    public partial bool MetadataLoaded { get; set; }
+
+    [ObservableProperty]
+    public partial bool UsesTimeline { get; set; }
+
+    [ObservableProperty]
+    public partial SceneEnvironment Environment { get; set; } = SceneEnvironment.Unknown;
+
+    [ObservableProperty]
+    public partial GameVersion Game { get; set; } = GameVersion.Unknown;
+
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;
     public bool HasThumbnail => ThumbnailPath != null;

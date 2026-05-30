@@ -49,6 +49,15 @@ public class SettingsService
         public List<string> AllowedResolutions { get; set; } = ["320x180", "1600x900"];
         public bool ShowFileNames { get; set; } = true;
         public bool ScrollToTopOnSort { get; set; } = true;
+
+        /// <summary>
+        /// Whether to parse embedded plugin GUIDs to classify scenes (environment
+        /// / Timeline) and expose the metadata filters. Off = no scanning, no
+        /// filter UI — for users who don't want the feature. Off by default;
+        /// users opt in from Settings.
+        /// </summary>
+        public bool PluginAnalysisEnabled { get; set; } = false;
+
         public string CacheFolderPath { get; set; } = "";
 
         /// <summary>

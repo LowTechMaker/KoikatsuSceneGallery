@@ -93,6 +93,33 @@
   <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
     <value>正在生成縮圖…</value>
   </data>
+  <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
+    <value>遊戲：</value>
+  </data>
+  <data name="Gallery_EnvironmentFilterLabel.Text" xml:space="preserve">
+    <value>環境：</value>
+  </data>
+  <data name="Gallery_TimelineFilterLabel.Text" xml:space="preserve">
+    <value>Timeline：</value>
+  </data>
+  <data name="Gallery_FilterAll.Content" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="Gallery_EnvNonMadevil.Content" xml:space="preserve">
+    <value>非 Madevil</value>
+  </data>
+  <data name="Gallery_EnvUnknown.Content" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Gallery_TimelineOnly.Content" xml:space="preserve">
+    <value>僅 Timeline</value>
+  </data>
+  <data name="Gallery_TimelineExclude.Content" xml:space="preserve">
+    <value>排除 Timeline</value>
+  </data>
+  <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
+    <value>分析外掛中…</value>
+  </data>
   <!-- DetailPage -->
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>上一張（左方向鍵）</value>
@@ -178,6 +205,30 @@
   </data>
   <data name="Settings_ClearCache.Text" xml:space="preserve">
     <value>清除快取</value>
+  </data>
+  <data name="Settings_PluginHeader.Text" xml:space="preserve">
+    <value>外掛分析</value>
+  </data>
+  <data name="Settings_PluginDesc.Text" xml:space="preserve">
+    <value>讀取內嵌的外掛資料，依環境（Madevil／非 Madevil）與是否使用 Timeline 為場景加標籤，並啟用圖庫篩選器。關閉則完全不掃描並隱藏篩選器。</value>
+  </data>
+  <data name="Settings_PluginToggle.Header" xml:space="preserve">
+    <value>分析場景外掛</value>
+  </data>
+  <data name="Settings_PluginToggle.OnContent" xml:space="preserve">
+    <value>已啟用</value>
+  </data>
+  <data name="Settings_PluginToggle.OffContent" xml:space="preserve">
+    <value>已停用</value>
+  </data>
+  <data name="Settings_ScanMissing.Text" xml:space="preserve">
+    <value>掃描未記錄</value>
+  </data>
+  <data name="Settings_RescanAll.Text" xml:space="preserve">
+    <value>重新掃描全部</value>
+  </data>
+  <data name="Settings_ScanProgress.Text" xml:space="preserve">
+    <value>掃描中…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
     <value>解析度篩選</value>

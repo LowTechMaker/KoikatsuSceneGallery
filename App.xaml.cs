@@ -12,6 +12,7 @@ public partial class App : Application
     public static SettingsService SettingsService { get; } = new();
     public static SceneCardService SceneCardService { get; } = new();
     public static ThumbnailCacheService ThumbnailCacheService { get; private set; } = null!;
+    public static SceneMetadataService SceneMetadataService { get; } = new();
     public static SettingsViewModel SettingsViewModel { get; private set; } = null!;
     public static GalleryViewModel GalleryViewModel { get; private set; } = null!;
 
@@ -32,7 +33,7 @@ public partial class App : Application
         ThumbnailCacheService = new ThumbnailCacheService(config.CacheFolderPath);
 
         SettingsViewModel = new SettingsViewModel(SettingsService);
-        GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService);
+        GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
 
         _mainWindow = new MainWindow();
         _mainWindow.Activate();

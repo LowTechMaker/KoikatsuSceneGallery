@@ -135,6 +135,63 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- Plugin Analysis Section -->
+            <StackPanel Spacing="16">
+                <TextBlock
+                    x:Uid="Settings_PluginHeader"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Settings_PluginDesc"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                <ToggleSwitch
+                    x:Uid="Settings_PluginToggle"
+                    IsOn="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=TwoWay}" />
+
+                <StackPanel
+                    Spacing="12"
+                    Visibility="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button
+                            Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
+                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontSize="14" Glyph="&#xE895;" />
+                                <TextBlock x:Uid="Settings_ScanMissing" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button
+                            Command="{x:Bind ViewModel.RescanMetadataCommand}"
+                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                <TextBlock x:Uid="Settings_RescanAll" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
+                        <ProgressRing
+                            Width="16"
+                            Height="16"
+                            IsActive="True" />
+                        <TextBlock
+                            x:Uid="Settings_ScanProgress"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
             <!-- Resolution Filter Section -->
             <StackPanel Spacing="16">
                 <TextBlock
