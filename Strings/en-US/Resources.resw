@@ -87,6 +87,24 @@
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Toggle sort direction</value>
   </data>
+  <data name="Gallery_SizeSmall.Content" xml:space="preserve">
+    <value>S</value>
+  </data>
+  <data name="Gallery_SizeSmall.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Small thumbnails</value>
+  </data>
+  <data name="Gallery_SizeMedium.Content" xml:space="preserve">
+    <value>M</value>
+  </data>
+  <data name="Gallery_SizeMedium.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Medium thumbnails</value>
+  </data>
+  <data name="Gallery_SizeLarge.Content" xml:space="preserve">
+    <value>L</value>
+  </data>
+  <data name="Gallery_SizeLarge.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Large thumbnails</value>
+  </data>
   <data name="Gallery_Empty.Text" xml:space="preserve">
     <value>No scene cards found. Add folders in Settings.</value>
   </data>
@@ -250,6 +268,36 @@
   </data>
   <data name="Settings_RemoveResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Remove resolution</value>
+  </data>
+  <data name="Settings_OcdHeader.Text" xml:space="preserve">
+    <value>Fine-tuning</value>
+  </data>
+  <data name="Settings_OcdDesc.Text" xml:space="preserve">
+    <value>This option is designed for OCD (Obsessive-Compulsive Disorder), and its features are not guaranteed to be updated or fixed in a timely manner.</value>
+  </data>
+  <data name="Settings_SizeSelector.Header" xml:space="preserve">
+    <value>Thumbnail size buttons</value>
+  </data>
+  <data name="Settings_SizeSelector.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Settings_AdvancedHeader.Text" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Settings_CacheBufferDesc.Text" xml:space="preserve">
+    <value>Off-screen render buffer for the gallery, as a multiple of the visible area. Higher values keep more thumbnails ready above and below the view, so zooming and fast scrolling stay smooth.</value>
+  </data>
+  <data name="Settings_CacheBufferWarning.Title" xml:space="preserve">
+    <value>Higher values use more memory and CPU</value>
+  </data>
+  <data name="Settings_CacheBufferWarning.Message" xml:space="preserve">
+    <value>A large buffer loads many more thumbnails at once. On big libraries or low-end PCs this can increase memory use and slow down loading. Raise it only if zooming feels laggy.</value>
+  </data>
+  <data name="Settings_CacheBuffer.Header" xml:space="preserve">
+    <value>Render buffer (multiple of the visible area)</value>
   </data>
   <data name="Settings_LanguageHeader.Text" xml:space="preserve">
     <value>Language</value>

@@ -51,6 +51,27 @@ public class SettingsService
         public bool ScrollToTopOnSort { get; set; } = true;
 
         /// <summary>
+        /// Gallery thumbnail card width in pixels. Adjusted via Ctrl+mouse wheel
+        /// in the gallery. Column count then reflows with the window width.
+        /// </summary>
+        public double ThumbnailWidth { get; set; } = 240;
+
+        /// <summary>
+        /// Whether the gallery shows the small/medium/large size buttons. Off =
+        /// buttons hidden and thumbnails fixed at the medium size. Off by default.
+        /// </summary>
+        public bool SizeSelectorEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Off-screen render buffer for the gallery, as a multiple of the
+        /// viewport (ItemsWrapGrid.CacheLength). Higher = more thumbnails kept
+        /// realized above/below the view (smoother fast-scroll) but more eager
+        /// thumbnail generation and memory/CPU. Advanced setting; 4 is the WinUI
+        /// default.
+        /// </summary>
+        public double CacheLength { get; set; } = 4;
+
+        /// <summary>
         /// Whether to parse embedded plugin GUIDs to classify scenes (environment
         /// / Timeline) and expose the metadata filters. Off = no scanning, no
         /// filter UI — for users who don't want the feature. Off by default;

@@ -62,6 +62,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Spacing="4">
@@ -115,6 +116,42 @@
                     FontSize="14"
                     Glyph="&#xE74A;" />
             </ToggleButton>
+
+            <!--  Thumbnail size: small / medium / large (one stays selected)  -->
+            <StackPanel
+                x:Name="SizeButtonsPanel"
+                Grid.Column="4"
+                Orientation="Horizontal"
+                VerticalAlignment="Top"
+                Spacing="4">
+                <ToggleButton
+                    x:Name="SizeSmallButton"
+                    x:Uid="Gallery_SizeSmall"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="0" />
+                <ToggleButton
+                    x:Name="SizeMediumButton"
+                    x:Uid="Gallery_SizeMedium"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="1" />
+                <ToggleButton
+                    x:Name="SizeLargeButton"
+                    x:Uid="Gallery_SizeLarge"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="2" />
+            </StackPanel>
         </Grid>
 
         <StackPanel
@@ -204,22 +241,45 @@
             ItemClick="GalleryGrid_ItemClick"
             ItemsSource="{x:Bind ViewModel.CardsView, Mode=OneWay}"
             SelectionMode="None">
+            <GridView.ItemsPanel>
+                <!--  Larger off-screen buffer (default CacheLength is 4.0 = ~2 viewports
+                      each side) so cards scrolling into view during a zoom are already
+                      realized with their thumbnails loaded — no pop-in / lag.  -->
+                <ItemsPanelTemplate>
+                    <ItemsWrapGrid Orientation="Horizontal" CacheLength="4" />
+                </ItemsPanelTemplate>
+            </GridView.ItemsPanel>
+            <GridView.ItemContainerStyle>
+                <!--  Cards stretch to fill the cell sized by ItemsWrapGrid.ItemWidth/Height;
+                      zero margin/padding keeps the per-cell overhead a known constant.  -->
+                <Style TargetType="GridViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </GridView.ItemContainerStyle>
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="models:SceneCard">
                     <Grid
-                        Width="240"
+                        x:Name="CardRoot"
+                        Margin="4"
                         Padding="4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
                         CornerRadius="8"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <Border
-                            Height="135"
+                            x:Name="ThumbBorder"
                             CornerRadius="4"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <Image Stretch="Uniform">

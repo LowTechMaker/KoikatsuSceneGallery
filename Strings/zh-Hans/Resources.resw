@@ -87,6 +87,24 @@
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>切换排序方向</value>
   </data>
+  <data name="Gallery_SizeSmall.Content" xml:space="preserve">
+    <value>小</value>
+  </data>
+  <data name="Gallery_SizeSmall.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>小图</value>
+  </data>
+  <data name="Gallery_SizeMedium.Content" xml:space="preserve">
+    <value>中</value>
+  </data>
+  <data name="Gallery_SizeMedium.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>中图</value>
+  </data>
+  <data name="Gallery_SizeLarge.Content" xml:space="preserve">
+    <value>大</value>
+  </data>
+  <data name="Gallery_SizeLarge.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>大图</value>
+  </data>
   <data name="Gallery_Empty.Text" xml:space="preserve">
     <value>未找到场景卡片。请在设置中添加文件夹。</value>
   </data>
@@ -250,6 +268,36 @@
   </data>
   <data name="Settings_RemoveResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>移除分辨率</value>
+  </data>
+  <data name="Settings_OcdHeader.Text" xml:space="preserve">
+    <value>强迫症选项</value>
+  </data>
+  <data name="Settings_OcdDesc.Text" xml:space="preserve">
+    <value>此选项专为强迫症打造，里面的功能不保证即时更新或修复。</value>
+  </data>
+  <data name="Settings_SizeSelector.Header" xml:space="preserve">
+    <value>缩略图大小按钮</value>
+  </data>
+  <data name="Settings_SizeSelector.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="Settings_AdvancedHeader.Text" xml:space="preserve">
+    <value>高级</value>
+  </data>
+  <data name="Settings_CacheBufferDesc.Text" xml:space="preserve">
+    <value>图库的画面外渲染缓冲，以可见区域的倍数计算。数值越大，会在画面上下预先准备越多缩略图，缩放与快速滚动就越流畅。</value>
+  </data>
+  <data name="Settings_CacheBufferWarning.Title" xml:space="preserve">
+    <value>数值越大，越耗内存与 CPU</value>
+  </data>
+  <data name="Settings_CacheBufferWarning.Message" xml:space="preserve">
+    <value>较大的缓冲会一次加载更多缩略图。在大型图库或较旧的电脑上，可能增加内存占用并拖慢加载速度。只有在缩放感觉卡顿时才调高。</value>
+  </data>
+  <data name="Settings_CacheBuffer.Header" xml:space="preserve">
+    <value>渲染缓冲（可见区域的倍数）</value>
   </data>
   <data name="Settings_LanguageHeader.Text" xml:space="preserve">
     <value>语言</value>

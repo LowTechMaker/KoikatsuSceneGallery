@@ -28,6 +28,15 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
     [ObservableProperty]
+    public partial double ThumbnailWidth { get; set; } = 240;
+
+    [ObservableProperty]
+    public partial double CacheLength { get; set; } = 4;
+
+    [ObservableProperty]
+    public partial bool SizeSelectorEnabled { get; set; } = false;
+
+    [ObservableProperty]
     public partial bool PluginAnalysisEnabled { get; set; }
 
     [ObservableProperty]
@@ -73,6 +82,20 @@ public partial class SettingsViewModel : ObservableObject
         _ = SaveConfigAsync();
     }
 
+    partial void OnCacheLengthChanged(double value)
+    {
+        if (_isLoading)
+            return;
+        _ = SaveConfigAsync();
+    }
+
+    partial void OnSizeSelectorEnabledChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+        _ = SaveConfigAsync();
+    }
+
     partial void OnPluginAnalysisEnabledChanged(bool value)
     {
         // Suppress while LoadAsync seeds the saved value — only react to the
@@ -108,11 +131,14 @@ public partial class SettingsViewModel : ObservableObject
         ResolutionFilterEnabled = config.ResolutionFilterEnabled;
         ShowFileNames = config.ShowFileNames;
         ScrollToTopOnSort = config.ScrollToTopOnSort;
+        ThumbnailWidth = config.ThumbnailWidth;
         CacheFolderPath = config.CacheFolderPath;
 
         _isLoading = true;
         PluginAnalysisEnabled = config.PluginAnalysisEnabled;
         SelectedLanguage = config.Language;
+        CacheLength = config.CacheLength;
+        SizeSelectorEnabled = config.SizeSelectorEnabled;
         _isLoading = false;
 
         OnPropertyChanged(nameof(CacheFolderDisplay));
@@ -204,6 +230,17 @@ public partial class SettingsViewModel : ObservableObject
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
     }
 
+    /// <summary>
+    /// Persists a new gallery thumbnail width (set via Ctrl+wheel in the
+    /// gallery). Called debounced so rapid wheel ticks don't rewrite the file
+    /// on every step.
+    /// </summary>
+    public async Task SaveThumbnailWidthAsync(double width)
+    {
+        ThumbnailWidth = width;
+        await SaveConfigAsync();
+    }
+
     private async Task SaveConfigAsync()
     {
         await _saveLock.WaitAsync();
@@ -216,6 +253,9 @@ public partial class SettingsViewModel : ObservableObject
                 AllowedResolutions = [.. AllowedResolutions],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
+                ThumbnailWidth = ThumbnailWidth,
+                CacheLength = CacheLength,
+                SizeSelectorEnabled = SizeSelectorEnabled,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
                 CacheFolderPath = CacheFolderPath,
                 Language = SelectedLanguage

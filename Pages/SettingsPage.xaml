@@ -91,6 +91,20 @@
                     IsOn="{x:Bind ViewModel.ScrollToTopOnSort, Mode=TwoWay}" />
             </StackPanel>
 
+            <!-- OCD / Fine-tuning Section -->
+            <StackPanel Spacing="16">
+                <TextBlock
+                    x:Uid="Settings_OcdHeader"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Settings_OcdDesc"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                <ToggleSwitch
+                    x:Uid="Settings_SizeSelector"
+                    IsOn="{x:Bind ViewModel.SizeSelectorEnabled, Mode=TwoWay}" />
+            </StackPanel>
+
             <!-- Cache Section -->
             <StackPanel Spacing="16">
                 <TextBlock
@@ -269,6 +283,33 @@
                         </ListView.ItemTemplate>
                     </ListView>
                 </StackPanel>
+            </StackPanel>
+
+            <!-- Advanced Section -->
+            <StackPanel Spacing="16">
+                <TextBlock
+                    x:Uid="Settings_AdvancedHeader"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="Settings_CacheBufferDesc"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                <InfoBar
+                    x:Uid="Settings_CacheBufferWarning"
+                    IsClosable="False"
+                    IsOpen="True"
+                    Severity="Warning" />
+
+                <NumberBox
+                    x:Uid="Settings_CacheBuffer"
+                    MinWidth="240"
+                    HorizontalAlignment="Left"
+                    LargeChange="4"
+                    Maximum="40"
+                    Minimum="2"
+                    SmallChange="2"
+                    SpinButtonPlacementMode="Inline"
+                    Value="{x:Bind ViewModel.CacheLength, Mode=TwoWay}" />
             </StackPanel>
 
             <!-- Language Section -->
