@@ -62,6 +62,9 @@
   <data name="Nav_Gallery.Content" xml:space="preserve">
     <value>图库</value>
   </data>
+  <data name="Nav_Characters.Content" xml:space="preserve">
+    <value>角色卡</value>
+  </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
     <value>图库</value>
@@ -138,6 +141,19 @@
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
     <value>分析插件中…</value>
   </data>
+  <!-- CharacterGalleryPage -->
+  <data name="Character_Title.Text" xml:space="preserve">
+    <value>角色卡</value>
+  </data>
+  <data name="Character_Empty.Text" xml:space="preserve">
+    <value>找不到角色卡。请在设置中添加文件夹。</value>
+  </data>
+  <data name="Character_SourceFilterLabel.Text" xml:space="preserve">
+    <value>来源：</value>
+  </data>
+  <data name="Character_SourceHF.Content" xml:space="preserve">
+    <value>无印 (HF)</value>
+  </data>
   <!-- DetailPage -->
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>上一张（左方向键）</value>
@@ -166,6 +182,37 @@
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>修改日期</value>
   </data>
+  <data name="Detail_CharaInfo.Text" xml:space="preserve">
+    <value>角色信息</value>
+  </data>
+  <data name="Detail_CharaName.Text" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Detail_CharaSex.Text" xml:space="preserve">
+    <value>性别</value>
+  </data>
+  <data name="Detail_CharaGame.Text" xml:space="preserve">
+    <value>游戏版本</value>
+  </data>
+  <data name="Detail_CharaMadevil.Text" xml:space="preserve">
+    <value>Madevil 数据</value>
+  </data>
+  <!-- Common -->
+  <data name="Common_Male" xml:space="preserve">
+    <value>男</value>
+  </data>
+  <data name="Common_Female" xml:space="preserve">
+    <value>女</value>
+  </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Common_Yes" xml:space="preserve">
+    <value>有</value>
+  </data>
+  <data name="Common_No" xml:space="preserve">
+    <value>无</value>
+  </data>
   <!-- SettingsPage -->
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>设置</value>
@@ -184,6 +231,12 @@
   </data>
   <data name="Settings_NoFolders.Text" xml:space="preserve">
     <value>尚未配置任何文件夹。</value>
+  </data>
+  <data name="Settings_CharaFoldersHeader.Text" xml:space="preserve">
+    <value>角色卡文件夹</value>
+  </data>
+  <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
+    <value>添加包含 Koikatsu 角色卡 .png 文件的文件夹。子文件夹会自动扫描。</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>显示</value>

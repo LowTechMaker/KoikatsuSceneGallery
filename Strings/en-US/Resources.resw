@@ -62,6 +62,9 @@
   <data name="Nav_Gallery.Content" xml:space="preserve">
     <value>Gallery</value>
   </data>
+  <data name="Nav_Characters.Content" xml:space="preserve">
+    <value>Characters</value>
+  </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
     <value>Gallery</value>
@@ -138,6 +141,19 @@
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
     <value>Analyzing plugins…</value>
   </data>
+  <!-- CharacterGalleryPage -->
+  <data name="Character_Title.Text" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="Character_Empty.Text" xml:space="preserve">
+    <value>No character cards found. Add folders in Settings.</value>
+  </data>
+  <data name="Character_SourceFilterLabel.Text" xml:space="preserve">
+    <value>Source:</value>
+  </data>
+  <data name="Character_SourceHF.Content" xml:space="preserve">
+    <value>Koikatsu (HF)</value>
+  </data>
   <!-- DetailPage -->
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Previous (Left Arrow)</value>
@@ -166,6 +182,37 @@
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>Date Modified</value>
   </data>
+  <data name="Detail_CharaInfo.Text" xml:space="preserve">
+    <value>Character Info</value>
+  </data>
+  <data name="Detail_CharaName.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Detail_CharaSex.Text" xml:space="preserve">
+    <value>Sex</value>
+  </data>
+  <data name="Detail_CharaGame.Text" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="Detail_CharaMadevil.Text" xml:space="preserve">
+    <value>Madevil data</value>
+  </data>
+  <!-- Common -->
+  <data name="Common_Male" xml:space="preserve">
+    <value>Male</value>
+  </data>
+  <data name="Common_Female" xml:space="preserve">
+    <value>Female</value>
+  </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Common_Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Common_No" xml:space="preserve">
+    <value>No</value>
+  </data>
   <!-- SettingsPage -->
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>Settings</value>
@@ -184,6 +231,12 @@
   </data>
   <data name="Settings_NoFolders.Text" xml:space="preserve">
     <value>No folders configured.</value>
+  </data>
+  <data name="Settings_CharaFoldersHeader.Text" xml:space="preserve">
+    <value>Character Card Folders</value>
+  </data>
+  <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
+    <value>Add folders containing Koikatsu character card .png files. Subfolders are scanned automatically.</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>Display</value>

@@ -31,6 +31,12 @@ public sealed partial class SettingsPage : Page
             await ViewModel.RemoveFolderCommand.ExecuteAsync(path);
     }
 
+    private async void RemoveCharacterFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string path)
+            await ViewModel.RemoveCharacterFolderCommand.ExecuteAsync(path);
+    }
+
     private async void AddResolution_Click(object sender, RoutedEventArgs e)
     {
         await TryAddResolution();

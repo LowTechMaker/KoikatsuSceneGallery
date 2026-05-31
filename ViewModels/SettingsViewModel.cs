@@ -14,9 +14,11 @@ public partial class SettingsViewModel : ObservableObject
     private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     public ObservableCollection<string> FolderPaths { get; } = [];
+    public ObservableCollection<string> CharacterFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
 
     public bool HasNoFolders => FolderPaths.Count == 0;
+    public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
@@ -63,6 +65,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settingsService = settingsService;
         FolderPaths.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFolders));
+        CharacterFolderPaths.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoCharacterFolders));
     }
 
     partial void OnResolutionFilterEnabledChanged(bool value)
@@ -124,6 +127,10 @@ public partial class SettingsViewModel : ObservableObject
         foreach (var path in config.FolderPaths)
             FolderPaths.Add(path);
 
+        CharacterFolderPaths.Clear();
+        foreach (var path in config.CharacterFolderPaths)
+            CharacterFolderPaths.Add(path);
+
         AllowedResolutions.Clear();
         foreach (var res in config.AllowedResolutions)
             AllowedResolutions.Add(res);
@@ -166,6 +173,31 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RemoveFolder(string path)
     {
         FolderPaths.Remove(path);
+        await SaveConfigAsync();
+    }
+
+    [RelayCommand]
+    private async Task AddCharacterFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null && !CharacterFolderPaths.Contains(folder.Path))
+        {
+            CharacterFolderPaths.Add(folder.Path);
+            await SaveConfigAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveCharacterFolder(string path)
+    {
+        CharacterFolderPaths.Remove(path);
         await SaveConfigAsync();
     }
 
@@ -249,6 +281,7 @@ public partial class SettingsViewModel : ObservableObject
             var config = new SettingsService.ConfigData
             {
                 FolderPaths = [.. FolderPaths],
+                CharacterFolderPaths = [.. CharacterFolderPaths],
                 ResolutionFilterEnabled = ResolutionFilterEnabled,
                 AllowedResolutions = [.. AllowedResolutions],
                 ShowFileNames = ShowFileNames,

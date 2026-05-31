@@ -45,6 +45,10 @@ public class SettingsService
     public class ConfigData
     {
         public List<string> FolderPaths { get; set; } = [];
+
+        /// <summary>Folders scanned for Koikatsu character cards (.png), tracked
+        /// separately from scene folders.</summary>
+        public List<string> CharacterFolderPaths { get; set; } = [];
         public bool ResolutionFilterEnabled { get; set; } = true;
         public List<string> AllowedResolutions { get; set; } = ["320x180", "1600x900"];
         public bool ShowFileNames { get; set; } = true;

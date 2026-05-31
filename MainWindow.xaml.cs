@@ -43,6 +43,9 @@ public sealed partial class MainWindow : Window
                 case "gallery":
                     NavFrame.Navigate(typeof(GalleryPage));
                     break;
+                case "characters":
+                    NavFrame.Navigate(typeof(CharacterGalleryPage));
+                    break;
             }
         }
     }
