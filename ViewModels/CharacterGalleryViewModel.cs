@@ -70,12 +70,13 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
 
     private bool HasSourceFilter => SourceFilter != CardSourceFilterOption.All;
     private bool HasResolutionFilter => _resolutionFilterEnabled && _allowedResolutions.Count > 0;
-    private bool NeedsLiveRefresh => HasSourceFilter || HasResolutionFilter || !string.IsNullOrWhiteSpace(SearchText);
+    private bool NeedsLiveRefresh => true;
 
     private bool _resolutionFilterEnabled;
     private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CharacterCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<CharacterCard>> _versionIndex = new();
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
     private readonly HashSet<string> _thumbnailRequested = new(StringComparer.OrdinalIgnoreCase);
@@ -133,6 +134,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
 
             Cards.Clear();
             _cardIndex.Clear();
+            _versionIndex.Clear();
             using (CardsView.DeferRefresh())
             {
                 foreach (var card in cards)
@@ -148,6 +150,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         finally
         {
             IsLoading = false;
+            CardsReloaded?.Invoke();
         }
     }
 
@@ -170,7 +173,10 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         {
             if (card.MetadataLoaded) continue;
             if (_metadataService.TryGetCached(card, out var meta))
+            {
                 ApplyMetadata(card, meta);
+                UpdateVersionIndex(card);
+            }
             else
                 pending.Add(card);
         }
@@ -197,7 +203,11 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
                 cancellationToken.ThrowIfCancellationRequested();
                 var meta = _metadataService.ParseAndCache(card);
                 if (!cancellationToken.IsCancellationRequested)
-                    _dispatcherQueue.TryEnqueue(() => ApplyMetadata(card, meta));
+                    _dispatcherQueue.TryEnqueue(() =>
+                    {
+                        ApplyMetadata(card, meta);
+                        UpdateVersionIndex(card);
+                    });
             }
             finally
             {
@@ -225,6 +235,64 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         card.Source = meta.Source;
         // Set last so a filter refresh observing this flag sees final values.
         card.MetadataLoaded = true;
+    }
+
+    public event Action<string>? VersionIndexChanged;
+    public event Action? CardsReloaded;
+
+    private void UpdateVersionIndex(CharacterCard card)
+    {
+        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
+
+        if (!_versionIndex.TryGetValue(card.CharacterName, out var group))
+        {
+            group = [];
+            _versionIndex[card.CharacterName] = group;
+        }
+        if (!group.Contains(card))
+            group.Add(card);
+
+        group.Sort((a, b) => b.FileTimestamp.CompareTo(a.FileTimestamp));
+
+        var count = group.Count;
+        for (int i = 0; i < count; i++)
+        {
+            group[i].VersionCount = count;
+            group[i].IsLatestVersion = i == 0;
+        }
+
+        VersionIndexChanged?.Invoke(card.CharacterName);
+    }
+
+    private void RemoveFromVersionIndex(CharacterCard card)
+    {
+        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
+        if (!_versionIndex.TryGetValue(card.CharacterName, out var group)) return;
+
+        group.Remove(card);
+        if (group.Count == 0)
+        {
+            _versionIndex.Remove(card.CharacterName);
+            VersionIndexChanged?.Invoke(card.CharacterName);
+            return;
+        }
+
+        var count = group.Count;
+        for (int i = 0; i < count; i++)
+        {
+            group[i].VersionCount = count;
+            group[i].IsLatestVersion = i == 0;
+        }
+
+        VersionIndexChanged?.Invoke(card.CharacterName);
+    }
+
+    public List<CharacterCard>? GetVersions(string characterName)
+    {
+        if (string.IsNullOrWhiteSpace(characterName)) return null;
+        return _versionIndex.TryGetValue(characterName, out var group) && group.Count > 1
+            ? group
+            : null;
     }
 
     private void StartMetadataRefreshTimer()
@@ -350,46 +418,41 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         var hasSourceFilter = sourceFilter != CardSourceFilterOption.All;
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
-        if (!hasSearch && !hasSourceFilter && !filterRes)
+        CardsView.Filter = item =>
         {
-            CardsView.Filter = null!;
-        }
-        else
-        {
-            CardsView.Filter = item =>
+            if (item is not CharacterCard card) return false;
+
+            if (!card.IsLatestVersion) return false;
+
+            if (hasSearch)
             {
-                if (item is not CharacterCard card) return false;
-
-                if (hasSearch)
+                foreach (var kw in keywords)
                 {
-                    foreach (var kw in keywords)
-                    {
-                        bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
-                        bool inName = card.MetadataLoaded
-                            && card.CharacterName.Contains(kw, StringComparison.OrdinalIgnoreCase);
-                        if (!inPath && !inName) return false;
-                    }
+                    bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
+                    bool inName = card.MetadataLoaded
+                        && card.CharacterName.Contains(kw, StringComparison.OrdinalIgnoreCase);
+                    if (!inPath && !inName) return false;
                 }
+            }
 
-                if (filterRes && !_allowedResolutions.Contains(card.Resolution))
-                    return false;
+            if (filterRes && !_allowedResolutions.Contains(card.Resolution))
+                return false;
 
-                if (hasSourceFilter)
+            if (hasSourceFilter)
+            {
+                if (!card.MetadataLoaded) return false;
+                var target = sourceFilter switch
                 {
-                    if (!card.MetadataLoaded) return false;
-                    var target = sourceFilter switch
-                    {
-                        CardSourceFilterOption.KoikatsuSunshine => CardSource.KoikatsuSunshine,
-                        CardSourceFilterOption.KoikatsuHF => CardSource.KoikatsuHF,
-                        CardSourceFilterOption.Madevil => CardSource.Madevil,
-                        _ => CardSource.Unknown
-                    };
-                    if (card.Source != target) return false;
-                }
+                    CardSourceFilterOption.KoikatsuSunshine => CardSource.KoikatsuSunshine,
+                    CardSourceFilterOption.KoikatsuHF => CardSource.KoikatsuHF,
+                    CardSourceFilterOption.Madevil => CardSource.Madevil,
+                    _ => CardSource.Unknown
+                };
+                if (card.Source != target) return false;
+            }
 
-                return true;
-            };
-        }
+            return true;
+        };
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
     }
@@ -412,6 +475,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         if (_metadataService.TryGetCached(card, out var meta))
         {
             ApplyMetadata(card, meta);
+            UpdateVersionIndex(card);
             if (NeedsLiveRefresh)
             {
                 CardsView.RefreshFilter();
@@ -431,7 +495,10 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (_cardIndex.Remove(path, out var existing))
+            {
+                RemoveFromVersionIndex(existing);
                 Cards.Remove(existing);
+            }
         });
     }
 

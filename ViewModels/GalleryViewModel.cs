@@ -231,6 +231,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         finally
         {
             IsLoading = false;
+            CardsReloaded?.Invoke();
         }
     }
 
@@ -558,12 +559,18 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         _ = Task.Run(() => ParseMetadataAsync(card, token), token);
     }
 
+    public event Action<string>? CardRemovedNotification;
+    public event Action? CardsReloaded;
+
     private void OnCardRemoved(string path)
     {
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (_cardIndex.Remove(path, out var existing))
+            {
                 Cards.Remove(existing);
+                CardRemovedNotification?.Invoke(path);
+            }
         });
     }
 

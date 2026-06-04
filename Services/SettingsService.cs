@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -11,7 +10,7 @@ public class SettingsService
 
     public SettingsService()
     {
-        _configPath = Path.Combine(ApplicationData.Current.LocalFolder.Path, ConfigFileName);
+        _configPath = Path.Combine(AppPaths.LocalFolder, ConfigFileName);
     }
 
     public async Task<ConfigData> LoadConfigAsync()
@@ -19,8 +18,18 @@ public class SettingsService
         if (!File.Exists(_configPath))
             return new ConfigData();
 
-        await using var stream = File.OpenRead(_configPath);
-        return await JsonSerializer.DeserializeAsync<ConfigData>(stream) ?? new ConfigData();
+        try
+        {
+            await using var stream = File.OpenRead(_configPath);
+            return await JsonSerializer.DeserializeAsync<ConfigData>(stream) ?? new ConfigData();
+        }
+        catch (Exception)
+        {
+            // A corrupt or unreadable config must never take the app down — fall
+            // back to defaults rather than throwing into callers (several of
+            // which run on the UI thread during startup/navigation).
+            return new ConfigData();
+        }
     }
 
     public async Task SaveConfigAsync(ConfigData config)

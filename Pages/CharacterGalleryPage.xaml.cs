@@ -47,6 +47,15 @@ public sealed partial class CharacterGalleryPage : Page
         _sizeIndex = NearestPresetIndex(App.SettingsViewModel.ThumbnailWidth);
         _thumbnailWidth = SizePresets[_sizeIndex];
         Loaded += OnLoaded;
+        App.SettingsViewModel.CharacterFolderPathsChanged += OnCharacterFolderPathsChanged;
+    }
+
+    private void OnCharacterFolderPathsChanged()
+    {
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+        });
     }
 
     private static int NearestPresetIndex(double width)

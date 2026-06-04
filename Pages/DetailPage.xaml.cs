@@ -21,8 +21,43 @@ public sealed partial class DetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        App.GalleryViewModel.CardRemovedNotification += OnCardRemoved;
+        App.GalleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is SceneCard card)
             ShowCard(card);
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        App.GalleryViewModel.CardRemovedNotification -= OnCardRemoved;
+        App.GalleryViewModel.CardsReloaded -= OnCardsReloaded;
+    }
+
+    private void OnCardRemoved(string path)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var view = App.GalleryViewModel.CardsView;
+            var index = view.IndexOf(ViewModel.Card);
+            if (index >= 0 && index < view.Count - 1 && view[index + 1] is SceneCard next)
+                ShowCard(next);
+            else if (index > 0 && view[index - 1] is SceneCard prev)
+                ShowCard(prev);
+            else if (Frame.CanGoBack)
+                Frame.GoBack();
+        });
+    }
+
+    private void OnCardsReloaded()
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (Frame.CanGoBack) Frame.GoBack();
+        });
     }
 
     private void ShowCard(SceneCard card)

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Models;
 
@@ -29,4 +30,16 @@ public partial class CharacterDetailViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string MadevilDisplay { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ObservableCollection<CharacterCard>? Versions { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasMultipleVersions { get; set; }
+
+    [ObservableProperty]
+    public partial int VersionIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int TotalVersions { get; set; }
 }

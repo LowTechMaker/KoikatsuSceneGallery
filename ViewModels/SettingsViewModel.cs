@@ -65,12 +65,24 @@ public partial class SettingsViewModel : ObservableObject
     public event Action<bool, HashSet<string>>? CharacterResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
+    public event Action? SceneFolderPathsChanged;
+    public event Action? CharacterFolderPathsChanged;
 
     public SettingsViewModel(SettingsService settingsService)
     {
         _settingsService = settingsService;
-        FolderPaths.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoFolders));
-        CharacterFolderPaths.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoCharacterFolders));
+        FolderPaths.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasNoFolders));
+            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                SceneFolderPathsChanged?.Invoke();
+        };
+        CharacterFolderPaths.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasNoCharacterFolders));
+            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                CharacterFolderPathsChanged?.Invoke();
+        };
     }
 
     partial void OnResolutionFilterEnabledChanged(bool value)

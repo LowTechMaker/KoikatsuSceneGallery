@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Models;
 
@@ -14,9 +15,12 @@ public partial class CharacterCard : ObservableObject
     public string FileName => System.IO.Path.GetFileName(FilePath);
     public long FileSize { get; init; }
     public DateTime DateModified { get; init; }
+    public DateTime DateCreated { get; init; }
     public int Width { get; init; }
     public int Height { get; init; }
     public string Resolution => $"{Width}x{Height}";
+
+    public DateTime FileTimestamp => CharacterCardFilenameParser.ParseTimestamp(FileName) ?? DateCreated;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ThumbnailUri))]
@@ -39,6 +43,15 @@ public partial class CharacterCard : ObservableObject
 
     [ObservableProperty]
     public partial CardSource Source { get; set; } = CardSource.Unknown;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersions))]
+    public partial int VersionCount { get; set; } = 1;
+
+    public bool HasVersions => VersionCount > 1;
+
+    [ObservableProperty]
+    public partial bool IsLatestVersion { get; set; } = true;
 
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;

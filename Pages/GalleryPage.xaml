@@ -241,10 +241,13 @@
             ItemClick="GalleryGrid_ItemClick"
             ItemsSource="{x:Bind ViewModel.CardsView, Mode=OneWay}"
             SelectionMode="None">
+            <GridView.ItemContainerTransitions>
+                <TransitionCollection>
+                    <EntranceThemeTransition />
+                    <AddDeleteThemeTransition />
+                </TransitionCollection>
+            </GridView.ItemContainerTransitions>
             <GridView.ItemsPanel>
-                <!--  Larger off-screen buffer (default CacheLength is 4.0 = ~2 viewports
-                      each side) so cards scrolling into view during a zoom are already
-                      realized with their thumbnails loaded — no pop-in / lag.  -->
                 <ItemsPanelTemplate>
                     <ItemsWrapGrid Orientation="Horizontal" CacheLength="4" />
                 </ItemsPanelTemplate>

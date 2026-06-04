@@ -164,6 +164,9 @@
   <data name="Detail_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Random</value>
   </data>
+  <data name="Detail_VersionHistory.Text" xml:space="preserve">
+    <value>Other Versions</value>
+  </data>
   <data name="Detail_FileInfo.Text" xml:space="preserve">
     <value>File Info</value>
   </data>

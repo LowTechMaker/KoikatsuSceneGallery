@@ -203,6 +203,12 @@
             ItemClick="GalleryGrid_ItemClick"
             ItemsSource="{x:Bind ViewModel.CardsView, Mode=OneWay}"
             SelectionMode="None">
+            <GridView.ItemContainerTransitions>
+                <TransitionCollection>
+                    <EntranceThemeTransition />
+                    <AddDeleteThemeTransition />
+                </TransitionCollection>
+            </GridView.ItemContainerTransitions>
             <GridView.ItemsPanel>
                 <ItemsPanelTemplate>
                     <ItemsWrapGrid Orientation="Horizontal" CacheLength="4" />
@@ -235,18 +241,45 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Border
-                            x:Name="ThumbBorder"
-                            CornerRadius="4"
-                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                            <Image Stretch="Uniform">
-                                <Image.Source>
-                                    <BitmapImage
-                                        DecodePixelWidth="300"
-                                        UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                </Image.Source>
-                            </Image>
-                        </Border>
+                        <Grid>
+                            <!--  Stack shadow (peeks from bottom-right when card has versions)  -->
+                            <Border
+                                CornerRadius="4"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                Visibility="{x:Bind HasVersions, Mode=OneWay}" />
+
+                            <!--  Main thumbnail  -->
+                            <Border
+                                x:Name="ThumbBorder"
+                                Margin="0,0,3,3"
+                                CornerRadius="4"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                <Image Stretch="Uniform">
+                                    <Image.Source>
+                                        <BitmapImage
+                                            DecodePixelWidth="300"
+                                            UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                    </Image.Source>
+                                </Image>
+                            </Border>
+
+                            <!--  Version count badge  -->
+                            <Border
+                                Margin="0,4,7,0"
+                                Padding="5,1"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Background="{ThemeResource SystemAccentColor}"
+                                CornerRadius="8"
+                                Visibility="{x:Bind HasVersions, Mode=OneWay}">
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                    Text="{x:Bind VersionCount, Mode=OneWay}" />
+                            </Border>
+                        </Grid>
 
                         <TextBlock
                             x:Name="FileNameText"

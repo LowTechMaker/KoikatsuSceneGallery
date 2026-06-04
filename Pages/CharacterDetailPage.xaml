@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -144,6 +145,65 @@
                             Style="{StaticResource CaptionTextBlockStyle}" />
                         <TextBlock Text="{x:Bind ViewModel.MadevilDisplay, Mode=OneWay}" />
                     </StackPanel>
+                </StackPanel>
+
+                <!--  Version History (visible only when multiple versions exist)  -->
+                <StackPanel
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.HasMultipleVersions, Mode=OneWay}">
+                    <TextBlock
+                        x:Uid="Detail_VersionHistory"
+                        Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}">
+                        <Run Text="{x:Bind ViewModel.VersionIndex, Mode=OneWay}" /><Run Text=" / " /><Run Text="{x:Bind ViewModel.TotalVersions, Mode=OneWay}" />
+                    </TextBlock>
+                    <ListView
+                        MaxHeight="400"
+                        IsItemClickEnabled="True"
+                        ItemClick="VersionItem_Click"
+                        ItemsSource="{x:Bind ViewModel.Versions, Mode=OneWay}"
+                        SelectedItem="{x:Bind ViewModel.Card, Mode=OneWay}"
+                        SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:CharacterCard">
+                                <Grid Padding="4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        CornerRadius="4"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                        <Image Stretch="Uniform">
+                                            <Image.Source>
+                                                <BitmapImage
+                                                    DecodePixelWidth="60"
+                                                    UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                            </Image.Source>
+                                        </Image>
+                                    </Border>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                        <TextBlock
+                                            Text="{x:Bind local:CharacterDetailPage.FormatTimestamp((models:CharacterCard))}"
+                                            Style="{StaticResource CaptionTextBlockStyle}" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind Resolution}" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind FileSize, Converter={StaticResource FileSizeConverter}}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </StackPanel>
 
                 <TextBlock

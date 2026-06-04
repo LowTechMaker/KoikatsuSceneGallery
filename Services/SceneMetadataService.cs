@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using KoikatsuSceneGallery.Models;
-using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -31,7 +30,7 @@ public sealed class SceneMetadataService
 
     public SceneMetadataService()
     {
-        _cachePath = Path.Combine(ApplicationData.Current.LocalFolder.Path, CacheFileName);
+        _cachePath = Path.Combine(AppPaths.LocalFolder, CacheFileName);
         Load();
     }
 

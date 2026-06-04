@@ -74,7 +74,15 @@
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!--
+      Trimming is intentionally OFF: this app relies on reflection-based
+      System.Text.Json (config + scene/character metadata) and on
+      AdvancedCollectionView's reflection-based sorting. Trimming disables
+      reflection JSON outright (JsonSerializerIsReflectionEnabledByDefault=false),
+      which crashes the app the moment it reads/writes config.json. Re-enabling
+      it safely would require source-generated JsonSerializerContexts and
+      preserving the sort types. Until that work is done, do not trim.
+    -->
+    <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
 </Project>

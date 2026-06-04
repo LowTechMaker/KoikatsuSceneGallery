@@ -164,6 +164,9 @@
   <data name="Detail_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>随机一张</value>
   </data>
+  <data name="Detail_VersionHistory.Text" xml:space="preserve">
+    <value>其他版本</value>
+  </data>
   <data name="Detail_FileInfo.Text" xml:space="preserve">
     <value>文件信息</value>
   </data>

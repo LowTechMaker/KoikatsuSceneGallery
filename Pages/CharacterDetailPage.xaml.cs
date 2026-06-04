@@ -25,8 +25,48 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        App.CharacterGalleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
+        App.CharacterGalleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
             ShowCard(card);
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        App.CharacterGalleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
+        App.CharacterGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+    }
+
+    private void OnVersionIndexChanged(string characterName)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
+            if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
+
+            var versions = App.CharacterGalleryViewModel.GetVersions(characterName);
+            if (versions != null && versions.Contains(ViewModel.Card))
+            {
+                LoadVersions(ViewModel.Card, characterName);
+            }
+            else if (versions != null && versions.Count > 0)
+            {
+                ShowCard(versions[0]);
+            }
+            else
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+            }
+        });
+    }
+
+    private void OnCardsReloaded()
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (Frame.CanGoBack) Frame.GoBack();
+        });
     }
 
     private void ShowCard(CharacterCard card)
@@ -70,7 +110,39 @@ public sealed partial class CharacterDetailPage : Page
             ? ResLoader.GetString("Common_Yes")
             : ResLoader.GetString("Common_No");
         ViewModel.MetadataLoaded = true;
+
+        LoadVersions(card, meta.FullName);
     }
+
+    private void LoadVersions(CharacterCard card, string fullName)
+    {
+        var versions = App.CharacterGalleryViewModel.GetVersions(fullName);
+        if (versions != null && versions.Count > 1)
+        {
+            ViewModel.Versions = new System.Collections.ObjectModel.ObservableCollection<CharacterCard>(versions);
+            ViewModel.HasMultipleVersions = true;
+            ViewModel.TotalVersions = versions.Count;
+            ViewModel.VersionIndex = versions.IndexOf(card) + 1;
+            foreach (var v in versions)
+                App.CharacterGalleryViewModel.RequestThumbnail(v);
+        }
+        else
+        {
+            ViewModel.Versions = null;
+            ViewModel.HasMultipleVersions = false;
+            ViewModel.VersionIndex = 0;
+            ViewModel.TotalVersions = 0;
+        }
+    }
+
+    private void VersionItem_Click(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is CharacterCard card && !ReferenceEquals(card, ViewModel.Card))
+            ShowCard(card);
+    }
+
+    public static string FormatTimestamp(CharacterCard card) =>
+        card.FileTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
 
     private void UpdateNavigationButtons()
     {
