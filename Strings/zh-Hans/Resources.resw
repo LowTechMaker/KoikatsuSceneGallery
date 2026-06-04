@@ -217,6 +217,21 @@
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>设置</value>
   </data>
+  <data name="Settings_TabGeneral.Header" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="Settings_TabFolders.Header" xml:space="preserve">
+    <value>文件夹</value>
+  </data>
+  <data name="Settings_TabFilters.Header" xml:space="preserve">
+    <value>筛选</value>
+  </data>
+  <data name="Settings_TabAdvanced.Header" xml:space="preserve">
+    <value>高级</value>
+  </data>
+  <data name="Settings_TabOcd.Header" xml:space="preserve">
+    <value>强迫症选项</value>
+  </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
     <value>场景卡片文件夹</value>
   </data>

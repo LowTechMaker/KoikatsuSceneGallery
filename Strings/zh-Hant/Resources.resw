@@ -217,6 +217,21 @@
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>設定</value>
   </data>
+  <data name="Settings_TabGeneral.Header" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="Settings_TabFolders.Header" xml:space="preserve">
+    <value>資料夾</value>
+  </data>
+  <data name="Settings_TabFilters.Header" xml:space="preserve">
+    <value>篩選</value>
+  </data>
+  <data name="Settings_TabAdvanced.Header" xml:space="preserve">
+    <value>進階</value>
+  </data>
+  <data name="Settings_TabOcd.Header" xml:space="preserve">
+    <value>強迫症選項</value>
+  </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
     <value>場景卡片資料夾</value>
   </data>

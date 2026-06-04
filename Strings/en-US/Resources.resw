@@ -217,6 +217,21 @@
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Settings_TabGeneral.Header" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Settings_TabFolders.Header" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="Settings_TabFilters.Header" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Settings_TabAdvanced.Header" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Settings_TabOcd.Header" xml:space="preserve">
+    <value>OCD</value>
+  </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
     <value>Scene Card Folders</value>
   </data>

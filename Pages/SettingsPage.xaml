@@ -8,402 +8,522 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer>
-        <StackPanel Padding="24,16,24,16" Spacing="32">
-            <TextBlock
-                x:Uid="Settings_Title"
-                Style="{StaticResource TitleTextBlockStyle}" />
+    <Grid Padding="24,16,24,0" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <!-- Folder Paths Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_FoldersHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_FoldersDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        <TextBlock
+            x:Uid="Settings_Title"
+            Style="{StaticResource TitleTextBlockStyle}" />
 
-                <Button Command="{x:Bind ViewModel.AddFolderCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                        <TextBlock x:Uid="Settings_AddFolder" />
-                    </StackPanel>
-                </Button>
+        <Pivot Grid.Row="1">
 
-                <ListView
-                    x:Name="FolderListView"
-                    ItemsSource="{x:Bind ViewModel.FolderPaths, Mode=OneWay}"
-                    SelectionMode="None">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <Grid Padding="8,12" ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+            <!-- General Tab -->
+            <PivotItem x:Uid="Settings_TabGeneral">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="32">
 
-                                <FontIcon
-                                    VerticalAlignment="Center"
-                                    FontSize="16"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Glyph="&#xE8B7;" />
+                        <!-- Display Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_DisplayHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                                <TextBlock
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Text="{x:Bind}"
-                                    TextTrimming="CharacterEllipsis"
-                                    ToolTipService.ToolTip="{x:Bind}" />
+                            <ToggleSwitch
+                                x:Uid="Settings_ShowFileNames"
+                                IsOn="{x:Bind ViewModel.ShowFileNames, Mode=TwoWay}" />
 
-                                <Button
-                                    x:Uid="Settings_RemoveFolder"
-                                    Grid.Column="2"
-                                    VerticalAlignment="Center"
-                                    CommandParameter="{x:Bind}"
-                                    Click="RemoveFolder_Click"
-                                    Style="{StaticResource SubtleButtonStyle}">
-                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                </Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-                <TextBlock
-                    x:Uid="Settings_NoFolders"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    Visibility="{x:Bind ViewModel.HasNoFolders, Mode=OneWay}" />
-            </StackPanel>
-
-            <!-- Character Card Folders Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_CharaFoldersHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_CharaFoldersDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                <Button Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                        <TextBlock x:Uid="Settings_AddFolder" />
-                    </StackPanel>
-                </Button>
-
-                <ListView
-                    x:Name="CharacterFolderListView"
-                    ItemsSource="{x:Bind ViewModel.CharacterFolderPaths, Mode=OneWay}"
-                    SelectionMode="None">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <Grid Padding="8,12" ColumnSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <FontIcon
-                                    VerticalAlignment="Center"
-                                    FontSize="16"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Glyph="&#xE8B7;" />
-
-                                <TextBlock
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Text="{x:Bind}"
-                                    TextTrimming="CharacterEllipsis"
-                                    ToolTipService.ToolTip="{x:Bind}" />
-
-                                <Button
-                                    x:Uid="Settings_RemoveFolder"
-                                    Grid.Column="2"
-                                    VerticalAlignment="Center"
-                                    CommandParameter="{x:Bind}"
-                                    Click="RemoveCharacterFolder_Click"
-                                    Style="{StaticResource SubtleButtonStyle}">
-                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                </Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-
-                <TextBlock
-                    x:Uid="Settings_NoFolders"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    Visibility="{x:Bind ViewModel.HasNoCharacterFolders, Mode=OneWay}" />
-            </StackPanel>
-
-            <!-- Display Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_DisplayHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-
-                <ToggleSwitch
-                    x:Uid="Settings_ShowFileNames"
-                    IsOn="{x:Bind ViewModel.ShowFileNames, Mode=TwoWay}" />
-
-                <ToggleSwitch
-                    x:Uid="Settings_ScrollToTop"
-                    IsOn="{x:Bind ViewModel.ScrollToTopOnSort, Mode=TwoWay}" />
-            </StackPanel>
-
-            <!-- OCD / Fine-tuning Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_OcdHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_OcdDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                <ToggleSwitch
-                    x:Uid="Settings_SizeSelector"
-                    IsOn="{x:Bind ViewModel.SizeSelectorEnabled, Mode=TwoWay}" />
-            </StackPanel>
-
-            <!-- Cache Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_CacheHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_CacheDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                <StackPanel Spacing="4">
-                    <TextBlock
-                        x:Uid="Settings_CacheFolderLabel"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock
-                        Text="{x:Bind ViewModel.CacheFolderDisplay, Mode=OneWay}"
-                        TextWrapping="Wrap"
-                        IsTextSelectionEnabled="True" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Command="{x:Bind ViewModel.ChangeCacheFolderCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="14" Glyph="&#xE8DA;" />
-                            <TextBlock x:Uid="Settings_ChangeFolder" />
+                            <ToggleSwitch
+                                x:Uid="Settings_ScrollToTop"
+                                IsOn="{x:Bind ViewModel.ScrollToTopOnSort, Mode=TwoWay}" />
                         </StackPanel>
-                    </Button>
 
-                    <Button Command="{x:Bind ViewModel.ResetCacheFolderCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="14" Glyph="&#xE777;" />
-                            <TextBlock x:Uid="Settings_ResetDefault" />
+                        <!-- Language Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_LanguageHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_LanguageDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <ComboBox
+                                x:Name="LanguageComboBox"
+                                MinWidth="240"
+                                SelectedValuePath="Tag"
+                                SelectedValue="{x:Bind ViewModel.SelectedLanguage, Mode=TwoWay}">
+                                <ComboBoxItem x:Uid="Settings_LanguageSystem" Tag="" />
+                                <ComboBoxItem Content="English" Tag="en-US" />
+                                <ComboBoxItem Content="简体中文" Tag="zh-Hans" />
+                                <ComboBoxItem Content="繁體中文" Tag="zh-Hant" />
+                            </ComboBox>
+
+                            <InfoBar
+                                x:Uid="Settings_RestartInfo"
+                                IsClosable="False"
+                                IsOpen="{x:Bind ViewModel.ShowRestartHint, Mode=OneWay}"
+                                Severity="Informational">
+                                <InfoBar.ActionButton>
+                                    <Button x:Uid="Settings_RestartButton" Click="RestartApp_Click" />
+                                </InfoBar.ActionButton>
+                            </InfoBar>
                         </StackPanel>
-                    </Button>
 
-                    <Button Click="ClearCache_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                            <TextBlock x:Uid="Settings_ClearCache" />
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
+            <!-- Folders Tab -->
+            <PivotItem x:Uid="Settings_TabFolders">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="32">
+
+                        <!-- Scene Folder Paths Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_FoldersHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_FoldersDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <Button Command="{x:Bind ViewModel.AddFolderCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                    <TextBlock x:Uid="Settings_AddFolder" />
+                                </StackPanel>
+                            </Button>
+
+                            <ListView
+                                x:Name="FolderListView"
+                                ItemsSource="{x:Bind ViewModel.FolderPaths, Mode=OneWay}"
+                                SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Grid Padding="8,12" ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <FontIcon
+                                                VerticalAlignment="Center"
+                                                FontSize="16"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Glyph="&#xE8B7;" />
+
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Text="{x:Bind}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTipService.ToolTip="{x:Bind}" />
+
+                                            <Button
+                                                x:Uid="Settings_RemoveFolder"
+                                                Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                CommandParameter="{x:Bind}"
+                                                Click="RemoveFolder_Click"
+                                                Style="{StaticResource SubtleButtonStyle}">
+                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <TextBlock
+                                x:Uid="Settings_NoFolders"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                Visibility="{x:Bind ViewModel.HasNoFolders, Mode=OneWay}" />
                         </StackPanel>
-                    </Button>
-                </StackPanel>
-            </StackPanel>
 
-            <!-- Plugin Analysis Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_PluginHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_PluginDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <!-- Character Card Folders Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_CharaFoldersHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_CharaFoldersDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
-                <ToggleSwitch
-                    x:Uid="Settings_PluginToggle"
-                    IsOn="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=TwoWay}" />
+                            <Button Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                    <TextBlock x:Uid="Settings_AddFolder" />
+                                </StackPanel>
+                            </Button>
 
-                <StackPanel
-                    Spacing="12"
-                    Visibility="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button
-                            Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
-                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon FontSize="14" Glyph="&#xE895;" />
-                                <TextBlock x:Uid="Settings_ScanMissing" />
-                            </StackPanel>
-                        </Button>
+                            <ListView
+                                x:Name="CharacterFolderListView"
+                                ItemsSource="{x:Bind ViewModel.CharacterFolderPaths, Mode=OneWay}"
+                                SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Grid Padding="8,12" ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                        <Button
-                            Command="{x:Bind ViewModel.RescanMetadataCommand}"
-                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                                <TextBlock x:Uid="Settings_RescanAll" />
-                            </StackPanel>
-                        </Button>
+                                            <FontIcon
+                                                VerticalAlignment="Center"
+                                                FontSize="16"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Glyph="&#xE8B7;" />
+
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Text="{x:Bind}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTipService.ToolTip="{x:Bind}" />
+
+                                            <Button
+                                                x:Uid="Settings_RemoveFolder"
+                                                Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                CommandParameter="{x:Bind}"
+                                                Click="RemoveCharacterFolder_Click"
+                                                Style="{StaticResource SubtleButtonStyle}">
+                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <TextBlock
+                                x:Uid="Settings_NoFolders"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                Visibility="{x:Bind ViewModel.HasNoCharacterFolders, Mode=OneWay}" />
+                        </StackPanel>
+
                     </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
 
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Spacing="8"
-                        VerticalAlignment="Center"
-                        Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
-                        <ProgressRing
-                            Width="16"
-                            Height="16"
-                            IsActive="True" />
-                        <TextBlock
-                            x:Uid="Settings_ScanProgress"
-                            VerticalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock
-                            VerticalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
-                    </StackPanel>
-                </StackPanel>
-            </StackPanel>
+            <!-- Filters Tab -->
+            <PivotItem x:Uid="Settings_TabFilters">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="32">
 
-            <!-- Resolution Filter Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_ResolutionHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_ResolutionDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <!-- Scene Resolution Filter Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_ResolutionHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_ResolutionDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
-                <ToggleSwitch
-                    x:Uid="Settings_ResolutionToggle"
-                    IsOn="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=TwoWay}" />
+                            <ToggleSwitch
+                                x:Uid="Settings_ResolutionToggle"
+                                IsOn="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=TwoWay}" />
 
-                <StackPanel
-                    Spacing="12"
-                    Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
+                            <StackPanel
+                                Spacing="12"
+                                Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
 
-                    <Grid ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MaxWidth="240" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <TextBox
-                            x:Name="ResolutionInput"
-                            x:Uid="Settings_ResolutionInput"
-                            KeyDown="ResolutionInput_KeyDown" />
-
-                        <Button
-                            Grid.Column="1"
-                            Click="AddResolution_Click"
-                            Style="{StaticResource AccentButtonStyle}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon FontSize="14" Glyph="&#xE710;" />
-                                <TextBlock x:Uid="Settings_AddResolution" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-
-                    <ListView
-                        x:Name="ResolutionListView"
-                        ItemsSource="{x:Bind ViewModel.AllowedResolutions, Mode=OneWay}"
-                        SelectionMode="None">
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                                <Grid Padding="8,8" ColumnSpacing="12">
+                                <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" MaxWidth="240" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <FontIcon
-                                        VerticalAlignment="Center"
-                                        FontSize="16"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="&#xE740;" />
-
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Text="{x:Bind}" />
+                                    <TextBox
+                                        x:Name="ResolutionInput"
+                                        x:Uid="Settings_ResolutionInput"
+                                        KeyDown="ResolutionInput_KeyDown" />
 
                                     <Button
-                                        x:Uid="Settings_RemoveResolution"
-                                        Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        CommandParameter="{x:Bind}"
-                                        Click="RemoveResolution_Click"
-                                        Style="{StaticResource SubtleButtonStyle}">
-                                        <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                        Grid.Column="1"
+                                        Click="AddResolution_Click"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontSize="14" Glyph="&#xE710;" />
+                                            <TextBlock x:Uid="Settings_AddResolution" />
+                                        </StackPanel>
                                     </Button>
                                 </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </StackPanel>
-            </StackPanel>
 
-            <!-- Advanced Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_AdvancedHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_CacheBufferDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <ListView
+                                    x:Name="ResolutionListView"
+                                    ItemsSource="{x:Bind ViewModel.AllowedResolutions, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,8" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
 
-                <InfoBar
-                    x:Uid="Settings_CacheBufferWarning"
-                    IsClosable="False"
-                    IsOpen="True"
-                    Severity="Warning" />
+                                                <FontIcon
+                                                    VerticalAlignment="Center"
+                                                    FontSize="16"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Glyph="&#xE740;" />
 
-                <NumberBox
-                    x:Uid="Settings_CacheBuffer"
-                    MinWidth="240"
-                    HorizontalAlignment="Left"
-                    LargeChange="4"
-                    Maximum="40"
-                    Minimum="2"
-                    SmallChange="2"
-                    SpinButtonPlacementMode="Inline"
-                    Value="{x:Bind ViewModel.CacheLength, Mode=TwoWay}" />
-            </StackPanel>
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Text="{x:Bind}" />
 
-            <!-- Language Section -->
-            <StackPanel Spacing="16">
-                <TextBlock
-                    x:Uid="Settings_LanguageHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    x:Uid="Settings_LanguageDesc"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <Button
+                                                    x:Uid="Settings_RemoveResolution"
+                                                    Grid.Column="2"
+                                                    VerticalAlignment="Center"
+                                                    CommandParameter="{x:Bind}"
+                                                    Click="RemoveResolution_Click"
+                                                    Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </StackPanel>
 
-                <ComboBox
-                    x:Name="LanguageComboBox"
-                    MinWidth="240"
-                    SelectedValuePath="Tag"
-                    SelectedValue="{x:Bind ViewModel.SelectedLanguage, Mode=TwoWay}">
-                    <ComboBoxItem x:Uid="Settings_LanguageSystem" Tag="" />
-                    <ComboBoxItem Content="English" Tag="en-US" />
-                    <ComboBoxItem Content="简体中文" Tag="zh-Hans" />
-                    <ComboBoxItem Content="繁體中文" Tag="zh-Hant" />
-                </ComboBox>
+                        <!-- Character Resolution Filter Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_CharaResolutionHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_CharaResolutionDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
-                <InfoBar
-                    x:Uid="Settings_RestartInfo"
-                    IsClosable="False"
-                    IsOpen="{x:Bind ViewModel.ShowRestartHint, Mode=OneWay}"
-                    Severity="Informational">
-                    <InfoBar.ActionButton>
-                        <Button x:Uid="Settings_RestartButton" Click="RestartApp_Click" />
-                    </InfoBar.ActionButton>
-                </InfoBar>
-            </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+                            <ToggleSwitch
+                                x:Uid="Settings_CharaResolutionToggle"
+                                IsOn="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=TwoWay}" />
+
+                            <StackPanel
+                                Spacing="12"
+                                Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
+
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" MaxWidth="240" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox
+                                        x:Name="CharacterResolutionInput"
+                                        x:Uid="Settings_CharaResolutionInput"
+                                        KeyDown="CharacterResolutionInput_KeyDown" />
+
+                                    <Button
+                                        Grid.Column="1"
+                                        Click="AddCharacterResolution_Click"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontSize="14" Glyph="&#xE710;" />
+                                            <TextBlock x:Uid="Settings_AddCharaResolution" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <ListView
+                                    x:Name="CharacterResolutionListView"
+                                    ItemsSource="{x:Bind ViewModel.CharacterAllowedResolutions, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,8" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <FontIcon
+                                                    VerticalAlignment="Center"
+                                                    FontSize="16"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Glyph="&#xE740;" />
+
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Text="{x:Bind}" />
+
+                                                <Button
+                                                    x:Uid="Settings_RemoveCharaResolution"
+                                                    Grid.Column="2"
+                                                    VerticalAlignment="Center"
+                                                    CommandParameter="{x:Bind}"
+                                                    Click="RemoveCharacterResolution_Click"
+                                                    Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Plugin Analysis Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_PluginHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_PluginDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <ToggleSwitch
+                                x:Uid="Settings_PluginToggle"
+                                IsOn="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=TwoWay}" />
+
+                            <StackPanel
+                                Spacing="12"
+                                Visibility="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
+                                        IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontSize="14" Glyph="&#xE895;" />
+                                            <TextBlock x:Uid="Settings_ScanMissing" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Command="{x:Bind ViewModel.RescanMetadataCommand}"
+                                        IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                            <TextBlock x:Uid="Settings_RescanAll" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center"
+                                    Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
+                                    <ProgressRing
+                                        Width="16"
+                                        Height="16"
+                                        IsActive="True" />
+                                    <TextBlock
+                                        x:Uid="Settings_ScanProgress"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
+            <!-- Advanced Tab -->
+            <PivotItem x:Uid="Settings_TabAdvanced">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="32">
+
+                        <!-- Cache Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_CacheHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_CacheDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Uid="Settings_CacheFolderLabel"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    Text="{x:Bind ViewModel.CacheFolderDisplay, Mode=OneWay}"
+                                    TextWrapping="Wrap"
+                                    IsTextSelectionEnabled="True" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{x:Bind ViewModel.ChangeCacheFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="14" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_ChangeFolder" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Command="{x:Bind ViewModel.ResetCacheFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="14" Glyph="&#xE777;" />
+                                        <TextBlock x:Uid="Settings_ResetDefault" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Click="ClearCache_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                        <TextBlock x:Uid="Settings_ClearCache" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Cache Buffer Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_CacheBufferDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <InfoBar
+                                x:Uid="Settings_CacheBufferWarning"
+                                IsClosable="False"
+                                IsOpen="True"
+                                Severity="Warning" />
+
+                            <NumberBox
+                                x:Uid="Settings_CacheBuffer"
+                                MinWidth="240"
+                                HorizontalAlignment="Left"
+                                LargeChange="4"
+                                Maximum="40"
+                                Minimum="2"
+                                SmallChange="2"
+                                SpinButtonPlacementMode="Inline"
+                                Value="{x:Bind ViewModel.CacheLength, Mode=TwoWay}" />
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
+            <!-- OCD Tab -->
+            <PivotItem x:Uid="Settings_TabOcd">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="16">
+                        <TextBlock
+                            x:Uid="Settings_OcdDesc"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                        <ToggleSwitch
+                            x:Uid="Settings_SizeSelector"
+                            IsOn="{x:Bind ViewModel.SizeSelectorEnabled, Mode=TwoWay}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
+        </Pivot>
+    </Grid>
 </Page>
