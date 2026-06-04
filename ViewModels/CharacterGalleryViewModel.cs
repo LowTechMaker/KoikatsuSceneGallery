@@ -69,7 +69,11 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
     public partial CardSourceFilterOption SourceFilter { get; set; } = CardSourceFilterOption.All;
 
     private bool HasSourceFilter => SourceFilter != CardSourceFilterOption.All;
-    private bool NeedsLiveRefresh => HasSourceFilter || !string.IsNullOrWhiteSpace(SearchText);
+    private bool HasResolutionFilter => _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+    private bool NeedsLiveRefresh => HasSourceFilter || HasResolutionFilter || !string.IsNullOrWhiteSpace(SearchText);
+
+    private bool _resolutionFilterEnabled;
+    private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CharacterCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _thumbnailCts;
@@ -99,6 +103,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         _cardService.CardRemoved += OnCardRemoved;
 
         App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
+        App.SettingsViewModel.CharacterResolutionFilterChanged += OnCharacterResolutionFilterChanged;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -120,6 +125,8 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         {
             var config = await _settingsService.LoadConfigAsync();
             ShowFileNames = config.ShowFileNames;
+            _resolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
+            _allowedResolutions = [.. config.CharacterAllowedResolutions];
 
             var paths = config.CharacterFolderPaths;
             var cards = await _cardService.ScanFoldersAsync(paths);
@@ -292,6 +299,16 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnCharacterResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
+    {
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            _resolutionFilterEnabled = enabled;
+            _allowedResolutions = resolutions;
+            ApplyFilter();
+        });
+    }
+
     private void OnShowFileNamesSettingChanged(bool value)
     {
         _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
@@ -331,8 +348,9 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         var hasSearch = keywords.Length > 0;
         var sourceFilter = SourceFilter;
         var hasSourceFilter = sourceFilter != CardSourceFilterOption.All;
+        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
-        if (!hasSearch && !hasSourceFilter)
+        if (!hasSearch && !hasSourceFilter && !filterRes)
         {
             CardsView.Filter = null!;
         }
@@ -353,10 +371,11 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
                     }
                 }
 
+                if (filterRes && !_allowedResolutions.Contains(card.Resolution))
+                    return false;
+
                 if (hasSourceFilter)
                 {
-                    // Not classified yet — hide until parsed (reappears via the
-                    // throttled refresh once metadata is ready).
                     if (!card.MetadataLoaded) return false;
                     var target = sourceFilter switch
                     {
@@ -426,6 +445,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         App.SettingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
+        App.SettingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
         GC.SuppressFinalize(this);
     }
 }

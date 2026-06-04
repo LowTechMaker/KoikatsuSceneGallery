@@ -322,6 +322,27 @@
   <data name="Settings_RemoveResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Remove resolution</value>
   </data>
+  <data name="Settings_CharaResolutionHeader.Text" xml:space="preserve">
+    <value>Character Resolution Filter</value>
+  </data>
+  <data name="Settings_CharaResolutionDesc.Text" xml:space="preserve">
+    <value>Only show character cards matching specific resolutions. Disable to show all cards.</value>
+  </data>
+  <data name="Settings_CharaResolutionToggle.OnContent" xml:space="preserve">
+    <value>Enabled — filtering by resolution</value>
+  </data>
+  <data name="Settings_CharaResolutionToggle.OffContent" xml:space="preserve">
+    <value>Disabled — showing all resolutions</value>
+  </data>
+  <data name="Settings_CharaResolutionInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. 252x352</value>
+  </data>
+  <data name="Settings_AddCharaResolution.Text" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Settings_RemoveCharaResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove resolution</value>
+  </data>
   <data name="Settings_OcdHeader.Text" xml:space="preserve">
     <value>Fine-tuning</value>
   </data>

@@ -16,12 +16,16 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> FolderPaths { get; } = [];
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
+    public ObservableCollection<string> CharacterAllowedResolutions { get; } = [];
 
     public bool HasNoFolders => FolderPaths.Count == 0;
     public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool CharacterResolutionFilterEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool ShowFileNames { get; set; } = true;
@@ -58,6 +62,7 @@ public partial class SettingsViewModel : ObservableObject
         : CacheFolderPath;
 
     public event Action<bool, HashSet<string>>? ResolutionFilterChanged;
+    public event Action<bool, HashSet<string>>? CharacterResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
 
@@ -72,6 +77,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         _ = SaveConfigAsync();
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
+    }
+
+    partial void OnCharacterResolutionFilterEnabledChanged(bool value)
+    {
+        _ = SaveConfigAsync();
+        CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
     }
 
     partial void OnShowFileNamesChanged(bool value)
@@ -135,7 +146,12 @@ public partial class SettingsViewModel : ObservableObject
         foreach (var res in config.AllowedResolutions)
             AllowedResolutions.Add(res);
 
+        CharacterAllowedResolutions.Clear();
+        foreach (var res in config.CharacterAllowedResolutions)
+            CharacterAllowedResolutions.Add(res);
+
         ResolutionFilterEnabled = config.ResolutionFilterEnabled;
+        CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
         ShowFileNames = config.ShowFileNames;
         ScrollToTopOnSort = config.ScrollToTopOnSort;
         ThumbnailWidth = config.ThumbnailWidth;
@@ -262,6 +278,26 @@ public partial class SettingsViewModel : ObservableObject
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
     }
 
+    [RelayCommand]
+    private async Task AddCharacterResolution(string input)
+    {
+        var parsed = ResolutionOption.TryParse(input);
+        if (parsed != null && !CharacterAllowedResolutions.Contains(parsed.ToString()))
+        {
+            CharacterAllowedResolutions.Add(parsed.ToString());
+            await SaveConfigAsync();
+            CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveCharacterResolution(string resolution)
+    {
+        CharacterAllowedResolutions.Remove(resolution);
+        await SaveConfigAsync();
+        CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
+    }
+
     /// <summary>
     /// Persists a new gallery thumbnail width (set via Ctrl+wheel in the
     /// gallery). Called debounced so rapid wheel ticks don't rewrite the file
@@ -284,6 +320,8 @@ public partial class SettingsViewModel : ObservableObject
                 CharacterFolderPaths = [.. CharacterFolderPaths],
                 ResolutionFilterEnabled = ResolutionFilterEnabled,
                 AllowedResolutions = [.. AllowedResolutions],
+                CharacterResolutionFilterEnabled = CharacterResolutionFilterEnabled,
+                CharacterAllowedResolutions = [.. CharacterAllowedResolutions],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 ThumbnailWidth = ThumbnailWidth,

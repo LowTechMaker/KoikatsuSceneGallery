@@ -90,5 +90,8 @@ public class SettingsService
         /// Otherwise a BCP-47 tag: "en-US", "zh-Hans", "zh-Hant".
         /// </summary>
         public string Language { get; set; } = "";
+
+        public bool CharacterResolutionFilterEnabled { get; set; } = false;
+        public List<string> CharacterAllowedResolutions { get; set; } = ["252x352"];
     }
 }

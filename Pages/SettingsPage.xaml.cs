@@ -64,6 +64,33 @@ public sealed partial class SettingsPage : Page
             await ViewModel.RemoveResolutionCommand.ExecuteAsync(resolution);
     }
 
+    private async void AddCharacterResolution_Click(object sender, RoutedEventArgs e)
+    {
+        await TryAddCharacterResolution();
+    }
+
+    private async void CharacterResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Enter)
+            await TryAddCharacterResolution();
+    }
+
+    private async Task TryAddCharacterResolution()
+    {
+        var input = CharacterResolutionInput.Text.Trim();
+        if (!string.IsNullOrEmpty(input))
+        {
+            await ViewModel.AddCharacterResolutionCommand.ExecuteAsync(input);
+            CharacterResolutionInput.Text = string.Empty;
+        }
+    }
+
+    private async void RemoveCharacterResolution_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string resolution)
+            await ViewModel.RemoveCharacterResolutionCommand.ExecuteAsync(resolution);
+    }
+
     private async void ClearCache_Click(object sender, RoutedEventArgs e)
     {
         await ViewModel.ClearCacheCommand.ExecuteAsync(null);
