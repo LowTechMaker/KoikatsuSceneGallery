@@ -85,6 +85,39 @@ public sealed partial class SettingsPage : Page
         }
     }
 
+    private async void RemoveCoordinateFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string path)
+            await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
+    }
+
+    private async void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)
+    {
+        await TryAddCoordinateResolution();
+    }
+
+    private async void CoordinateResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Enter)
+            await TryAddCoordinateResolution();
+    }
+
+    private async Task TryAddCoordinateResolution()
+    {
+        var input = CoordinateResolutionInput.Text.Trim();
+        if (!string.IsNullOrEmpty(input))
+        {
+            await ViewModel.AddCoordinateResolutionCommand.ExecuteAsync(input);
+            CoordinateResolutionInput.Text = string.Empty;
+        }
+    }
+
+    private async void RemoveCoordinateResolution_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string resolution)
+            await ViewModel.RemoveCoordinateResolutionCommand.ExecuteAsync(resolution);
+    }
+
     private async void RemoveCharacterResolution_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.CommandParameter is string resolution)

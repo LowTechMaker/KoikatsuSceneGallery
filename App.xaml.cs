@@ -13,12 +13,15 @@ public partial class App : Application
     public static SettingsService SettingsService { get; } = new();
     public static SceneCardService SceneCardService { get; } = new();
     public static CharacterCardService CharacterCardService { get; } = new();
+    public static CoordinateCardService CoordinateCardService { get; } = new();
     public static ThumbnailCacheService ThumbnailCacheService { get; private set; } = null!;
     public static SceneMetadataService SceneMetadataService { get; } = new();
     public static CharacterMetadataService CharacterMetadataService { get; } = new();
+    public static CoordinateMetadataService CoordinateMetadataService { get; } = new();
     public static SettingsViewModel SettingsViewModel { get; private set; } = null!;
     public static GalleryViewModel GalleryViewModel { get; private set; } = null!;
     public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
+    public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
 
     public App()
     {
@@ -66,6 +69,7 @@ public partial class App : Application
         SettingsViewModel = new SettingsViewModel(SettingsService);
         GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
         CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
+        CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
 
         _mainWindow = new MainWindow();
         _mainWindow.Activate();

@@ -141,6 +141,49 @@
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
     <value>分析插件中…</value>
   </data>
+  <!-- CoordinateGalleryPage -->
+  <data name="Nav_Coordinates.Content" xml:space="preserve">
+    <value>服装卡</value>
+  </data>
+  <data name="Coordinate_Title.Text" xml:space="preserve">
+    <value>服装卡</value>
+  </data>
+  <data name="Coordinate_Empty.Text" xml:space="preserve">
+    <value>未找到服装卡。请在设置中添加文件夹。</value>
+  </data>
+  <data name="Detail_CoordInfo.Text" xml:space="preserve">
+    <value>服装信息</value>
+  </data>
+  <data name="Detail_CoordName.Text" xml:space="preserve">
+    <value>服装名称</value>
+  </data>
+  <data name="Settings_CoordFoldersHeader.Text" xml:space="preserve">
+    <value>服装卡文件夹</value>
+  </data>
+  <data name="Settings_CoordFoldersDesc.Text" xml:space="preserve">
+    <value>添加包含 Koikatsu 服装卡 .png 文件的文件夹。子文件夹会自动扫描。</value>
+  </data>
+  <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
+    <value>服装卡分辨率筛选</value>
+  </data>
+  <data name="Settings_CoordResolutionDesc.Text" xml:space="preserve">
+    <value>仅显示符合特定分辨率的服装卡片。禁用则显示全部卡片。</value>
+  </data>
+  <data name="Settings_CoordResolutionToggle.OnContent" xml:space="preserve">
+    <value>已启用 — 按分辨率筛选</value>
+  </data>
+  <data name="Settings_CoordResolutionToggle.OffContent" xml:space="preserve">
+    <value>已禁用 — 显示所有分辨率</value>
+  </data>
+  <data name="Settings_CoordResolutionInput.PlaceholderText" xml:space="preserve">
+    <value>例如 252x352</value>
+  </data>
+  <data name="Settings_AddCoordResolution.Text" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Settings_RemoveCoordResolution.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除分辨率</value>
+  </data>
   <!-- CharacterGalleryPage -->
   <data name="Character_Title.Text" xml:space="preserve">
     <value>角色卡</value>

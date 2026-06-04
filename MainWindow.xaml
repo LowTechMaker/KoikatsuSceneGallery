@@ -53,6 +53,13 @@
                         <FontIcon Glyph="&#xE77B;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem
+                    x:Uid="Nav_Coordinates"
+                    Tag="coordinates">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE78A;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
             <Frame x:Name="NavFrame" />
         </NavigationView>

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.CoordinateDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:KoikatsuSceneGallery.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:KoikatsuSceneGallery.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:FileSizeConverter x:Key="FileSizeConverter" />
+    </Page.Resources>
+
+    <Page.KeyboardAccelerators>
+        <KeyboardAccelerator Key="Left" Invoked="PreviousCard_Invoked" />
+        <KeyboardAccelerator Key="Right" Invoked="NextCard_Invoked" />
+    </Page.KeyboardAccelerators>
+
+    <Grid Padding="24,16,24,16" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                Margin="0,0,12,0"
+                VerticalAlignment="Center"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}" />
+
+            <StackPanel
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    x:Name="PrevButton"
+                    x:Uid="Detail_PrevButton"
+                    Click="PrevButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE76B;" />
+                </Button>
+
+                <Button
+                    x:Name="RandomButton"
+                    x:Uid="Detail_RandomButton"
+                    Click="RandomButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                </Button>
+
+                <Button
+                    x:Name="NextButton"
+                    x:Uid="Detail_NextButton"
+                    Click="NextButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE76C;" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnSpacing="24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="320" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer
+                HorizontalScrollBarVisibility="Auto"
+                VerticalScrollBarVisibility="Auto"
+                ZoomMode="Enabled">
+                <Image
+                    x:Name="PreviewImage"
+                    CanDrag="True"
+                    DragStarting="PreviewImage_DragStarting"
+                    Stretch="Uniform" />
+            </ScrollViewer>
+
+            <ScrollViewer
+                Grid.Column="1"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <StackPanel
+                    Padding="16"
+                    CornerRadius="8"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    Spacing="16">
+
+                <TextBlock
+                    x:Uid="Detail_CoordInfo"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                <ProgressRing
+                    Width="20"
+                    Height="20"
+                    HorizontalAlignment="Left"
+                    IsActive="True"
+                    Visibility="{x:Bind ViewModel.IsParsing, Mode=OneWay}" />
+
+                <StackPanel
+                    Spacing="16"
+                    Visibility="{x:Bind ViewModel.MetadataLoaded, Mode=OneWay}">
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            x:Uid="Detail_CoordName"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                        <TextBlock
+                            IsTextSelectionEnabled="True"
+                            Text="{x:Bind ViewModel.CoordinateName, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock
+                    x:Uid="Detail_FileInfo"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="Detail_FileName"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock
+                        IsTextSelectionEnabled="True"
+                        Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="Detail_FilePath"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock
+                        IsTextSelectionEnabled="True"
+                        Text="{x:Bind ViewModel.Card.FilePath, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="Detail_FileSize"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.Card.FileSize, Converter={StaticResource FileSizeConverter}, Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="Detail_Resolution"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.Card.Resolution, Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="Detail_DateModified"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.Card.DateModified, Mode=OneWay}" />
+                </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Page>

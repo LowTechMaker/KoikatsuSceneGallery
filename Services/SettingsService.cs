@@ -102,5 +102,9 @@ public class SettingsService
 
         public bool CharacterResolutionFilterEnabled { get; set; } = false;
         public List<string> CharacterAllowedResolutions { get; set; } = ["252x352"];
+
+        public List<string> CoordinateFolderPaths { get; set; } = [];
+        public bool CoordinateResolutionFilterEnabled { get; set; } = false;
+        public List<string> CoordinateAllowedResolutions { get; set; } = ["252x352"];
     }
 }

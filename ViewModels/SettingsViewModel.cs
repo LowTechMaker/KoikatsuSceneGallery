@@ -15,17 +15,23 @@ public partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<string> FolderPaths { get; } = [];
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
+    public ObservableCollection<string> CoordinateFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
     public ObservableCollection<string> CharacterAllowedResolutions { get; } = [];
+    public ObservableCollection<string> CoordinateAllowedResolutions { get; } = [];
 
     public bool HasNoFolders => FolderPaths.Count == 0;
     public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
+    public bool HasNoCoordinateFolders => CoordinateFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool CharacterResolutionFilterEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool CoordinateResolutionFilterEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool ShowFileNames { get; set; } = true;
@@ -63,10 +69,12 @@ public partial class SettingsViewModel : ObservableObject
 
     public event Action<bool, HashSet<string>>? ResolutionFilterChanged;
     public event Action<bool, HashSet<string>>? CharacterResolutionFilterChanged;
+    public event Action<bool, HashSet<string>>? CoordinateResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
     public event Action? SceneFolderPathsChanged;
     public event Action? CharacterFolderPathsChanged;
+    public event Action? CoordinateFolderPathsChanged;
 
     public SettingsViewModel(SettingsService settingsService)
     {
@@ -83,6 +91,12 @@ public partial class SettingsViewModel : ObservableObject
             if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 CharacterFolderPathsChanged?.Invoke();
         };
+        CoordinateFolderPaths.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasNoCoordinateFolders));
+            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                CoordinateFolderPathsChanged?.Invoke();
+        };
     }
 
     partial void OnResolutionFilterEnabledChanged(bool value)
@@ -95,6 +109,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         _ = SaveConfigAsync();
         CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
+    }
+
+    partial void OnCoordinateResolutionFilterEnabledChanged(bool value)
+    {
+        _ = SaveConfigAsync();
+        CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
     partial void OnShowFileNamesChanged(bool value)
@@ -162,8 +182,17 @@ public partial class SettingsViewModel : ObservableObject
         foreach (var res in config.CharacterAllowedResolutions)
             CharacterAllowedResolutions.Add(res);
 
+        CoordinateFolderPaths.Clear();
+        foreach (var path in config.CoordinateFolderPaths)
+            CoordinateFolderPaths.Add(path);
+
+        CoordinateAllowedResolutions.Clear();
+        foreach (var res in config.CoordinateAllowedResolutions)
+            CoordinateAllowedResolutions.Add(res);
+
         ResolutionFilterEnabled = config.ResolutionFilterEnabled;
         CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
+        CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
         ShowFileNames = config.ShowFileNames;
         ScrollToTopOnSort = config.ScrollToTopOnSort;
         ThumbnailWidth = config.ThumbnailWidth;
@@ -226,6 +255,31 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RemoveCharacterFolder(string path)
     {
         CharacterFolderPaths.Remove(path);
+        await SaveConfigAsync();
+    }
+
+    [RelayCommand]
+    private async Task AddCoordinateFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null && !CoordinateFolderPaths.Contains(folder.Path))
+        {
+            CoordinateFolderPaths.Add(folder.Path);
+            await SaveConfigAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveCoordinateFolder(string path)
+    {
+        CoordinateFolderPaths.Remove(path);
         await SaveConfigAsync();
     }
 
@@ -310,6 +364,26 @@ public partial class SettingsViewModel : ObservableObject
         CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
     }
 
+    [RelayCommand]
+    private async Task AddCoordinateResolution(string input)
+    {
+        var parsed = ResolutionOption.TryParse(input);
+        if (parsed != null && !CoordinateAllowedResolutions.Contains(parsed.ToString()))
+        {
+            CoordinateAllowedResolutions.Add(parsed.ToString());
+            await SaveConfigAsync();
+            CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveCoordinateResolution(string resolution)
+    {
+        CoordinateAllowedResolutions.Remove(resolution);
+        await SaveConfigAsync();
+        CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
+    }
+
     /// <summary>
     /// Persists a new gallery thumbnail width (set via Ctrl+wheel in the
     /// gallery). Called debounced so rapid wheel ticks don't rewrite the file
@@ -330,10 +404,13 @@ public partial class SettingsViewModel : ObservableObject
             {
                 FolderPaths = [.. FolderPaths],
                 CharacterFolderPaths = [.. CharacterFolderPaths],
+                CoordinateFolderPaths = [.. CoordinateFolderPaths],
                 ResolutionFilterEnabled = ResolutionFilterEnabled,
                 AllowedResolutions = [.. AllowedResolutions],
                 CharacterResolutionFilterEnabled = CharacterResolutionFilterEnabled,
                 CharacterAllowedResolutions = [.. CharacterAllowedResolutions],
+                CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
+                CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 ThumbnailWidth = ThumbnailWidth,
