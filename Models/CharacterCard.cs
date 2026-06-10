@@ -10,7 +10,7 @@ namespace KoikatsuSceneGallery.Models;
 /// Plugin/character metadata (name, game, classification) is added in a later
 /// phase; this foundation models only the file-level information.
 /// </summary>
-public partial class CharacterCard : ObservableObject
+public partial class CharacterCard : ObservableObject, IAuthorOwner
 {
     public required string FilePath { get; init; }
     public string FileName => System.IO.Path.GetFileName(FilePath);
@@ -54,6 +54,14 @@ public partial class CharacterCard : ObservableObject
 
     [ObservableProperty]
     public partial bool IsLatestVersion { get; set; } = true;
+
+    /// <summary>Author resolved from the card's folder name by a plugin; null
+    /// when no author plugin is installed or the folder carries no id.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAuthor))]
+    public partial AuthorDisplay? Author { get; set; }
+
+    public bool HasAuthor => Author != null;
 
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;

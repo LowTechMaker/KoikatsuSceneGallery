@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+      Contracts-only assembly shared between the app and plugins. Deliberately
+      plain net10.0 (no WinUI, no Windows APIs): contracts exchange strings and
+      local file paths so plugins never need UI types and the app owns all
+      BitmapImage creation.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SceneGallery.PluginSdk</RootNamespace>
+  </PropertyGroup>
+</Project>
