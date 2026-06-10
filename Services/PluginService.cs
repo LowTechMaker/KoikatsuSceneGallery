@@ -27,7 +27,40 @@ public sealed class PluginService
     private readonly List<LoadedPluginInfo> _plugins = [];
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
-    public static string PluginsDirectory => Path.Combine(AppContext.BaseDirectory, "Plugins");
+    public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
+
+    private static string ResolvePluginsDirectory()
+    {
+        var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var primary = Path.Combine(baseDir, "Plugins");
+        if (HasPluginAssemblies(primary)) return primary;
+
+        // Packaged dev launches (VS F5 / dotnet run) execute from the AppX
+        // layout subfolder of the build output, where the MSIX tooling creates
+        // an *empty* Plugins folder; the dev plugin copy lands in the build
+        // output itself — so prefer whichever candidate actually has content.
+        if (string.Equals(Path.GetFileName(baseDir), "AppX", StringComparison.OrdinalIgnoreCase)
+            && Path.GetDirectoryName(baseDir) is { } parent)
+        {
+            var sibling = Path.Combine(parent, "Plugins");
+            if (HasPluginAssemblies(sibling)) return sibling;
+        }
+        return primary;
+    }
+
+    private static bool HasPluginAssemblies(string pluginsDir)
+    {
+        try
+        {
+            return Directory.Exists(pluginsDir)
+                && Directory.EnumerateDirectories(pluginsDir)
+                    .Any(dir => Directory.EnumerateFiles(dir, "*.dll").Any());
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     public IReadOnlyList<LoadedPluginInfo> Plugins => _plugins;
 
