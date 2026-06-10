@@ -18,7 +18,7 @@
       project's directory (the repo root). Keep their sources out of this
       project's default globs or they would be compiled twice.
     -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**;PixivAuthorsPlugin\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -58,29 +58,7 @@
     <!-- Plugin contracts: loaded in the default ALC; plugins resolve their
          SceneGallery.PluginSdk reference to this copy. -->
     <ProjectReference Include="PluginSdk\SceneGallery.PluginSdk.csproj" />
-    <!--
-      Build-ordering-only reference to the pixiv plugin so F5 always has a
-      fresh plugin build; its output is copied to Plugins\ below instead of
-      being referenced. Publish output intentionally does NOT include it —
-      the plugin is distributed separately and dropped next to the exe.
-    -->
-    <ProjectReference Include="PixivAuthorsPlugin\SceneGallery.Plugin.PixivAuthors.csproj"
-                      ReferenceOutputAssembly="false"
-                      OutputItemType="PixivPluginAssembly"
-                      Private="false" />
   </ItemGroup>
-
-  <Target Name="CopyDevPlugins" AfterTargets="Build" Condition="'@(PixivPluginAssembly)' != ''">
-    <PropertyGroup>
-      <_PixivPluginDir>@(PixivPluginAssembly->'%(RootDir)%(Directory)')</_PixivPluginDir>
-    </PropertyGroup>
-    <ItemGroup>
-      <_PixivPluginFiles Include="$(_PixivPluginDir)**\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_PixivPluginFiles)"
-          DestinationFolder="$(OutDir)Plugins\PixivAuthors\%(RecursiveDir)"
-          SkipUnchangedFiles="true" />
-  </Target>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
