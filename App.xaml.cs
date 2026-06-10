@@ -24,6 +24,7 @@ public partial class App : Application
     public static GalleryViewModel GalleryViewModel { get; private set; } = null!;
     public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
     public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
+    public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
 
     public App()
     {
@@ -103,6 +104,10 @@ public partial class App : Application
             SettingsViewModel.SceneFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CharacterFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
+
+            AuthorsViewModel = new AuthorsViewModel(
+                AuthorInfoService,
+                Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         }
 
         _mainWindow = new MainWindow();

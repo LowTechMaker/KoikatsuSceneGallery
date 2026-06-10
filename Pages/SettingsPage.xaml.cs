@@ -1,22 +1,57 @@
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 using Windows.System;
 
 namespace KoikatsuSceneGallery.Pages;
 
+/// <summary>Display row for the Settings → Plugins list. Plain get-only class:
+/// the XAML type-info generator rejects record init-setters on x:DataType types.</summary>
+public sealed class PluginListItem(string name, string version, string statusText, string? error)
+{
+    public string Name { get; } = name;
+    public string Version { get; } = version;
+    public string StatusText { get; } = statusText;
+    public string? Error { get; } = error;
+    public bool HasError => Error != null;
+}
+
 public sealed partial class SettingsPage : Page
 {
+    private static readonly ResourceLoader ResLoader = new();
+
     public SettingsViewModel ViewModel { get; }
 
     public GalleryViewModel GalleryViewModel => App.GalleryViewModel;
 
+    /// <summary>Plugin list is fixed for the app's lifetime (changes need a restart).</summary>
+    public List<PluginListItem> PluginItems { get; }
+
+    public bool HasNoPlugins => PluginItems.Count == 0;
+
     public SettingsPage()
     {
         ViewModel = App.SettingsViewModel;
+        PluginItems = App.PluginService.Plugins
+            .Select(p => new PluginListItem(
+                p.Name,
+                p.Version == "?" ? "" : $"v{p.Version}",
+                ResLoader.GetString(p.Status == PluginStatus.Loaded ? "Plugins_StatusLoaded" : "Plugins_StatusFailed"),
+                p.Error))
+            .ToList();
         InitializeComponent();
+    }
+
+    private async void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
+    {
+        // The folder may not exist yet on a build that shipped without plugins;
+        // create it so the button always lands the user somewhere useful.
+        Directory.CreateDirectory(PluginService.PluginsDirectory);
+        await Launcher.LaunchFolderPathAsync(PluginService.PluginsDirectory);
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)

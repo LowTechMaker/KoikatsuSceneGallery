@@ -60,6 +60,16 @@
                         <FontIcon Glyph="&#xE78A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <!--  Shown only when an author plugin is installed (see ctor).  -->
+                <NavigationViewItem
+                    x:Name="AuthorsNavItem"
+                    x:Uid="Nav_Authors"
+                    Tag="authors"
+                    Visibility="Collapsed">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE716;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
             <Frame x:Name="NavFrame" />
         </NavigationView>

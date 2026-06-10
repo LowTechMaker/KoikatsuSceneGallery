@@ -202,6 +202,35 @@
                                 Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                         </Border>
 
+                        <!--  Author badge (plugin-provided); overlays the thumbnail so
+                              the fixed cell-height layout math stays untouched.  -->
+                        <Border
+                            Margin="6"
+                            Padding="6,3"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="10"
+                            ToolTipService.ToolTip="{x:Bind Author.Name, Mode=OneWay}"
+                            Visibility="{x:Bind HasAuthor, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <Ellipse
+                                    Width="16"
+                                    Height="16"
+                                    Visibility="{x:Bind Author.HasAvatar, Mode=OneWay}">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{x:Bind Author.AvatarSource, Mode=OneWay}" Stretch="UniformToFill" />
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <TextBlock
+                                    MaxWidth="110"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind Author.Name, Mode=OneWay}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock
                             x:Name="FileNameText"
                             Grid.Row="1"
