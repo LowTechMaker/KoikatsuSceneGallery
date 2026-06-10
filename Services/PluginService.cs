@@ -25,6 +25,7 @@ public sealed record LoadedPluginInfo(
 public sealed class PluginService
 {
     private readonly List<LoadedPluginInfo> _plugins = [];
+    private readonly List<IPlugin> _instances = [];
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
     public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
@@ -141,6 +142,8 @@ public sealed class PluginService
             Directory.CreateDirectory(storageDir);
             plugin.Initialize(new PluginHost(plugin.Name, storageDir));
 
+            _instances.Add(plugin);
+
             if (plugin is IFolderAuthorProvider provider)
                 AuthorProvider ??= provider;
 
@@ -151,6 +154,18 @@ public sealed class PluginService
         {
             CrashLogPlugin(name, ex);
             _plugins.Add(new LoadedPluginInfo(name, "?", PluginStatus.Failed, ex.Message, assemblyPath));
+        }
+    }
+
+    public void Shutdown()
+    {
+        foreach (var plugin in _instances)
+        {
+            if (plugin is IDisposable disposable)
+            {
+                try { disposable.Dispose(); }
+                catch (Exception ex) { CrashLogPlugin(plugin.Name, ex); }
+            }
         }
     }
 

@@ -30,17 +30,20 @@ public sealed partial class AuthorsPage : Page
             _ = App.CoordinateGalleryViewModel.LoadCardsCommand.ExecuteAsync(null);
     }
 
-    private async void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
+    private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is AuthorSummary summary)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+            OpenProfile(summary);
     }
 
-    private async void OpenProfile_Click(object sender, RoutedEventArgs e)
+    private void OpenProfile_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: AuthorSummary summary })
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+            OpenProfile(summary);
     }
+
+    private static async void OpenProfile(AuthorSummary summary)
+        => await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
 
     private async void RefreshOne_Click(object sender, RoutedEventArgs e)
     {

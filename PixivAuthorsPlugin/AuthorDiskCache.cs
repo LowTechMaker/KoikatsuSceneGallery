@@ -80,7 +80,7 @@ internal sealed class AuthorDiskCache : IDisposable
             {
                 var tempPath = _cachePath + ".tmp";
                 using (var stream = File.Create(tempPath))
-                    JsonSerializer.Serialize(stream, _entries.ToDictionary());
+                    JsonSerializer.Serialize(stream, _entries);
                 File.Move(tempPath, _cachePath, overwrite: true);
             }
         }

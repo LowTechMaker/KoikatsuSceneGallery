@@ -249,7 +249,7 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 

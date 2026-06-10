@@ -8,7 +8,7 @@ namespace SceneGallery.Plugin.PixivAuthors;
 /// Anonymous web requests only (no account); rate-limited and disk-cached so
 /// each author is fetched at most once until a forced refresh.
 /// </summary>
-public sealed class PixivAuthorPlugin : IFolderAuthorProvider
+public sealed class PixivAuthorPlugin : IFolderAuthorProvider, IDisposable
 {
     private static readonly TimeSpan MinRequestInterval = TimeSpan.FromSeconds(2);
 
@@ -45,9 +45,10 @@ public sealed class PixivAuthorPlugin : IFolderAuthorProvider
         if (!forceRefresh && _cache.TryGet(key.Id, out var cached))
             return Task.FromResult(ToAuthorInfo(key, cached));
 
-        // Lazy ensures only one fetch task is created per id even when many
-        // callers race; the entry is removed once the task completes so a
-        // later forceRefresh starts a fresh one.
+        // Force-refresh must bypass any in-flight non-force fetch.
+        if (forceRefresh)
+            _inFlight.TryRemove(key.Id, out _);
+
         var lazy = _inFlight.GetOrAdd(key.Id, _ => new Lazy<Task<AuthorInfo?>>(
             () => FetchAndCacheAsync(key, ct)));
         return lazy.Value;
@@ -105,4 +106,10 @@ public sealed class PixivAuthorPlugin : IFolderAuthorProvider
     // pixiv serves a placeholder image for users without an avatar; skip
     // downloading it so the UI falls back to its own person glyph.
     private static bool IsDefaultAvatar(string url) => url.Contains("no_profile", StringComparison.Ordinal);
+
+    public void Dispose()
+    {
+        _cache?.Dispose();
+        _client?.Dispose();
+    }
 }

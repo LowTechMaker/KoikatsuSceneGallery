@@ -111,6 +111,7 @@ public partial class App : Application
         }
 
         _mainWindow = new MainWindow();
+        _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
     }
 

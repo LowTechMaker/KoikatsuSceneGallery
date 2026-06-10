@@ -52,7 +52,7 @@ public sealed partial class MainWindow : Window
                 case "coordinates":
                     NavFrame.Navigate(typeof(CoordinateGalleryPage));
                     break;
-                case "authors":
+                case "authors" when App.AuthorInfoService.IsAvailable:
                     NavFrame.Navigate(typeof(AuthorsPage));
                     break;
             }

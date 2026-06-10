@@ -94,6 +94,12 @@ public sealed class AuthorInfoService
                     foreach (TCard card in e.OldItems!)
                         UnassignAuthor(card, kind);
                     break;
+                case NotifyCollectionChangedAction.Replace:
+                    foreach (TCard card in e.OldItems!)
+                        UnassignAuthor(card, kind);
+                    foreach (TCard card in e.NewItems!)
+                        AssignAuthor(card, kind);
+                    break;
                 case NotifyCollectionChangedAction.Reset:
                     _counts[kind].Clear();
                     AuthorsChanged?.Invoke();
