@@ -79,6 +79,25 @@ public sealed partial class AuthorDetailPage : Page
             await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
     }
 
+    private void Shuffle_Click(object sender, RoutedEventArgs e)
+    {
+        switch (TabPivot.SelectedIndex)
+        {
+            case 0 when ViewModel.Scenes.Count > 0:
+                Frame.Navigate(typeof(DetailPage),
+                    ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]);
+                break;
+            case 1 when ViewModel.Characters.Count > 0:
+                Frame.Navigate(typeof(CharacterDetailPage),
+                    ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]);
+                break;
+            case 2 when ViewModel.Coordinates.Count > 0:
+                Frame.Navigate(typeof(CoordinateDetailPage),
+                    ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]);
+                break;
+        }
+    }
+
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Author is { } author)

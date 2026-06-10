@@ -87,6 +87,12 @@
   <data name="Gallery_SortFileSize.Content" xml:space="preserve">
     <value>File Size</value>
   </data>
+  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
+    <value>Shuffle</value>
+  </data>
+  <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
+    <value>I'm feeling lucky</value>
+  </data>
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Toggle sort direction</value>
   </data>
@@ -483,6 +489,9 @@
   </data>
   <data name="AuthorDetail_CoordinatesTab.Text" xml:space="preserve">
     <value>Coordinates</value>
+  </data>
+  <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Shuffle</value>
   </data>
   <!-- Settings: Plugins tab -->
   <data name="Settings_TabPlugins.Header" xml:space="preserve">

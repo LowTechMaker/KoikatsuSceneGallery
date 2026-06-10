@@ -111,6 +111,7 @@ public sealed partial class CharacterGalleryPage : Page
             return;
         _appliedColumns = columns;
         _appliedAvailable = available;
+        ViewModel.SetShuffleCount(columns * 2);
 
         double cellW = (available / columns) - 0.5;
         double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;
@@ -302,6 +303,12 @@ public sealed partial class CharacterGalleryPage : Page
         var card = ViewModel.GetRandomCard();
         if (card != null)
             Frame.Navigate(typeof(CharacterDetailPage), card);
+    }
+
+    private void FeelingLucky_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.Reshuffle();
+        ScrollToTop();
     }
 
     private void ScrollToTop_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

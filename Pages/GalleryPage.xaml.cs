@@ -137,9 +137,8 @@ public sealed partial class GalleryPage : Page
             return;
         _appliedColumns = columns;
         _appliedAvailable = available;
+        ViewModel.SetShuffleCount(columns * 2);
 
-        // Shave 0.5px so floating-point never rounds the last column onto the
-        // next row.
         double cellW = (available / columns) - 0.5;
         double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;
         double filename = App.SettingsViewModel.ShowFileNames ? FilenameReserve : 0;
@@ -371,6 +370,12 @@ public sealed partial class GalleryPage : Page
         var card = ViewModel.GetRandomCard();
         if (card != null)
             Frame.Navigate(typeof(DetailPage), card);
+    }
+
+    private void FeelingLucky_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.Reshuffle();
+        ScrollToTop();
     }
 
     private void ScrollToTop_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

@@ -84,6 +84,12 @@
                     </StackPanel>
                 </Button>
                 <Button
+                    x:Uid="AuthorDetail_Shuffle"
+                    Click="Shuffle_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                </Button>
+                <Button
                     x:Uid="AuthorDetail_Refresh"
                     Click="Refresh_Click"
                     Style="{StaticResource SubtleButtonStyle}">
@@ -93,7 +99,7 @@
         </Grid>
 
         <!-- Tabs: Scenes / Characters / Coordinates -->
-        <Pivot Grid.Row="1">
+        <Pivot x:Name="TabPivot" Grid.Row="1">
 
             <!-- Scenes Tab -->
             <PivotItem>

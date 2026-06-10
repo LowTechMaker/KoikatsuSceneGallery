@@ -39,10 +39,16 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShuffleMode))]
     public partial SortOption SelectedSort { get; set; } = SortOption.Name;
 
     [ObservableProperty]
     public partial bool SortAscending { get; set; } = true;
+
+    public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
+
+    private int _shuffleCount;
+    private readonly HashSet<object> _shuffleSet = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -110,7 +116,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
     partial void OnSourceFilterChanged(CardSourceFilterOption value) => ApplyFilter();
-    partial void OnSelectedSortChanged(SortOption value) => ApplySort();
+    partial void OnSelectedSortChanged(SortOption value) { ApplySort(); ApplyFilter(); }
     partial void OnSortAscendingChanged(bool value) => ApplySort();
 
     [RelayCommand]
@@ -425,11 +431,20 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
     }
 
+    public void SetShuffleCount(int count)
+    {
+        _shuffleCount = count;
+        if (IsShuffleMode) ApplyFilter();
+    }
+
+    public void Reshuffle() => ApplyFilter();
+
     private void ApplySort()
     {
         using (CardsView.DeferRefresh())
         {
             CardsView.SortDescriptions.Clear();
+            if (SelectedSort == SortOption.Shuffle) return;
             var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
             string propertyName = SelectedSort switch
             {
@@ -460,11 +475,10 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         var sourceFilter = SourceFilter;
         var hasSourceFilter = sourceFilter != CardSourceFilterOption.All;
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+        var isShuffleMode = IsShuffleMode;
 
-        CardsView.Filter = item =>
+        Func<CharacterCard, bool> baseFilter = card =>
         {
-            if (item is not CharacterCard card) return false;
-
             if (!card.IsLatestVersion) return false;
 
             if (hasSearch)
@@ -494,6 +508,31 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
                 if (card.Source != target) return false;
             }
 
+            return true;
+        };
+
+        if (isShuffleMode && _shuffleCount > 0)
+        {
+            var candidates = new List<CharacterCard>();
+            foreach (var card in Cards)
+                if (baseFilter(card))
+                    candidates.Add(card);
+
+            _shuffleSet.Clear();
+            int n = Math.Min(_shuffleCount, candidates.Count);
+            for (int i = 0; i < n; i++)
+            {
+                int j = Random.Shared.Next(i, candidates.Count);
+                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+                _shuffleSet.Add(candidates[i]);
+            }
+        }
+
+        CardsView.Filter = item =>
+        {
+            if (item is not CharacterCard card) return false;
+            if (!baseFilter(card)) return false;
+            if (isShuffleMode && !_shuffleSet.Contains(card)) return false;
             return true;
         };
         CardsView.RefreshFilter();

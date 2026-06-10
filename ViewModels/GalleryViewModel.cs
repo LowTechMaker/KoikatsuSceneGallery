@@ -12,7 +12,8 @@ public enum SortOption
 {
     Name,
     DateModified,
-    FileSize
+    FileSize,
+    Shuffle
 }
 
 public enum EnvironmentFilterOption
@@ -53,10 +54,16 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShuffleMode))]
     public partial SortOption SelectedSort { get; set; } = SortOption.Name;
 
     [ObservableProperty]
     public partial bool SortAscending { get; set; } = true;
+
+    public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
+
+    private int _shuffleCount;
+    private readonly HashSet<object> _shuffleSet = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -185,6 +192,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     partial void OnSelectedSortChanged(SortOption value)
     {
         ApplySort();
+        ApplyFilter();
     }
 
     partial void OnSortAscendingChanged(bool value)
@@ -473,11 +481,20 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
     }
 
+    public void SetShuffleCount(int count)
+    {
+        _shuffleCount = count;
+        if (IsShuffleMode) ApplyFilter();
+    }
+
+    public void Reshuffle() => ApplyFilter();
+
     private void ApplySort()
     {
         using (CardsView.DeferRefresh())
         {
             CardsView.SortDescriptions.Clear();
+            if (SelectedSort == SortOption.Shuffle) return;
             var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
             string propertyName = SelectedSort switch
             {
@@ -512,8 +529,76 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         var hasMetadataFilter = envFilter != EnvironmentFilterOption.All
             || timelineFilter != TimelineFilterOption.All
             || gameFilter != GameFilterOption.All;
+        var isShuffleMode = IsShuffleMode;
 
-        if (!hasSearch && !filterRes && !hasMetadataFilter)
+        Func<SceneCard, bool> baseFilter = card =>
+        {
+            if (hasSearch)
+            {
+                foreach (var kw in keywords)
+                {
+                    if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                        return false;
+                }
+            }
+
+            if (filterRes && !_allowedResolutions.Contains(card.Resolution))
+                return false;
+
+            if (envFilter != EnvironmentFilterOption.All)
+            {
+                if (!card.MetadataLoaded) return false;
+                var target = envFilter switch
+                {
+                    EnvironmentFilterOption.Madevil => SceneEnvironment.Madevil,
+                    EnvironmentFilterOption.NonMadevil => SceneEnvironment.NonMadevil,
+                    _ => SceneEnvironment.Unknown
+                };
+                if (card.Environment != target) return false;
+            }
+
+            if (timelineFilter == TimelineFilterOption.Only)
+            {
+                if (!card.MetadataLoaded || !card.UsesTimeline) return false;
+            }
+            else if (timelineFilter == TimelineFilterOption.Exclude)
+            {
+                if (!card.MetadataLoaded || card.UsesTimeline) return false;
+            }
+
+            if (gameFilter != GameFilterOption.All)
+            {
+                if (!card.MetadataLoaded) return false;
+                var targetGame = gameFilter switch
+                {
+                    GameFilterOption.Koikatsu => GameVersion.Koikatsu,
+                    GameFilterOption.KoikatsuSunshine => GameVersion.KoikatsuSunshine,
+                    _ => GameVersion.Unknown
+                };
+                if (card.Game != targetGame) return false;
+            }
+
+            return true;
+        };
+
+        if (isShuffleMode && _shuffleCount > 0)
+        {
+            var candidates = new List<SceneCard>();
+            foreach (var card in Cards)
+                if (baseFilter(card))
+                    candidates.Add(card);
+
+            _shuffleSet.Clear();
+            int n = Math.Min(_shuffleCount, candidates.Count);
+            for (int i = 0; i < n; i++)
+            {
+                int j = Random.Shared.Next(i, candidates.Count);
+                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+                _shuffleSet.Add(candidates[i]);
+            }
+        }
+
+        if (!hasSearch && !filterRes && !hasMetadataFilter && !isShuffleMode)
         {
             CardsView.Filter = null!;
         }
@@ -522,54 +607,8 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item =>
             {
                 if (item is not SceneCard card) return false;
-
-                if (hasSearch)
-                {
-                    foreach (var kw in keywords)
-                    {
-                        if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
-                            return false;
-                    }
-                }
-
-                if (filterRes && !_allowedResolutions.Contains(card.Resolution))
-                    return false;
-
-                if (envFilter != EnvironmentFilterOption.All)
-                {
-                    // A card hasn't been classified yet — hide it until parsed
-                    // (it will reappear via the throttled refresh once done).
-                    if (!card.MetadataLoaded) return false;
-                    var target = envFilter switch
-                    {
-                        EnvironmentFilterOption.Madevil => SceneEnvironment.Madevil,
-                        EnvironmentFilterOption.NonMadevil => SceneEnvironment.NonMadevil,
-                        _ => SceneEnvironment.Unknown
-                    };
-                    if (card.Environment != target) return false;
-                }
-
-                if (timelineFilter == TimelineFilterOption.Only)
-                {
-                    if (!card.MetadataLoaded || !card.UsesTimeline) return false;
-                }
-                else if (timelineFilter == TimelineFilterOption.Exclude)
-                {
-                    if (!card.MetadataLoaded || card.UsesTimeline) return false;
-                }
-
-                if (gameFilter != GameFilterOption.All)
-                {
-                    if (!card.MetadataLoaded) return false;
-                    var targetGame = gameFilter switch
-                    {
-                        GameFilterOption.Koikatsu => GameVersion.Koikatsu,
-                        GameFilterOption.KoikatsuSunshine => GameVersion.KoikatsuSunshine,
-                        _ => GameVersion.Unknown
-                    };
-                    if (card.Game != targetGame) return false;
-                }
-
+                if (!baseFilter(card)) return false;
+                if (isShuffleMode && !_shuffleSet.Contains(card)) return false;
                 return true;
             };
         }

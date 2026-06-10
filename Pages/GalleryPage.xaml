@@ -100,6 +100,7 @@
                 <ComboBoxItem x:Uid="Gallery_SortName" Tag="Name" />
                 <ComboBoxItem x:Uid="Gallery_SortDateModified" Tag="DateModified" />
                 <ComboBoxItem x:Uid="Gallery_SortFileSize" Tag="FileSize" />
+                <ComboBoxItem x:Uid="Gallery_SortShuffle" Tag="Shuffle" />
             </ComboBox>
 
             <ToggleButton
@@ -343,5 +344,19 @@
             VerticalAlignment="Center"
             Opacity="0.6"
             Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+
+        <Button
+            x:Uid="Gallery_FeelingLucky"
+            Grid.Row="3"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,24"
+            Click="FeelingLucky_Click"
+            Visibility="{x:Bind ViewModel.IsShuffleMode, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                <TextBlock x:Uid="Gallery_FeelingLuckyLabel" />
+            </StackPanel>
+        </Button>
     </Grid>
 </Page>
