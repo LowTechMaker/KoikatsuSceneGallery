@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 
@@ -9,6 +10,12 @@ public class SceneCardService : IDisposable
     private readonly System.Timers.Timer _debounceTimer;
     private readonly HashSet<string> _pendingChanges = [];
     private readonly object _lock = new();
+
+    // Bound scan concurrency so a large library can't inject dozens of
+    // thread-pool threads blocked on file I/O. ProcessorCount saturates an
+    // SSD/NVMe queue for these tiny header reads without the thread churn.
+    private static readonly ParallelOptions ScanOptions =
+        new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
     public event Action<SceneCard>? CardAdded;
     public event Action<string>? CardRemoved;
@@ -24,22 +31,68 @@ public class SceneCardService : IDisposable
     {
         return Task.Run(() =>
         {
-            var cards = new List<SceneCard>();
+            var cards = new ConcurrentBag<SceneCard>();
             foreach (var folder in folderPaths)
             {
                 if (!Directory.Exists(folder)) continue;
 
-                var files = Directory.EnumerateFiles(folder, "*.png", SearchOption.AllDirectories);
-                foreach (var file in files)
+                Parallel.ForEach(EnumerateCardFiles(folder), ScanOptions, file =>
                 {
                     var card = TryCreateCard(file);
                     if (card != null)
                         cards.Add(card);
-                }
+                });
             }
-            return cards;
+            return cards.ToList();
         });
     }
+
+    public Task ScanFoldersAsync(IEnumerable<string> folderPaths, Action<List<SceneCard>> onBatch, int batchSize = 200)
+    {
+        return Task.Run(() =>
+        {
+            var batchLock = new object();
+            var batch = new List<SceneCard>(batchSize);
+
+            void Accumulate(SceneCard card)
+            {
+                List<SceneCard>? ready = null;
+                lock (batchLock)
+                {
+                    batch.Add(card);
+                    if (batch.Count >= batchSize)
+                    {
+                        ready = batch;
+                        batch = new List<SceneCard>(batchSize);
+                    }
+                }
+                // Dispatch outside the lock so the (UI-marshaling) callback never
+                // blocks other worker threads from accumulating.
+                if (ready != null)
+                    onBatch(ready);
+            }
+
+            foreach (var folder in folderPaths)
+            {
+                if (!Directory.Exists(folder)) continue;
+                Parallel.ForEach(EnumerateCardFiles(folder), ScanOptions, file =>
+                {
+                    var card = TryCreateCard(file);
+                    if (card != null)
+                        Accumulate(card);
+                });
+            }
+
+            if (batch.Count > 0)
+                onBatch(batch);
+        });
+    }
+
+    // DirectoryInfo.EnumerateFiles yields FileInfo objects whose size/timestamps
+    // are already populated from the directory walk, so reading them in
+    // TryCreateCard costs no extra stat per file.
+    private static IEnumerable<FileInfo> EnumerateCardFiles(string folder) =>
+        new DirectoryInfo(folder).EnumerateFiles("*.png", SearchOption.AllDirectories);
 
     public void StartWatching(IEnumerable<string> folderPaths)
     {
@@ -74,14 +127,16 @@ public class SceneCardService : IDisposable
         _watchers.Clear();
     }
 
-    private static SceneCard? TryCreateCard(string filePath)
+    private static SceneCard? TryCreateCard(string filePath) =>
+        TryCreateCard(new FileInfo(filePath));
+
+    private static SceneCard? TryCreateCard(FileInfo info)
     {
         try
         {
-            var info = new FileInfo(filePath);
             if (!info.Exists) return null;
 
-            var (width, height) = PngHelper.ReadDimensions(filePath);
+            var (width, height) = PngHelper.ReadDimensions(info.FullName);
             return new SceneCard
             {
                 FilePath = info.FullName,

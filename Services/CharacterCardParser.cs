@@ -73,8 +73,7 @@ public static class CharacterCardParser
             if (kkex.Name == "KKEx" && kkex.Size > 0 && kkex.Size <= dataLen - kkex.Pos)
             {
                 byte[] kbytes = ReadBlock(fs, dataStart + kkex.Pos, (int)kkex.Size);
-                isMadevil = ReadTopLevelKeys(kbytes)
-                    .Any(k => k.StartsWith(MadevilGuidPrefix, StringComparison.OrdinalIgnoreCase));
+                isMadevil = HasTopLevelKeyPrefix(kbytes, MadevilGuidPrefix);
             }
 
             return new CharacterMetadata(last, first, nick, sex, game, isMadevil);
@@ -149,16 +148,22 @@ public static class CharacterCardParser
         }
     }
 
-    private static List<string> ReadTopLevelKeys(byte[] blob)
+    /// <summary>
+    /// Returns true as soon as a top-level map key starts with <paramref name="prefix"/>,
+    /// skipping each value without materializing it. Stops at the first match so a
+    /// Madevil card need not be traversed in full.
+    /// </summary>
+    private static bool HasTopLevelKeyPrefix(byte[] blob, string prefix)
     {
         var reader = new MessagePackReader(blob);
         int count = reader.ReadMapHeader();
-        var keys = new List<string>(count);
         for (int i = 0; i < count; i++)
         {
-            keys.Add(reader.ReadString() ?? string.Empty);
+            string key = reader.ReadString() ?? string.Empty;
+            if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
             reader.Skip();
         }
-        return keys;
+        return false;
     }
 }

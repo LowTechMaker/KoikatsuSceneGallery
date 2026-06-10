@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace KoikatsuSceneGallery.Models;
 
@@ -24,6 +25,7 @@ public partial class CharacterCard : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ThumbnailUri))]
+    [NotifyPropertyChangedFor(nameof(ThumbnailSource))]
     [NotifyPropertyChangedFor(nameof(HasThumbnail))]
     public partial string? ThumbnailPath { get; set; }
 
@@ -55,5 +57,22 @@ public partial class CharacterCard : ObservableObject
 
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;
+
+    private BitmapImage? _thumbnailSource;
+    /// <summary>
+    /// Stable BitmapImage bound to the gallery Image.Source. Cached so x:Bind's
+    /// phased re-evaluation gets the same instance; rebuilt only on path change.
+    /// </summary>
+    public BitmapImage? ThumbnailSource
+    {
+        get
+        {
+            if (ThumbnailPath is null) return null;
+            return _thumbnailSource ??= new BitmapImage(new Uri(ThumbnailPath)) { DecodePixelWidth = 300 };
+        }
+    }
+
+    partial void OnThumbnailPathChanged(string? value) => _thumbnailSource = null;
+
     public bool HasThumbnail => ThumbnailPath != null;
 }

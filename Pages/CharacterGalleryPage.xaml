@@ -204,10 +204,7 @@
             ItemsSource="{x:Bind ViewModel.CardsView, Mode=OneWay}"
             SelectionMode="None">
             <GridView.ItemContainerTransitions>
-                <TransitionCollection>
-                    <EntranceThemeTransition />
-                    <AddDeleteThemeTransition />
-                </TransitionCollection>
+                <TransitionCollection />
             </GridView.ItemContainerTransitions>
             <GridView.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -256,13 +253,9 @@
                                 Margin="0,0,3,3"
                                 CornerRadius="4"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                <Image Stretch="Uniform">
-                                    <Image.Source>
-                                        <BitmapImage
-                                            DecodePixelWidth="300"
-                                            UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                    </Image.Source>
-                                </Image>
+                                <Image
+                                    Stretch="Uniform"
+                                    Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                             </Border>
 
                             <!--  Version count badge  -->

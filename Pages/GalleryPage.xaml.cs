@@ -260,9 +260,12 @@ public sealed partial class GalleryPage : Page
 
     private void GalleryGrid_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        // Generate (or resolve a cached) thumbnail only for cards that scroll
-        // into view, instead of the whole library up front.
-        if (args.InRecycleQueue) return;
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is SceneCard recycled)
+                ViewModel.ReleaseThumbnail(recycled);
+            return;
+        }
         if (args.Item is SceneCard card)
             ViewModel.RequestThumbnail(card);
 

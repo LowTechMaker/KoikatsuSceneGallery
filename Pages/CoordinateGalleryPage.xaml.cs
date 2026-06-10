@@ -207,7 +207,12 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private void GalleryGrid_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (args.InRecycleQueue) return;
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is CoordinateCard recycled)
+                ViewModel.ReleaseThumbnail(recycled);
+            return;
+        }
         if (args.Item is CoordinateCard card)
             ViewModel.RequestThumbnail(card);
 

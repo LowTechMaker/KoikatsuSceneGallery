@@ -212,7 +212,12 @@ public sealed partial class CharacterGalleryPage : Page
 
     private void GalleryGrid_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (args.InRecycleQueue) return;
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is CharacterCard recycled)
+                ViewModel.ReleaseThumbnail(recycled);
+            return;
+        }
         if (args.Item is CharacterCard card)
             ViewModel.RequestThumbnail(card);
 

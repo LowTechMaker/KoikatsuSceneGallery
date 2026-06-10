@@ -105,6 +105,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
     private readonly HashSet<string> _thumbnailRequested = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _thumbnailPathCache = new(StringComparer.OrdinalIgnoreCase);
 
     private CancellationTokenSource? _metadataCts;
     // Metadata parsing is I/O-bound (reading file bytes), not CPU-bound like
@@ -198,6 +199,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         _thumbnailCts?.Dispose();
         _thumbnailCts = new CancellationTokenSource();
         _thumbnailRequested.Clear();
+        _thumbnailPathCache.Clear();
         PendingThumbnailCount = 0;
 
         IsLoading = true;
@@ -211,18 +213,43 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             ShowMetadataFilters = config.PluginAnalysisEnabled;
 
             var paths = config.FolderPaths;
-            var cards = await _sceneCardService.ScanFoldersAsync(paths);
-
             Cards.Clear();
             _cardIndex.Clear();
-            using (CardsView.DeferRefresh())
+
+            await _sceneCardService.ScanFoldersAsync(paths, batch =>
             {
-                foreach (var card in cards)
+                var processed = new ManualResetEventSlim(false);
+                // Low priority so the parallel scan's tight batch burst can't
+                // starve user input/rendering during the initial load.
+                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
                 {
-                    Cards.Add(card);
-                    _cardIndex[card.FilePath] = card;
-                }
-            }
+                    var added = new List<SceneCard>(batch.Count);
+                    using (CardsView.DeferRefresh())
+                    {
+                        foreach (var card in batch)
+                        {
+                            // Skip files already loaded (overlapping configured
+                            // folders, or a reload racing the first load) so the
+                            // same file can't appear twice in the grid.
+                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
+                            Cards.Add(card);
+                            added.Add(card);
+                        }
+                    }
+                    // Request thumbnails for every loaded card, not just ones the
+                    // GridView happens to realize. ContainerContentChanging
+                    // doesn't reliably re-fire when sort/filter shifts items
+                    // among already-realized containers, which left those cards
+                    // permanently blank. Generation is gated + disk-cached, and
+                    // the BitmapImage only materializes when a container binds it.
+                    foreach (var card in added)
+                        RequestThumbnail(card);
+                    processed.Set();
+                });
+                processed.Wait();
+                processed.Dispose();
+            });
+
             ApplyFilter();
             _sceneCardService.StartWatching(paths);
             if (_pluginAnalysisEnabled)
@@ -369,11 +396,25 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public void RequestThumbnail(SceneCard card)
     {
         if (card.HasThumbnail) return;
+        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
+        {
+            card.ThumbnailPath = cached;
+            return;
+        }
         if (!_thumbnailRequested.Add(card.FilePath)) return;
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
         PendingThumbnailCount++;
         _ = Task.Run(() => GenerateOneAsync(card, token));
+    }
+
+    // Eviction-on-recycle was removed: clearing ThumbnailPath when a container
+    // recycled raced with re-prepare during scroll/relayout and left visible
+    // cards blank or stale. Thumbnails now stay loaded once generated. Memory is
+    // bounded in practice by how many cards are ever scrolled into view, and each
+    // is a small 300px-wide decoded image (DecodePixelWidth).
+    public void ReleaseThumbnail(SceneCard card)
+    {
     }
 
     private async Task GenerateOneAsync(SceneCard card, CancellationToken cancellationToken)
@@ -384,9 +425,14 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (card.HasThumbnail) return;
                 var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card).ConfigureAwait(false);
                 if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-                    _dispatcherQueue.TryEnqueue(() => card.ThumbnailPath = thumbnailPath);
+                    _dispatcherQueue.TryEnqueue(() =>
+                    {
+                        _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                        card.ThumbnailPath = thumbnailPath;
+                    });
             }
             finally
             {
@@ -401,8 +447,13 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             // counter to 0, so decrementing here would drive it negative.
             _dispatcherQueue.TryEnqueue(() =>
             {
-                if (!cancellationToken.IsCancellationRequested)
-                    PendingThumbnailCount--;
+                if (cancellationToken.IsCancellationRequested) return;
+                PendingThumbnailCount--;
+                // If generation produced nothing (null result or error), drop the
+                // requested-mark so a later request can retry instead of leaving
+                // the card permanently blank.
+                if (!card.HasThumbnail)
+                    _thumbnailRequested.Remove(card.FilePath);
             });
         }
     }
@@ -531,9 +582,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card);
         _dispatcherQueue.TryEnqueue(() =>
         {
+            // Guard against re-adding a file that's already present.
+            if (!_cardIndex.TryAdd(card.FilePath, card)) return;
             card.ThumbnailPath = thumbnailPath;
             Cards.Add(card);
-            _cardIndex[card.FilePath] = card;
             QueueMetadata(card);
         });
     }

@@ -1,3 +1,6 @@
+## Local-only test fixtures (large card binaries, not for the repo)
+sample/
+
 ## .NET / Visual Studio
 [Bb]in/
 [Oo]bj/

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace KoikatsuSceneGallery.Models;
 
@@ -14,6 +15,7 @@ public partial class SceneCard : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ThumbnailUri))]
+    [NotifyPropertyChangedFor(nameof(ThumbnailSource))]
     [NotifyPropertyChangedFor(nameof(HasThumbnail))]
     public partial string? ThumbnailPath { get; set; }
 
@@ -32,6 +34,25 @@ public partial class SceneCard : ObservableObject
 
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;
+
+    private BitmapImage? _thumbnailSource;
+    /// <summary>
+    /// Stable BitmapImage bound to the gallery Image.Source. Cached so x:Bind's
+    /// phased re-evaluation gets the same instance (a fresh instance per read
+    /// makes virtualized cells render inconsistently). Rebuilt only when the path
+    /// changes; null when there is no thumbnail so Image.Source clears cleanly.
+    /// </summary>
+    public BitmapImage? ThumbnailSource
+    {
+        get
+        {
+            if (ThumbnailPath is null) return null;
+            return _thumbnailSource ??= new BitmapImage(new Uri(ThumbnailPath)) { DecodePixelWidth = 300 };
+        }
+    }
+
+    partial void OnThumbnailPathChanged(string? value) => _thumbnailSource = null;
+
     public bool HasThumbnail => ThumbnailPath != null;
 }
 
