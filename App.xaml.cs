@@ -115,17 +115,10 @@ public partial class App : Application
         _mainWindow.Activate();
     }
 
-    private static async void OnAnyFolderPathsChanged()
+    private static void OnAnyFolderPathsChanged()
     {
-        try
-        {
-            var config = await SettingsService.LoadConfigAsync();
-            AuthorInfoService.UpdateRoots(
-                [.. config.FolderPaths, .. config.CharacterFolderPaths, .. config.CoordinateFolderPaths]);
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("AuthorRoots", ex);
-        }
+        var vm = SettingsViewModel;
+        AuthorInfoService.UpdateRoots(
+            [.. vm.FolderPaths, .. vm.CharacterFolderPaths, .. vm.CoordinateFolderPaths]);
     }
 }
