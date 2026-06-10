@@ -14,7 +14,7 @@
         <KeyboardAccelerator Key="End" Invoked="ScrollToBottom_Invoked" />
     </Page.KeyboardAccelerators>
 
-    <Grid Padding="24,16,24,16" RowSpacing="16">
+    <Grid Padding="24,16,24,0" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />

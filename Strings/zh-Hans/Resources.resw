@@ -471,6 +471,19 @@
   <data name="Authors_RefreshOne.Text" xml:space="preserve">
     <value>刷新</value>
   </data>
+  <!-- AuthorDetailPage -->
+  <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
+    <value>打开主页</value>
+  </data>
+  <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
+    <value>场景</value>
+  </data>
+  <data name="AuthorDetail_CharactersTab.Text" xml:space="preserve">
+    <value>角色</value>
+  </data>
+  <data name="AuthorDetail_CoordinatesTab.Text" xml:space="preserve">
+    <value>服装</value>
+  </data>
   <!-- Settings: Plugins tab -->
   <data name="Settings_TabPlugins.Header" xml:space="preserve">
     <value>插件</value>

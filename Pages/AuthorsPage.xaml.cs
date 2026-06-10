@@ -33,17 +33,17 @@ public sealed partial class AuthorsPage : Page
     private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is AuthorSummary summary)
-            OpenProfile(summary);
+            OpenAuthorDetail(summary);
     }
 
-    private void OpenProfile_Click(object sender, RoutedEventArgs e)
+    private async void OpenProfile_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: AuthorSummary summary })
-            OpenProfile(summary);
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
     }
 
-    private static async void OpenProfile(AuthorSummary summary)
-        => await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+    private void OpenAuthorDetail(AuthorSummary summary)
+        => Frame.Navigate(typeof(AuthorDetailPage), summary);
 
     private async void RefreshOne_Click(object sender, RoutedEventArgs e)
     {
