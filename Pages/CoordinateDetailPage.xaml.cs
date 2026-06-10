@@ -128,6 +128,18 @@ public sealed partial class CoordinateDetailPage : Page
         args.Handled = true;
     }
 
+    private async void PixivButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.PixivArtworkId is { } id)
+            await Windows.System.Launcher.LaunchUriAsync(new Uri($"https://www.pixiv.net/artworks/{id}"));
+    }
+
+    private async void BepisDbButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.BepisDbUrl is { } url)
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+    }
+
     private async void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
     {
         if (ViewModel.Card is { } card)
