@@ -234,6 +234,12 @@
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>修改日期</value>
   </data>
+  <data name="Detail_PixivArtworkId.Text" xml:space="preserve">
+    <value>Pixiv 作品 ID</value>
+  </data>
+  <data name="Detail_BepisDbId.Text" xml:space="preserve">
+    <value>BepisDB ID</value>
+  </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>角色信息</value>
   </data>

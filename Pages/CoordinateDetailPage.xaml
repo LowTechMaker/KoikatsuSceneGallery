@@ -176,7 +176,7 @@
                     Spacing="4"
                     Visibility="{x:Bind ViewModel.HasPixivArtworkId, Mode=OneWay}">
                     <TextBlock
-                        Text="Pixiv Artwork ID"
+                        x:Uid="Detail_PixivArtworkId"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <HyperlinkButton
@@ -193,7 +193,7 @@
                     Spacing="4"
                     Visibility="{x:Bind ViewModel.HasBepisDbUrl, Mode=OneWay}">
                     <TextBlock
-                        Text="BepisDB ID"
+                        x:Uid="Detail_BepisDbId"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <HyperlinkButton

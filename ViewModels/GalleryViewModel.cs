@@ -608,7 +608,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             {
                 if (item is not SceneCard card) return false;
                 if (!baseFilter(card)) return false;
-                if (isShuffleMode && !_shuffleSet.Contains(card)) return false;
+                if (isShuffleMode && _shuffleSet.Count > 0 && !_shuffleSet.Contains(card)) return false;
                 return true;
             };
         }

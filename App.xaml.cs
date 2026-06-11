@@ -104,11 +104,11 @@ public partial class App : Application
             SettingsViewModel.SceneFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CharacterFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
-
-            AuthorsViewModel = new AuthorsViewModel(
-                AuthorInfoService,
-                Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         }
+
+        AuthorsViewModel = new AuthorsViewModel(
+            AuthorInfoService,
+            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
 
         _mainWindow = new MainWindow();
         _mainWindow.Closed += (_, _) => PluginService.Shutdown();

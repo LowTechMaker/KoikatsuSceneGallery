@@ -132,8 +132,8 @@ public sealed partial class DetailPage : Page
 
     private async void PixivButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.PixivArtworkId is { } id)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri($"https://www.pixiv.net/artworks/{id}"));
+        if (ViewModel.PixivUrl is { } url)
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
     }
 
     private async void BepisDbButton_Click(object sender, RoutedEventArgs e)
