@@ -33,12 +33,13 @@ jobs:
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
       - name: Publish x64
-        run: dotnet publish -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64
+        run: dotnet publish -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 -p:WindowsPackageType=None -p:DebugType=none
 
       - name: Package zip
         shell: pwsh
         run: |
           $publishDir = Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Select-Object -First 1 -ExpandProperty FullName
+          Get-ChildItem "$publishDir" -Include "*.pdb" -Recurse | Remove-Item -Force -Confirm:$false
           Compress-Archive -Path "$publishDir\*" -DestinationPath "KoikatsuSceneGallery-${{ steps.version.outputs.tag }}-win-x64.zip"
 
       - name: Create GitHub Release
