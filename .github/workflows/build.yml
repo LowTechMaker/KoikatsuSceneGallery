@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        platform: [x64, arm64]
+        configuration: [Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Restore
+        run: dotnet restore -p:Platform=${{ matrix.platform }}
+
+      - name: Build
+        run: dotnet build --no-restore -c ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }}
