@@ -524,4 +524,29 @@
   <data name="Plugins_StatusFailed" xml:space="preserve">
     <value>Failed</value>
   </data>
+  <!-- ImportPage -->
+  <data name="Nav_Import.Content" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Import_Title.Text" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
+    <value>Drop Koikatsu cards here</value>
+  </data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve">
+    <value>Drop PNG files downloaded from pixiv</value>
+  </data>
+  <data name="Import_AllAges.Text" xml:space="preserve">
+    <value>All Ages</value>
+  </data>
+  <data name="Import_ImportAllLabel.Text" xml:space="preserve">
+    <value>Import All</value>
+  </data>
+  <data name="Import_ClearLabel.Text" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Import_RejectedWarningMessage" xml:space="preserve">
+    <value>{0} file(s) are not Koikatsu cards and were removed.</value>
+  </data>
 </root>

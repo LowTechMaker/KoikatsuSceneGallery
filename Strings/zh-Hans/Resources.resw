@@ -524,4 +524,29 @@
   <data name="Plugins_StatusFailed" xml:space="preserve">
     <value>加载失败</value>
   </data>
+  <!-- ImportPage -->
+  <data name="Nav_Import.Content" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="Import_Title.Text" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
+    <value>将 Koikatsu 卡片拖放到此处</value>
+  </data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve">
+    <value>拖放从 pixiv 下载的 PNG 文件</value>
+  </data>
+  <data name="Import_AllAges.Text" xml:space="preserve">
+    <value>全年龄</value>
+  </data>
+  <data name="Import_ImportAllLabel.Text" xml:space="preserve">
+    <value>全部导入</value>
+  </data>
+  <data name="Import_ClearLabel.Text" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Import_RejectedWarningMessage" xml:space="preserve">
+    <value>已移除 {0} 个非 Koikatsu 卡片的文件。</value>
+  </data>
 </root>

@@ -409,6 +409,16 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             card.ThumbnailPath = cached;
             return;
         }
+
+        // Fast-path: resolve from disk cache without queuing async work
+        var diskCached = _thumbnailCacheService.TryGetCachedPath(card);
+        if (diskCached is not null)
+        {
+            _thumbnailPathCache[card.FilePath] = diskCached;
+            card.ThumbnailPath = diskCached;
+            return;
+        }
+
         if (!_thumbnailRequested.Add(card.FilePath)) return;
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;

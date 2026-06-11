@@ -366,6 +366,15 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
             card.ThumbnailPath = cached;
             return;
         }
+
+        var diskCached = _thumbnailCacheService.TryGetCachedPath(card.FilePath, card.DateModified);
+        if (diskCached is not null)
+        {
+            _thumbnailPathCache[card.FilePath] = diskCached;
+            card.ThumbnailPath = diskCached;
+            return;
+        }
+
         if (!_thumbnailRequested.Add(card.FilePath)) return;
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;

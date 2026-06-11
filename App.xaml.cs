@@ -25,6 +25,8 @@ public partial class App : Application
     public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
     public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
     public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
+    public static ImportService? ImportService { get; private set; }
+    public static ImportViewModel? ImportViewModel { get; private set; }
 
     public App()
     {
@@ -104,6 +106,17 @@ public partial class App : Application
             SettingsViewModel.SceneFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CharacterFolderPathsChanged += OnAnyFolderPathsChanged;
             SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
+        }
+
+        if (PluginService.ImportProvider is not null)
+        {
+            ImportService = new ImportService(
+                PluginService.ImportProvider,
+                PluginService.AuthorProvider,
+                SettingsService);
+            ImportViewModel = new ImportViewModel(
+                ImportService,
+                Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         }
 
         AuthorsViewModel = new AuthorsViewModel(

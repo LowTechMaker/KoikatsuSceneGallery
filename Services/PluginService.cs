@@ -68,6 +68,9 @@ public sealed class PluginService
     /// <summary>First loaded author provider, or null when none is installed.</summary>
     public IFolderAuthorProvider? AuthorProvider { get; private set; }
 
+    /// <summary>First loaded import provider, or null when none is installed.</summary>
+    public ICardImportProvider? ImportProvider { get; private set; }
+
     public void LoadPlugins()
     {
         if (!Directory.Exists(PluginsDirectory)) return;
@@ -146,6 +149,9 @@ public sealed class PluginService
 
             if (plugin is IFolderAuthorProvider provider)
                 AuthorProvider ??= provider;
+
+            if (plugin is ICardImportProvider importProvider)
+                ImportProvider ??= importProvider;
 
             _plugins.Add(new LoadedPluginInfo(plugin.Name, plugin.Version, PluginStatus.Loaded, null, assemblyPath));
             Log(plugin.Name, $"loaded v{plugin.Version}");

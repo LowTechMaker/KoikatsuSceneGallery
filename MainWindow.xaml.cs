@@ -19,6 +19,9 @@ public sealed partial class MainWindow : Window
         if (App.AuthorInfoService.IsAvailable)
             AuthorsNavItem.Visibility = Visibility.Visible;
 
+        if (App.ImportViewModel is not null)
+            ImportNavItem.Visibility = Visibility.Visible;
+
         NavFrame.Navigate(typeof(GalleryPage));
     }
 
@@ -54,6 +57,9 @@ public sealed partial class MainWindow : Window
                     break;
                 case "authors" when App.AuthorInfoService.IsAvailable:
                     NavFrame.Navigate(typeof(AuthorsPage));
+                    break;
+                case "import" when App.ImportViewModel is not null:
+                    NavFrame.Navigate(typeof(ImportPage));
                     break;
             }
         }

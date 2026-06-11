@@ -29,14 +29,19 @@ public class ThumbnailCacheService
         Directory.CreateDirectory(_cacheFolder);
     }
 
+    public string? TryGetCachedPath(SceneCard card) =>
+        TryGetCachedPath(card.FilePath, card.DateModified);
+
+    public string? TryGetCachedPath(string filePath, DateTime dateModified)
+    {
+        var cacheKey = ComputeCacheKey(filePath, dateModified);
+        var cachePath = Path.Combine(_cacheFolder, $"{cacheKey}.jpg");
+        return File.Exists(cachePath) ? cachePath : null;
+    }
+
     public Task<string?> EnsureThumbnailAsync(SceneCard card) =>
         EnsureThumbnailAsync(card.FilePath, card.DateModified);
 
-    /// <summary>
-    /// Ensures a cached thumbnail exists for an arbitrary card PNG (scene or
-    /// character), keyed by file path + last-modified time. Works on any PNG
-    /// whose leading image is the preview to show.
-    /// </summary>
     public async Task<string?> EnsureThumbnailAsync(string filePath, DateTime dateModified)
     {
         try
