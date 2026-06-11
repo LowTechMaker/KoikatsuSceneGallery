@@ -38,7 +38,7 @@ jobs:
       - name: Package zip
         shell: pwsh
         run: |
-          $publishDir = "bin\Release\net10.0-windows10.0.26100.0\win-x64\publish"
+          $publishDir = Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Select-Object -First 1 -ExpandProperty FullName
           Compress-Archive -Path "$publishDir\*" -DestinationPath "KoikatsuSceneGallery-${{ steps.version.outputs.tag }}-win-x64.zip"
 
       - name: Create GitHub Release
