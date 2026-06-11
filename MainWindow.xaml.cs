@@ -16,6 +16,9 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
+        if (App.AuthorInfoService.IsAvailable)
+            AuthorsNavItem.Visibility = Visibility.Visible;
+
         NavFrame.Navigate(typeof(GalleryPage));
     }
 
@@ -48,6 +51,9 @@ public sealed partial class MainWindow : Window
                     break;
                 case "coordinates":
                     NavFrame.Navigate(typeof(CoordinateGalleryPage));
+                    break;
+                case "authors" when App.AuthorInfoService.IsAvailable:
+                    NavFrame.Navigate(typeof(AuthorsPage));
                     break;
             }
         }

@@ -13,6 +13,12 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!--
+      The PluginSdk and PixivAuthorsPlugin projects live in subfolders of this
+      project's directory (the repo root). Keep their sources out of this
+      project's default globs or they would be compiled twice.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,6 +54,12 @@
     Set <EnableWinAppRunSupport>false</EnableWinAppRunSupport> in a
     <PropertyGroup> above to opt out.
   -->
+  <ItemGroup>
+    <!-- Plugin contracts: loaded in the default ALC; plugins resolve their
+         SceneGallery.PluginSdk reference to this copy. -->
+    <ProjectReference Include="PluginSdk\SceneGallery.PluginSdk.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="CommunityToolkit.WinUI.Collections" Version="8.2.251219" />

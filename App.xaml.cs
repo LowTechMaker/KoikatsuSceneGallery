@@ -18,10 +18,13 @@ public partial class App : Application
     public static SceneMetadataService SceneMetadataService { get; } = new();
     public static CharacterMetadataService CharacterMetadataService { get; } = new();
     public static CoordinateMetadataService CoordinateMetadataService { get; } = new();
+    public static PluginService PluginService { get; } = new();
+    public static AuthorInfoService AuthorInfoService { get; private set; } = null!;
     public static SettingsViewModel SettingsViewModel { get; private set; } = null!;
     public static GalleryViewModel GalleryViewModel { get; private set; } = null!;
     public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
     public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
+    public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
 
     public App()
     {
@@ -47,9 +50,10 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        SettingsService.ConfigData? config = null;
         try
         {
-            var config = await SettingsService.LoadConfigAsync();
+            config = await SettingsService.LoadConfigAsync();
 
             // Apply the saved UI language override before any window/page is created.
             // Empty means follow the system language (resources fall back to en-US).
@@ -66,12 +70,55 @@ public partial class App : Application
             ThumbnailCacheService ??= new ThumbnailCacheService(null);
         }
 
+        try
+        {
+            // Local-disk reflection only; a broken plugin is recorded as Failed
+            // and must never stop the window from opening.
+            PluginService.LoadPlugins();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("Plugins", ex);
+        }
+
+        AuthorInfoService = new AuthorInfoService(
+            PluginService.AuthorProvider,
+            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+
         SettingsViewModel = new SettingsViewModel(SettingsService);
         GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
         CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
         CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
 
+        if (AuthorInfoService.IsAvailable)
+        {
+            if (config is not null)
+                AuthorInfoService.UpdateRoots(
+                    [.. config.FolderPaths, .. config.CharacterFolderPaths, .. config.CoordinateFolderPaths]);
+            AuthorInfoService.Attach(GalleryViewModel.Cards, AuthorCardKind.Scene);
+            AuthorInfoService.Attach(CharacterGalleryViewModel.Cards, AuthorCardKind.Character);
+            AuthorInfoService.Attach(CoordinateGalleryViewModel.Cards, AuthorCardKind.Coordinate);
+
+            // Folder-list edits change which directories count as library roots;
+            // refresh them so author resolution follows (galleries reload too).
+            SettingsViewModel.SceneFolderPathsChanged += OnAnyFolderPathsChanged;
+            SettingsViewModel.CharacterFolderPathsChanged += OnAnyFolderPathsChanged;
+            SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
+        }
+
+        AuthorsViewModel = new AuthorsViewModel(
+            AuthorInfoService,
+            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+
         _mainWindow = new MainWindow();
+        _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
+    }
+
+    private static void OnAnyFolderPathsChanged()
+    {
+        var vm = SettingsViewModel;
+        AuthorInfoService.UpdateRoots(
+            [.. vm.FolderPaths, .. vm.CharacterFolderPaths, .. vm.CoordinateFolderPaths]);
     }
 }

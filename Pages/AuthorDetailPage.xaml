@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.AuthorDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:KoikatsuSceneGallery.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
+    mc:Ignorable="d">
+
+    <Grid Padding="24,16,24,0" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Author Header -->
+        <Grid ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <PersonPicture
+                Width="64"
+                Height="64"
+                DisplayName="{x:Bind ViewModel.Author.Name, Mode=OneWay}"
+                ProfilePicture="{x:Bind ViewModel.Author.AvatarSource, Mode=OneWay}" />
+
+            <StackPanel
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Spacing="4">
+                <TextBlock
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="{x:Bind ViewModel.Author.Name, Mode=OneWay}" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE8B9;" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind ViewModel.SceneCount, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE77B;" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind ViewModel.CharacterCount, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE78A;" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{x:Bind ViewModel.CoordinateCount, Mode=OneWay}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    x:Uid="AuthorDetail_OpenProfile"
+                    Click="OpenProfile_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE774;" />
+                        <TextBlock x:Uid="AuthorDetail_OpenProfileLabel" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Uid="AuthorDetail_Shuffle"
+                    Click="Shuffle_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                </Button>
+                <Button
+                    x:Uid="AuthorDetail_Refresh"
+                    Click="Refresh_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Tabs: Scenes / Characters / Coordinates -->
+        <Pivot x:Name="TabPivot" Grid.Row="1">
+
+            <!-- Scenes Tab -->
+            <PivotItem>
+                <PivotItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE8B9;" />
+                        <TextBlock x:Uid="AuthorDetail_ScenesTab" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind local:AuthorDetailPage.FormatCount(ViewModel.SceneCount), Mode=OneWay}" />
+                    </StackPanel>
+                </PivotItem.Header>
+                <GridView
+                    x:Name="ScenesGrid"
+                    Margin="0,8,0,0"
+                    IsItemClickEnabled="True"
+                    ItemClick="ScenesGrid_ItemClick"
+                    ItemsSource="{x:Bind ViewModel.Scenes}"
+                    SelectionMode="None">
+                    <GridView.ItemContainerTransitions>
+                        <TransitionCollection />
+                    </GridView.ItemContainerTransitions>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="MinWidth" Value="0" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                    <GridView.ItemTemplate>
+                        <DataTemplate x:DataType="models:SceneCard">
+                            <Grid
+                                Margin="4"
+                                Padding="4"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Border
+                                    CornerRadius="4"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <Image
+                                        Stretch="Uniform"
+                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                </Border>
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Margin="8,4"
+                                    MaxLines="1"
+                                    Text="{x:Bind FileName}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTipService.ToolTip="{x:Bind FileName}" />
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+            </PivotItem>
+
+            <!-- Characters Tab -->
+            <PivotItem>
+                <PivotItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE77B;" />
+                        <TextBlock x:Uid="AuthorDetail_CharactersTab" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind local:AuthorDetailPage.FormatCount(ViewModel.CharacterCount), Mode=OneWay}" />
+                    </StackPanel>
+                </PivotItem.Header>
+                <GridView
+                    x:Name="CharactersGrid"
+                    Margin="0,8,0,0"
+                    IsItemClickEnabled="True"
+                    ItemClick="CharactersGrid_ItemClick"
+                    ItemsSource="{x:Bind ViewModel.Characters}"
+                    SelectionMode="None">
+                    <GridView.ItemContainerTransitions>
+                        <TransitionCollection />
+                    </GridView.ItemContainerTransitions>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="MinWidth" Value="0" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                    <GridView.ItemTemplate>
+                        <DataTemplate x:DataType="models:CharacterCard">
+                            <Grid
+                                Margin="4"
+                                Padding="4"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Border
+                                    CornerRadius="4"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <Image
+                                        Stretch="Uniform"
+                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                </Border>
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Margin="8,4"
+                                    MaxLines="1"
+                                    Text="{x:Bind FileName}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTipService.ToolTip="{x:Bind FileName}" />
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+            </PivotItem>
+
+            <!-- Coordinates Tab -->
+            <PivotItem>
+                <PivotItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE78A;" />
+                        <TextBlock x:Uid="AuthorDetail_CoordinatesTab" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind local:AuthorDetailPage.FormatCount(ViewModel.CoordinateCount), Mode=OneWay}" />
+                    </StackPanel>
+                </PivotItem.Header>
+                <GridView
+                    x:Name="CoordinatesGrid"
+                    Margin="0,8,0,0"
+                    IsItemClickEnabled="True"
+                    ItemClick="CoordinatesGrid_ItemClick"
+                    ItemsSource="{x:Bind ViewModel.Coordinates}"
+                    SelectionMode="None">
+                    <GridView.ItemContainerTransitions>
+                        <TransitionCollection />
+                    </GridView.ItemContainerTransitions>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="MinWidth" Value="0" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                    <GridView.ItemTemplate>
+                        <DataTemplate x:DataType="models:CoordinateCard">
+                            <Grid
+                                Margin="4"
+                                Padding="4"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Border
+                                    CornerRadius="4"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <Image
+                                        Stretch="Uniform"
+                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                </Border>
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Margin="8,4"
+                                    MaxLines="1"
+                                    Text="{x:Bind FileName}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTipService.ToolTip="{x:Bind FileName}" />
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+            </PivotItem>
+
+        </Pivot>
+    </Grid>
+</Page>

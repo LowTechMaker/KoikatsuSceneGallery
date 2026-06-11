@@ -142,6 +142,40 @@
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <TextBlock Text="{x:Bind ViewModel.Card.DateModified, Mode=OneWay}" />
                 </StackPanel>
+
+                <StackPanel
+                    Spacing="4"
+                    Visibility="{x:Bind ViewModel.HasPixivArtworkId, Mode=OneWay}">
+                    <TextBlock
+                        x:Uid="Detail_PixivArtworkId"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <HyperlinkButton
+                        Padding="0"
+                        Click="PixivButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE774;" />
+                            <TextBlock Text="{x:Bind ViewModel.PixivArtworkId, Mode=OneWay}" />
+                        </StackPanel>
+                    </HyperlinkButton>
+                </StackPanel>
+
+                <StackPanel
+                    Spacing="4"
+                    Visibility="{x:Bind ViewModel.HasBepisDbUrl, Mode=OneWay}">
+                    <TextBlock
+                        x:Uid="Detail_BepisDbId"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <HyperlinkButton
+                        Padding="0"
+                        Click="BepisDbButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="16" Glyph="&#xE774;" />
+                            <TextBlock Text="{x:Bind ViewModel.BepisDbId, Mode=OneWay}" />
+                        </StackPanel>
+                    </HyperlinkButton>
+                </StackPanel>
             </StackPanel>
         </Grid>
     </Grid>

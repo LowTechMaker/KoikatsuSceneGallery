@@ -87,6 +87,12 @@
   <data name="Gallery_SortFileSize.Content" xml:space="preserve">
     <value>文件大小</value>
   </data>
+  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
+    <value>随机</value>
+  </data>
+  <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
+    <value>手气不错</value>
+  </data>
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>切换排序方向</value>
   </data>
@@ -227,6 +233,12 @@
   </data>
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>修改日期</value>
+  </data>
+  <data name="Detail_PixivArtworkId.Text" xml:space="preserve">
+    <value>Pixiv 作品 ID</value>
+  </data>
+  <data name="Detail_BepisDbId.Text" xml:space="preserve">
+    <value>BepisDB ID</value>
   </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>角色信息</value>
@@ -451,5 +463,65 @@
   </data>
   <data name="Settings_RestartButton.Content" xml:space="preserve">
     <value>立即重启</value>
+  </data>
+  <!-- AuthorsPage -->
+  <data name="Nav_Authors.Content" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Authors_Title.Text" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Authors_Empty.Text" xml:space="preserve">
+    <value>尚未检测到作者。请将卡片文件夹命名为“作者名 (12345678)”（pixiv 用户 ID），然后重新加载图库。</value>
+  </data>
+  <data name="Authors_RefreshAllLabel.Text" xml:space="preserve">
+    <value>全部刷新</value>
+  </data>
+  <data name="Authors_OpenProfile.Text" xml:space="preserve">
+    <value>打开 pixiv 主页</value>
+  </data>
+  <data name="Authors_RefreshOne.Text" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <!-- AuthorDetailPage -->
+  <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
+    <value>打开主页</value>
+  </data>
+  <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
+    <value>场景</value>
+  </data>
+  <data name="AuthorDetail_CharactersTab.Text" xml:space="preserve">
+    <value>角色</value>
+  </data>
+  <data name="AuthorDetail_CoordinatesTab.Text" xml:space="preserve">
+    <value>服装</value>
+  </data>
+  <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>随机排序</value>
+  </data>
+  <!-- Settings: Plugins tab -->
+  <data name="Settings_TabPlugins.Header" xml:space="preserve">
+    <value>插件</value>
+  </data>
+  <data name="Plugins_Header.Text" xml:space="preserve">
+    <value>已安装插件</value>
+  </data>
+  <data name="Plugins_Desc.Text" xml:space="preserve">
+    <value>插件提供可选功能（例如从互联网获取作者信息）。安装：将插件文件夹放入应用旁的 Plugins 目录；卸载：删除该文件夹。</value>
+  </data>
+  <data name="Plugins_OpenFolder.Text" xml:space="preserve">
+    <value>打开插件文件夹</value>
+  </data>
+  <data name="Plugins_RestartNote.Text" xml:space="preserve">
+    <value>插件更改需重启应用后生效。</value>
+  </data>
+  <data name="Plugins_Empty.Text" xml:space="preserve">
+    <value>未安装任何插件。</value>
+  </data>
+  <data name="Plugins_StatusLoaded" xml:space="preserve">
+    <value>已加载</value>
+  </data>
+  <data name="Plugins_StatusFailed" xml:space="preserve">
+    <value>加载失败</value>
   </data>
 </root>

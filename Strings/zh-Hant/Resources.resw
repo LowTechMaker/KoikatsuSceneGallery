@@ -87,6 +87,12 @@
   <data name="Gallery_SortFileSize.Content" xml:space="preserve">
     <value>檔案大小</value>
   </data>
+  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
+    <value>隨機</value>
+  </data>
+  <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
+    <value>手氣不錯</value>
+  </data>
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>切換排序方向</value>
   </data>
@@ -227,6 +233,12 @@
   </data>
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>修改日期</value>
+  </data>
+  <data name="Detail_PixivArtworkId.Text" xml:space="preserve">
+    <value>Pixiv 作品 ID</value>
+  </data>
+  <data name="Detail_BepisDbId.Text" xml:space="preserve">
+    <value>BepisDB ID</value>
   </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>角色資訊</value>
@@ -451,5 +463,65 @@
   </data>
   <data name="Settings_RestartButton.Content" xml:space="preserve">
     <value>立即重新啟動</value>
+  </data>
+  <!-- AuthorsPage -->
+  <data name="Nav_Authors.Content" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Authors_Title.Text" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Authors_Empty.Text" xml:space="preserve">
+    <value>尚未偵測到作者。請將卡片資料夾命名為「作者名 (12345678)」（pixiv 使用者 ID），然後重新載入圖庫。</value>
+  </data>
+  <data name="Authors_RefreshAllLabel.Text" xml:space="preserve">
+    <value>全部重新整理</value>
+  </data>
+  <data name="Authors_OpenProfile.Text" xml:space="preserve">
+    <value>開啟 pixiv 個人頁面</value>
+  </data>
+  <data name="Authors_RefreshOne.Text" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <!-- AuthorDetailPage -->
+  <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
+    <value>開啟個人頁面</value>
+  </data>
+  <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
+    <value>場景</value>
+  </data>
+  <data name="AuthorDetail_CharactersTab.Text" xml:space="preserve">
+    <value>角色</value>
+  </data>
+  <data name="AuthorDetail_CoordinatesTab.Text" xml:space="preserve">
+    <value>服裝</value>
+  </data>
+  <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>隨機排序</value>
+  </data>
+  <!-- Settings: Plugins tab -->
+  <data name="Settings_TabPlugins.Header" xml:space="preserve">
+    <value>外掛</value>
+  </data>
+  <data name="Plugins_Header.Text" xml:space="preserve">
+    <value>已安裝外掛</value>
+  </data>
+  <data name="Plugins_Desc.Text" xml:space="preserve">
+    <value>外掛提供可選功能（例如從網路擷取作者資訊）。安裝：將外掛資料夾放入應用程式旁的 Plugins 目錄；移除：刪除該資料夾。</value>
+  </data>
+  <data name="Plugins_OpenFolder.Text" xml:space="preserve">
+    <value>開啟外掛資料夾</value>
+  </data>
+  <data name="Plugins_RestartNote.Text" xml:space="preserve">
+    <value>外掛變更需重新啟動應用程式後生效。</value>
+  </data>
+  <data name="Plugins_Empty.Text" xml:space="preserve">
+    <value>未安裝任何外掛。</value>
+  </data>
+  <data name="Plugins_StatusLoaded" xml:space="preserve">
+    <value>已載入</value>
+  </data>
+  <data name="Plugins_StatusFailed" xml:space="preserve">
+    <value>載入失敗</value>
   </data>
 </root>

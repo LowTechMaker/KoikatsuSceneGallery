@@ -650,6 +650,88 @@
                 </ScrollViewer>
             </PivotItem>
 
+            <!-- Plugins Tab -->
+            <PivotItem x:Uid="Settings_TabPlugins">
+                <ScrollViewer Padding="0,16,0,24">
+                    <StackPanel Spacing="16">
+                        <TextBlock
+                            x:Uid="Plugins_Header"
+                            Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock
+                            x:Uid="Plugins_Desc"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap" />
+
+                        <TextBlock
+                            x:Uid="Plugins_RestartNote"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                        <TextBlock
+                            x:Uid="Plugins_Empty"
+                            Opacity="0.6"
+                            Visibility="{x:Bind HasNoPlugins}" />
+
+                        <ItemsControl ItemsSource="{x:Bind PluginItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="local:PluginListItem">
+                                    <Grid
+                                        Margin="0,0,0,8"
+                                        Padding="16,12"
+                                        ColumnSpacing="12"
+                                        CornerRadius="8"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon
+                                            VerticalAlignment="Center"
+                                            Glyph="&#xEA86;" />
+
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock
+                                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                    Text="{x:Bind Name}" />
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{x:Bind Version}" />
+                                            </StackPanel>
+                                            <TextBlock
+                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{x:Bind Error}"
+                                                TextWrapping="Wrap"
+                                                Visibility="{x:Bind HasError}" />
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind StatusText}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Click="OpenPluginsFolder_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontSize="14" Glyph="&#xE8DA;" />
+                                <TextBlock x:Uid="Plugins_OpenFolder" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
             <!-- OCD Tab -->
             <PivotItem x:Uid="Settings_TabOcd">
                 <ScrollViewer Padding="0,16,0,24">

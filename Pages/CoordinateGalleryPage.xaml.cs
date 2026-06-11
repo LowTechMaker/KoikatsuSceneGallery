@@ -106,6 +106,7 @@ public sealed partial class CoordinateGalleryPage : Page
             return;
         _appliedColumns = columns;
         _appliedAvailable = available;
+        ViewModel.SetShuffleCount(columns * 2);
 
         double cellW = (available / columns) - 0.5;
         double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;
@@ -249,7 +250,7 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 
@@ -288,6 +289,12 @@ public sealed partial class CoordinateGalleryPage : Page
         var card = ViewModel.GetRandomCard();
         if (card != null)
             Frame.Navigate(typeof(CoordinateDetailPage), card);
+    }
+
+    private void FeelingLucky_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.Reshuffle();
+        ScrollToTop();
     }
 
     private void ScrollToTop_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

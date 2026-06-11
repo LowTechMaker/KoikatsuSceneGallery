@@ -87,6 +87,12 @@
   <data name="Gallery_SortFileSize.Content" xml:space="preserve">
     <value>File Size</value>
   </data>
+  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
+    <value>Shuffle</value>
+  </data>
+  <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
+    <value>I'm feeling lucky</value>
+  </data>
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Toggle sort direction</value>
   </data>
@@ -227,6 +233,12 @@
   </data>
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>Date Modified</value>
+  </data>
+  <data name="Detail_PixivArtworkId.Text" xml:space="preserve">
+    <value>Pixiv Artwork ID</value>
+  </data>
+  <data name="Detail_BepisDbId.Text" xml:space="preserve">
+    <value>BepisDB ID</value>
   </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>Character Info</value>
@@ -451,5 +463,65 @@
   </data>
   <data name="Settings_RestartButton.Content" xml:space="preserve">
     <value>Restart now</value>
+  </data>
+  <!-- AuthorsPage -->
+  <data name="Nav_Authors.Content" xml:space="preserve">
+    <value>Authors</value>
+  </data>
+  <data name="Authors_Title.Text" xml:space="preserve">
+    <value>Authors</value>
+  </data>
+  <data name="Authors_Empty.Text" xml:space="preserve">
+    <value>No authors detected yet. Name card folders like "Artist (12345678)" using the pixiv user ID, then reload the galleries.</value>
+  </data>
+  <data name="Authors_RefreshAllLabel.Text" xml:space="preserve">
+    <value>Refresh all</value>
+  </data>
+  <data name="Authors_OpenProfile.Text" xml:space="preserve">
+    <value>Open pixiv profile</value>
+  </data>
+  <data name="Authors_RefreshOne.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <!-- AuthorDetailPage -->
+  <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
+    <value>Open profile</value>
+  </data>
+  <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="AuthorDetail_CharactersTab.Text" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="AuthorDetail_CoordinatesTab.Text" xml:space="preserve">
+    <value>Coordinates</value>
+  </data>
+  <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Shuffle</value>
+  </data>
+  <!-- Settings: Plugins tab -->
+  <data name="Settings_TabPlugins.Header" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="Plugins_Header.Text" xml:space="preserve">
+    <value>Installed Plugins</value>
+  </data>
+  <data name="Plugins_Desc.Text" xml:space="preserve">
+    <value>Plugins add optional features (such as fetching author info from the internet). To install one, drop its folder into the Plugins directory next to the app; to remove it, delete the folder.</value>
+  </data>
+  <data name="Plugins_OpenFolder.Text" xml:space="preserve">
+    <value>Open Plugins Folder</value>
+  </data>
+  <data name="Plugins_RestartNote.Text" xml:space="preserve">
+    <value>Changes to plugins take effect after restarting the app.</value>
+  </data>
+  <data name="Plugins_Empty.Text" xml:space="preserve">
+    <value>No plugins installed.</value>
+  </data>
+  <data name="Plugins_StatusLoaded" xml:space="preserve">
+    <value>Loaded</value>
+  </data>
+  <data name="Plugins_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
   </data>
 </root>
