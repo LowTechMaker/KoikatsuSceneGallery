@@ -102,6 +102,7 @@ public sealed class AuthorInfoService
                     break;
                 case NotifyCollectionChangedAction.Reset:
                     _counts[kind].Clear();
+                    PruneOrphanedDisplays();
                     AuthorsChanged?.Invoke();
                     break;
             }
@@ -156,6 +157,24 @@ public sealed class AuthorInfoService
             else counts[display] = count - 1;
         }
         AuthorsChanged?.Invoke();
+    }
+
+    private void PruneOrphanedDisplays()
+    {
+        List<AuthorKey>? toRemove = null;
+        foreach (var (key, display) in _displays)
+        {
+            bool hasCount = false;
+            foreach (var kindCounts in _counts.Values)
+            {
+                if (kindCounts.ContainsKey(display)) { hasCount = true; break; }
+            }
+            if (!hasCount)
+                (toRemove ??= []).Add(key);
+        }
+        if (toRemove is null) return;
+        foreach (var key in toRemove)
+            _displays.Remove(key);
     }
 
     /// <summary>
