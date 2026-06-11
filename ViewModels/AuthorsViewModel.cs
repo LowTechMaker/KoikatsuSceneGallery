@@ -56,9 +56,16 @@ public partial class AuthorsViewModel : ObservableObject
             .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        Authors.Clear();
-        foreach (var summary in summaries)
-            Authors.Add(summary);
+        for (int i = 0; i < summaries.Count; i++)
+        {
+            if (i < Authors.Count)
+                Authors[i] = summaries[i];
+            else
+                Authors.Add(summaries[i]);
+        }
+        while (Authors.Count > summaries.Count)
+            Authors.RemoveAt(Authors.Count - 1);
+
         HasAuthors = Authors.Count > 0;
     }
 
