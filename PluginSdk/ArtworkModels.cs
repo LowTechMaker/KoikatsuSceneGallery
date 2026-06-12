@@ -23,6 +23,7 @@ public sealed record ArtworkInfo(
     ArtworkId ArtworkId,
     string AuthorName,
     string AuthorId,
+    string? Title,
     ContentRating Rating,
     IReadOnlyList<ArtworkTag> Tags,
     DateTimeOffset FetchedAt);

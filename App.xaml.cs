@@ -116,6 +116,7 @@ public partial class App : Application
                 SettingsService);
             ImportViewModel = new ImportViewModel(
                 ImportService,
+                SettingsService,
                 Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         }
 

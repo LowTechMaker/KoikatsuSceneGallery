@@ -106,5 +106,31 @@ public class SettingsService
         public List<string> CoordinateFolderPaths { get; set; } = [];
         public bool CoordinateResolutionFilterEnabled { get; set; } = false;
         public List<string> CoordinateAllowedResolutions { get; set; } = ["252x352"];
+
+        /// <summary>
+        /// Relative subfolder path inserted between the library root and the author
+        /// folder when resolving import destinations. Can be multi-level (e.g. "整理\pixiv").
+        /// Empty = place directly under the root (legacy behaviour).
+        /// </summary>
+        public string ImportSubfolder { get; set; } = "";
+
+        /// <summary>
+        /// When the number of files from the same pixiv artwork in one import batch
+        /// is strictly greater than this value, a subfolder named after the artwork
+        /// title is created inside the author folder. 0 = always create; -1 = never.
+        /// </summary>
+        public int ArtworkSubfolderThreshold { get; set; } = 1;
+
+        public bool UseVisualSimilarity { get; set; }
+
+        // ── Folder naming (OCD) ─────────────────────────────────────
+        public string AuthorFolderFormat { get; set; } = "{name} ({id})";
+        public string ArtworkFolderFormat { get; set; } = "{title} ({id})";
+        public string UnknownFolderName { get; set; } = "Unknown";
+        public string KoikatsuFolderName { get; set; } = "Koikatsu";
+        public string KoikatsuSunshineFolderName { get; set; } = "KoikatsuSunshine";
+        public string GFolderName { get; set; } = "G";
+        public string R18FolderName { get; set; } = "R-18";
+        public string R18GFolderName { get; set; } = "R-18G";
     }
 }

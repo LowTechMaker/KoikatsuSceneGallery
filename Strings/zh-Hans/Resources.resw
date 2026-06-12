@@ -78,6 +78,9 @@
   <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>随机打开一张卡片</value>
   </data>
+  <data name="Gallery_ShowR18Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示 R-18 内容</value>
+  </data>
   <data name="Gallery_SortName.Content" xml:space="preserve">
     <value>名称</value>
   </data>
@@ -168,6 +171,24 @@
   </data>
   <data name="Settings_CoordFoldersDesc.Text" xml:space="preserve">
     <value>添加包含 Koikatsu 服装卡 .png 文件的文件夹。子文件夹会自动扫描。</value>
+  </data>
+  <data name="Settings_ImportSubfolderHeader.Text" xml:space="preserve">
+    <value>整理子目录</value>
+  </data>
+  <data name="Settings_ImportSubfolderDesc.Text" xml:space="preserve">
+    <value>在各根目录下建立子目录来存放整理好的卡片。支持多层路径，例如「整理\pixiv」。留空则直接放在根目录。</value>
+  </data>
+  <data name="Settings_ImportSubfolderLabel.Text" xml:space="preserve">
+    <value>子目录路径</value>
+  </data>
+  <data name="Settings_ImportSubfolderPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>例如 pixiv</value>
+  </data>
+  <data name="Settings_ArtworkSubfolder.Header" xml:space="preserve">
+    <value>帖子子文件夹阈值</value>
+  </data>
+  <data name="Settings_ArtworkSubfolderDesc.Text" xml:space="preserve">
+    <value>当同一帖子的卡片数量严格大于此值时，在作者文件夹下建立以帖子名称命名的子文件夹。0 = 始终建立；-1 = 从不建立。</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
     <value>服装卡分辨率筛选</value>
@@ -431,6 +452,18 @@
   <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
     <value>关</value>
   </data>
+  <data name="Settings_VisualSimilarity.Header" xml:space="preserve">
+    <value>视觉相似度检测</value>
+  </data>
+  <data name="Settings_VisualSimilarity.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="Settings_VisualSimilarity.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="Import_SubfolderThreshold.Header" xml:space="preserve">
+    <value>子文件夹阈值</value>
+  </data>
   <data name="Settings_AdvancedHeader.Text" xml:space="preserve">
     <value>高级</value>
   </data>
@@ -546,7 +579,70 @@
   <data name="Import_ClearLabel.Text" xml:space="preserve">
     <value>清除</value>
   </data>
+  <data name="Import_UndoLabel.Text" xml:space="preserve">
+    <value>撤销</value>
+  </data>
   <data name="Import_RejectedWarningMessage" xml:space="preserve">
     <value>已移除 {0} 个非 Koikatsu 卡片的文件。</value>
+  </data>
+  <data name="Import_ScanningHint.Text" xml:space="preserve">
+    <value>正在扫描文件…</value>
+  </data>
+  <data name="Import_Tab_Pixiv.Header" xml:space="preserve">
+    <value>pixiv</value>
+  </data>
+  <data name="Import_Tab_Unknown.Header" xml:space="preserve">
+    <value>未识别</value>
+  </data>
+  <data name="Import_UnknownHint.Message" xml:space="preserve">
+    <value>这些卡片并非来自 pixiv，需要手动分类。</value>
+  </data>
+  <data name="Import_Analyzing.Text" xml:space="preserve">
+    <value>分析中…</value>
+  </data>
+  <data name="Import_FetchFailed.Text" xml:space="preserve">
+    <value>帖子已删除或设为不公开</value>
+  </data>
+  <data name="Import_SearchAuthor" xml:space="preserve">
+    <value>搜索作者…</value>
+  </data>
+  <data name="Import_AuthorName.PlaceholderText" xml:space="preserve">
+    <value>作者名称</value>
+  </data>
+  <data name="Import_ArtworkId.PlaceholderText" xml:space="preserve">
+    <value>作品 ID</value>
+  </data>
+  <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
+    <value>作者 ID</value>
+  </data>
+  <data name="Settings_FolderNamingHeader.Text" xml:space="preserve">
+    <value>导入文件夹命名</value>
+  </data>
+  <data name="Settings_FolderNamingDesc.Text" xml:space="preserve">
+    <value>自定义导入卡片时使用的文件夹名称。占位符：{name}、{id}、{title}。</value>
+  </data>
+  <data name="Settings_AuthorFolderFormat.Header" xml:space="preserve">
+    <value>作者文件夹格式</value>
+  </data>
+  <data name="Settings_ArtworkFolderFormat.Header" xml:space="preserve">
+    <value>帖子子文件夹格式</value>
+  </data>
+  <data name="Settings_UnknownFolderName.Header" xml:space="preserve">
+    <value>未知作者文件夹名称</value>
+  </data>
+  <data name="Settings_KoikatsuFolderName.Header" xml:space="preserve">
+    <value>Koikatsu 文件夹名称</value>
+  </data>
+  <data name="Settings_KoikatsuSunshineFolderName.Header" xml:space="preserve">
+    <value>Koikatsu Sunshine 文件夹名称</value>
+  </data>
+  <data name="Settings_GFolderName.Header" xml:space="preserve">
+    <value>全年龄文件夹名称</value>
+  </data>
+  <data name="Settings_R18FolderName.Header" xml:space="preserve">
+    <value>R-18 文件夹名称</value>
+  </data>
+  <data name="Settings_R18GFolderName.Header" xml:space="preserve">
+    <value>R-18G 文件夹名称</value>
   </data>
 </root>

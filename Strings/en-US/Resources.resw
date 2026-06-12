@@ -78,6 +78,9 @@
   <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Open a random card</value>
   </data>
+  <data name="Gallery_ShowR18Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show R-18 content</value>
+  </data>
   <data name="Gallery_SortName.Content" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -168,6 +171,24 @@
   </data>
   <data name="Settings_CoordFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing Koikatsu coordinate card .png files. Subfolders are scanned automatically.</value>
+  </data>
+  <data name="Settings_ImportSubfolderHeader.Text" xml:space="preserve">
+    <value>Organized Subfolder</value>
+  </data>
+  <data name="Settings_ImportSubfolderDesc.Text" xml:space="preserve">
+    <value>Subfolder path (relative to each library root) where imported cards are placed. Supports multi-level paths like "organized\pixiv". Leave empty to place cards directly in the root.</value>
+  </data>
+  <data name="Settings_ImportSubfolderLabel.Text" xml:space="preserve">
+    <value>Subfolder path</value>
+  </data>
+  <data name="Settings_ImportSubfolderPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>e.g. pixiv</value>
+  </data>
+  <data name="Settings_ArtworkSubfolder.Header" xml:space="preserve">
+    <value>Artwork subfolder threshold</value>
+  </data>
+  <data name="Settings_ArtworkSubfolderDesc.Text" xml:space="preserve">
+    <value>Create a subfolder named after the artwork when the number of files from the same artwork in one import batch is strictly greater than this value. 0 = always; -1 = never.</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
     <value>Coordinate Resolution Filter</value>
@@ -431,6 +452,18 @@
   <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
     <value>Off</value>
   </data>
+  <data name="Settings_VisualSimilarity.Header" xml:space="preserve">
+    <value>Visual similarity detection</value>
+  </data>
+  <data name="Settings_VisualSimilarity.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Settings_VisualSimilarity.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Import_SubfolderThreshold.Header" xml:space="preserve">
+    <value>Subfolder threshold</value>
+  </data>
   <data name="Settings_AdvancedHeader.Text" xml:space="preserve">
     <value>Advanced</value>
   </data>
@@ -546,7 +579,70 @@
   <data name="Import_ClearLabel.Text" xml:space="preserve">
     <value>Clear</value>
   </data>
+  <data name="Import_UndoLabel.Text" xml:space="preserve">
+    <value>Undo</value>
+  </data>
   <data name="Import_RejectedWarningMessage" xml:space="preserve">
     <value>{0} file(s) are not Koikatsu cards and were removed.</value>
+  </data>
+  <data name="Import_ScanningHint.Text" xml:space="preserve">
+    <value>Scanning files…</value>
+  </data>
+  <data name="Import_Tab_Pixiv.Header" xml:space="preserve">
+    <value>pixiv</value>
+  </data>
+  <data name="Import_Tab_Unknown.Header" xml:space="preserve">
+    <value>Unrecognized</value>
+  </data>
+  <data name="Import_UnknownHint.Message" xml:space="preserve">
+    <value>These cards were not downloaded from pixiv and need manual classification.</value>
+  </data>
+  <data name="Import_Analyzing.Text" xml:space="preserve">
+    <value>Analyzing…</value>
+  </data>
+  <data name="Import_FetchFailed.Text" xml:space="preserve">
+    <value>Artwork deleted or private</value>
+  </data>
+  <data name="Import_SearchAuthor" xml:space="preserve">
+    <value>Search author...</value>
+  </data>
+  <data name="Import_AuthorName.PlaceholderText" xml:space="preserve">
+    <value>Author name</value>
+  </data>
+  <data name="Import_ArtworkId.PlaceholderText" xml:space="preserve">
+    <value>Artwork ID</value>
+  </data>
+  <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
+    <value>Author ID</value>
+  </data>
+  <data name="Settings_FolderNamingHeader.Text" xml:space="preserve">
+    <value>Import folder naming</value>
+  </data>
+  <data name="Settings_FolderNamingDesc.Text" xml:space="preserve">
+    <value>Customize the folder names used when importing cards. Placeholders: {name}, {id}, {title}.</value>
+  </data>
+  <data name="Settings_AuthorFolderFormat.Header" xml:space="preserve">
+    <value>Author folder format</value>
+  </data>
+  <data name="Settings_ArtworkFolderFormat.Header" xml:space="preserve">
+    <value>Artwork subfolder format</value>
+  </data>
+  <data name="Settings_UnknownFolderName.Header" xml:space="preserve">
+    <value>Unknown author folder name</value>
+  </data>
+  <data name="Settings_KoikatsuFolderName.Header" xml:space="preserve">
+    <value>Koikatsu folder name</value>
+  </data>
+  <data name="Settings_KoikatsuSunshineFolderName.Header" xml:space="preserve">
+    <value>Koikatsu Sunshine folder name</value>
+  </data>
+  <data name="Settings_GFolderName.Header" xml:space="preserve">
+    <value>All-ages folder name</value>
+  </data>
+  <data name="Settings_R18FolderName.Header" xml:space="preserve">
+    <value>R-18 folder name</value>
+  </data>
+  <data name="Settings_R18GFolderName.Header" xml:space="preserve">
+    <value>R-18G folder name</value>
   </data>
 </root>

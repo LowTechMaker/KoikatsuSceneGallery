@@ -178,10 +178,11 @@ public sealed class AuthorInfoService
     }
 
     /// <summary>
-    /// Resolves a directory to an author by parsing its name and, failing
-    /// that, its ancestors' names — but never above a configured library root,
-    /// so unrelated path segments (e.g. a user folder with digits) can't
-    /// produce phantom authors. Nearest-to-file match wins.
+    /// Resolves a directory to an author by walking up from the file's
+    /// directory toward the library root and returning the highest
+    /// (farthest-from-file) match. This avoids treating artwork subfolders
+    /// like "Title (artworkId)" as authors when the real author folder sits
+    /// one level above.
     /// </summary>
     private AuthorDisplay? ResolveDirectory(string directory)
     {
@@ -191,10 +192,17 @@ public sealed class AuthorInfoService
         AuthorDisplay? result = null;
         if (IsAtOrBelowRoot(directory))
         {
-            var parsed = _provider!.TryParseFolderName(Path.GetFileName(directory));
-            result = parsed is not null
-                ? GetOrCreateDisplay(parsed)
-                : Path.GetDirectoryName(directory) is { } parent ? ResolveDirectory(parent) : null;
+            // Check ancestors first so the outermost match wins.
+            if (Path.GetDirectoryName(directory) is { } parent)
+                result = ResolveDirectory(parent);
+
+            // Only parse this folder if no ancestor matched.
+            if (result is null)
+            {
+                var parsed = _provider!.TryParseFolderName(Path.GetFileName(directory));
+                if (parsed is not null)
+                    result = GetOrCreateDisplay(parsed);
+            }
         }
 
         _directoryCache[directory] = result;

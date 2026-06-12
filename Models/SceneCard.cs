@@ -32,6 +32,9 @@ public partial class SceneCard : ObservableObject, IAuthorOwner
     [ObservableProperty]
     public partial GameVersion Game { get; set; } = GameVersion.Unknown;
 
+    [ObservableProperty]
+    public partial bool IsR18Content { get; set; }
+
     /// <summary>Author resolved from the card's folder name by a plugin; null
     /// when no author plugin is installed or the folder carries no id.</summary>
     [ObservableProperty]

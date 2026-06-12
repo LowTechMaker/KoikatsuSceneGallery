@@ -13,6 +13,38 @@ public sealed class ImportService
 {
     private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
 
+    private static string GetRatingFolder(ContentRating rating, SettingsService.ConfigData config) => rating switch
+    {
+        ContentRating.R18 => config.R18FolderName,
+        ContentRating.R18G => config.R18GFolderName,
+        _ => config.GFolderName,
+    };
+
+    private static string GetGameVersionFolder(GameVersion gameVersion, SettingsService.ConfigData config) => gameVersion switch
+    {
+        GameVersion.Koikatsu         => config.KoikatsuFolderName,
+        GameVersion.KoikatsuSunshine => config.KoikatsuSunshineFolderName,
+        _ => "",
+    };
+
+    private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
+        [config.GFolderName, config.R18FolderName, config.R18GFolderName];
+
+    private static string[] GetGameVersionFolderNames(SettingsService.ConfigData config) =>
+        [config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, ""];
+
+    private static string FormatAuthorFolder(SettingsService.ConfigData config, string authorName, string authorId) =>
+        SanitizeFolderName(config.AuthorFolderFormat
+            .Replace("{name}", authorName)
+            .Replace("{id}", authorId));
+
+    private static string FormatArtworkFolder(SettingsService.ConfigData config, string? title, string artworkId) =>
+        string.IsNullOrEmpty(title)
+            ? $"({artworkId})"
+            : SanitizeFolderName(config.ArtworkFolderFormat
+                .Replace("{title}", title)
+                .Replace("{id}", artworkId));
+
     private readonly ICardImportProvider _importProvider;
     private readonly IFolderAuthorProvider? _authorProvider;
     private readonly SettingsService _settingsService;
@@ -27,42 +59,82 @@ public sealed class ImportService
         _settingsService = settingsService;
     }
 
+    public async Task ComputeFingerprintsAsync(IReadOnlyList<ImportItem> items, CancellationToken ct)
+    {
+        await Parallel.ForEachAsync(items, new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            CancellationToken = ct,
+        }, async (item, token) =>
+        {
+            var fp = await ImageFingerprintService.ComputeAsync(item.SourceFilePath, token).ConfigureAwait(false);
+            if (fp is not null)
+            {
+                item.PHash = fp.Value.PHash;
+                item.ColorHistogram = fp.Value.Histogram;
+            }
+        }).ConfigureAwait(false);
+    }
+
+    public ArtworkId CreateManualArtworkId(string id) =>
+        new(_importProvider.ProviderId, id.Trim());
+
+    public async Task<ArtworkInfo?> FetchArtworkInfoAsync(ArtworkId artworkId, CancellationToken ct)
+    {
+        try
+        {
+            return await _importProvider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     /// <summary>
-    /// Analyzes a batch of dropped files: classifies card type, parses artwork
-    /// IDs, fetches artwork info from the provider. Items in the collection are
-    /// updated on the dispatcher thread as results arrive.
+    /// Analyzes a batch of dropped file paths: classifies card type on a
+    /// background thread (keeping the UI responsive), adds valid cards to the
+    /// collection as they are found, then fetches artwork metadata and resolves
+    /// destination folders. Items in the collection are updated on the dispatcher
+    /// thread as results arrive.
     /// </summary>
     public async Task<int> AnalyzeAsync(
+        IReadOnlyList<string> filePaths,
         ObservableCollection<ImportItem> items,
         DispatcherQueue dispatcher,
         CancellationToken ct)
     {
-        // Phase 1: classify card type + parse artwork ID (all local, fast)
-        foreach (var item in items)
+        // Phase 1: classify on a background thread so the UI stays responsive
+        // (CardTypeClassifier reads file content for each card).
+        var (validItems, rejectedCount) = await Task.Run(() =>
         {
-            ct.ThrowIfCancellationRequested();
-            item.Status = ImportItemStatus.Analyzing;
-            item.CardType = CardTypeClassifier.Classify(item.SourceFilePath);
-            item.ArtworkId = _importProvider.TryParseFilename(item.FileName);
-
-            if (item.CardType == CardType.NotACard)
-                item.Status = ImportItemStatus.Skipped;
-        }
-
-        // Remove non-card files from the queue
-        var nonCards = items.Where(i => i.CardType == CardType.NotACard).ToList();
-        int rejectedCount = nonCards.Count;
-        if (rejectedCount > 0)
-        {
-            dispatcher.TryEnqueue(() =>
+            var valid = new List<ImportItem>(filePaths.Count);
+            int rejected = 0;
+            foreach (var path in filePaths)
             {
-                foreach (var nc in nonCards)
-                    items.Remove(nc);
-            });
-        }
+                ct.ThrowIfCancellationRequested();
+                var (cardType, gameVersion) = CardTypeClassifier.ClassifyExtended(path);
+                if (cardType == CardType.NotACard) { rejected++; continue; }
+                var item = new ImportItem { SourceFilePath = path, Status = ImportItemStatus.Analyzing };
+                item.CardType = cardType;
+                item.GameVersion = gameVersion;
+                item.ArtworkId = _importProvider.TryParseFilename(item.FileName);
+                valid.Add(item);
+            }
+            return (valid, rejected);
+        }, ct);
 
-        // Phase 2: deduplicate artwork IDs and fetch from provider
-        var groups = items
+        // Back on the UI thread: add valid items to the collection.
+        // The first Add flips HasItems → the DropZone transitions to the queue view.
+        foreach (var item in validItems)
+            items.Add(item);
+
+        // Phase 2: deduplicate artwork IDs and fetch metadata from provider
+        var groups = validItems
             .Where(i => i.ArtworkId is not null)
             .GroupBy(i => i.ArtworkId!.Id)
             .ToList();
@@ -94,28 +166,102 @@ public sealed class ImportService
                     {
                         item.AuthorName = info.AuthorName;
                         item.AuthorId = info.AuthorId;
+                        item.Title = info.Title;
                         item.Rating = info.Rating;
                         item.Tags = info.Tags;
                     }
-
-                    if (item.Status != ImportItemStatus.Skipped)
-                        item.Status = ImportItemStatus.ReadyToImport;
+                    item.Status = ImportItemStatus.ReadyToImport;
                 }
             });
         }
 
-        // Mark remaining items without artwork ID as ready (they're valid cards but no pixiv ID)
+        // Mark items without an artwork ID as ready
         dispatcher.TryEnqueue(() =>
         {
-            foreach (var item in items.Where(i => i.ArtworkId is null && i.Status == ImportItemStatus.Analyzing))
+            foreach (var item in validItems.Where(i => i.ArtworkId is null))
                 item.Status = ImportItemStatus.ReadyToImport;
         });
 
-        // Phase 3: resolve destinations
+        // Phase 3: resolve destinations (initial pass; fingerprints not yet computed,
+        // so visual similarity falls back to count threshold here — a second
+        // ReResolveAsync call after ComputeFingerprintsAsync corrects this)
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        dispatcher.TryEnqueue(() => ResolveDestinations(items, config));
+        var existingFilenames = await Task.Run(() => BuildExistingFilenameSet(config), ct).ConfigureAwait(false);
+        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, existingFilenames,
+            config.ArtworkSubfolderThreshold, config.UseVisualSimilarity));
 
         return rejectedCount;
+    }
+
+    /// <summary>
+    /// Scans all library roots for author folders, returning deduplicated authors
+    /// sorted by name. Used by the manual-assign picker.
+    /// </summary>
+    public async Task<List<(string Name, string Id)>> GetKnownAuthorsAsync(CancellationToken ct)
+    {
+        if (_authorProvider is null) return [];
+
+        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
+        var provider = _authorProvider;
+
+        return await Task.Run(() =>
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<(string Name, string Id)>();
+            var subfolder = config.ImportSubfolder.Trim();
+
+            var allRoots = config.FolderPaths
+                .Concat(config.CharacterFolderPaths)
+                .Concat(config.CoordinateFolderPaths)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var root in allRoots)
+            {
+                if (!Directory.Exists(root)) continue;
+
+                foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
+                {
+                    foreach (var ratingFolder in GetRatingFolderNames(config))
+                    {
+                        var ratingDir = BuildTargetBase(root, subfolder, gameVersionFolder, ratingFolder, null);
+                        if (!Directory.Exists(ratingDir)) continue;
+                        try
+                        {
+                            foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                            {
+                                ct.ThrowIfCancellationRequested();
+                                var parsed = provider.TryParseFolderName(Path.GetFileName(dir));
+                                if (parsed is not null && seen.Add(parsed.Key.Id))
+                                    result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                            }
+                        }
+                        catch (OperationCanceledException) { throw; }
+                        catch { }
+                    }
+                }
+            }
+
+            result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return result;
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Re-resolves destination paths for all ReadyToImport items. Called after
+    /// manual author assignment so the newly-assigned items get proper paths.
+    /// </summary>
+    public async Task ReResolveAsync(
+        ObservableCollection<ImportItem> items,
+        DispatcherQueue dispatcher,
+        CancellationToken ct,
+        int? artworkSubfolderThreshold = null,
+        bool? useVisualSimilarity = null)
+    {
+        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
+        var existingFilenames = await Task.Run(() => BuildExistingFilenameSet(config), ct).ConfigureAwait(false);
+        int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
+        bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
+        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, existingFilenames, threshold, visual));
     }
 
     /// <summary>
@@ -127,7 +273,7 @@ public sealed class ImportService
         CancellationToken ct)
     {
         var toImport = items
-            .Where(i => i.Status == ImportItemStatus.ReadyToImport && !i.IsExcluded && i.DestinationPath is not null)
+            .Where(i => i.Status == ImportItemStatus.ReadyToImport && i.DestinationPath is not null)
             .ToList();
 
         foreach (var item in toImport)
@@ -144,11 +290,19 @@ public sealed class ImportService
 
                     if (File.Exists(item.DestinationPath))
                     {
-                        dispatcher.TryEnqueue(() =>
+                        if (FilesAreIdentical(item.SourceFilePath, item.DestinationPath!))
                         {
-                            item.Status = ImportItemStatus.Skipped;
-                            item.ErrorMessage = "File already exists";
-                        });
+                            File.Delete(item.SourceFilePath);
+                            dispatcher.TryEnqueue(() => item.Status = ImportItemStatus.Completed);
+                        }
+                        else
+                        {
+                            dispatcher.TryEnqueue(() =>
+                            {
+                                item.Status = ImportItemStatus.Skipped;
+                                item.ErrorMessage = "File already exists";
+                            });
+                        }
                         return;
                     }
 
@@ -169,30 +323,74 @@ public sealed class ImportService
                 });
             }
         }
+
+        // Clean up empty source directories after all moves complete.
+        await Task.Run(() =>
+        {
+            var sourceDirs = toImport
+                .Where(i => i.Status == ImportItemStatus.Completed)
+                .Select(i => Path.GetDirectoryName(i.SourceFilePath)!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(d => d.Length);
+
+            foreach (var dir in sourceDirs)
+            {
+                try
+                {
+                    if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                        Directory.Delete(dir);
+                }
+                catch { }
+            }
+        }, CancellationToken.None).ConfigureAwait(false);
     }
 
-    private void ResolveDestinations(ObservableCollection<ImportItem> items, SettingsService.ConfigData config)
+    private void ResolveDestinations(
+        ObservableCollection<ImportItem> items,
+        SettingsService.ConfigData config,
+        HashSet<string> existingFilenames,
+        int artworkThreshold = 1,
+        bool useVisualSimilarity = false)
     {
-        // Build folder index: for each configured root, enumerate subdirectories
-        // and parse author IDs using the folder name parser.
         var folderIndex = BuildFolderIndex(config);
+        var subfolder = config.ImportSubfolder.Trim();
+
+        var readyWithArtwork = items
+            .Where(i => i.Status == ImportItemStatus.ReadyToImport && i.ArtworkId is not null)
+            .GroupBy(i => i.ArtworkId!.Id)
+            .ToList();
+
+        var artworkCounts = readyWithArtwork.ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        var artworkGroups = readyWithArtwork.ToDictionary(
+            g => g.Key,
+            g => (IReadOnlyList<ImportItem>)g.ToList(),
+            StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in items)
         {
             if (item.Status != ImportItemStatus.ReadyToImport || item.CardType == CardType.NotACard)
                 continue;
 
+            if (existingFilenames.Contains(item.FileName))
+            {
+                item.Status = ImportItemStatus.AlreadyInLibrary;
+                continue;
+            }
+
             var roots = GetRootsForCardType(item.CardType, config);
             if (roots.Count == 0) continue;
 
+            var ratingFolder = GetRatingFolder(item.Rating, config);
+            var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
             string? targetFolder = null;
 
             if (item.AuthorId is not null)
             {
-                // Search all roots for this card type for a matching author folder
                 foreach (var root in roots)
                 {
-                    if (folderIndex.TryGetValue(root, out var authorFolders)
+                    if (folderIndex.TryGetValue(root, out var gameIndex)
+                        && gameIndex.TryGetValue(gameVersionFolder, out var ratingIndex)
+                        && ratingIndex.TryGetValue(ratingFolder, out var authorFolders)
                         && authorFolders.TryGetValue(item.AuthorId, out var existing))
                     {
                         targetFolder = existing;
@@ -200,24 +398,94 @@ public sealed class ImportService
                     }
                 }
 
-                // No existing folder — create under the first root
                 if (targetFolder is null && item.AuthorName is not null)
                 {
-                    var safeName = SanitizeFolderName($"{item.AuthorName} ({item.AuthorId})");
-                    targetFolder = Path.Combine(roots[0], safeName);
+                    var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, gameVersionFolder, ratingFolder, safeName);
                 }
             }
 
-            // Fallback: use first root directly if no author info
-            targetFolder ??= roots[0];
+            targetFolder ??= BuildTargetBase(roots[0], subfolder, gameVersionFolder, config.UnknownFolderName, null);
+
+            if (item.ArtworkId is not null)
+            {
+                var artworkSafeName = FormatArtworkFolder(config, item.Title, item.ArtworkId.Id);
+                var artworkFolder = Path.Combine(targetFolder, artworkSafeName);
+
+                if (Directory.Exists(artworkFolder))
+                {
+                    targetFolder = artworkFolder;
+                }
+                else
+                {
+                    bool countExceeds = artworkThreshold >= 0
+                        && artworkCounts.TryGetValue(item.ArtworkId.Id, out var cnt)
+                        && cnt > artworkThreshold;
+
+                    if (useVisualSimilarity)
+                    {
+                        var artworkItems = artworkGroups.TryGetValue(item.ArtworkId.Id, out var ag) ? ag : null;
+                        var visualVerdict = artworkItems is not null
+                            ? CardGroupingService.ShouldGroupAsArtwork(artworkItems) : null;
+
+                        bool shouldCreate = visualVerdict switch
+                        {
+                            true => true,
+                            false => false,
+                            null => countExceeds,
+                        };
+                        if (shouldCreate)
+                            targetFolder = artworkFolder;
+                    }
+                    else if (countExceeds)
+                    {
+                        targetFolder = artworkFolder;
+                    }
+                }
+            }
 
             item.DestinationPath = Path.Combine(targetFolder, item.FileName);
         }
     }
 
-    private Dictionary<string, Dictionary<string, string>> BuildFolderIndex(SettingsService.ConfigData config)
+    // Builds the path segments: root[\subfolder][\gameVersion]\rating[\authorName]
+    private static string BuildTargetBase(string root, string subfolder, string gameVersionFolder, string ratingFolder, string? authorName)
     {
-        var index = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        var parts = new List<string>(5) { root };
+        if (!string.IsNullOrEmpty(subfolder)) parts.Add(subfolder);
+        if (!string.IsNullOrEmpty(gameVersionFolder)) parts.Add(gameVersionFolder);
+        parts.Add(ratingFolder);
+        if (authorName is not null) parts.Add(authorName);
+        return Path.Combine([.. parts]);
+    }
+
+    private HashSet<string> BuildExistingFilenameSet(SettingsService.ConfigData config)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var allRoots = config.FolderPaths
+            .Concat(config.CharacterFolderPaths)
+            .Concat(config.CoordinateFolderPaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in allRoots)
+        {
+            if (!Directory.Exists(root)) continue;
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
+                    set.Add(Path.GetFileName(file));
+            }
+            catch { }
+        }
+
+        return set;
+    }
+
+    private Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, string>>>> BuildFolderIndex(SettingsService.ConfigData config)
+    {
+        // root → gameVersionFolder → ratingFolder → authorId → fullFolderPath
+        var index = new Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, string>>>>(StringComparer.OrdinalIgnoreCase);
+        var subfolder = config.ImportSubfolder.Trim();
 
         var allRoots = config.FolderPaths
             .Concat(config.CharacterFolderPaths)
@@ -228,23 +496,38 @@ public sealed class ImportService
         {
             if (!Directory.Exists(root)) continue;
 
-            var authorFolders = new Dictionary<string, string>();
-            try
+            var gameIndex = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
             {
-                foreach (var dir in Directory.EnumerateDirectories(root))
+                var ratingIndex = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var ratingFolder in GetRatingFolderNames(config))
                 {
-                    var folderName = Path.GetFileName(dir);
-                    var parsed = _authorProvider?.TryParseFolderName(folderName);
-                    if (parsed is not null)
-                        authorFolders.TryAdd(parsed.Key.Id, dir);
+                    var ratingDir = BuildTargetBase(root, subfolder, gameVersionFolder, ratingFolder, null);
+                    var authorFolders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                    if (Directory.Exists(ratingDir))
+                    {
+                        try
+                        {
+                            foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                            {
+                                var parsed = _authorProvider?.TryParseFolderName(Path.GetFileName(dir));
+                                if (parsed is not null)
+                                    authorFolders.TryAdd(parsed.Key.Id, dir);
+                            }
+                        }
+                        catch { }
+                    }
+
+                    ratingIndex[ratingFolder] = authorFolders;
                 }
-            }
-            catch
-            {
-                // Inaccessible directory — skip
+
+                gameIndex[gameVersionFolder] = ratingIndex;
             }
 
-            index[root] = authorFolders;
+            index[root] = gameIndex;
         }
 
         return index;
@@ -266,5 +549,28 @@ public sealed class ImportService
         foreach (var c in InvalidFileNameChars)
             name = name.Replace(c, '_');
         return name.Trim();
+    }
+
+    private static bool FilesAreIdentical(string pathA, string pathB)
+    {
+        var infoA = new FileInfo(pathA);
+        var infoB = new FileInfo(pathB);
+        if (infoA.Length != infoB.Length) return false;
+
+        const int bufferSize = 1 << 16;
+        var bufA = new byte[bufferSize];
+        var bufB = new byte[bufferSize];
+
+        using var fsA = infoA.OpenRead();
+        using var fsB = infoB.OpenRead();
+
+        while (true)
+        {
+            int readA = fsA.ReadAtLeast(bufA, bufferSize, throwOnEndOfStream: false);
+            int readB = fsB.ReadAtLeast(bufB, bufferSize, throwOnEndOfStream: false);
+            if (readA != readB) return false;
+            if (readA == 0) return true;
+            if (!bufA.AsSpan(0, readA).SequenceEqual(bufB.AsSpan(0, readB))) return false;
+        }
     }
 }

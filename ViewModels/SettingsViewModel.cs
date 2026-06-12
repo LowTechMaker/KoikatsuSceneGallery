@@ -60,6 +60,40 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowRestartHint { get; set; }
 
+    [ObservableProperty]
+    public partial string ImportSubfolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial double ArtworkSubfolderThreshold { get; set; } = 1;
+
+    // ── OCD ─────────────────────────────────────────────────────
+    [ObservableProperty]
+    public partial bool UseVisualSimilarity { get; set; }
+
+    [ObservableProperty]
+    public partial string AuthorFolderFormat { get; set; } = "{name} ({id})";
+
+    [ObservableProperty]
+    public partial string ArtworkFolderFormat { get; set; } = "{title} ({id})";
+
+    [ObservableProperty]
+    public partial string UnknownFolderName { get; set; } = "Unknown";
+
+    [ObservableProperty]
+    public partial string KoikatsuFolderName { get; set; } = "Koikatsu";
+
+    [ObservableProperty]
+    public partial string KoikatsuSunshineFolderName { get; set; } = "KoikatsuSunshine";
+
+    [ObservableProperty]
+    public partial string GFolderName { get; set; } = "G";
+
+    [ObservableProperty]
+    public partial string R18FolderName { get; set; } = "R-18";
+
+    [ObservableProperty]
+    public partial string R18GFolderName { get; set; } = "R-18G";
+
     // Suppresses the restart hint and save while LoadAsync seeds the initial value.
     private bool _isLoading;
 
@@ -162,6 +196,25 @@ public partial class SettingsViewModel : ObservableObject
         ShowRestartHint = true;
     }
 
+    partial void OnImportSubfolderChanged(string value)
+    {
+        _ = SaveConfigAsync();
+    }
+
+    partial void OnArtworkSubfolderThresholdChanged(double value)
+    {
+        _ = SaveConfigAsync();
+    }
+
+    partial void OnAuthorFolderFormatChanged(string value) => _ = SaveConfigAsync();
+    partial void OnArtworkFolderFormatChanged(string value) => _ = SaveConfigAsync();
+    partial void OnUnknownFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnKoikatsuFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnKoikatsuSunshineFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnGFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnR18FolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnR18GFolderNameChanged(string value) => _ = SaveConfigAsync();
+
     public async Task LoadAsync()
     {
         var config = await _settingsService.LoadConfigAsync();
@@ -197,6 +250,19 @@ public partial class SettingsViewModel : ObservableObject
         ScrollToTopOnSort = config.ScrollToTopOnSort;
         ThumbnailWidth = config.ThumbnailWidth;
         CacheFolderPath = config.CacheFolderPath;
+
+        ImportSubfolder = config.ImportSubfolder;
+        ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
+        UseVisualSimilarity = config.UseVisualSimilarity;
+
+        AuthorFolderFormat = config.AuthorFolderFormat;
+        ArtworkFolderFormat = config.ArtworkFolderFormat;
+        UnknownFolderName = config.UnknownFolderName;
+        KoikatsuFolderName = config.KoikatsuFolderName;
+        KoikatsuSunshineFolderName = config.KoikatsuSunshineFolderName;
+        GFolderName = config.GFolderName;
+        R18FolderName = config.R18FolderName;
+        R18GFolderName = config.R18GFolderName;
 
         _isLoading = true;
         PluginAnalysisEnabled = config.PluginAnalysisEnabled;
@@ -418,7 +484,18 @@ public partial class SettingsViewModel : ObservableObject
                 SizeSelectorEnabled = SizeSelectorEnabled,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
                 CacheFolderPath = CacheFolderPath,
-                Language = SelectedLanguage
+                Language = SelectedLanguage,
+                ImportSubfolder = ImportSubfolder,
+                ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
+                UseVisualSimilarity = UseVisualSimilarity,
+                AuthorFolderFormat = AuthorFolderFormat,
+                ArtworkFolderFormat = ArtworkFolderFormat,
+                UnknownFolderName = UnknownFolderName,
+                KoikatsuFolderName = KoikatsuFolderName,
+                KoikatsuSunshineFolderName = KoikatsuSunshineFolderName,
+                GFolderName = GFolderName,
+                R18FolderName = R18FolderName,
+                R18GFolderName = R18GFolderName
             };
             await _settingsService.SaveConfigAsync(config);
         }

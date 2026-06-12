@@ -75,6 +75,9 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public partial bool ShowFileNames { get; set; } = true;
 
     [ObservableProperty]
+    public partial bool ShowR18Content { get; set; }
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneratingThumbnails))]
     public partial int PendingThumbnailCount { get; set; }
 
@@ -108,6 +111,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     private bool _resolutionFilterEnabled;
     private HashSet<string> _allowedResolutions = [];
+    private HashSet<string> _r18FolderNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SceneCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
@@ -174,6 +178,11 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         ApplyFilter();
     }
 
+    partial void OnShowR18ContentChanged(bool value)
+    {
+        ApplyFilter();
+    }
+
     partial void OnEnvironmentFilterChanged(EnvironmentFilterOption value)
     {
         ApplyFilter();
@@ -216,6 +225,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             var config = await _settingsService.LoadConfigAsync();
             _resolutionFilterEnabled = config.ResolutionFilterEnabled;
             _allowedResolutions = [.. config.AllowedResolutions];
+            _r18FolderNames = new HashSet<string>(
+                [config.R18FolderName, config.R18GFolderName],
+                StringComparer.OrdinalIgnoreCase);
+            _r18FolderNames.RemoveWhere(string.IsNullOrWhiteSpace);
             ShowFileNames = config.ShowFileNames;
             _pluginAnalysisEnabled = config.PluginAnalysisEnabled;
             ShowMetadataFilters = config.PluginAnalysisEnabled;
@@ -240,6 +253,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                             // folders, or a reload racing the first load) so the
                             // same file can't appear twice in the grid.
                             if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
+                            card.IsR18Content = IsR18Path(card.FilePath);
                             Cards.Add(card);
                             added.Add(card);
                         }
@@ -536,6 +550,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         var envFilter = EnvironmentFilter;
         var timelineFilter = TimelineFilter;
         var gameFilter = GameFilter;
+        var showR18Content = ShowR18Content;
         var hasMetadataFilter = envFilter != EnvironmentFilterOption.All
             || timelineFilter != TimelineFilterOption.All
             || gameFilter != GameFilterOption.All;
@@ -543,6 +558,9 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
         Func<SceneCard, bool> baseFilter = card =>
         {
+            if (!showR18Content && card.IsR18Content)
+                return false;
+
             if (hasSearch)
             {
                 foreach (var kw in keywords)
@@ -608,7 +626,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             }
         }
 
-        if (!hasSearch && !filterRes && !hasMetadataFilter && !isShuffleMode)
+        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter && !isShuffleMode)
         {
             CardsView.Filter = null!;
         }
@@ -633,6 +651,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         {
             // Guard against re-adding a file that's already present.
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;
+            card.IsR18Content = IsR18Path(card.FilePath);
             card.ThumbnailPath = thumbnailPath;
             Cards.Add(card);
             QueueMetadata(card);
@@ -673,6 +692,22 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 CardRemovedNotification?.Invoke(path);
             }
         });
+    }
+
+    private bool IsR18Path(string filePath)
+    {
+        if (_r18FolderNames.Count == 0) return false;
+
+        var directory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrEmpty(directory)) return false;
+
+        foreach (var segment in directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        {
+            if (_r18FolderNames.Contains(segment))
+                return true;
+        }
+
+        return false;
     }
 
     public void Dispose()

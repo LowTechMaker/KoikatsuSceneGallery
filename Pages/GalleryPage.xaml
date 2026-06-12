@@ -63,6 +63,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Spacing="4">
@@ -91,7 +92,7 @@
 
             <ComboBox
                 x:Name="SortComboBox"
-                Grid.Column="2"
+                Grid.Column="3"
                 Width="160"
                 Height="32"
                 VerticalAlignment="Top"
@@ -106,7 +107,7 @@
             <ToggleButton
                 x:Name="SortDirectionButton"
                 x:Uid="Gallery_SortDirection"
-                Grid.Column="3"
+                Grid.Column="4"
                 Width="40"
                 Height="32"
                 Padding="0"
@@ -121,7 +122,7 @@
             <!--  Thumbnail size: small / medium / large (one stays selected)  -->
             <StackPanel
                 x:Name="SizeButtonsPanel"
-                Grid.Column="4"
+                Grid.Column="5"
                 Orientation="Horizontal"
                 VerticalAlignment="Top"
                 Spacing="4">
@@ -153,6 +154,16 @@
                     Click="SizeButton_Click"
                     Tag="2" />
             </StackPanel>
+
+            <ToggleButton
+                x:Uid="Gallery_ShowR18Button"
+                Grid.Column="2"
+                Width="64"
+                Height="32"
+                Padding="0"
+                VerticalAlignment="Top"
+                Content="R-18"
+                IsChecked="{x:Bind ViewModel.ShowR18Content, Mode=TwoWay}" />
         </Grid>
 
         <StackPanel
