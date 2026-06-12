@@ -532,6 +532,25 @@
   <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>隨機排序</value>
   </data>
+  <data name="AuthorDetail_PostsTab.Text" xml:space="preserve">
+    <value>貼文</value>
+  </data>
+  <!-- PostDetailPage -->
+  <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
+    <value>在瀏覽器開啟</value>
+  </data>
+  <data name="PostDetail_SaveLabel.Text" xml:space="preserve">
+    <value>儲存詳情</value>
+  </data>
+  <data name="PostDetail_Loading.Text" xml:space="preserve">
+    <value>載入中...</value>
+  </data>
+  <data name="PostDetail_TagsHeader.Text" xml:space="preserve">
+    <value>標籤</value>
+  </data>
+  <data name="PostDetail_DescriptionHeader.Text" xml:space="preserve">
+    <value>描述</value>
+  </data>
   <!-- Settings: Plugins tab -->
   <data name="Settings_TabPlugins.Header" xml:space="preserve">
     <value>外掛</value>

@@ -24,6 +24,8 @@ public sealed record ArtworkInfo(
     string AuthorName,
     string AuthorId,
     string? Title,
+    string? Description,
     ContentRating Rating,
     IReadOnlyList<ArtworkTag> Tags,
-    DateTimeOffset FetchedAt);
+    DateTimeOffset FetchedAt,
+    bool IsSavedLocally);

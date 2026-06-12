@@ -22,7 +22,17 @@ public interface ICardImportProvider : IPlugin
     /// Fetches artwork metadata from the provider. Rate-limited internally.
     /// Returns null when the artwork cannot be resolved (deleted, private).
     /// </summary>
-    Task<ArtworkInfo?> FetchArtworkInfoAsync(ArtworkId id, CancellationToken ct);
+    Task<ArtworkInfo?> FetchArtworkInfoAsync(
+        ArtworkId id,
+        CancellationToken ct,
+        bool saveToLocalCache = true);
+
+    /// <summary>
+    /// Extracts a provider-specific artwork identity from a subfolder name
+    /// (e.g. "Title (123456789)"). Pure string work, no I/O.
+    /// Returns null when the name doesn't match this provider's pattern.
+    /// </summary>
+    ArtworkId? TryParseArtworkFolderName(string folderName);
 
     /// <summary>Browser-openable URL for the artwork. No I/O.</summary>
     string GetArtworkUrl(ArtworkId id);

@@ -18,6 +18,13 @@ public sealed partial class AuthorDetailPage : Page
     private const double ContentInsetW = (CardMargin + CardInset) * 2;
     private const double FilenameReserve = 30;
     private const double DesiredWidth = 240;
+    private const int ScenesTabIndex = 0;
+    private const int CharactersTabIndex = 1;
+    private const int CoordinatesTabIndex = 2;
+    private const int PostsTabIndex = 3;
+
+    private CancellationTokenSource? _postsCts;
+    private static int? s_restoreSelectedTabOnBack;
 
     public AuthorDetailPage()
     {
@@ -28,7 +35,15 @@ public sealed partial class AuthorDetailPage : Page
     {
         base.OnNavigatedTo(e);
         if (e.Parameter is AuthorSummary summary)
+        {
             ViewModel.Load(summary);
+            RestoreSelectedTab(e.NavigationMode);
+            if (ViewModel.HasPixivId && App.AuthorPostService is { } postService)
+            {
+                _postsCts = new CancellationTokenSource();
+                _ = ViewModel.LoadPostsAsync(postService, _postsCts.Token);
+            }
+        }
 
         ScenesGrid.SizeChanged += Grid_SizeChanged;
         CharactersGrid.SizeChanged += Grid_SizeChanged;
@@ -45,6 +60,9 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _postsCts?.Cancel();
+        _postsCts?.Dispose();
+        _postsCts = null;
         ScenesGrid.SizeChanged -= Grid_SizeChanged;
         CharactersGrid.SizeChanged -= Grid_SizeChanged;
         CoordinatesGrid.SizeChanged -= Grid_SizeChanged;
@@ -72,6 +90,8 @@ public sealed partial class AuthorDetailPage : Page
     }
 
     public static string FormatCount(int count) => $"({count})";
+
+    public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
     private async void OpenProfile_Click(object sender, RoutedEventArgs e)
     {
@@ -107,18 +127,44 @@ public sealed partial class AuthorDetailPage : Page
     private void ScenesGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is SceneCard card)
+        {
+            s_restoreSelectedTabOnBack = ScenesTabIndex;
             Frame.Navigate(typeof(DetailPage), card);
+        }
     }
 
     private void CharactersGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is CharacterCard card)
+        {
+            s_restoreSelectedTabOnBack = CharactersTabIndex;
             Frame.Navigate(typeof(CharacterDetailPage), card);
+        }
     }
 
     private void CoordinatesGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is CoordinateCard card)
+        {
+            s_restoreSelectedTabOnBack = CoordinatesTabIndex;
             Frame.Navigate(typeof(CoordinateDetailPage), card);
+        }
+    }
+
+    private void PostsList_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is AuthorPost post)
+        {
+            s_restoreSelectedTabOnBack = PostsTabIndex;
+            Frame.Navigate(typeof(PostDetailPage), post);
+        }
+    }
+
+    private void RestoreSelectedTab(NavigationMode navigationMode)
+    {
+        if (navigationMode == NavigationMode.Back && s_restoreSelectedTabOnBack is { } tabIndex)
+            TabPivot.SelectedIndex = tabIndex;
+
+        s_restoreSelectedTabOnBack = null;
     }
 }

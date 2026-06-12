@@ -14,6 +14,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public ObservableCollection<SceneCard> Scenes { get; } = [];
     public ObservableCollection<CharacterCard> Characters { get; } = [];
     public ObservableCollection<CoordinateCard> Coordinates { get; } = [];
+    public ObservableCollection<AuthorPost> Posts { get; } = [];
 
     [ObservableProperty]
     public partial int SceneCount { get; set; }
@@ -23,6 +24,14 @@ public partial class AuthorDetailViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int CoordinateCount { get; set; }
+
+    [ObservableProperty]
+    public partial int PostCount { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingPosts { get; set; }
+
+    public bool HasPixivId => Author?.Key.ProviderId == "pixiv";
 
     public void Load(AuthorSummary summary)
     {
@@ -52,5 +61,26 @@ public partial class AuthorDetailViewModel : ObservableObject
                 Coordinates.Add(card);
         }
         CoordinateCount = Coordinates.Count;
+
+        OnPropertyChanged(nameof(HasPixivId));
+    }
+
+    public async Task LoadPostsAsync(AuthorPostService postService, CancellationToken ct)
+    {
+        if (Author is null || !HasPixivId) return;
+
+        IsLoadingPosts = true;
+        try
+        {
+            var posts = await postService.ScanAuthorPostsAsync(Author.Key, ct);
+            Posts.Clear();
+            foreach (var post in posts)
+                Posts.Add(post);
+            PostCount = Posts.Count;
+        }
+        finally
+        {
+            IsLoadingPosts = false;
+        }
     }
 }

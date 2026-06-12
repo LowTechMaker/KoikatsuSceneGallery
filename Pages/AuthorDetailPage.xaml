@@ -320,6 +320,74 @@
                 </GridView>
             </PivotItem>
 
+            <!-- Posts Tab (only for authors with provider ID) -->
+            <PivotItem
+                x:Name="PostsPivotItem"
+                Visibility="{x:Bind ViewModel.HasPixivId, Mode=OneWay}">
+                <PivotItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE8F1;" />
+                        <TextBlock x:Uid="AuthorDetail_PostsTab" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind local:AuthorDetailPage.FormatCount(ViewModel.PostCount), Mode=OneWay}" />
+                    </StackPanel>
+                </PivotItem.Header>
+                <Grid>
+                    <ProgressRing
+                        IsActive="{x:Bind ViewModel.IsLoadingPosts, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.IsLoadingPosts, Mode=OneWay}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                    <ListView
+                        x:Name="PostsList"
+                        Margin="0,8,0,0"
+                        IsItemClickEnabled="True"
+                        ItemClick="PostsList_ItemClick"
+                        ItemsSource="{x:Bind ViewModel.Posts}"
+                        SelectionMode="None">
+                        <ListView.ItemContainerTransitions>
+                            <TransitionCollection />
+                        </ListView.ItemContainerTransitions>
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:AuthorPost">
+                                <Grid Padding="12,8" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock
+                                            Text="{x:Bind DisplayTitle, Mode=OneWay}"
+                                            TextTrimming="CharacterEllipsis"
+                                            MaxLines="1" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind ArtworkId.Id}" />
+                                    </StackPanel>
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Bind local:AuthorDetailPage.FormatFileCount(LocalFileCount)}" />
+
+                                    <FontIcon
+                                        Grid.Column="2"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Glyph="&#xE76C;" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
         </Pivot>
     </Grid>
 </Page>

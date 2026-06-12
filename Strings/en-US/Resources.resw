@@ -532,6 +532,25 @@
   <data name="AuthorDetail_Shuffle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Shuffle</value>
   </data>
+  <data name="AuthorDetail_PostsTab.Text" xml:space="preserve">
+    <value>Posts</value>
+  </data>
+  <!-- PostDetailPage -->
+  <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
+    <value>Open in browser</value>
+  </data>
+  <data name="PostDetail_SaveLabel.Text" xml:space="preserve">
+    <value>Save details</value>
+  </data>
+  <data name="PostDetail_Loading.Text" xml:space="preserve">
+    <value>Loading details...</value>
+  </data>
+  <data name="PostDetail_TagsHeader.Text" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="PostDetail_DescriptionHeader.Text" xml:space="preserve">
+    <value>Description</value>
+  </data>
   <!-- Settings: Plugins tab -->
   <data name="Settings_TabPlugins.Header" xml:space="preserve">
     <value>Plugins</value>

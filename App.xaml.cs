@@ -27,6 +27,7 @@ public partial class App : Application
     public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
     public static ImportService? ImportService { get; private set; }
     public static ImportViewModel? ImportViewModel { get; private set; }
+    public static AuthorPostService? AuthorPostService { get; private set; }
 
     public App()
     {
@@ -118,6 +119,14 @@ public partial class App : Application
                 ImportService,
                 SettingsService,
                 Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+
+            if (PluginService.AuthorProvider is not null)
+            {
+                AuthorPostService = new AuthorPostService(
+                    PluginService.ImportProvider,
+                    PluginService.AuthorProvider,
+                    SettingsService);
+            }
         }
 
         AuthorsViewModel = new AuthorsViewModel(
