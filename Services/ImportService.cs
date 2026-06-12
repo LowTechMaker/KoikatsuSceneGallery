@@ -47,15 +47,18 @@ public sealed class ImportService
 
     private readonly ICardImportProvider _importProvider;
     private readonly IFolderAuthorProvider? _authorProvider;
+    private readonly IReverseImageSearchProvider? _reverseImageSearchProvider;
     private readonly SettingsService _settingsService;
 
     public ImportService(
         ICardImportProvider importProvider,
         IFolderAuthorProvider? authorProvider,
+        IReverseImageSearchProvider? reverseImageSearchProvider,
         SettingsService settingsService)
     {
         _importProvider = importProvider;
         _authorProvider = authorProvider;
+        _reverseImageSearchProvider = reverseImageSearchProvider;
         _settingsService = settingsService;
     }
 
@@ -84,6 +87,29 @@ public sealed class ImportService
         try
         {
             return await _importProvider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<ReverseImageSearchResult?> SearchReverseImageAsync(
+        string imagePath,
+        string apiKey,
+        CancellationToken ct)
+    {
+        if (_reverseImageSearchProvider is null)
+            return null;
+
+        try
+        {
+            return await _reverseImageSearchProvider.SearchImageAsync(
+                imagePath, apiKey, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

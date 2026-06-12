@@ -634,6 +634,60 @@
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>作者 ID</value>
   </data>
+  <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>用 SauceNao 搜索</value>
+  </data>
+  <data name="Import_SauceNaoResultTitle" xml:space="preserve">
+    <value>SauceNao 找到结果</value>
+  </data>
+  <data name="Import_SauceNaoAuthor" xml:space="preserve">
+    <value>作者：{0} ({1})</value>
+  </data>
+  <data name="Import_SauceNaoTitle" xml:space="preserve">
+    <value>帖子：{0}</value>
+  </data>
+  <data name="Import_SauceNaoSimilarity" xml:space="preserve">
+    <value>准确度：{0:0.##}%</value>
+  </data>
+  <data name="Import_SauceNaoLowSimilarityTitle" xml:space="preserve">
+    <value>相似度偏低</value>
+  </data>
+  <data name="Import_SauceNaoLowSimilarityMessage" xml:space="preserve">
+    <value>这个结果低于 50%。导入前请仔细确认是否为正确来源。</value>
+  </data>
+  <data name="Import_SauceNaoRating" xml:space="preserve">
+    <value>分级</value>
+  </data>
+  <data name="Import_SauceNaoImportButton" xml:space="preserve">
+    <value>导入作者文件夹</value>
+  </data>
+  <data name="Import_SauceNaoCancelButton" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Import_SauceNaoCloseButton" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Import_SauceNaoNoResultTitle" xml:space="preserve">
+    <value>没有可用的 Pixiv 结果</value>
+  </data>
+  <data name="Import_SauceNaoNoResultMessage" xml:space="preserve">
+    <value>SauceNao 没有返回可用的 Pixiv 作者结果。</value>
+  </data>
+  <data name="Import_SauceNaoApiKeyMissingTitle" xml:space="preserve">
+    <value>需要 SauceNao API key</value>
+  </data>
+  <data name="Import_SauceNaoApiKeyMissingMessage" xml:space="preserve">
+    <value>请先在设置中输入 SauceNao API key，再进行搜索。</value>
+  </data>
+  <data name="Settings_SauceNaoHeader.Text" xml:space="preserve">
+    <value>SauceNao</value>
+  </data>
+  <data name="Settings_SauceNaoDesc.Text" xml:space="preserve">
+    <value>在导入页反向搜索已删除或不公开的 Pixiv 帖子。</value>
+  </data>
+  <data name="Settings_SauceNaoApiKey.Header" xml:space="preserve">
+    <value>API key</value>
+  </data>
   <data name="Settings_FolderNamingHeader.Text" xml:space="preserve">
     <value>导入文件夹命名</value>
   </data>

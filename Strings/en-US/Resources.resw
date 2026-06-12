@@ -634,6 +634,60 @@
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>Author ID</value>
   </data>
+  <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Search with SauceNao</value>
+  </data>
+  <data name="Import_SauceNaoResultTitle" xml:space="preserve">
+    <value>SauceNao match</value>
+  </data>
+  <data name="Import_SauceNaoAuthor" xml:space="preserve">
+    <value>Author: {0} ({1})</value>
+  </data>
+  <data name="Import_SauceNaoTitle" xml:space="preserve">
+    <value>Post: {0}</value>
+  </data>
+  <data name="Import_SauceNaoSimilarity" xml:space="preserve">
+    <value>Similarity: {0:0.##}%</value>
+  </data>
+  <data name="Import_SauceNaoLowSimilarityTitle" xml:space="preserve">
+    <value>Low similarity</value>
+  </data>
+  <data name="Import_SauceNaoLowSimilarityMessage" xml:space="preserve">
+    <value>This match is below 50%. Check the result carefully before importing.</value>
+  </data>
+  <data name="Import_SauceNaoRating" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Import_SauceNaoImportButton" xml:space="preserve">
+    <value>Import to author folder</value>
+  </data>
+  <data name="Import_SauceNaoCancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Import_SauceNaoCloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Import_SauceNaoNoResultTitle" xml:space="preserve">
+    <value>No Pixiv match</value>
+  </data>
+  <data name="Import_SauceNaoNoResultMessage" xml:space="preserve">
+    <value>SauceNao did not return a usable Pixiv author result for this image.</value>
+  </data>
+  <data name="Import_SauceNaoApiKeyMissingTitle" xml:space="preserve">
+    <value>SauceNao API key required</value>
+  </data>
+  <data name="Import_SauceNaoApiKeyMissingMessage" xml:space="preserve">
+    <value>Add your SauceNao API key in Settings before searching.</value>
+  </data>
+  <data name="Settings_SauceNaoHeader.Text" xml:space="preserve">
+    <value>SauceNao</value>
+  </data>
+  <data name="Settings_SauceNaoDesc.Text" xml:space="preserve">
+    <value>Used on the import page to reverse-search Pixiv posts that are deleted or private.</value>
+  </data>
+  <data name="Settings_SauceNaoApiKey.Header" xml:space="preserve">
+    <value>API key</value>
+  </data>
   <data name="Settings_FolderNamingHeader.Text" xml:space="preserve">
     <value>Import folder naming</value>
   </data>

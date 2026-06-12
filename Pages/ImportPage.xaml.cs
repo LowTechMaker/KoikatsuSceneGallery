@@ -5,7 +5,9 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -250,6 +252,135 @@ public sealed partial class ImportPage : Page
     {
         if (sender is Button { CommandParameter: ImportUnknownGroup group })
             await ViewModel.AssignArtworkIdToUnknownGroupCommand.ExecuteAsync(group);
+    }
+
+    private async void SearchSauceNaoForFetchFailed_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: ImportArtworkGroup group } button)
+            return;
+
+        button.IsEnabled = false;
+        group.IsSauceNaoSearching = true;
+        try
+        {
+            var result = await ViewModel.SearchSauceNaoForFetchFailedGroupAsync(group, CancellationToken.None);
+            if (result is null)
+            {
+                await ShowMessageDialog(
+                    ResLoader.GetString("Import_SauceNaoNoResultTitle"),
+                    ResLoader.GetString("Import_SauceNaoNoResultMessage"));
+                return;
+            }
+
+            var rating = await ShowSauceNaoResultDialog(result);
+            if (rating is null)
+                return;
+
+            await ViewModel.ApplySauceNaoResultToFetchFailedGroupAsync(group, result, rating.Value);
+        }
+        catch (InvalidOperationException)
+        {
+            await ShowMessageDialog(
+                ResLoader.GetString("Import_SauceNaoApiKeyMissingTitle"),
+                ResLoader.GetString("Import_SauceNaoApiKeyMissingMessage"));
+        }
+        finally
+        {
+            group.IsSauceNaoSearching = false;
+            button.IsEnabled = true;
+        }
+    }
+
+    private async Task<ContentRating?> ShowSauceNaoResultDialog(ReverseImageSearchResult result)
+    {
+        var ratingBox = new ComboBox
+        {
+            MinWidth = 180,
+            SelectedIndex = 0,
+        };
+        ratingBox.Items.Add(new ComboBoxItem { Content = "G", Tag = ContentRating.AllAges });
+        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18", Tag = ContentRating.R18 });
+        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18G", Tag = ContentRating.R18G });
+
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = string.Format(ResLoader.GetString("Import_SauceNaoAuthor"), result.AuthorName, result.AuthorId),
+            TextWrapping = TextWrapping.Wrap,
+        });
+
+        if (!string.IsNullOrWhiteSpace(result.ThumbnailUrl)
+            && Uri.TryCreate(result.ThumbnailUrl, UriKind.Absolute, out var thumbnailUri))
+        {
+            panel.Children.Add(new Border
+            {
+                Width = 260,
+                Height = 180,
+                CornerRadius = new CornerRadius(6),
+                Child = new Image
+                {
+                    Source = new BitmapImage(thumbnailUri),
+                    Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform,
+                },
+            });
+        }
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = string.Format(
+                ResLoader.GetString("Import_SauceNaoTitle"),
+                string.IsNullOrWhiteSpace(result.Title) ? "-" : result.Title),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = string.Format(ResLoader.GetString("Import_SauceNaoSimilarity"), result.Similarity),
+        });
+
+        if (result.Similarity < 50)
+        {
+            panel.Children.Add(new InfoBar
+            {
+                IsOpen = true,
+                IsClosable = false,
+                Severity = InfoBarSeverity.Warning,
+                Title = ResLoader.GetString("Import_SauceNaoLowSimilarityTitle"),
+                Message = ResLoader.GetString("Import_SauceNaoLowSimilarityMessage"),
+            });
+        }
+
+        panel.Children.Add(new TextBlock { Text = ResLoader.GetString("Import_SauceNaoRating") });
+        panel.Children.Add(ratingBox);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = ResLoader.GetString("Import_SauceNaoResultTitle"),
+            Content = panel,
+            PrimaryButtonText = ResLoader.GetString("Import_SauceNaoImportButton"),
+            CloseButtonText = ResLoader.GetString("Import_SauceNaoCancelButton"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+
+        var response = await dialog.ShowAsync();
+        if (response != ContentDialogResult.Primary)
+            return null;
+
+        return ratingBox.SelectedItem is ComboBoxItem { Tag: ContentRating rating }
+            ? rating
+            : ContentRating.AllAges;
+    }
+
+    private async Task ShowMessageDialog(string title, string message)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = title,
+            Content = message,
+            CloseButtonText = ResLoader.GetString("Import_SauceNaoCloseButton"),
+        };
+        await dialog.ShowAsync();
     }
 
     private void RemoveUnknownGroup_Click(object sender, RoutedEventArgs e)
