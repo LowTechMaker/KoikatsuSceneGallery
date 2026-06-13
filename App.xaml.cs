@@ -109,10 +109,10 @@ public partial class App : Application
             SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
         }
 
-        if (PluginService.ImportProvider is not null)
+        if (PluginService.ImportProviders.Count > 0)
         {
             ImportService = new ImportService(
-                PluginService.ImportProvider,
+                PluginService.ImportProviders,
                 PluginService.AuthorProvider,
                 PluginService.ReverseImageSearchProvider,
                 SettingsService);
@@ -124,7 +124,7 @@ public partial class App : Application
             if (PluginService.AuthorProvider is not null)
             {
                 AuthorPostService = new AuthorPostService(
-                    PluginService.ImportProvider,
+                    PluginService.ImportProviders,
                     PluginService.AuthorProvider,
                     SettingsService);
             }

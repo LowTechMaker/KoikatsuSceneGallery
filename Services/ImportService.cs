@@ -45,22 +45,35 @@ public sealed class ImportService
                 .Replace("{title}", title)
                 .Replace("{id}", artworkId));
 
-    private readonly ICardImportProvider _importProvider;
+    private readonly IReadOnlyList<ICardImportProvider> _importProviders;
     private readonly IFolderAuthorProvider? _authorProvider;
     private readonly IReverseImageSearchProvider? _reverseImageSearchProvider;
     private readonly SettingsService _settingsService;
 
     public ImportService(
-        ICardImportProvider importProvider,
+        IReadOnlyList<ICardImportProvider> importProviders,
         IFolderAuthorProvider? authorProvider,
         IReverseImageSearchProvider? reverseImageSearchProvider,
         SettingsService settingsService)
     {
-        _importProvider = importProvider;
+        _importProviders = importProviders;
         _authorProvider = authorProvider;
         _reverseImageSearchProvider = reverseImageSearchProvider;
         _settingsService = settingsService;
     }
+
+    private ArtworkId? TryParseFilenameAll(string fileName)
+    {
+        foreach (var provider in _importProviders)
+        {
+            var id = provider.TryParseFilename(fileName);
+            if (id is not null) return id;
+        }
+        return null;
+    }
+
+    private ICardImportProvider? FindProvider(string providerId)
+        => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
 
     public async Task ComputeFingerprintsAsync(IReadOnlyList<ImportItem> items, CancellationToken ct)
     {
@@ -79,14 +92,25 @@ public sealed class ImportService
         }).ConfigureAwait(false);
     }
 
-    public ArtworkId CreateManualArtworkId(string id) =>
-        new(_importProvider.ProviderId, id.Trim());
+    public ArtworkId CreateManualArtworkId(string id)
+    {
+        var trimmed = id.Trim();
+        foreach (var provider in _importProviders)
+        {
+            var parsed = provider.TryParseFilename(trimmed);
+            if (parsed is not null) return parsed;
+        }
+        return new(_importProviders[0].ProviderId, trimmed);
+    }
 
     public async Task<ArtworkInfo?> FetchArtworkInfoAsync(ArtworkId artworkId, CancellationToken ct)
     {
+        var provider = FindProvider(artworkId.ProviderId);
+        if (provider is null) return null;
+
         try
         {
-            return await _importProvider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
+            return await provider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -148,7 +172,7 @@ public sealed class ImportService
                 var item = new ImportItem { SourceFilePath = path, Status = ImportItemStatus.Analyzing };
                 item.CardType = cardType;
                 item.GameVersion = gameVersion;
-                item.ArtworkId = _importProvider.TryParseFilename(item.FileName);
+                item.ArtworkId = TryParseFilenameAll(item.FileName);
                 valid.Add(item);
             }
             return (valid, rejected);
@@ -170,10 +194,13 @@ public sealed class ImportService
             ct.ThrowIfCancellationRequested();
 
             var artworkId = group.First().ArtworkId!;
+            var provider = FindProvider(artworkId.ProviderId);
             ArtworkInfo? info;
             try
             {
-                info = await _importProvider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
+                info = provider is not null
+                    ? await provider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false)
+                    : null;
             }
             catch (OperationCanceledException)
             {

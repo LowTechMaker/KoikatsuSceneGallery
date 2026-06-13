@@ -68,8 +68,9 @@ public sealed class PluginService
     /// <summary>First loaded author provider, or null when none is installed.</summary>
     public IFolderAuthorProvider? AuthorProvider { get; private set; }
 
-    /// <summary>First loaded import provider, or null when none is installed.</summary>
-    public ICardImportProvider? ImportProvider { get; private set; }
+    /// <summary>All loaded import providers, tried in load order.</summary>
+    public IReadOnlyList<ICardImportProvider> ImportProviders => _importProviders;
+    private readonly List<ICardImportProvider> _importProviders = [];
 
     /// <summary>First loaded reverse image search provider, or null when none is installed.</summary>
     public IReverseImageSearchProvider? ReverseImageSearchProvider { get; private set; }
@@ -154,7 +155,7 @@ public sealed class PluginService
                 AuthorProvider ??= provider;
 
             if (plugin is ICardImportProvider importProvider)
-                ImportProvider ??= importProvider;
+                _importProviders.Add(importProvider);
 
             if (plugin is IReverseImageSearchProvider reverseImageSearchProvider)
                 ReverseImageSearchProvider ??= reverseImageSearchProvider;

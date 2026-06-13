@@ -12,26 +12,50 @@ public sealed class AuthorPostService
 {
     private sealed class PostAccumulator
     {
+        public required string ProviderId { get; init; }
         public string? Title { get; set; }
         public List<string> FilePaths { get; } = [];
     }
 
-    private readonly ICardImportProvider _importProvider;
+    private readonly IReadOnlyList<ICardImportProvider> _importProviders;
     private readonly IFolderAuthorProvider _authorProvider;
     private readonly SettingsService _settingsService;
 
     public AuthorPostService(
-        ICardImportProvider importProvider,
+        IReadOnlyList<ICardImportProvider> importProviders,
         IFolderAuthorProvider authorProvider,
         SettingsService settingsService)
     {
-        _importProvider = importProvider;
+        _importProviders = importProviders;
         _authorProvider = authorProvider;
         _settingsService = settingsService;
     }
 
+    private ArtworkId? TryParseFilenameAll(string fileName)
+    {
+        foreach (var provider in _importProviders)
+        {
+            var id = provider.TryParseFilename(fileName);
+            if (id is not null) return id;
+        }
+        return null;
+    }
+
+    private ArtworkId? TryParseArtworkFolderNameAll(string folderName)
+    {
+        foreach (var provider in _importProviders)
+        {
+            var id = provider.TryParseArtworkFolderName(folderName);
+            if (id is not null) return id;
+        }
+        return null;
+    }
+
+    private ICardImportProvider? FindProvider(string providerId)
+        => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
+
     /// <summary>
-    /// Scans all library roots for folders belonging to <paramref name="authorId"/>
+    /// Scans all library roots for folders belonging to <paramref name="authorKey"/>
     /// and returns deduplicated artwork IDs found in subfolder names and filenames.
     /// Each result includes the folder-derived title (if any) and local file count.
     /// </summary>
@@ -84,11 +108,12 @@ public sealed class AuthorPostService
             var result = new List<AuthorPost>(posts.Count);
             foreach (var (id, post) in posts)
             {
-                var artworkId = new ArtworkId(_importProvider.ProviderId, id);
+                var artworkId = new ArtworkId(post.ProviderId, id);
+                var provider = FindProvider(post.ProviderId);
                 result.Add(new AuthorPost
                 {
                     ArtworkId = artworkId,
-                    ArtworkUrl = _importProvider.GetArtworkUrl(artworkId),
+                    ArtworkUrl = provider?.GetArtworkUrl(artworkId) ?? "",
                     Title = post.Title,
                     LocalFileCount = post.FilePaths.Count,
                     LocalFilePaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
@@ -107,35 +132,37 @@ public sealed class AuthorPostService
         ArtworkId id,
         CancellationToken ct,
         bool saveToLocalCache)
-        => _importProvider.FetchArtworkInfoAsync(id, ct, saveToLocalCache);
+    {
+        var provider = FindProvider(id.ProviderId);
+        return provider?.FetchArtworkInfoAsync(id, ct, saveToLocalCache)
+            ?? Task.FromResult<ArtworkInfo?>(null);
+    }
 
     private void ScanAuthorDirectory(
         string authorDir,
         Dictionary<string, PostAccumulator> posts,
         CancellationToken ct)
     {
-        // Scan filenames in the author directory itself
         try
         {
             foreach (var file in Directory.EnumerateFiles(authorDir, "*.png"))
             {
                 ct.ThrowIfCancellationRequested();
-                var artworkId = _importProvider.TryParseFilename(Path.GetFileName(file));
+                var artworkId = TryParseFilenameAll(Path.GetFileName(file));
                 if (artworkId is not null)
-                    AddOrUpdate(posts, artworkId.Id, null, file);
+                    AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file);
             }
         }
         catch (OperationCanceledException) { throw; }
         catch { }
 
-        // Scan subdirectories (artwork folders)
         try
         {
             foreach (var subDir in Directory.EnumerateDirectories(authorDir))
             {
                 ct.ThrowIfCancellationRequested();
                 var folderName = Path.GetFileName(subDir);
-                var artworkId = _importProvider.TryParseArtworkFolderName(folderName);
+                var artworkId = TryParseArtworkFolderNameAll(folderName);
 
                 var localFiles = new List<string>();
                 string? titleFromFolder = artworkId is not null
@@ -150,9 +177,9 @@ public sealed class AuthorPostService
                         localFiles.Add(file);
                         if (artworkId is null)
                         {
-                            var fromFile = _importProvider.TryParseFilename(Path.GetFileName(file));
+                            var fromFile = TryParseFilenameAll(Path.GetFileName(file));
                             if (fromFile is not null)
-                                AddOrUpdate(posts, fromFile.Id, null, file);
+                                AddOrUpdate(posts, fromFile.ProviderId, fromFile.Id, null, file);
                         }
                     }
                 }
@@ -160,7 +187,7 @@ public sealed class AuthorPostService
                 catch { }
 
                 if (artworkId is not null)
-                    AddOrUpdate(posts, artworkId.Id, titleFromFolder, localFiles);
+                    AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, titleFromFolder, localFiles);
             }
         }
         catch (OperationCanceledException) { throw; }
@@ -169,16 +196,16 @@ public sealed class AuthorPostService
 
     private static void AddOrUpdate(
         Dictionary<string, PostAccumulator> posts,
-        string id, string? title, string filePath)
-        => AddOrUpdate(posts, id, title, [filePath]);
+        string providerId, string id, string? title, string filePath)
+        => AddOrUpdate(posts, providerId, id, title, [filePath]);
 
     private static void AddOrUpdate(
         Dictionary<string, PostAccumulator> posts,
-        string id, string? title, IReadOnlyList<string> filePaths)
+        string providerId, string id, string? title, IReadOnlyList<string> filePaths)
     {
         if (!posts.TryGetValue(id, out var post))
         {
-            post = new PostAccumulator();
+            post = new PostAccumulator { ProviderId = providerId };
             posts[id] = post;
         }
 
@@ -189,7 +216,6 @@ public sealed class AuthorPostService
 
     private static string? ExtractTitleFromFolderName(string folderName, string artworkId)
     {
-        // Artwork folders are typically formatted as "Title (123456789)" or "(123456789)"
         var idPattern = $"({artworkId})";
         var idx = folderName.IndexOf(idPattern, StringComparison.Ordinal);
         if (idx <= 0) return null;
