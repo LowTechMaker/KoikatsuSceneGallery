@@ -71,6 +71,23 @@
                             </InfoBar>
                         </StackPanel>
 
+                        <!-- SauceNao Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_SauceNaoHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_SauceNaoDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                            <PasswordBox
+                                x:Uid="Settings_SauceNaoApiKey"
+                                MinWidth="320"
+                                MaxWidth="520"
+                                HorizontalAlignment="Left"
+                                Password="{x:Bind ViewModel.SauceNaoApiKey, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                        </StackPanel>
+
                     </StackPanel>
                 </ScrollViewer>
             </PivotItem>

@@ -94,6 +94,9 @@ public class SettingsService
 
         public string CacheFolderPath { get; set; } = "";
 
+        /// <summary>API key used for SauceNao reverse image search during import.</summary>
+        public string SauceNaoApiKey { get; set; } = "";
+
         /// <summary>
         /// UI language override. Empty = follow the system language.
         /// Otherwise a BCP-47 tag: "en-US", "zh-Hans", "zh-Hant".

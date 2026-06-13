@@ -71,6 +71,9 @@ public sealed class PluginService
     /// <summary>First loaded import provider, or null when none is installed.</summary>
     public ICardImportProvider? ImportProvider { get; private set; }
 
+    /// <summary>First loaded reverse image search provider, or null when none is installed.</summary>
+    public IReverseImageSearchProvider? ReverseImageSearchProvider { get; private set; }
+
     public void LoadPlugins()
     {
         if (!Directory.Exists(PluginsDirectory)) return;
@@ -152,6 +155,9 @@ public sealed class PluginService
 
             if (plugin is ICardImportProvider importProvider)
                 ImportProvider ??= importProvider;
+
+            if (plugin is IReverseImageSearchProvider reverseImageSearchProvider)
+                ReverseImageSearchProvider ??= reverseImageSearchProvider;
 
             _plugins.Add(new LoadedPluginInfo(plugin.Name, plugin.Version, PluginStatus.Loaded, null, assemblyPath));
             Log(plugin.Name, $"loaded v{plugin.Version}");

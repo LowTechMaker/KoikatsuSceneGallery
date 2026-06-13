@@ -55,6 +55,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial string CacheFolderPath { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string SauceNaoApiKey { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string SelectedLanguage { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -214,6 +217,13 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnGFolderNameChanged(string value) => _ = SaveConfigAsync();
     partial void OnR18FolderNameChanged(string value) => _ = SaveConfigAsync();
     partial void OnR18GFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnSauceNaoApiKeyChanged(string value)
+    {
+        if (_isLoading)
+            return;
+
+        _ = SaveConfigAsync();
+    }
 
     public async Task LoadAsync()
     {
@@ -269,6 +279,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedLanguage = config.Language;
         CacheLength = config.CacheLength;
         SizeSelectorEnabled = config.SizeSelectorEnabled;
+        SauceNaoApiKey = config.SauceNaoApiKey;
         _isLoading = false;
 
         OnPropertyChanged(nameof(CacheFolderDisplay));
@@ -484,6 +495,7 @@ public partial class SettingsViewModel : ObservableObject
                 SizeSelectorEnabled = SizeSelectorEnabled,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
                 CacheFolderPath = CacheFolderPath,
+                SauceNaoApiKey = SauceNaoApiKey,
                 Language = SelectedLanguage,
                 ImportSubfolder = ImportSubfolder,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,

@@ -405,6 +405,60 @@ public partial class ImportViewModel : ObservableObject
         return null;
     }
 
+    public async Task<ReverseImageSearchResult?> SearchSauceNaoForFetchFailedGroupAsync(
+        ImportArtworkGroup group,
+        CancellationToken ct)
+    {
+        if (group.Files.Count == 0)
+            return null;
+
+        var config = await _settingsService.LoadConfigAsync();
+        if (string.IsNullOrWhiteSpace(config.SauceNaoApiKey))
+            throw new InvalidOperationException("SauceNao API key is not set.");
+
+        return await _importService.SearchReverseImageAsync(
+            group.Files[0].SourceFilePath,
+            config.SauceNaoApiKey.Trim(),
+            ct);
+    }
+
+    public async Task ApplySauceNaoResultToFetchFailedGroupAsync(
+        ImportArtworkGroup group,
+        ReverseImageSearchResult result,
+        ContentRating rating)
+    {
+        var files = group.Files.ToList();
+        if (files.Count == 0)
+            return;
+
+        CaptureUndo(ManualAssignmentSource.FetchFailed, files);
+
+        foreach (var item in files)
+        {
+            if (result.ArtworkId is not null)
+                item.ArtworkId = result.ArtworkId;
+
+            item.AuthorName = result.AuthorName;
+            item.AuthorId = result.AuthorId;
+            item.Title = result.Title;
+            item.Rating = rating;
+            item.Tags = [];
+            item.ManualAuthorId = result.AuthorId;
+            item.ErrorMessage = null;
+            item.Status = ImportItemStatus.ReadyToImport;
+        }
+
+        FetchFailedGroups.Remove(group);
+
+        foreach (var item in files)
+            PlaceItemInTree(item);
+
+        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId);
+
+        await ReResolveDestinationsAsync();
+        UpdateCounts();
+    }
+
     private void AddBatchAuthorIfLoaded(string authorName, string authorId)
     {
         if (!_authorsLoaded) return;

@@ -55,6 +55,9 @@ public partial class ImportArtworkGroup : ObservableObject
     public partial bool IsSelected { get; set; }
 
     [ObservableProperty]
+    public partial bool IsSauceNaoSearching { get; set; }
+
+    [ObservableProperty]
     public partial bool IsExpanded { get; set; } = true;
 
     public string? Title { get; }
