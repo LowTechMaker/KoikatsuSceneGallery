@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -7,6 +8,11 @@ namespace KoikatsuSceneGallery;
 
 public sealed partial class MainWindow : Window
 {
+    private static readonly InfoBadge ImportingBadge = new()
+    {
+        Style = (Style)Application.Current.Resources["AttentionIconInfoBadgeStyle"],
+    };
+
     public MainWindow()
     {
         InitializeComponent();
@@ -20,9 +26,18 @@ public sealed partial class MainWindow : Window
             AuthorsNavItem.Visibility = Visibility.Visible;
 
         if (App.ImportViewModel is not null)
+        {
             ImportNavItem.Visibility = Visibility.Visible;
+            App.ImportViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
+        }
 
         NavFrame.Navigate(typeof(GalleryPage));
+    }
+
+    private void ImportViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModels.ImportViewModel.IsImporting))
+            ImportNavItem.InfoBadge = App.ImportViewModel!.IsImporting ? ImportingBadge : null;
     }
 
     private void TitleBar_PaneToggleRequested(TitleBar sender, object args)
