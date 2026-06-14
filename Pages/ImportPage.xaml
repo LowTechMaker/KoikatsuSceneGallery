@@ -41,10 +41,28 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock
-            x:Uid="Import_Title"
-            Style="{StaticResource TitleTextBlockStyle}" />
+        <!-- Title + cookie setup -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                x:Uid="Import_Title"
+                Style="{StaticResource TitleTextBlockStyle}" />
+            <Button
+                x:Name="CookieSetupButton"
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                Click="CookieSetup_Click"
+                Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon FontSize="14" Glyph="&#xE8C7;" />
+                    <TextBlock x:Uid="Import_CookieSetup" />
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <!-- Rejected files warning (overlays content area) -->
         <InfoBar
@@ -114,8 +132,8 @@
             TabWidthMode="SizeToContent"
             Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
 
-            <!-- pixiv tab -->
-            <TabViewItem x:Uid="Import_Tab_Pixiv" IsClosable="False">
+            <!-- matched tab -->
+            <TabViewItem x:Uid="Import_Tab_Matched" IsClosable="False">
                 <ScrollViewer Padding="0,8,0,0">
                     <StackPanel Spacing="4" Padding="0,0,0,8">
 
@@ -160,7 +178,7 @@
                             </ItemsRepeater>
                         </Expander>
 
-                        <!-- Fetch-failed: pixiv ID recognized but artwork deleted/private -->
+                        <!-- Fetch-failed: artwork ID recognized but fetch returned null -->
                         <Expander
                             IsExpanded="True"
                             HorizontalAlignment="Stretch"
@@ -350,7 +368,7 @@
                         </Expander>
 
                         <!-- Resolved tree: rating → author → artwork → files -->
-                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.PixivGroups, Mode=OneWay}">
+                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.MatchedGroups, Mode=OneWay}">
                             <ItemsRepeater.Layout>
                                 <StackLayout Spacing="4" />
                             </ItemsRepeater.Layout>

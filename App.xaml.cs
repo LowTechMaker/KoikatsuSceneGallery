@@ -84,6 +84,21 @@ public partial class App : Application
             CrashLog.Write("Plugins", ex);
         }
 
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var updates = await new PluginUpdateChecker()
+                    .CheckUpdatesAsync(PluginService.Plugins, CancellationToken.None);
+                if (updates.Count > 0)
+                    PluginService.ApplyUpdateInfo(updates);
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("PluginUpdateCheck", ex);
+            }
+        });
+
         AuthorInfoService = new AuthorInfoService(
             PluginService.AuthorProvider,
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());

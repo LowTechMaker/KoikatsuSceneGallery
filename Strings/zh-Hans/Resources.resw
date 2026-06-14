@@ -176,13 +176,13 @@
     <value>整理子目录</value>
   </data>
   <data name="Settings_ImportSubfolderDesc.Text" xml:space="preserve">
-    <value>在各根目录下建立子目录来存放整理好的卡片。支持多层路径，例如「整理\pixiv」。留空则直接放在根目录。</value>
+    <value>在各根目录下建立子目录来存放整理好的卡片。Pixiv、BepisDB 等来源文件夹会自动加入。留空则直接放在根目录。</value>
   </data>
   <data name="Settings_ImportSubfolderLabel.Text" xml:space="preserve">
     <value>子目录路径</value>
   </data>
   <data name="Settings_ImportSubfolderPlaceholder.PlaceholderText" xml:space="preserve">
-    <value>例如 pixiv</value>
+    <value>Organized</value>
   </data>
   <data name="Settings_ArtworkSubfolder.Header" xml:space="preserve">
     <value>帖子子文件夹阈值</value>
@@ -576,6 +576,9 @@
   <data name="Plugins_StatusFailed" xml:space="preserve">
     <value>加载失败</value>
   </data>
+  <data name="Plugins_UpdateAvailable" xml:space="preserve">
+    <value>有可用更新：{0}</value>
+  </data>
   <!-- ImportPage -->
   <data name="Nav_Import.Content" xml:space="preserve">
     <value>导入</value>
@@ -587,7 +590,7 @@
     <value>将 Koikatsu 卡片拖放到此处</value>
   </data>
   <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>拖放从 pixiv 下载的 PNG 文件</value>
+    <value>拖放从 pixiv 或 BepisDB 下载的 PNG 文件</value>
   </data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>全年龄</value>
@@ -607,14 +610,17 @@
   <data name="Import_ScanningHint.Text" xml:space="preserve">
     <value>正在扫描文件…</value>
   </data>
-  <data name="Import_Tab_Pixiv.Header" xml:space="preserve">
-    <value>pixiv</value>
+  <data name="Import_CookieSetup.Text" xml:space="preserve">
+    <value>设置 Cookie</value>
+  </data>
+  <data name="Import_Tab_Matched.Header" xml:space="preserve">
+    <value>已配对</value>
   </data>
   <data name="Import_Tab_Unknown.Header" xml:space="preserve">
     <value>未识别</value>
   </data>
   <data name="Import_UnknownHint.Message" xml:space="preserve">
-    <value>这些卡片并非来自 pixiv，需要手动分类。</value>
+    <value>这些卡片未被任何来源识别，需要手动分类。</value>
   </data>
   <data name="Import_Analyzing.Text" xml:space="preserve">
     <value>分析中…</value>

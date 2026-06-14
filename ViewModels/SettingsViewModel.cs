@@ -64,7 +64,7 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool ShowRestartHint { get; set; }
 
     [ObservableProperty]
-    public partial string ImportSubfolder { get; set; } = string.Empty;
+    public partial string ImportSubfolder { get; set; } = "Organized";
 
     [ObservableProperty]
     public partial double ArtworkSubfolderThreshold { get; set; } = 1;

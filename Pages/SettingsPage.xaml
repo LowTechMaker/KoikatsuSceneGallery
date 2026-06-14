@@ -750,6 +750,11 @@
                                                 Text="{x:Bind Error}"
                                                 TextWrapping="Wrap"
                                                 Visibility="{x:Bind HasError}" />
+                                            <TextBlock
+                                                Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{x:Bind UpdateText}"
+                                                Visibility="{x:Bind UpdateAvailable}" />
                                         </StackPanel>
 
                                         <TextBlock

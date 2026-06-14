@@ -176,13 +176,13 @@
     <value>Organized Subfolder</value>
   </data>
   <data name="Settings_ImportSubfolderDesc.Text" xml:space="preserve">
-    <value>Subfolder path (relative to each library root) where imported cards are placed. Supports multi-level paths like "organized\pixiv". Leave empty to place cards directly in the root.</value>
+    <value>Subfolder path (relative to each library root) where imported cards are placed. Provider folders such as Pixiv and BepisDB are added automatically. Leave empty to place cards directly in the root.</value>
   </data>
   <data name="Settings_ImportSubfolderLabel.Text" xml:space="preserve">
     <value>Subfolder path</value>
   </data>
   <data name="Settings_ImportSubfolderPlaceholder.PlaceholderText" xml:space="preserve">
-    <value>e.g. pixiv</value>
+    <value>Organized</value>
   </data>
   <data name="Settings_ArtworkSubfolder.Header" xml:space="preserve">
     <value>Artwork subfolder threshold</value>
@@ -576,6 +576,9 @@
   <data name="Plugins_StatusFailed" xml:space="preserve">
     <value>Failed</value>
   </data>
+  <data name="Plugins_UpdateAvailable" xml:space="preserve">
+    <value>Update available: {0}</value>
+  </data>
   <!-- ImportPage -->
   <data name="Nav_Import.Content" xml:space="preserve">
     <value>Import</value>
@@ -587,7 +590,7 @@
     <value>Drop Koikatsu cards here</value>
   </data>
   <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>Drop PNG files downloaded from pixiv</value>
+    <value>Drop PNG files downloaded from pixiv or BepisDB</value>
   </data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>All Ages</value>
@@ -607,14 +610,17 @@
   <data name="Import_ScanningHint.Text" xml:space="preserve">
     <value>Scanning files…</value>
   </data>
-  <data name="Import_Tab_Pixiv.Header" xml:space="preserve">
-    <value>pixiv</value>
+  <data name="Import_CookieSetup.Text" xml:space="preserve">
+    <value>Setup cookies</value>
+  </data>
+  <data name="Import_Tab_Matched.Header" xml:space="preserve">
+    <value>Matched</value>
   </data>
   <data name="Import_Tab_Unknown.Header" xml:space="preserve">
     <value>Unrecognized</value>
   </data>
   <data name="Import_UnknownHint.Message" xml:space="preserve">
-    <value>These cards were not downloaded from pixiv and need manual classification.</value>
+    <value>These cards were not recognized by any provider and need manual classification.</value>
   </data>
   <data name="Import_Analyzing.Text" xml:space="preserve">
     <value>Analyzing…</value>

@@ -6,8 +6,8 @@ using SceneGallery.PluginSdk;
 namespace KoikatsuSceneGallery.Services;
 
 /// <summary>
-/// Orchestrates the import pipeline: card type classification, pixiv API
-/// fetch (author + tags + R-18), destination folder resolution, and file move.
+/// Orchestrates the import pipeline: card type classification, provider API
+/// fetch (author + tags + rating), destination folder resolution, and file move.
 /// </summary>
 public sealed class ImportService
 {
@@ -26,6 +26,27 @@ public sealed class ImportService
         GameVersion.KoikatsuSunshine => config.KoikatsuSunshineFolderName,
         _ => "",
     };
+
+    private string GetProviderFolder(ArtworkId? artworkId)
+    {
+        if (artworkId is null) return "";
+
+        var provider = FindProvider(artworkId.ProviderId);
+        var folderName = provider is IImportDestinationProvider destinationProvider
+            ? destinationProvider.DestinationFolderName
+            : provider?.Name ?? artworkId.ProviderId;
+
+        return SanitizeRelativePath(folderName);
+    }
+
+    private bool UsesRatingFolders(ArtworkId? artworkId)
+    {
+        if (artworkId is null) return true;
+
+        var provider = FindProvider(artworkId.ProviderId);
+        return provider is not IImportDestinationProvider destinationProvider
+            || destinationProvider.UsesRatingFolders;
+    }
 
     private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
         [config.GFolderName, config.R18FolderName, config.R18GFolderName];
@@ -272,24 +293,33 @@ public sealed class ImportService
             {
                 if (!Directory.Exists(root)) continue;
 
-                foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
+                var providerFolders = _importProviders
+                    .Where(p => ReferenceEquals(p, _authorProvider))
+                    .Select(p => GetProviderFolder(new ArtworkId(p.ProviderId, "")))
+                    .Append("")
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var providerFolder in providerFolders)
                 {
-                    foreach (var ratingFolder in GetRatingFolderNames(config))
+                    foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
                     {
-                        var ratingDir = BuildTargetBase(root, subfolder, gameVersionFolder, ratingFolder, null);
-                        if (!Directory.Exists(ratingDir)) continue;
-                        try
+                        foreach (var ratingFolder in GetRatingFolderNames(config))
                         {
-                            foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                            var ratingDir = BuildTargetBase(root, subfolder, providerFolder, gameVersionFolder, ratingFolder, null);
+                            if (!Directory.Exists(ratingDir)) continue;
+                            try
                             {
-                                ct.ThrowIfCancellationRequested();
-                                var parsed = provider.TryParseFolderName(Path.GetFileName(dir));
-                                if (parsed is not null && seen.Add(parsed.Key.Id))
-                                    result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                                foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                                {
+                                    ct.ThrowIfCancellationRequested();
+                                    var parsed = provider.TryParseFolderName(Path.GetFileName(dir));
+                                    if (parsed is not null && seen.Add(parsed.Key.Id))
+                                        result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                                }
                             }
+                            catch (OperationCanceledException) { throw; }
+                            catch { }
                         }
-                        catch (OperationCanceledException) { throw; }
-                        catch { }
                     }
                 }
             }
@@ -433,7 +463,9 @@ public sealed class ImportService
             var roots = GetRootsForCardType(item.CardType, config);
             if (roots.Count == 0) continue;
 
-            var ratingFolder = GetRatingFolder(item.Rating, config);
+            var providerFolder = GetProviderFolder(item.ArtworkId);
+            var usesRatingFolders = UsesRatingFolders(item.ArtworkId);
+            var ratingFolder = usesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
             var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
             string? targetFolder = null;
 
@@ -441,9 +473,8 @@ public sealed class ImportService
             {
                 foreach (var root in roots)
                 {
-                    if (folderIndex.TryGetValue(root, out var gameIndex)
-                        && gameIndex.TryGetValue(gameVersionFolder, out var ratingIndex)
-                        && ratingIndex.TryGetValue(ratingFolder, out var authorFolders)
+                    var scopeKey = BuildScopeKey(root, providerFolder, gameVersionFolder, ratingFolder);
+                    if (folderIndex.TryGetValue(scopeKey, out var authorFolders)
                         && authorFolders.TryGetValue(item.AuthorId, out var existing))
                     {
                         targetFolder = existing;
@@ -454,11 +485,11 @@ public sealed class ImportService
                 if (targetFolder is null && item.AuthorName is not null)
                 {
                     var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
-                    targetFolder = BuildTargetBase(roots[0], subfolder, gameVersionFolder, ratingFolder, safeName);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, providerFolder, gameVersionFolder, ratingFolder, safeName);
                 }
             }
 
-            targetFolder ??= BuildTargetBase(roots[0], subfolder, gameVersionFolder, config.UnknownFolderName, null);
+            targetFolder ??= BuildTargetBase(roots[0], subfolder, providerFolder, gameVersionFolder, config.UnknownFolderName, null);
 
             if (item.ArtworkId is not null)
             {
@@ -501,13 +532,20 @@ public sealed class ImportService
         }
     }
 
-    // Builds the path segments: root[\subfolder][\gameVersion]\rating[\authorName]
-    private static string BuildTargetBase(string root, string subfolder, string gameVersionFolder, string ratingFolder, string? authorName)
+    // Builds the path segments: root[\subfolder][\provider][\gameVersion][\rating][\authorName]
+    private static string BuildTargetBase(
+        string root,
+        string subfolder,
+        string providerFolder,
+        string gameVersionFolder,
+        string ratingFolder,
+        string? authorName)
     {
-        var parts = new List<string>(5) { root };
+        var parts = new List<string>(6) { root };
         if (!string.IsNullOrEmpty(subfolder)) parts.Add(subfolder);
+        if (!string.IsNullOrEmpty(providerFolder)) parts.Add(providerFolder);
         if (!string.IsNullOrEmpty(gameVersionFolder)) parts.Add(gameVersionFolder);
-        parts.Add(ratingFolder);
+        if (!string.IsNullOrEmpty(ratingFolder)) parts.Add(ratingFolder);
         if (authorName is not null) parts.Add(authorName);
         return Path.Combine([.. parts]);
     }
@@ -534,10 +572,10 @@ public sealed class ImportService
         return set;
     }
 
-    private Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, string>>>> BuildFolderIndex(SettingsService.ConfigData config)
+    private Dictionary<string, Dictionary<string, string>> BuildFolderIndex(SettingsService.ConfigData config)
     {
-        // root → gameVersionFolder → ratingFolder → authorId → fullFolderPath
-        var index = new Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, string>>>>(StringComparer.OrdinalIgnoreCase);
+        // (root, providerFolder, gameVersionFolder, ratingFolder) → authorId → fullFolderPath
+        var index = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         var subfolder = config.ImportSubfolder.Trim();
 
         var allRoots = config.FolderPaths
@@ -545,42 +583,50 @@ public sealed class ImportService
             .Concat(config.CoordinateFolderPaths)
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
+        var providerScopes = _importProviders
+            .Select(p =>
+            {
+                var artworkId = new ArtworkId(p.ProviderId, "");
+                return (
+                    Folder: GetProviderFolder(artworkId),
+                    RatingFolders: UsesRatingFolders(artworkId)
+                        ? GetRatingFolderNames(config)
+                        : [""]
+                );
+            })
+            .ToList();
+
         foreach (var root in allRoots)
         {
             if (!Directory.Exists(root)) continue;
 
-            var gameIndex = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
+            foreach (var providerScope in providerScopes)
             {
-                var ratingIndex = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var ratingFolder in GetRatingFolderNames(config))
+                foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
                 {
-                    var ratingDir = BuildTargetBase(root, subfolder, gameVersionFolder, ratingFolder, null);
-                    var authorFolders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                    if (Directory.Exists(ratingDir))
+                    foreach (var ratingFolder in providerScope.RatingFolders)
                     {
-                        try
+                        var ratingDir = BuildTargetBase(root, subfolder, providerScope.Folder, gameVersionFolder, ratingFolder, null);
+                        var authorFolders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        if (Directory.Exists(ratingDir))
                         {
-                            foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                            try
                             {
-                                var parsed = _authorProvider?.TryParseFolderName(Path.GetFileName(dir));
-                                if (parsed is not null)
-                                    authorFolders.TryAdd(parsed.Key.Id, dir);
+                                foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                                {
+                                    var parsed = _authorProvider?.TryParseFolderName(Path.GetFileName(dir));
+                                    if (parsed is not null)
+                                        authorFolders.TryAdd(parsed.Key.Id, dir);
+                                }
                             }
+                            catch { }
                         }
-                        catch { }
+
+                        index[BuildScopeKey(root, providerScope.Folder, gameVersionFolder, ratingFolder)] = authorFolders;
                     }
-
-                    ratingIndex[ratingFolder] = authorFolders;
                 }
-
-                gameIndex[gameVersionFolder] = ratingIndex;
             }
-
-            index[root] = gameIndex;
         }
 
         return index;
@@ -597,11 +643,29 @@ public sealed class ImportService
         };
     }
 
+    private static string BuildScopeKey(
+        string root,
+        string providerFolder,
+        string gameVersionFolder,
+        string ratingFolder)
+        => string.Join('\u001F', root, providerFolder, gameVersionFolder, ratingFolder);
+
     private static string SanitizeFolderName(string name)
     {
         foreach (var c in InvalidFileNameChars)
             name = name.Replace(c, '_');
         return name.Trim();
+    }
+
+    private static string SanitizeRelativePath(string relativePath)
+    {
+        var parts = relativePath
+            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)
+            .Select(SanitizeFolderName)
+            .Where(p => p.Length > 0)
+            .ToArray();
+
+        return parts.Length == 0 ? "" : Path.Combine(parts);
     }
 
     private static bool FilesAreIdentical(string pathA, string pathB)

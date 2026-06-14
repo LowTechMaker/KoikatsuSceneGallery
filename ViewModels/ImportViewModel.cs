@@ -44,9 +44,9 @@ public partial class ImportViewModel : ObservableObject
     // Flat collection used by ImportService (source of truth for all items)
     public ObservableCollection<ImportItem> Items { get; } = [];
 
-    // Tree collections for the pixiv tab
+    // Tree collections for the matched tab
     public ObservableCollection<ImportItem> AnalyzingItems { get; } = [];
-    public ObservableCollection<ImportRatingGroup> PixivGroups { get; } = [];
+    public ObservableCollection<ImportRatingGroup> MatchedGroups { get; } = [];
 
     // Items whose artwork ID was parsed but API fetch returned null (deleted/private),
     // grouped by artwork ID so multi-page posts stay together.
@@ -257,7 +257,7 @@ public partial class ImportViewModel : ObservableObject
             AnalyzingItems.Clear();
             FetchFailedGroups.Clear();
             UnknownGroups.Clear();
-            PixivGroups.Clear();
+            MatchedGroups.Clear();
             BatchAuthors.Clear();
             LibraryAuthors.Clear();
             foreach (var group in _subscribedFetchFailedGroups)
@@ -317,12 +317,12 @@ public partial class ImportViewModel : ObservableObject
         AnalyzingItems.Remove(item);
 
         // Find or create the rating group (G < R18 < R18G order)
-        var ratingGroup = PixivGroups.FirstOrDefault(g => g.Rating == item.Rating);
+        var ratingGroup = MatchedGroups.FirstOrDefault(g => g.Rating == item.Rating);
         if (ratingGroup is null)
         {
             ratingGroup = new ImportRatingGroup(item.Rating);
-            var insertAt = PixivGroups.Count(g => (int)g.Rating < (int)item.Rating);
-            PixivGroups.Insert(insertAt, ratingGroup);
+            var insertAt = MatchedGroups.Count(g => (int)g.Rating < (int)item.Rating);
+            MatchedGroups.Insert(insertAt, ratingGroup);
         }
 
         // Find or create the author group
@@ -379,7 +379,7 @@ public partial class ImportViewModel : ObservableObject
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 // Batch authors first (from current import)
-                foreach (var ratingGroup in PixivGroups)
+                foreach (var ratingGroup in MatchedGroups)
                     foreach (var authorGroup in ratingGroup.Authors)
                         if (seen.Add(authorGroup.AuthorId))
                             BatchAuthors.Add(new SelectableAuthor(authorGroup.AuthorName, authorGroup.AuthorId));
@@ -1015,7 +1015,7 @@ public partial class ImportViewModel : ObservableObject
 
     private void RemoveItemFromTree(ImportItem item)
     {
-        foreach (var ratingGroup in PixivGroups.ToList())
+        foreach (var ratingGroup in MatchedGroups.ToList())
         {
             foreach (var authorGroup in ratingGroup.Authors.ToList())
             {
@@ -1027,7 +1027,7 @@ public partial class ImportViewModel : ObservableObject
                     if (authorGroup.Artworks.Count == 0)
                         ratingGroup.Authors.Remove(authorGroup);
                     if (ratingGroup.Authors.Count == 0)
-                        PixivGroups.Remove(ratingGroup);
+                        MatchedGroups.Remove(ratingGroup);
                     return;
                 }
             }

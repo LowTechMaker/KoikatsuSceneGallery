@@ -11,13 +11,17 @@ namespace KoikatsuSceneGallery.Pages;
 
 /// <summary>Display row for the Settings → Plugins list. Plain get-only class:
 /// the XAML type-info generator rejects record init-setters on x:DataType types.</summary>
-public sealed class PluginListItem(string name, string version, string statusText, string? error)
+public sealed class PluginListItem(
+    string name, string version, string statusText, string? error,
+    string? updateText = null)
 {
     public string Name { get; } = name;
     public string Version { get; } = version;
     public string StatusText { get; } = statusText;
     public string? Error { get; } = error;
     public bool HasError => Error != null;
+    public bool UpdateAvailable => UpdateText is not null;
+    public string? UpdateText { get; } = updateText;
 }
 
 public sealed partial class SettingsPage : Page
@@ -36,12 +40,16 @@ public sealed partial class SettingsPage : Page
     public SettingsPage()
     {
         ViewModel = App.SettingsViewModel;
+        var updateFmt = ResLoader.GetString("Plugins_UpdateAvailable");
         PluginItems = App.PluginService.Plugins
             .Select(p => new PluginListItem(
                 p.Name,
                 p.Version == "?" ? "" : $"v{p.Version}",
                 ResLoader.GetString(p.Status == PluginStatus.Loaded ? "Plugins_StatusLoaded" : "Plugins_StatusFailed"),
-                p.Error))
+                p.Error,
+                p.AvailableVersion is not null
+                    ? string.Format(updateFmt, p.AvailableVersion)
+                    : null))
             .ToList();
         InitializeComponent();
     }

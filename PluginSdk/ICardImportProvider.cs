@@ -37,3 +37,16 @@ public interface ICardImportProvider : IPlugin
     /// <summary>Browser-openable URL for the artwork. No I/O.</summary>
     string GetArtworkUrl(ArtworkId id);
 }
+
+/// <summary>
+/// Optional import destination hints. Providers that do not implement this keep
+/// the default app layout: provider name folder plus rating folders.
+/// </summary>
+public interface IImportDestinationProvider
+{
+    /// <summary>Relative folder name inserted below the configured import subfolder.</summary>
+    string DestinationFolderName { get; }
+
+    /// <summary>Whether imports from this provider should be split into G/R-18/R-18G folders.</summary>
+    bool UsesRatingFolders { get; }
+}

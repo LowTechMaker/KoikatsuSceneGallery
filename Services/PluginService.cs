@@ -14,7 +14,10 @@ public sealed record LoadedPluginInfo(
     string Version,
     PluginStatus Status,
     string? Error,
-    string FilePath);
+    string FilePath,
+    string? Description = null,
+    string? UpdateUrl = null,
+    string? AvailableVersion = null);
 
 /// <summary>
 /// Discovers and loads plugins from the Plugins folder next to the exe. Each
@@ -25,7 +28,10 @@ public sealed record LoadedPluginInfo(
 public sealed class PluginService
 {
     private readonly List<LoadedPluginInfo> _plugins = [];
+    private readonly object _pluginLock = new();
     private readonly List<IPlugin> _instances = [];
+    private readonly HashSet<string> _loadedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _loadedPluginNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
     public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
@@ -53,9 +59,10 @@ public sealed class PluginService
     {
         try
         {
-            return Directory.Exists(pluginsDir)
-                && Directory.EnumerateDirectories(pluginsDir)
-                    .Any(dir => Directory.EnumerateFiles(dir, "*.dll").Any());
+            if (!Directory.Exists(pluginsDir)) return false;
+            return Directory.EnumerateDirectories(pluginsDir)
+                       .Any(dir => Directory.EnumerateFiles(dir, "*.dll").Any())
+                   || Directory.EnumerateFiles(pluginsDir, "*.dll").Any();
         }
         catch
         {
@@ -63,7 +70,10 @@ public sealed class PluginService
         }
     }
 
-    public IReadOnlyList<LoadedPluginInfo> Plugins => _plugins;
+    public IReadOnlyList<LoadedPluginInfo> Plugins
+    {
+        get { lock (_pluginLock) return _plugins.ToList(); }
+    }
 
     /// <summary>First loaded author provider, or null when none is installed.</summary>
     public IFolderAuthorProvider? AuthorProvider { get; private set; }
@@ -72,6 +82,10 @@ public sealed class PluginService
     public IReadOnlyList<ICardImportProvider> ImportProviders => _importProviders;
     private readonly List<ICardImportProvider> _importProviders = [];
 
+    /// <summary>All loaded cookie setup providers.</summary>
+    public IReadOnlyList<ICookieSetupProvider> CookieSetupProviders => _cookieSetupProviders;
+    private readonly List<ICookieSetupProvider> _cookieSetupProviders = [];
+
     /// <summary>First loaded reverse image search provider, or null when none is installed.</summary>
     public IReverseImageSearchProvider? ReverseImageSearchProvider { get; private set; }
 
@@ -79,11 +93,23 @@ public sealed class PluginService
     {
         if (!Directory.Exists(PluginsDirectory)) return;
 
+        // Folder-based plugins (dev layout: Plugins/<Name>/<Name>.dll)
         foreach (var pluginDir in Directory.EnumerateDirectories(PluginsDirectory))
         {
             var assemblyPath = FindPluginAssembly(pluginDir);
             if (assemblyPath is null) continue;
             LoadPlugin(assemblyPath);
+        }
+
+        // Single-file plugins (distribution: Plugins/<Name>.dll)
+        foreach (var dllPath in Directory.EnumerateFiles(PluginsDirectory, "*.dll"))
+        {
+            var name = Path.GetFileNameWithoutExtension(dllPath);
+            if (_loadedAssemblyNames.Contains(name))
+                continue;
+            if (name.Equals("SceneGallery.PluginSdk", StringComparison.OrdinalIgnoreCase))
+                continue;
+            LoadPlugin(dllPath);
         }
     }
 
@@ -106,6 +132,7 @@ public sealed class PluginService
         {
             var context = new PluginLoadContext(assemblyPath);
             var assembly = context.LoadFromAssemblyPath(assemblyPath);
+            _loadedAssemblyNames.Add(fileName);
 
             var pluginTypes = assembly.GetExportedTypes()
                 .Where(t => t is { IsAbstract: false, IsClass: true })
@@ -127,8 +154,10 @@ public sealed class PluginService
                 return;
             }
 
+            var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToList();
+
             foreach (var type in pluginTypes)
-                InstantiateAndInitialize(type, assemblyPath);
+                InstantiateAndInitialize(type, assemblyPath, metadata);
         }
         catch (Exception ex)
         {
@@ -137,7 +166,8 @@ public sealed class PluginService
         }
     }
 
-    private void InstantiateAndInitialize(Type type, string assemblyPath)
+    private void InstantiateAndInitialize(
+        Type type, string assemblyPath, IReadOnlyList<AssemblyMetadataAttribute> metadata)
     {
         var name = type.Name;
         try
@@ -149,6 +179,9 @@ public sealed class PluginService
             Directory.CreateDirectory(storageDir);
             plugin.Initialize(new PluginHost(plugin.Name, storageDir));
 
+            if (!_loadedPluginNames.Add(plugin.Name))
+                return;
+
             _instances.Add(plugin);
 
             if (plugin is IFolderAuthorProvider provider)
@@ -157,16 +190,36 @@ public sealed class PluginService
             if (plugin is ICardImportProvider importProvider)
                 _importProviders.Add(importProvider);
 
+            if (plugin is ICookieSetupProvider cookieSetupProvider)
+                _cookieSetupProviders.Add(cookieSetupProvider);
+
             if (plugin is IReverseImageSearchProvider reverseImageSearchProvider)
                 ReverseImageSearchProvider ??= reverseImageSearchProvider;
 
-            _plugins.Add(new LoadedPluginInfo(plugin.Name, plugin.Version, PluginStatus.Loaded, null, assemblyPath));
+            var description = metadata.FirstOrDefault(a => a.Key == "PluginDescription")?.Value;
+            var updateUrl = metadata.FirstOrDefault(a => a.Key == "PluginUpdateUrl")?.Value;
+
+            _plugins.Add(new LoadedPluginInfo(
+                plugin.Name, plugin.Version, PluginStatus.Loaded, null, assemblyPath,
+                description, updateUrl));
             Log(plugin.Name, $"loaded v{plugin.Version}");
         }
         catch (Exception ex)
         {
             CrashLogPlugin(name, ex);
             _plugins.Add(new LoadedPluginInfo(name, "?", PluginStatus.Failed, ex.Message, assemblyPath));
+        }
+    }
+
+    internal void ApplyUpdateInfo(IReadOnlyDictionary<string, PluginUpdateInfo> updates)
+    {
+        lock (_pluginLock)
+        {
+            for (var i = 0; i < _plugins.Count; i++)
+            {
+                if (updates.TryGetValue(_plugins[i].Name, out var info) && info.Version is not null)
+                    _plugins[i] = _plugins[i] with { AvailableVersion = info.Version };
+            }
         }
     }
 

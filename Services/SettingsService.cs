@@ -115,7 +115,7 @@ public class SettingsService
         /// folder when resolving import destinations. Can be multi-level (e.g. "整理\pixiv").
         /// Empty = place directly under the root (legacy behaviour).
         /// </summary>
-        public string ImportSubfolder { get; set; } = "";
+        public string ImportSubfolder { get; set; } = "Organized";
 
         /// <summary>
         /// When the number of files from the same pixiv artwork in one import batch
