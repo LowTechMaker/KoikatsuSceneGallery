@@ -204,9 +204,9 @@
 
                                     <Button
                                         Grid.Column="1"
+                                        x:Uid="Import_SelectAuthor"
                                         Click="PickAuthorForFetchFailedBatch_Click"
-                                        IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
-                                        ToolTipService.ToolTip="Select author">
+                                        IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}">
                                         <FontIcon FontSize="14" Glyph="&#xE716;" />
                                     </Button>
 
@@ -275,9 +275,9 @@
 
                                                     <Button
                                                         Grid.Column="5"
+                                                        x:Uid="Import_SelectAuthor"
                                                         CommandParameter="{x:Bind}"
-                                                        Click="PickAuthor_Click"
-                                                        ToolTipService.ToolTip="Select author">
+                                                        Click="PickAuthor_Click">
                                                         <FontIcon FontSize="14" Glyph="&#xE716;" />
                                                     </Button>
 
@@ -331,9 +331,9 @@
                                                                 </StackPanel>
 
                                                                 <StackPanel
+                                                                    x:Uid="Import_RatingTooltip"
                                                                     Orientation="Horizontal"
-                                                                    Spacing="4"
-                                                                    ToolTipService.ToolTip="Rating">
+                                                                    Spacing="4">
                                                                     <ToggleButton
                                                                         MinWidth="48"
                                                                         Content="G"
@@ -519,8 +519,8 @@
 
                         <Button
                             Grid.Column="1"
-                            Command="{x:Bind ViewModel.AssignBatchArtworkIdToUnknownCommand}"
-                            ToolTipService.ToolTip="Resolve selected artwork">
+                            x:Uid="Import_ResolveSelectedArtwork"
+                            Command="{x:Bind ViewModel.AssignBatchArtworkIdToUnknownCommand}">
                             <FontIcon FontSize="14" Glyph="&#xE721;" />
                         </Button>
 
@@ -531,9 +531,9 @@
 
                         <Button
                             Grid.Column="3"
+                            x:Uid="Import_SelectAuthor"
                             Click="PickAuthorForUnknownBatch_Click"
-                            IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
-                            ToolTipService.ToolTip="Select author">
+                            IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}">
                             <FontIcon FontSize="14" Glyph="&#xE716;" />
                         </Button>
 
@@ -580,10 +580,10 @@
                                                          Text="{x:Bind ManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                 <Button Grid.Column="3"
+                                                        x:Uid="Import_ResolveArtwork"
                                                         IsEnabled="{x:Bind CanAssignArtworkId, Mode=OneWay}"
                                                         CommandParameter="{x:Bind}"
-                                                        Click="AssignArtworkIdToUnknownGroup_Click"
-                                                        ToolTipService.ToolTip="Resolve artwork">
+                                                        Click="AssignArtworkIdToUnknownGroup_Click">
                                                     <FontIcon FontSize="14" Glyph="&#xE721;" />
                                                 </Button>
 
@@ -593,9 +593,9 @@
                                                          Text="{x:Bind ManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                 <Button Grid.Column="5"
+                                                        x:Uid="Import_SelectAuthor"
                                                         CommandParameter="{x:Bind}"
-                                                        Click="PickAuthorForUnknownGroup_Click"
-                                                        ToolTipService.ToolTip="Select author">
+                                                        Click="PickAuthorForUnknownGroup_Click">
                                                     <FontIcon FontSize="14" Glyph="&#xE716;" />
                                                 </Button>
 
@@ -607,9 +607,9 @@
                                                 </Button>
 
                                                 <Button Grid.Column="7"
+                                                        x:Uid="Import_RemoveGroup"
                                                         CommandParameter="{x:Bind}"
-                                                        Click="RemoveUnknownGroup_Click"
-                                                        ToolTipService.ToolTip="Remove group">
+                                                        Click="RemoveUnknownGroup_Click">
                                                     <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
@@ -651,8 +651,10 @@
                                                                            VerticalAlignment="Center" />
                                                             </StackPanel>
 
-                                                            <StackPanel Orientation="Horizontal" Spacing="4"
-                                                                        ToolTipService.ToolTip="Rating">
+                                                            <StackPanel
+                                                                x:Uid="Import_RatingTooltip"
+                                                                Orientation="Horizontal"
+                                                                Spacing="4">
                                                                 <ToggleButton MinWidth="48" Content="G"
                                                                               IsChecked="{x:Bind IsAllAgesRating, Mode=TwoWay}" />
                                                                 <ToggleButton MinWidth="64" Content="R-18"
@@ -663,9 +665,9 @@
                                                         </StackPanel>
 
                                                         <Button Grid.Column="2" VerticalAlignment="Top"
+                                                                x:Uid="Import_RemoveItem"
                                                                 CommandParameter="{x:Bind}"
-                                                                Click="RemoveUnknownItem_Click"
-                                                                ToolTipService.ToolTip="Remove">
+                                                                Click="RemoveUnknownItem_Click">
                                                             <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                         </Button>
                                                     </Grid>

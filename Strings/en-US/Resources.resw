@@ -723,6 +723,24 @@
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Search with SauceNao</value>
   </data>
+  <data name="Import_SelectAuthor.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select author</value>
+  </data>
+  <data name="Import_RatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Import_ResolveSelectedArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Resolve selected artwork</value>
+  </data>
+  <data name="Import_ResolveArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Resolve artwork</value>
+  </data>
+  <data name="Import_RemoveGroup.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove group</value>
+  </data>
+  <data name="Import_RemoveItem.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove</value>
+  </data>
   <data name="Import_SauceNaoResultTitle" xml:space="preserve">
     <value>SauceNao match</value>
   </data>

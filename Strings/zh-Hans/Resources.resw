@@ -723,6 +723,24 @@
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>用 SauceNao 搜索</value>
   </data>
+  <data name="Import_SelectAuthor.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择作者</value>
+  </data>
+  <data name="Import_RatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>分级</value>
+  </data>
+  <data name="Import_ResolveSelectedArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>解析所选作品</value>
+  </data>
+  <data name="Import_ResolveArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>解析作品</value>
+  </data>
+  <data name="Import_RemoveGroup.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除分组</value>
+  </data>
+  <data name="Import_RemoveItem.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除</value>
+  </data>
   <data name="Import_SauceNaoResultTitle" xml:space="preserve">
     <value>SauceNao 找到结果</value>
   </data>
