@@ -337,6 +337,18 @@ public sealed partial class SettingsPage : Page
             await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
     }
 
+    private async void RemoveScreenshotFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string path)
+            await ViewModel.RemoveScreenshotFolderCommand.ExecuteAsync(path);
+    }
+
+    private async void RemoveVideoFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string path)
+            await ViewModel.RemoveVideoFolderCommand.ExecuteAsync(path);
+    }
+
     private async void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)
     {
         await TryAddCoordinateResolution();

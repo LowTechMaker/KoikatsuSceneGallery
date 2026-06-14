@@ -150,6 +150,26 @@
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
     <value>分析外掛中…</value>
   </data>
+  <!-- ScreenshotGalleryPage -->
+  <data name="Nav_Screenshots.Content" xml:space="preserve">
+    <value>截圖</value>
+  </data>
+  <data name="Screenshot_Title.Text" xml:space="preserve">
+    <value>截圖</value>
+  </data>
+  <data name="Screenshot_Empty.Text" xml:space="preserve">
+    <value>找不到截圖。請在設定中新增資料夾。</value>
+  </data>
+  <!-- VideoGalleryPage -->
+  <data name="Nav_Videos.Content" xml:space="preserve">
+    <value>影片</value>
+  </data>
+  <data name="Video_Title.Text" xml:space="preserve">
+    <value>影片</value>
+  </data>
+  <data name="Video_Empty.Text" xml:space="preserve">
+    <value>找不到影片。請在設定中新增資料夾。</value>
+  </data>
   <!-- CoordinateGalleryPage -->
   <data name="Nav_Coordinates.Content" xml:space="preserve">
     <value>服裝卡</value>
@@ -261,6 +281,12 @@
   <data name="Detail_BepisDbId.Text" xml:space="preserve">
     <value>BepisDB ID</value>
   </data>
+  <data name="Detail_RotateLeft.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>向左旋轉</value>
+  </data>
+  <data name="Detail_RotateRight.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>向右旋轉 (R)</value>
+  </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>角色資訊</value>
   </data>
@@ -331,6 +357,18 @@
   </data>
   <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
     <value>新增包含 Koikatsu 角色卡 .png 檔案的資料夾。子資料夾會自動掃描。</value>
+  </data>
+  <data name="Settings_ScreenshotFoldersHeader.Text" xml:space="preserve">
+    <value>截圖資料夾</value>
+  </data>
+  <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
+    <value>新增包含截圖的資料夾（.png、.jpg、.jpeg、.bmp）。子資料夾會自動掃描。</value>
+  </data>
+  <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
+    <value>影片資料夾</value>
+  </data>
+  <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
+    <value>新增包含影片檔案的資料夾（.mp4、.avi、.webm、.mov、.mkv、.gif）。子資料夾會自動掃描。</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>顯示</value>

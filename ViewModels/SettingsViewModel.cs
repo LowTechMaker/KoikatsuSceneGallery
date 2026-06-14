@@ -16,6 +16,8 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> FolderPaths { get; } = [];
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
     public ObservableCollection<string> CoordinateFolderPaths { get; } = [];
+    public ObservableCollection<string> ScreenshotFolderPaths { get; } = [];
+    public ObservableCollection<string> VideoFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
     public ObservableCollection<string> CharacterAllowedResolutions { get; } = [];
     public ObservableCollection<string> CoordinateAllowedResolutions { get; } = [];
@@ -23,6 +25,8 @@ public partial class SettingsViewModel : ObservableObject
     public bool HasNoFolders => FolderPaths.Count == 0;
     public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
     public bool HasNoCoordinateFolders => CoordinateFolderPaths.Count == 0;
+    public bool HasNoScreenshotFolders => ScreenshotFolderPaths.Count == 0;
+    public bool HasNoVideoFolders => VideoFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
@@ -112,6 +116,8 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? SceneFolderPathsChanged;
     public event Action? CharacterFolderPathsChanged;
     public event Action? CoordinateFolderPathsChanged;
+    public event Action? ScreenshotFolderPathsChanged;
+    public event Action? VideoFolderPathsChanged;
 
     public SettingsViewModel(SettingsService settingsService)
     {
@@ -133,6 +139,18 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNoCoordinateFolders));
             if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 CoordinateFolderPathsChanged?.Invoke();
+        };
+        ScreenshotFolderPaths.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasNoScreenshotFolders));
+            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                ScreenshotFolderPathsChanged?.Invoke();
+        };
+        VideoFolderPaths.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasNoVideoFolders));
+            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                VideoFolderPathsChanged?.Invoke();
         };
     }
 
@@ -253,6 +271,14 @@ public partial class SettingsViewModel : ObservableObject
         foreach (var res in config.CoordinateAllowedResolutions)
             CoordinateAllowedResolutions.Add(res);
 
+        ScreenshotFolderPaths.Clear();
+        foreach (var path in config.ScreenshotFolderPaths)
+            ScreenshotFolderPaths.Add(path);
+
+        VideoFolderPaths.Clear();
+        foreach (var path in config.VideoFolderPaths)
+            VideoFolderPaths.Add(path);
+
         ResolutionFilterEnabled = config.ResolutionFilterEnabled;
         CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
         CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
@@ -357,6 +383,56 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RemoveCoordinateFolder(string path)
     {
         CoordinateFolderPaths.Remove(path);
+        await SaveConfigAsync();
+    }
+
+    [RelayCommand]
+    private async Task AddScreenshotFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null && !ScreenshotFolderPaths.Contains(folder.Path))
+        {
+            ScreenshotFolderPaths.Add(folder.Path);
+            await SaveConfigAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveScreenshotFolder(string path)
+    {
+        ScreenshotFolderPaths.Remove(path);
+        await SaveConfigAsync();
+    }
+
+    [RelayCommand]
+    private async Task AddVideoFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add("*");
+
+        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null && !VideoFolderPaths.Contains(folder.Path))
+        {
+            VideoFolderPaths.Add(folder.Path);
+            await SaveConfigAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveVideoFolder(string path)
+    {
+        VideoFolderPaths.Remove(path);
         await SaveConfigAsync();
     }
 
@@ -488,6 +564,8 @@ public partial class SettingsViewModel : ObservableObject
                 CharacterAllowedResolutions = [.. CharacterAllowedResolutions],
                 CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
+                ScreenshotFolderPaths = [.. ScreenshotFolderPaths],
+                VideoFolderPaths = [.. VideoFolderPaths],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 ThumbnailWidth = ThumbnailWidth,

@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.ScreenshotGalleryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:KoikatsuSceneGallery.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
+    mc:Ignorable="d">
+
+    <Page.KeyboardAccelerators>
+        <KeyboardAccelerator Key="Home" Invoked="ScrollToTop_Invoked" />
+        <KeyboardAccelerator Key="End" Invoked="ScrollToBottom_Invoked" />
+    </Page.KeyboardAccelerators>
+
+    <Grid Padding="24,16,24,0" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel
+            Orientation="Horizontal"
+            VerticalAlignment="Center"
+            Spacing="12">
+            <TextBlock
+                x:Uid="Screenshot_Title"
+                Style="{StaticResource TitleTextBlockStyle}" />
+            <StackPanel
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Spacing="8"
+                Visibility="{x:Bind ViewModel.IsGeneratingThumbnails, Mode=OneWay}">
+                <ProgressRing
+                    Width="16"
+                    Height="16"
+                    IsActive="True" />
+                <TextBlock
+                    x:Uid="Gallery_GeneratingLabel"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.PendingThumbnailCount, Mode=OneWay}" />
+            </StackPanel>
+        </StackPanel>
+
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Spacing="4">
+                <AutoSuggestBox
+                    x:Name="SearchBox"
+                    x:Uid="Gallery_SearchBox"
+                    QueryIcon="Find"
+                    TextChanged="SearchBox_TextChanged" />
+                <TextBlock
+                    x:Uid="Gallery_SearchHint"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}" />
+            </StackPanel>
+
+            <Button
+                x:Name="RandomButton"
+                x:Uid="Gallery_RandomButton"
+                Grid.Column="1"
+                Width="40"
+                Height="32"
+                Padding="0"
+                VerticalAlignment="Top"
+                Click="RandomButton_Click">
+                <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+            </Button>
+
+            <ComboBox
+                x:Name="SortComboBox"
+                Grid.Column="2"
+                Width="160"
+                Height="32"
+                VerticalAlignment="Top"
+                SelectedIndex="0"
+                SelectionChanged="SortComboBox_SelectionChanged">
+                <ComboBoxItem x:Uid="Gallery_SortName" Tag="Name" />
+                <ComboBoxItem x:Uid="Gallery_SortDateModified" Tag="DateModified" />
+                <ComboBoxItem x:Uid="Gallery_SortFileSize" Tag="FileSize" />
+                <ComboBoxItem x:Uid="Gallery_SortShuffle" Tag="Shuffle" />
+            </ComboBox>
+
+            <ToggleButton
+                x:Name="SortDirectionButton"
+                x:Uid="Gallery_SortDirection"
+                Grid.Column="3"
+                Width="40"
+                Height="32"
+                Padding="0"
+                VerticalAlignment="Top"
+                Click="SortDirectionButton_Click">
+                <FontIcon
+                    x:Name="SortDirectionIcon"
+                    FontSize="14"
+                    Glyph="&#xE74A;" />
+            </ToggleButton>
+
+            <StackPanel
+                x:Name="SizeButtonsPanel"
+                Grid.Column="4"
+                Orientation="Horizontal"
+                VerticalAlignment="Top"
+                Spacing="4">
+                <ToggleButton
+                    x:Name="SizeSmallButton"
+                    x:Uid="Gallery_SizeSmall"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="0" />
+                <ToggleButton
+                    x:Name="SizeMediumButton"
+                    x:Uid="Gallery_SizeMedium"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="1" />
+                <ToggleButton
+                    x:Name="SizeLargeButton"
+                    x:Uid="Gallery_SizeLarge"
+                    MinWidth="36"
+                    Width="36"
+                    Height="32"
+                    Padding="0"
+                    Click="SizeButton_Click"
+                    Tag="2" />
+            </StackPanel>
+        </Grid>
+
+        <GridView
+            x:Name="GalleryGrid"
+            Grid.Row="2"
+            CanDragItems="True"
+            ContainerContentChanging="GalleryGrid_ContainerContentChanging"
+            DragItemsStarting="GalleryGrid_DragItemsStarting"
+            IsItemClickEnabled="True"
+            ItemClick="GalleryGrid_ItemClick"
+            ItemsSource="{x:Bind ViewModel.CardsView, Mode=OneWay}"
+            SelectionMode="None">
+            <GridView.ItemContainerTransitions>
+                <TransitionCollection />
+            </GridView.ItemContainerTransitions>
+            <GridView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <ItemsWrapGrid Orientation="Horizontal" CacheLength="4" />
+                </ItemsPanelTemplate>
+            </GridView.ItemsPanel>
+            <GridView.ItemContainerStyle>
+                <Style TargetType="GridViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </GridView.ItemContainerStyle>
+            <GridView.ItemTemplate>
+                <DataTemplate x:DataType="models:MediaCard">
+                    <Grid
+                        x:Name="CardRoot"
+                        Margin="4"
+                        Padding="4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        CornerRadius="8"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Border
+                            CornerRadius="4"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <Image
+                                Stretch="Uniform"
+                                Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                        </Border>
+
+                        <TextBlock
+                            x:Name="FileNameText"
+                            Grid.Row="1"
+                            Margin="8,4"
+                            MaxLines="1"
+                            Text="{x:Bind FileName}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTipService.ToolTip="{x:Bind FileName}"
+                            Loaded="FileNameText_Loaded" />
+                    </Grid>
+                </DataTemplate>
+            </GridView.ItemTemplate>
+        </GridView>
+
+        <ProgressRing
+            Grid.Row="2"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+
+        <TextBlock
+            x:Uid="Screenshot_Empty"
+            Grid.Row="2"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Opacity="0.6"
+            Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+
+        <Button
+            x:Uid="Gallery_FeelingLucky"
+            Grid.Row="2"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,24"
+            Click="FeelingLucky_Click"
+            Visibility="{x:Bind ViewModel.IsShuffleMode, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                <TextBlock x:Uid="Gallery_FeelingLuckyLabel" />
+            </StackPanel>
+        </Button>
+    </Grid>
+</Page>

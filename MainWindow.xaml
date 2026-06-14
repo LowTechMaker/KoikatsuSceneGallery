@@ -60,6 +60,20 @@
                         <FontIcon Glyph="&#xE78A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem
+                    x:Uid="Nav_Screenshots"
+                    Tag="screenshots">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE722;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem
+                    x:Uid="Nav_Videos"
+                    Tag="videos">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE714;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <!--  Shown only when an author plugin is installed (see ctor).  -->
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"

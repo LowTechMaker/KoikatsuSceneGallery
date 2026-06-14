@@ -150,6 +150,26 @@
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
     <value>分析插件中…</value>
   </data>
+  <!-- ScreenshotGalleryPage -->
+  <data name="Nav_Screenshots.Content" xml:space="preserve">
+    <value>截图</value>
+  </data>
+  <data name="Screenshot_Title.Text" xml:space="preserve">
+    <value>截图</value>
+  </data>
+  <data name="Screenshot_Empty.Text" xml:space="preserve">
+    <value>未找到截图。请在设置中添加文件夹。</value>
+  </data>
+  <!-- VideoGalleryPage -->
+  <data name="Nav_Videos.Content" xml:space="preserve">
+    <value>视频</value>
+  </data>
+  <data name="Video_Title.Text" xml:space="preserve">
+    <value>视频</value>
+  </data>
+  <data name="Video_Empty.Text" xml:space="preserve">
+    <value>未找到视频。请在设置中添加文件夹。</value>
+  </data>
   <!-- CoordinateGalleryPage -->
   <data name="Nav_Coordinates.Content" xml:space="preserve">
     <value>服装卡</value>
@@ -261,6 +281,12 @@
   <data name="Detail_BepisDbId.Text" xml:space="preserve">
     <value>BepisDB ID</value>
   </data>
+  <data name="Detail_RotateLeft.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>向左旋转</value>
+  </data>
+  <data name="Detail_RotateRight.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>向右旋转 (R)</value>
+  </data>
   <data name="Detail_CharaInfo.Text" xml:space="preserve">
     <value>角色信息</value>
   </data>
@@ -331,6 +357,18 @@
   </data>
   <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
     <value>添加包含 Koikatsu 角色卡 .png 文件的文件夹。子文件夹会自动扫描。</value>
+  </data>
+  <data name="Settings_ScreenshotFoldersHeader.Text" xml:space="preserve">
+    <value>截图文件夹</value>
+  </data>
+  <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
+    <value>添加包含截图的文件夹（.png、.jpg、.jpeg、.bmp）。子文件夹会自动扫描。</value>
+  </data>
+  <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
+    <value>视频文件夹</value>
+  </data>
+  <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
+    <value>添加包含视频文件的文件夹（.mp4、.avi、.webm、.mov、.mkv、.gif）。子文件夹会自动扫描。</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>显示</value>

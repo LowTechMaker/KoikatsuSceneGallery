@@ -70,6 +70,12 @@ public sealed partial class MainWindow : Window
                 case "coordinates":
                     NavFrame.Navigate(typeof(CoordinateGalleryPage));
                     break;
+                case "screenshots":
+                    NavFrame.Navigate(typeof(ScreenshotGalleryPage));
+                    break;
+                case "videos":
+                    NavFrame.Navigate(typeof(VideoGalleryPage));
+                    break;
                 case "authors" when App.AuthorInfoService.IsAvailable:
                     NavFrame.Navigate(typeof(AuthorsPage));
                     break;

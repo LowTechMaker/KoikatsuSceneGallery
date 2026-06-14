@@ -18,6 +18,8 @@ public partial class App : Application
     public static SceneMetadataService SceneMetadataService { get; } = new();
     public static CharacterMetadataService CharacterMetadataService { get; } = new();
     public static CoordinateMetadataService CoordinateMetadataService { get; } = new();
+    public static MediaCardService ScreenshotCardService { get; } = new([".png", ".jpg", ".jpeg", ".bmp"], isVideo: false);
+    public static MediaCardService VideoCardService { get; } = new([".mp4", ".avi", ".webm", ".mov", ".mkv", ".gif"], isVideo: true);
     public static PluginService PluginService { get; } = new();
     public static AuthorInfoService AuthorInfoService { get; private set; } = null!;
     public static SettingsViewModel SettingsViewModel { get; private set; } = null!;
@@ -25,6 +27,8 @@ public partial class App : Application
     public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
     public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
     public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
+    public static MediaGalleryViewModel ScreenshotGalleryViewModel { get; private set; } = null!;
+    public static MediaGalleryViewModel VideoGalleryViewModel { get; private set; } = null!;
     public static ImportService? ImportService { get; private set; }
     public static ImportViewModel? ImportViewModel { get; private set; }
     public static AuthorPostService? AuthorPostService { get; private set; }
@@ -107,6 +111,8 @@ public partial class App : Application
         GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
         CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
         CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
+        ScreenshotGalleryViewModel = new MediaGalleryViewModel(ScreenshotCardService, SettingsService, ThumbnailCacheService, isVideo: false);
+        VideoGalleryViewModel = new MediaGalleryViewModel(VideoCardService, SettingsService, ThumbnailCacheService, isVideo: true);
 
         if (AuthorInfoService.IsAvailable)
         {

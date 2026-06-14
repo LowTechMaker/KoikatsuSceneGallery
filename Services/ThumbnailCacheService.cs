@@ -100,6 +100,65 @@ public class ThumbnailCacheService
         }
     }
 
+    public async Task<string?> EnsureVideoThumbnailAsync(string filePath, DateTime dateModified)
+    {
+        try
+        {
+            var cacheKey = ComputeCacheKey(filePath, dateModified);
+            var cachePath = Path.Combine(_cacheFolder, $"{cacheKey}.jpg");
+
+            if (File.Exists(cachePath))
+                return cachePath;
+
+            var file = await StorageFile.GetFileFromPathAsync(filePath);
+            using var thumbnail = await file.GetThumbnailAsync(
+                Windows.Storage.FileProperties.ThumbnailMode.SingleItem, ThumbnailWidth);
+            if (thumbnail == null) return null;
+
+            var decoder = await BitmapDecoder.CreateAsync(thumbnail);
+
+            var scale = (double)ThumbnailWidth / decoder.PixelWidth;
+            var scaledHeight = (uint)(decoder.PixelHeight * scale);
+
+            var transform = new BitmapTransform
+            {
+                ScaledWidth = ThumbnailWidth,
+                ScaledHeight = scaledHeight,
+                InterpolationMode = BitmapInterpolationMode.Linear
+            };
+
+            var pixels = await decoder.GetPixelDataAsync(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Premultiplied,
+                transform,
+                ExifOrientationMode.RespectExifOrientation,
+                ColorManagementMode.DoNotColorManage);
+
+            var cacheFile = await StorageFolder.GetFolderFromPathAsync(_cacheFolder);
+            var outputFile = await cacheFile.CreateFileAsync(
+                $"{cacheKey}.jpg",
+                CreationCollisionOption.ReplaceExisting);
+
+            using var outputStream = await outputFile.OpenAsync(FileAccessMode.ReadWrite);
+            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, outputStream);
+            encoder.SetPixelData(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Premultiplied,
+                ThumbnailWidth,
+                scaledHeight,
+                decoder.DpiX,
+                decoder.DpiY,
+                pixels.DetachPixelData());
+
+            await encoder.FlushAsync();
+            return cachePath;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     public async Task ClearCacheAsync()
     {
         await Task.Run(() =>

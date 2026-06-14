@@ -110,6 +110,9 @@ public class SettingsService
         public bool CoordinateResolutionFilterEnabled { get; set; } = false;
         public List<string> CoordinateAllowedResolutions { get; set; } = ["252x352"];
 
+        public List<string> ScreenshotFolderPaths { get; set; } = [];
+        public List<string> VideoFolderPaths { get; set; } = [];
+
         /// <summary>
         /// Relative subfolder path inserted between the library root and the author
         /// folder when resolving import destinations. Can be multi-level (e.g. "整理\pixiv").
