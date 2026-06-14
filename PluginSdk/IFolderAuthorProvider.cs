@@ -6,6 +6,9 @@ namespace SceneGallery.PluginSdk;
 /// </summary>
 public interface IFolderAuthorProvider : IPlugin
 {
+    /// <summary>Provider identifier, e.g. "pixiv" or "bepisdb".</summary>
+    string ProviderId { get; }
+
     /// <summary>
     /// Extracts an author identity from a single directory name. Called on hot
     /// scan paths: must be pure, fast, and do no I/O. Returns null when the

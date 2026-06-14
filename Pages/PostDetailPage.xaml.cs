@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -17,6 +19,7 @@ public sealed partial class PostDetailPage : Page
     public PostDetailPage()
     {
         InitializeComponent();
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -25,6 +28,7 @@ public sealed partial class PostDetailPage : Page
         if (e.Parameter is AuthorPost post)
         {
             ViewModel.Load(post);
+            RenderDescription();
             if (!post.IsDetailLoaded && App.AuthorPostService is { } postService)
             {
                 _cts = new CancellationTokenSource();
@@ -52,4 +56,13 @@ public sealed partial class PostDetailPage : Page
         if (App.AuthorPostService is { } postService)
             await ViewModel.SaveToCacheAsync(postService, _cts?.Token ?? CancellationToken.None);
     }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PostDetailViewModel.Description))
+            RenderDescription();
+    }
+
+    private void RenderDescription()
+        => HtmlDescriptionRenderer.Render(DescriptionText, ViewModel.Description);
 }

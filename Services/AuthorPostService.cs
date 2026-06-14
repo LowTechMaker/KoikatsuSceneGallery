@@ -18,16 +18,16 @@ public sealed class AuthorPostService
     }
 
     private readonly IReadOnlyList<ICardImportProvider> _importProviders;
-    private readonly IFolderAuthorProvider _authorProvider;
+    private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly SettingsService _settingsService;
 
     public AuthorPostService(
         IReadOnlyList<ICardImportProvider> importProviders,
-        IFolderAuthorProvider authorProvider,
+        IReadOnlyList<IFolderAuthorProvider> authorProviders,
         SettingsService settingsService)
     {
         _importProviders = importProviders;
-        _authorProvider = authorProvider;
+        _authorProviders = authorProviders;
         _settingsService = settingsService;
     }
 
@@ -54,6 +54,13 @@ public sealed class AuthorPostService
     private ICardImportProvider? FindProvider(string providerId)
         => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
 
+    private IFolderAuthorProvider? FindAuthorProvider(string providerId)
+        => _authorProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
+
+    public bool CanScanPosts(AuthorKey authorKey)
+        => FindAuthorProvider(authorKey.ProviderId) is not null
+           && FindProvider(authorKey.ProviderId) is not null;
+
     /// <summary>
     /// Scans all library roots for folders belonging to <paramref name="authorKey"/>
     /// and returns deduplicated artwork IDs found in subfolder names and filenames.
@@ -62,6 +69,9 @@ public sealed class AuthorPostService
     public async Task<List<AuthorPost>> ScanAuthorPostsAsync(
         AuthorKey authorKey, CancellationToken ct)
     {
+        var authorProvider = FindAuthorProvider(authorKey.ProviderId);
+        if (authorProvider is null) return [];
+
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
 
         return await Task.Run(() =>
@@ -74,6 +84,12 @@ public sealed class AuthorPostService
                 .Distinct(StringComparer.OrdinalIgnoreCase);
 
             var subfolder = config.ImportSubfolder.Trim();
+            var providerScopes = _importProviders
+                .Where(p => p.ProviderId.Equals(authorKey.ProviderId, StringComparison.OrdinalIgnoreCase))
+                .Select(GetProviderScope)
+                .Append((Folder: "", UsesRatingFolders: true))
+                .DistinctBy(s => s.Folder, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             var gameVersionFolders = new[] { config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, "" };
             var ratingFolders = new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName };
 
@@ -81,26 +97,29 @@ public sealed class AuthorPostService
             {
                 if (!Directory.Exists(root)) continue;
 
-                foreach (var gvFolder in gameVersionFolders)
+                foreach (var providerScope in providerScopes)
                 {
-                    foreach (var ratingFolder in ratingFolders)
+                    foreach (var gvFolder in gameVersionFolders)
                     {
-                        var ratingDir = BuildPath(root, subfolder, gvFolder, ratingFolder);
-                        if (!Directory.Exists(ratingDir)) continue;
-
-                        try
+                        foreach (var ratingFolder in providerScope.UsesRatingFolders ? ratingFolders : [""])
                         {
-                            foreach (var authorDir in Directory.EnumerateDirectories(ratingDir))
-                            {
-                                ct.ThrowIfCancellationRequested();
-                                var parsed = _authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
-                                if (parsed is null || parsed.Key != authorKey) continue;
+                            var ratingDir = BuildPath(root, subfolder, providerScope.Folder, gvFolder, ratingFolder);
+                            if (!Directory.Exists(ratingDir)) continue;
 
-                                ScanAuthorDirectory(authorDir, posts, ct);
+                            try
+                            {
+                                foreach (var authorDir in Directory.EnumerateDirectories(ratingDir))
+                                {
+                                    ct.ThrowIfCancellationRequested();
+                                    var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
+                                    if (parsed is null || parsed.Key != authorKey) continue;
+
+                                    ScanAuthorDirectory(authorDir, posts, ct);
+                                }
                             }
+                            catch (OperationCanceledException) { throw; }
+                            catch { }
                         }
-                        catch (OperationCanceledException) { throw; }
-                        catch { }
                     }
                 }
             }
@@ -223,12 +242,39 @@ public sealed class AuthorPostService
         return string.IsNullOrEmpty(title) ? null : title;
     }
 
-    private static string BuildPath(string root, string subfolder, string gameVersion, string rating)
+    private static string BuildPath(string root, string subfolder, string providerFolder, string gameVersion, string rating)
     {
-        var parts = new List<string>(4) { root };
+        var parts = new List<string>(5) { root };
         if (!string.IsNullOrEmpty(subfolder)) parts.Add(subfolder);
+        if (!string.IsNullOrEmpty(providerFolder)) parts.Add(providerFolder);
         if (!string.IsNullOrEmpty(gameVersion)) parts.Add(gameVersion);
         parts.Add(rating);
         return Path.Combine([.. parts]);
+    }
+
+    private static (string Folder, bool UsesRatingFolders) GetProviderScope(ICardImportProvider provider)
+    {
+        if (provider is IImportDestinationProvider destinationProvider)
+            return (SanitizeRelativePath(destinationProvider.DestinationFolderName), destinationProvider.UsesRatingFolders);
+
+        return (SanitizeRelativePath(provider.Name), true);
+    }
+
+    private static string SanitizeRelativePath(string relativePath)
+    {
+        var parts = relativePath
+            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)
+            .Select(SanitizeFolderName)
+            .Where(p => p.Length > 0)
+            .ToArray();
+
+        return parts.Length == 0 ? "" : Path.Combine(parts);
+    }
+
+    private static string SanitizeFolderName(string name)
+    {
+        foreach (var c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+        return name.Trim();
     }
 }

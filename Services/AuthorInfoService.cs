@@ -22,8 +22,10 @@ public sealed record AuthorSummary(
     public int TotalCount => SceneCount + CharacterCount + CoordinateCount;
 }
 
+public sealed record AuthorProviderInfo(string ProviderId, string DisplayName);
+
 /// <summary>
-/// Bridges the loaded <see cref="IFolderAuthorProvider"/> plugin and the
+/// Bridges loaded <see cref="IFolderAuthorProvider"/> plugins and the
 /// galleries: resolves each card's folder chain to an author, assigns the
 /// shared <see cref="AuthorDisplay"/> to cards as they enter the collections,
 /// and kicks off (plugin-rate-limited) profile fetches. When no plugin is
@@ -34,7 +36,7 @@ public sealed record AuthorSummary(
 /// </summary>
 public sealed class AuthorInfoService
 {
-    private readonly IFolderAuthorProvider? _provider;
+    private readonly IReadOnlyList<IFolderAuthorProvider> _providers;
     private readonly DispatcherQueue _dispatcher;
 
     // Folder-chain resolution memoized per directory; cleared when the
@@ -52,17 +54,25 @@ public sealed class AuthorInfoService
     /// <summary>Fired (on the UI thread) whenever author assignments or counts change.</summary>
     public event Action? AuthorsChanged;
 
-    public AuthorInfoService(IFolderAuthorProvider? provider, DispatcherQueue dispatcher)
+    public AuthorInfoService(IReadOnlyList<IFolderAuthorProvider> providers, DispatcherQueue dispatcher)
     {
-        _provider = provider;
+        _providers = providers
+            .GroupBy(p => p.ProviderId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+        ProviderInfos = _providers
+            .Select(p => new AuthorProviderInfo(p.ProviderId, GetDisplayName(p)))
+            .ToList();
         _dispatcher = dispatcher;
     }
 
-    public bool IsAvailable => _provider != null;
+    public bool IsAvailable => _providers.Count > 0;
+
+    public IReadOnlyList<AuthorProviderInfo> ProviderInfos { get; }
 
     public void UpdateRoots(IEnumerable<string> roots)
     {
-        if (_provider is null) return;
+        if (_providers.Count == 0) return;
         _roots = roots
             .Where(r => !string.IsNullOrWhiteSpace(r))
             .Select(r => r.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
@@ -80,7 +90,7 @@ public sealed class AuthorInfoService
     public void Attach<TCard>(ObservableCollection<TCard> cards, AuthorCardKind kind)
         where TCard : class, IAuthorOwner
     {
-        if (_provider is null) return;
+        if (_providers.Count == 0) return;
 
         cards.CollectionChanged += (_, e) =>
         {
@@ -127,8 +137,9 @@ public sealed class AuthorInfoService
     /// <summary>Re-fetches one author from the network, bypassing the plugin's cache.</summary>
     public async Task RefreshAuthorAsync(AuthorKey key, CancellationToken ct = default)
     {
-        if (_provider is null) return;
-        var info = await _provider.GetAuthorInfoAsync(key, forceRefresh: true, ct);
+        var provider = FindProvider(key.ProviderId);
+        if (provider is null) return;
+        var info = await provider.GetAuthorInfoAsync(key, forceRefresh: true, ct);
         if (info is not null)
             ApplyInfo(info);
     }
@@ -199,9 +210,15 @@ public sealed class AuthorInfoService
             // Only parse this folder if no ancestor matched.
             if (result is null)
             {
-                var parsed = _provider!.TryParseFolderName(Path.GetFileName(directory));
-                if (parsed is not null)
-                    result = GetOrCreateDisplay(parsed);
+                var folderName = Path.GetFileName(directory);
+                foreach (var provider in GetCandidateProviders(directory))
+                {
+                    var parsed = provider.TryParseFolderName(folderName);
+                    if (parsed is null) continue;
+
+                    result = GetOrCreateDisplay(provider, parsed);
+                    break;
+                }
             }
         }
 
@@ -225,12 +242,12 @@ public sealed class AuthorInfoService
         return false;
     }
 
-    private AuthorDisplay GetOrCreateDisplay(ParsedAuthor parsed)
+    private AuthorDisplay GetOrCreateDisplay(IFolderAuthorProvider provider, ParsedAuthor parsed)
     {
         if (_displays.TryGetValue(parsed.Key, out var existing))
             return existing;
 
-        var display = new AuthorDisplay(parsed.Key, parsed.FolderDisplayName, _provider!.GetProfileUrl(parsed.Key));
+        var display = new AuthorDisplay(parsed.Key, parsed.FolderDisplayName, provider.GetProfileUrl(parsed.Key));
         _displays[parsed.Key] = display;
 
         // Fire-and-forget: cache hits complete synchronously inside the
@@ -244,7 +261,10 @@ public sealed class AuthorInfoService
     {
         try
         {
-            var info = await _provider!.GetAuthorInfoAsync(key, forceRefresh: false, CancellationToken.None);
+            var provider = FindProvider(key.ProviderId);
+            if (provider is null) return;
+
+            var info = await provider.GetAuthorInfoAsync(key, forceRefresh: false, CancellationToken.None);
             if (info is not null)
                 ApplyInfo(info);
         }
@@ -264,5 +284,107 @@ public sealed class AuthorInfoService
             display.AvatarPath = info.AvatarFilePath;
             AuthorsChanged?.Invoke();
         });
+    }
+
+    private IFolderAuthorProvider? FindProvider(string providerId)
+        => _providers.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
+
+    private IReadOnlyList<IFolderAuthorProvider> GetCandidateProviders(string directory)
+    {
+        var scoped = _providers
+            .Where(p => IsInsideProviderScope(directory, p))
+            .ToList();
+        return scoped.Count > 0 ? scoped : _providers;
+    }
+
+    private bool IsInsideProviderScope(string directory, IFolderAuthorProvider provider)
+    {
+        if (provider is not IImportDestinationProvider destinationProvider)
+            return false;
+
+        var providerFolder = SanitizeRelativePath(destinationProvider.DestinationFolderName);
+        if (string.IsNullOrEmpty(providerFolder))
+            return false;
+
+        var providerParts = SplitPath(providerFolder);
+        if (providerParts.Length == 0)
+            return false;
+
+        foreach (var root in _roots)
+        {
+            if (!TryGetRelativePath(directory, root, out var relativePath))
+                continue;
+
+            var directoryParts = SplitPath(relativePath);
+            for (var i = 0; i <= directoryParts.Length - providerParts.Length; i++)
+            {
+                var matches = true;
+                for (var j = 0; j < providerParts.Length; j++)
+                {
+                    if (!directoryParts[i + j].Equals(providerParts[j], StringComparison.OrdinalIgnoreCase))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+
+                if (matches)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetRelativePath(string directory, string root, out string relativePath)
+    {
+        relativePath = string.Empty;
+        if (directory.Length == root.Length &&
+            directory.Equals(root, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (directory.Length <= root.Length ||
+            !directory.StartsWith(root, StringComparison.OrdinalIgnoreCase) ||
+            (directory[root.Length] != Path.DirectorySeparatorChar &&
+             directory[root.Length] != Path.AltDirectorySeparatorChar))
+        {
+            return false;
+        }
+
+        relativePath = directory[(root.Length + 1)..];
+        return true;
+    }
+
+    private static string[] SplitPath(string path)
+        => path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+    private static string SanitizeRelativePath(string relativePath)
+    {
+        var parts = SplitPath(relativePath)
+            .Select(SanitizeFolderName)
+            .Where(p => p.Length > 0)
+            .ToArray();
+
+        return parts.Length == 0 ? "" : Path.Combine(parts);
+    }
+
+    private static string SanitizeFolderName(string name)
+    {
+        foreach (var c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+        return name.Trim();
+    }
+
+    private static string GetDisplayName(IFolderAuthorProvider provider)
+    {
+        if (provider is IImportDestinationProvider destinationProvider)
+        {
+            var providerFolder = SanitizeRelativePath(destinationProvider.DestinationFolderName);
+            if (!string.IsNullOrEmpty(providerFolder))
+                return Path.GetFileName(providerFolder);
+        }
+
+        return string.IsNullOrWhiteSpace(provider.Name) ? provider.ProviderId : provider.Name;
     }
 }

@@ -79,6 +79,10 @@ public sealed class PluginService
     /// <summary>First loaded author provider, or null when none is installed.</summary>
     public IFolderAuthorProvider? AuthorProvider { get; private set; }
 
+    /// <summary>All loaded author providers, tried in load order.</summary>
+    public IReadOnlyList<IFolderAuthorProvider> AuthorProviders => _authorProviders;
+    private readonly List<IFolderAuthorProvider> _authorProviders = [];
+
     /// <summary>All loaded import providers, tried in load order.</summary>
     public IReadOnlyList<ICardImportProvider> ImportProviders => _importProviders;
     private readonly List<ICardImportProvider> _importProviders = [];
@@ -189,7 +193,10 @@ public sealed class PluginService
             _instances.Add(plugin);
 
             if (plugin is IFolderAuthorProvider provider)
+            {
                 AuthorProvider ??= provider;
+                _authorProviders.Add(provider);
+            }
 
             if (plugin is ICardImportProvider importProvider)
                 _importProviders.Add(importProvider);

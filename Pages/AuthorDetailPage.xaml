@@ -320,10 +320,10 @@
                 </GridView>
             </PivotItem>
 
-            <!-- Posts Tab (only for authors with provider ID) -->
+            <!-- Posts Tab (added dynamically for providers with artwork scanning) -->
             <PivotItem
                 x:Name="PostsPivotItem"
-                Visibility="{x:Bind ViewModel.HasPixivId, Mode=OneWay}">
+                x:Load="{x:Bind ViewModel.CanLoadPosts, Mode=OneWay}">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE8F1;" />

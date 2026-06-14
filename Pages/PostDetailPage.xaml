@@ -173,10 +173,10 @@
                 <TextBlock
                     x:Uid="PostDetail_DescriptionHeader"
                     Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock
-                    Text="{x:Bind ViewModel.Description, Mode=OneWay}"
-                    TextWrapping="Wrap"
-                    IsTextSelectionEnabled="True" />
+                <RichTextBlock
+                    x:Name="DescriptionText"
+                    IsTextSelectionEnabled="True"
+                    TextWrapping="Wrap" />
             </StackPanel>
 
             <!-- Local file info -->

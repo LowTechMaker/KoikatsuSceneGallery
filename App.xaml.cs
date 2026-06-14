@@ -104,7 +104,7 @@ public partial class App : Application
         });
 
         AuthorInfoService = new AuthorInfoService(
-            PluginService.AuthorProvider,
+            PluginService.AuthorProviders,
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
 
         SettingsViewModel = new SettingsViewModel(SettingsService);
@@ -142,11 +142,11 @@ public partial class App : Application
                 SettingsService,
                 Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
 
-            if (PluginService.AuthorProvider is not null)
+            if (PluginService.AuthorProviders.Count > 0)
             {
                 AuthorPostService = new AuthorPostService(
                     PluginService.ImportProviders,
-                    PluginService.AuthorProvider,
+                    PluginService.AuthorProviders,
                     SettingsService);
             }
         }

@@ -7,6 +7,7 @@
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:services="using:KoikatsuSceneGallery.Services"
+    xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
 
     <Grid Padding="24,16,24,0" RowSpacing="16">
@@ -55,108 +56,125 @@
             </Button>
         </Grid>
 
-        <GridView
-            x:Name="AuthorsGrid"
+        <Pivot
             Grid.Row="1"
-            IsItemClickEnabled="True"
-            ItemClick="AuthorsGrid_ItemClick"
-            ItemsSource="{x:Bind ViewModel.Authors, Mode=OneWay}"
-            SelectionMode="None">
-            <GridView.ItemTemplate>
-                <DataTemplate x:DataType="services:AuthorSummary">
-                    <Grid
-                        Width="280"
-                        Margin="4"
-                        Padding="12"
-                        ColumnSpacing="12"
-                        CornerRadius="8"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+            ItemsSource="{x:Bind ViewModel.ProviderTabs, Mode=OneWay}">
+            <Pivot.HeaderTemplate>
+                <DataTemplate x:DataType="viewModels:AuthorProviderTabViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{x:Bind DisplayName, Mode=OneWay}" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind CountText, Mode=OneWay}" />
+                    </StackPanel>
+                </DataTemplate>
+            </Pivot.HeaderTemplate>
+            <Pivot.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:AuthorProviderTabViewModel">
+                    <Grid>
+                        <GridView
+                            IsItemClickEnabled="True"
+                            ItemClick="AuthorsGrid_ItemClick"
+                            ItemsSource="{x:Bind Authors, Mode=OneWay}"
+                            SelectionMode="None">
+                            <GridView.ItemTemplate>
+                                <DataTemplate x:DataType="services:AuthorSummary">
+                                    <Grid
+                                        Width="280"
+                                        Margin="4"
+                                        Padding="12"
+                                        ColumnSpacing="12"
+                                        CornerRadius="8"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                        <PersonPicture
-                            Width="48"
-                            Height="48"
-                            DisplayName="{x:Bind Display.Name, Mode=OneWay}"
-                            ProfilePicture="{x:Bind Display.AvatarSource, Mode=OneWay}" />
+                                        <PersonPicture
+                                            Width="48"
+                                            Height="48"
+                                            DisplayName="{x:Bind Display.Name, Mode=OneWay}"
+                                            ProfilePicture="{x:Bind Display.AvatarSource, Mode=OneWay}" />
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                            <TextBlock
-                                MaxLines="1"
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="{x:Bind Display.Name, Mode=OneWay}"
-                                TextTrimming="CharacterEllipsis" />
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <FontIcon
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="&#xE8B9;" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{x:Bind SceneCount}" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <FontIcon
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="&#xE77B;" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{x:Bind CharacterCount}" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <FontIcon
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="&#xE78A;" />
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{x:Bind CoordinateCount}" />
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock
+                                                MaxLines="1"
+                                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                Text="{x:Bind Display.Name, Mode=OneWay}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon
+                                                        FontSize="12"
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Glyph="&#xE8B9;" />
+                                                    <TextBlock
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind SceneCount}" />
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon
+                                                        FontSize="12"
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Glyph="&#xE77B;" />
+                                                    <TextBlock
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind CharacterCount}" />
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <FontIcon
+                                                        FontSize="12"
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Glyph="&#xE78A;" />
+                                                    <TextBlock
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind CoordinateCount}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
 
-                        <Grid.ContextFlyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem
-                                    x:Uid="Authors_OpenProfile"
-                                    Click="OpenProfile_Click"
-                                    Tag="{x:Bind}">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xE774;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                                <MenuFlyoutItem
-                                    x:Uid="Authors_RefreshOne"
-                                    Click="RefreshOne_Click"
-                                    Tag="{x:Bind}">
-                                    <MenuFlyoutItem.Icon>
-                                        <FontIcon Glyph="&#xE72C;" />
-                                    </MenuFlyoutItem.Icon>
-                                </MenuFlyoutItem>
-                            </MenuFlyout>
-                        </Grid.ContextFlyout>
+                                        <Grid.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem
+                                                    x:Uid="Authors_OpenProfile"
+                                                    Click="OpenProfile_Click"
+                                                    Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE774;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem
+                                                    x:Uid="Authors_RefreshOne"
+                                                    Click="RefreshOne_Click"
+                                                    Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE72C;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Grid.ContextFlyout>
+                                    </Grid>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+
+                        <TextBlock
+                            x:Uid="Authors_Empty"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Opacity="0.6"
+                            TextAlignment="Center"
+                            Visibility="{x:Bind IsEmpty, Mode=OneWay}" />
                     </Grid>
                 </DataTemplate>
-            </GridView.ItemTemplate>
-        </GridView>
-
-        <TextBlock
-            x:Uid="Authors_Empty"
-            Grid.Row="1"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Opacity="0.6"
-            TextAlignment="Center"
-            Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
+            </Pivot.ItemTemplate>
+        </Pivot>
     </Grid>
 </Page>

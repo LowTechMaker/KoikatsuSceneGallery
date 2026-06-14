@@ -31,7 +31,8 @@ public partial class AuthorDetailViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsLoadingPosts { get; set; }
 
-    public bool HasPixivId => Author?.Key.ProviderId == "pixiv";
+    public bool CanLoadPosts => Author is { } author
+                                && App.AuthorPostService?.CanScanPosts(author.Key) == true;
 
     public void Load(AuthorSummary summary)
     {
@@ -62,12 +63,12 @@ public partial class AuthorDetailViewModel : ObservableObject
         }
         CoordinateCount = Coordinates.Count;
 
-        OnPropertyChanged(nameof(HasPixivId));
+        OnPropertyChanged(nameof(CanLoadPosts));
     }
 
     public async Task LoadPostsAsync(AuthorPostService postService, CancellationToken ct)
     {
-        if (Author is null || !HasPixivId) return;
+        if (Author is null || !CanLoadPosts) return;
 
         IsLoadingPosts = true;
         try

@@ -6,6 +6,34 @@ using Microsoft.UI.Dispatching;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
+public partial class AuthorProviderTabViewModel : ObservableObject
+{
+    public AuthorProviderTabViewModel(AuthorProviderInfo provider)
+    {
+        ProviderId = provider.ProviderId;
+        DisplayName = provider.DisplayName;
+    }
+
+    public string ProviderId { get; }
+
+    public string DisplayName { get; }
+
+    public ObservableCollection<AuthorSummary> Authors { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    public partial bool HasAuthors { get; set; }
+
+    public bool IsEmpty => !HasAuthors;
+
+    [ObservableProperty]
+    public partial int AuthorCount { get; set; }
+
+    public string CountText => AuthorCount > 0 ? $"({AuthorCount})" : "";
+
+    partial void OnAuthorCountChanged(int value) => OnPropertyChanged(nameof(CountText));
+}
+
 /// <summary>
 /// Backs the Authors page: an aggregated, count-sorted list of every author
 /// detected across the three galleries. Rebuilds are debounced because
@@ -18,7 +46,7 @@ public partial class AuthorsViewModel : ObservableObject
     private readonly AuthorInfoService _authorInfoService;
     private readonly DispatcherQueueTimer _rebuildTimer;
 
-    public ObservableCollection<AuthorSummary> Authors { get; } = [];
+    public ObservableCollection<AuthorProviderTabViewModel> ProviderTabs { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -39,6 +67,9 @@ public partial class AuthorsViewModel : ObservableObject
     public AuthorsViewModel(AuthorInfoService authorInfoService, DispatcherQueue dispatcher)
     {
         _authorInfoService = authorInfoService;
+        foreach (var provider in _authorInfoService.ProviderInfos)
+            ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
+
         _rebuildTimer = dispatcher.CreateTimer();
         _rebuildTimer.Interval = RebuildDebounce;
         _rebuildTimer.IsRepeating = false;
@@ -56,17 +87,27 @@ public partial class AuthorsViewModel : ObservableObject
             .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        for (int i = 0; i < summaries.Count; i++)
+        foreach (var tab in ProviderTabs)
         {
-            if (i < Authors.Count)
-                Authors[i] = summaries[i];
-            else
-                Authors.Add(summaries[i]);
-        }
-        while (Authors.Count > summaries.Count)
-            Authors.RemoveAt(Authors.Count - 1);
+            var tabSummaries = summaries
+                .Where(s => s.Display.Key.ProviderId.Equals(tab.ProviderId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-        HasAuthors = Authors.Count > 0;
+            for (int i = 0; i < tabSummaries.Count; i++)
+            {
+                if (i < tab.Authors.Count)
+                    tab.Authors[i] = tabSummaries[i];
+                else
+                    tab.Authors.Add(tabSummaries[i]);
+            }
+            while (tab.Authors.Count > tabSummaries.Count)
+                tab.Authors.RemoveAt(tab.Authors.Count - 1);
+
+            tab.AuthorCount = tab.Authors.Count;
+            tab.HasAuthors = tab.Authors.Count > 0;
+        }
+
+        HasAuthors = ProviderTabs.Any(t => t.HasAuthors);
     }
 
     [RelayCommand]
@@ -78,7 +119,10 @@ public partial class AuthorsViewModel : ObservableObject
         {
             // Sequential on purpose: each call queues behind the plugin's rate
             // limiter anyway, and one-at-a-time gives an honest progress count.
-            var keys = Authors.Select(s => s.Display.Key).ToList();
+            var keys = ProviderTabs
+                .SelectMany(t => t.Authors)
+                .Select(s => s.Display.Key)
+                .ToList();
             for (var i = 0; i < keys.Count; i++)
             {
                 RefreshProgress = $"{i + 1} / {keys.Count}";

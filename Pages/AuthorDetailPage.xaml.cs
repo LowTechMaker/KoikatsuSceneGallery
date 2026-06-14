@@ -38,7 +38,7 @@ public sealed partial class AuthorDetailPage : Page
         {
             ViewModel.Load(summary);
             RestoreSelectedTab(e.NavigationMode);
-            if (ViewModel.HasPixivId && App.AuthorPostService is { } postService)
+            if (ViewModel.CanLoadPosts && App.AuthorPostService is { } postService)
             {
                 _postsCts = new CancellationTokenSource();
                 _ = ViewModel.LoadPostsAsync(postService, _postsCts.Token);
