@@ -5,6 +5,7 @@ using CommunityToolkit.WinUI.Collections;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
+using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
@@ -75,7 +76,11 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public partial bool ShowFileNames { get; set; } = true;
 
     [ObservableProperty]
-    public partial bool ShowR18Content { get; set; }
+    public partial bool ShowR18Content { get; set; } = true;
+
+    public bool ShowR18FilterButton => App.PluginService.ImportProviders
+        .OfType<IImportDestinationProvider>()
+        .Any(p => p.UsesRatingFolders);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneratingThumbnails))]

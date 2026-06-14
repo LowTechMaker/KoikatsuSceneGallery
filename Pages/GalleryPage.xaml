@@ -163,7 +163,8 @@
                 Padding="0"
                 VerticalAlignment="Top"
                 Content="R-18"
-                IsChecked="{x:Bind ViewModel.ShowR18Content, Mode=TwoWay}" />
+                IsChecked="{x:Bind ViewModel.ShowR18Content, Mode=TwoWay}"
+                Visibility="{x:Bind ViewModel.ShowR18FilterButton, Mode=OneWay}" />
         </Grid>
 
         <StackPanel

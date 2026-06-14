@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
+using SceneGallery.PluginSdk;
 using Windows.System;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -12,14 +13,23 @@ namespace KoikatsuSceneGallery.Pages;
 /// <summary>Display row for the Settings → Plugins list. Plain get-only class:
 /// the XAML type-info generator rejects record init-setters on x:DataType types.</summary>
 public sealed class PluginListItem(
-    string name, string version, string statusText, string? error,
+    string name,
+    string version,
+    string statusText,
+    string? error,
+    string? description,
+    string filePath,
     string? updateText = null)
 {
     public string Name { get; } = name;
     public string Version { get; } = version;
+    public bool HasVersion => !string.IsNullOrWhiteSpace(Version);
     public string StatusText { get; } = statusText;
     public string? Error { get; } = error;
     public bool HasError => Error != null;
+    public string? Description { get; } = description;
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
+    public string FilePath { get; } = filePath;
     public bool UpdateAvailable => UpdateText is not null;
     public string? UpdateText { get; } = updateText;
 }
@@ -47,6 +57,8 @@ public sealed partial class SettingsPage : Page
                 p.Version == "?" ? "" : $"v{p.Version}",
                 ResLoader.GetString(p.Status == PluginStatus.Loaded ? "Plugins_StatusLoaded" : "Plugins_StatusFailed"),
                 p.Error,
+                p.Description,
+                p.FilePath,
                 p.AvailableVersion is not null
                     ? string.Format(updateFmt, p.AvailableVersion)
                     : null))
@@ -60,6 +72,197 @@ public sealed partial class SettingsPage : Page
         // create it so the button always lands the user somewhere useful.
         Directory.CreateDirectory(PluginService.PluginsDirectory);
         await Launcher.LaunchFolderPathAsync(PluginService.PluginsDirectory);
+    }
+
+    private async void PluginItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: PluginListItem item })
+            await ShowPluginSettingsDialogAsync(item);
+    }
+
+    private async Task ShowPluginSettingsDialogAsync(PluginListItem item)
+    {
+        var panel = new StackPanel { Spacing = 16, MinWidth = 420, MaxWidth = 720 };
+        var settingsProvider = App.PluginService.GetSettingsProvider(item.Name);
+        var editors = new Dictionary<string, FrameworkElement>();
+        InfoBar? validationBar = null;
+
+        if (item.HasDescription)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = item.Description,
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        var details = new StackPanel { Spacing = 8 };
+        details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailStatus"), item.StatusText));
+
+        if (item.HasVersion)
+            details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailVersion"), item.Version));
+
+        details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailPath"), item.FilePath));
+
+        if (item.UpdateAvailable)
+            details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailUpdate"), item.UpdateText!));
+
+        if (item.HasError)
+            details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailError"), item.Error!));
+
+        panel.Children.Add(details);
+
+        if (settingsProvider is not null && settingsProvider.Settings.Count > 0)
+        {
+            validationBar = new InfoBar
+            {
+                IsOpen = false,
+                IsClosable = false,
+                Severity = InfoBarSeverity.Error,
+            };
+            panel.Children.Add(validationBar);
+
+            foreach (var setting in settingsProvider.Settings)
+            {
+                var value = settingsProvider.GetSettingValue(setting.Key) ?? setting.DefaultValue;
+                var editor = BuildSettingEditor(setting, value);
+                editors[setting.Key] = editor;
+                panel.Children.Add(BuildSettingRow(setting, editor));
+            }
+        }
+        else
+        {
+            panel.Children.Add(new InfoBar
+            {
+                IsOpen = true,
+                IsClosable = false,
+                Severity = InfoBarSeverity.Informational,
+                Title = ResLoader.GetString("Plugins_NoSettingsTitle"),
+                Message = ResLoader.GetString("Plugins_NoSettingsMessage"),
+            });
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = string.Format(ResLoader.GetString("Plugins_SettingsTitle"), item.Name),
+            Content = new ScrollViewer
+            {
+                Content = panel,
+                MaxHeight = 620,
+            },
+            CloseButtonText = ResLoader.GetString("Plugins_Close"),
+            PrimaryButtonText = editors.Count > 0 ? ResLoader.GetString("Plugins_Save") : "",
+            DefaultButton = ContentDialogButton.Close,
+        };
+
+        if (settingsProvider is not null && validationBar is not null)
+        {
+            dialog.PrimaryButtonClick += (_, args) =>
+            {
+                try
+                {
+                    foreach (var (key, editor) in editors)
+                        settingsProvider.SetSettingValue(key, ReadSettingEditorValue(editor));
+                }
+                catch (Exception ex)
+                {
+                    validationBar.Message = ex.Message;
+                    validationBar.IsOpen = true;
+                    args.Cancel = true;
+                }
+            };
+        }
+
+        await dialog.ShowAsync();
+    }
+
+    private static FrameworkElement BuildDetailRow(string label, string value)
+    {
+        var grid = new Grid { ColumnSpacing = 12 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        grid.Children.Add(new TextBlock
+        {
+            Text = label,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        });
+
+        var valueBlock = new TextBlock
+        {
+            Text = value,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+        };
+        Grid.SetColumn(valueBlock, 1);
+        grid.Children.Add(valueBlock);
+
+        return grid;
+    }
+
+    private static FrameworkElement BuildSettingRow(PluginSettingDefinition setting, FrameworkElement editor)
+    {
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = setting.Label,
+            Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
+        });
+
+        if (!string.IsNullOrWhiteSpace(setting.Description))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = setting.Description,
+                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        panel.Children.Add(editor);
+        return panel;
+    }
+
+    private static FrameworkElement BuildSettingEditor(PluginSettingDefinition setting, string? value)
+    {
+        return setting.ValueType switch
+        {
+            PluginSettingValueType.Boolean => new ToggleSwitch
+            {
+                IsOn = bool.TryParse(value, out var isOn) && isOn,
+            },
+            PluginSettingValueType.Secret => new PasswordBox
+            {
+                Password = value ?? "",
+                MinWidth = 320,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            },
+            PluginSettingValueType.Integer => new NumberBox
+            {
+                Value = double.TryParse(value, out var number) ? number : double.NaN,
+                MinWidth = 180,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            },
+            _ => new TextBox
+            {
+                Text = value ?? "",
+                MinWidth = 320,
+                HorizontalAlignment = HorizontalAlignment.Left,
+            },
+        };
+    }
+
+    private static string? ReadSettingEditorValue(FrameworkElement editor)
+    {
+        return editor switch
+        {
+            ToggleSwitch toggle => toggle.IsOn.ToString(),
+            NumberBox number => double.IsNaN(number.Value) ? null : ((int)number.Value).ToString(),
+            PasswordBox passwordBox => passwordBox.Password,
+            TextBox textBox => textBox.Text,
+            _ => null,
+        };
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)

@@ -559,7 +559,19 @@
     <value>已安装插件</value>
   </data>
   <data name="Plugins_Desc.Text" xml:space="preserve">
-    <value>插件提供可选功能（例如从互联网获取作者信息）。安装：将插件文件夹放入应用旁的 Plugins 目录；卸载：删除该文件夹。</value>
+    <value>插件提供可选功能，例如导入、作者信息、反向搜索和网站集成。用户可以按需下载安装。</value>
+  </data>
+  <data name="Plugins_InstallHeader.Text" xml:space="preserve">
+    <value>安装教程</value>
+  </data>
+  <data name="Plugins_InstallStepDownload.Text" xml:space="preserve">
+    <value>1. 从插件的 GitHub Release 下载需要的单个 .dll 文件。</value>
+  </data>
+  <data name="Plugins_InstallStepCopy.Text" xml:space="preserve">
+    <value>2. 点击“打开插件文件夹”，将 .dll 放入该 Plugins 文件夹。</value>
+  </data>
+  <data name="Plugins_InstallStepRestart.Text" xml:space="preserve">
+    <value>3. 重启应用。成功加载后，相关功能会自动显示在界面中。</value>
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>打开插件文件夹</value>
@@ -578,6 +590,36 @@
   </data>
   <data name="Plugins_UpdateAvailable" xml:space="preserve">
     <value>有可用更新：{0}</value>
+  </data>
+  <data name="Plugins_SettingsTitle" xml:space="preserve">
+    <value>{0} 设置</value>
+  </data>
+  <data name="Plugins_DetailStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Plugins_DetailVersion" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Plugins_DetailPath" xml:space="preserve">
+    <value>文件位置</value>
+  </data>
+  <data name="Plugins_DetailUpdate" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Plugins_DetailError" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="Plugins_NoSettingsTitle" xml:space="preserve">
+    <value>没有设置项</value>
+  </data>
+  <data name="Plugins_NoSettingsMessage" xml:space="preserve">
+    <value>此插件目前没有可在设置页调整的项目。需要实时取得的数据会在使用该功能时处理。</value>
+  </data>
+  <data name="Plugins_Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Plugins_Save" xml:space="preserve">
+    <value>保存</value>
   </data>
   <!-- ImportPage -->
   <data name="Nav_Import.Content" xml:space="preserve">

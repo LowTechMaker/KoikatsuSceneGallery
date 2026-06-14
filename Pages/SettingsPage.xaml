@@ -71,23 +71,6 @@
                             </InfoBar>
                         </StackPanel>
 
-                        <!-- SauceNao Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_SauceNaoHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_SauceNaoDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextWrapping="Wrap" />
-                            <PasswordBox
-                                x:Uid="Settings_SauceNaoApiKey"
-                                MinWidth="320"
-                                MaxWidth="520"
-                                HorizontalAlignment="Left"
-                                Password="{x:Bind ViewModel.SauceNaoApiKey, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                        </StackPanel>
-
                     </StackPanel>
                 </ScrollViewer>
             </PivotItem>
@@ -281,30 +264,6 @@
                                 x:Uid="Settings_NoFolders"
                                 Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                 Visibility="{x:Bind ViewModel.HasNoCoordinateFolders, Mode=OneWay}" />
-                        </StackPanel>
-
-                        <!-- Import Subfolder Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_ImportSubfolderHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_ImportSubfolderDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextWrapping="Wrap" />
-
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Uid="Settings_ImportSubfolderLabel"
-                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBox
-                                    x:Uid="Settings_ImportSubfolderPlaceholder"
-                                    MinWidth="320"
-                                    HorizontalAlignment="Left"
-                                    Text="{x:Bind ViewModel.ImportSubfolder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </StackPanel>
-
                         </StackPanel>
 
                     </StackPanel>
@@ -703,6 +662,24 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             TextWrapping="Wrap" />
 
+                        <StackPanel Spacing="8">
+                            <TextBlock
+                                x:Uid="Plugins_InstallHeader"
+                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Plugins_InstallStepDownload"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                x:Uid="Plugins_InstallStepCopy"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                x:Uid="Plugins_InstallStepRestart"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
                         <TextBlock
                             x:Uid="Plugins_RestartNote"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -715,55 +692,79 @@
                         <ItemsControl ItemsSource="{x:Bind PluginItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="local:PluginListItem">
-                                    <Grid
+                                    <Button
                                         Margin="0,0,0,8"
-                                        Padding="16,12"
-                                        ColumnSpacing="12"
-                                        CornerRadius="8"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                                        Padding="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Click="PluginItem_Click"
+                                        CommandParameter="{x:Bind}">
+                                        <Grid
+                                            Padding="16,12"
+                                            ColumnSpacing="12"
+                                            CornerRadius="8"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <FontIcon
-                                            VerticalAlignment="Center"
-                                            Glyph="&#xEA86;" />
+                                            <FontIcon
+                                                VerticalAlignment="Center"
+                                                Glyph="&#xEA86;" />
 
-                                        <StackPanel Grid.Column="1" Spacing="2">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock
+                                                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                        Text="{x:Bind Name}" />
+                                                    <TextBlock
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind Version}"
+                                                        Visibility="{x:Bind HasVersion}" />
+                                                </StackPanel>
                                                 <TextBlock
-                                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                    Text="{x:Bind Name}" />
-                                                <TextBlock
-                                                    VerticalAlignment="Center"
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                     Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind Version}" />
+                                                    Text="{x:Bind Description}"
+                                                    TextWrapping="Wrap"
+                                                    Visibility="{x:Bind HasDescription}" />
+                                                <TextBlock
+                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{x:Bind Error}"
+                                                    TextWrapping="Wrap"
+                                                    Visibility="{x:Bind HasError}" />
+                                                <TextBlock
+                                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{x:Bind UpdateText}"
+                                                    Visibility="{x:Bind UpdateAvailable}" />
                                             </StackPanel>
-                                            <TextBlock
-                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Text="{x:Bind Error}"
-                                                TextWrapping="Wrap"
-                                                Visibility="{x:Bind HasError}" />
-                                            <TextBlock
-                                                Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Text="{x:Bind UpdateText}"
-                                                Visibility="{x:Bind UpdateAvailable}" />
-                                        </StackPanel>
 
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            VerticalAlignment="Center"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{x:Bind StatusText}" />
-                                    </Grid>
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Text="{x:Bind StatusText}" />
+
+                                            <FontIcon
+                                                Grid.Column="3"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Glyph="&#xE76C;" />
+                                        </Grid>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -796,62 +797,6 @@
                                 IsOn="{x:Bind ViewModel.UseVisualSimilarity, Mode=TwoWay}" />
                         </StackPanel>
 
-                        <!-- Import folder naming -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_FolderNamingHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_FolderNamingDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextWrapping="Wrap" />
-
-                            <TextBox
-                                x:Uid="Settings_AuthorFolderFormat"
-                                MinWidth="320" HorizontalAlignment="Left"
-                                Text="{x:Bind ViewModel.AuthorFolderFormat, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            <TextBox
-                                x:Uid="Settings_ArtworkFolderFormat"
-                                MinWidth="320" HorizontalAlignment="Left"
-                                Text="{x:Bind ViewModel.ArtworkFolderFormat, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            <TextBox
-                                x:Uid="Settings_UnknownFolderName"
-                                MinWidth="320" HorizontalAlignment="Left"
-                                Text="{x:Bind ViewModel.UnknownFolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" MaxWidth="320" />
-                                    <ColumnDefinition Width="*" MaxWidth="320" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox
-                                    x:Uid="Settings_KoikatsuFolderName"
-                                    Text="{x:Bind ViewModel.KoikatsuFolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                <TextBox
-                                    Grid.Column="1"
-                                    x:Uid="Settings_KoikatsuSunshineFolderName"
-                                    Text="{x:Bind ViewModel.KoikatsuSunshineFolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </Grid>
-
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" MaxWidth="200" />
-                                    <ColumnDefinition Width="*" MaxWidth="200" />
-                                    <ColumnDefinition Width="*" MaxWidth="200" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox
-                                    x:Uid="Settings_GFolderName"
-                                    Text="{x:Bind ViewModel.GFolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                <TextBox
-                                    Grid.Column="1"
-                                    x:Uid="Settings_R18FolderName"
-                                    Text="{x:Bind ViewModel.R18FolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                <TextBox
-                                    Grid.Column="2"
-                                    x:Uid="Settings_R18GFolderName"
-                                    Text="{x:Bind ViewModel.R18GFolderName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </Grid>
-                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </PivotItem>

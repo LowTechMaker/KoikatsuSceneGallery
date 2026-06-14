@@ -32,6 +32,7 @@ public sealed class PluginService
     private readonly List<IPlugin> _instances = [];
     private readonly HashSet<string> _loadedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _loadedPluginNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IPluginSettingsProvider> _settingsProviders = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
     public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
@@ -88,6 +89,9 @@ public sealed class PluginService
 
     /// <summary>First loaded reverse image search provider, or null when none is installed.</summary>
     public IReverseImageSearchProvider? ReverseImageSearchProvider { get; private set; }
+
+    public IPluginSettingsProvider? GetSettingsProvider(string pluginName)
+        => _settingsProviders.GetValueOrDefault(pluginName);
 
     public void LoadPlugins()
     {
@@ -195,6 +199,9 @@ public sealed class PluginService
 
             if (plugin is IReverseImageSearchProvider reverseImageSearchProvider)
                 ReverseImageSearchProvider ??= reverseImageSearchProvider;
+
+            if (plugin is IPluginSettingsProvider settingsProvider)
+                _settingsProviders[plugin.Name] = settingsProvider;
 
             var description = metadata.FirstOrDefault(a => a.Key == "PluginDescription")?.Value;
             var updateUrl = metadata.FirstOrDefault(a => a.Key == "PluginUpdateUrl")?.Value;

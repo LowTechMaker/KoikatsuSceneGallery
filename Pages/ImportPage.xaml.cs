@@ -2,12 +2,12 @@ using System.IO;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.ApplicationModel.Resources;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.Web.WebView2.Core;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -450,126 +450,10 @@ public sealed partial class ImportPage : Page
         return filePaths.Any(path => importProvider.TryParseFilename(Path.GetFileName(path)) is not null);
     }
 
-    private async Task<bool> ShowCookieSetupDialogAsync(ICookieSetupProvider provider)
-    {
-        var webView = new WebView2 { MinWidth = 800, MinHeight = 600 };
-        var completed = false;
-        var isCompleting = false;
-        CancellationTokenSource? completionPollingCts = null;
-
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = $"{provider.Name} — Cloudflare Setup",
-            Content = webView,
-            CloseButtonText = ResLoader.GetString("Import_SauceNaoCloseButton"),
-            DefaultButton = ContentDialogButton.Close,
-        };
-
-        async Task<bool> TryApplyCookiesAsync()
-        {
-            if (webView.CoreWebView2 is null)
-                return false;
-
-            var cookies = await webView.CoreWebView2.CookieManager
-                .GetCookiesAsync($"https://{provider.CookieDomain}");
-            var cookieDict = cookies.ToDictionary(c => c.Name, c => c.Value);
-            if (!cookieDict.ContainsKey("cf_clearance"))
-                return false;
-
-            var userAgent = await webView.CoreWebView2.ExecuteScriptAsync("navigator.userAgent");
-            if (userAgent is not null)
-                userAgent = System.Text.Json.JsonSerializer.Deserialize<string>(userAgent);
-
-            provider.ApplyCookies(cookieDict, userAgent ?? "");
-            return true;
-        }
-
-        async Task<bool> IsCompletionPageAsync()
-        {
-            if (webView.CoreWebView2 is null)
-                return false;
-
-            var titleJson = await webView.CoreWebView2.ExecuteScriptAsync("document.title");
-            var title = System.Text.Json.JsonSerializer.Deserialize<string>(titleJson);
-            return title is not null
-                && title.Contains(provider.CompletionTitleHint, StringComparison.OrdinalIgnoreCase)
-                && !title.Contains("challenge", StringComparison.OrdinalIgnoreCase)
-                && !title.Contains("just a moment", StringComparison.OrdinalIgnoreCase);
-        }
-
-        async Task TryCompleteAsync()
-        {
-            if (isCompleting || completed)
-                return;
-
-            isCompleting = true;
-            try
-            {
-                if (await IsCompletionPageAsync() && await TryApplyCookiesAsync())
-                {
-                    completed = true;
-                    completionPollingCts?.Cancel();
-                    dialog.Hide();
-                }
-            }
-            catch { }
-            finally
-            {
-                isCompleting = false;
-            }
-        }
-
-        void StartCompletionPolling()
-        {
-            completionPollingCts?.Cancel();
-            completionPollingCts = new CancellationTokenSource();
-            var token = completionPollingCts.Token;
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    while (!token.IsCancellationRequested && !completed)
-                    {
-                        await Task.Delay(500, token).ConfigureAwait(false);
-                        _ = DispatcherQueue.TryEnqueue(async () => await TryCompleteAsync());
-                    }
-                }
-                catch (OperationCanceledException) { }
-            }, token);
-        }
-
-        dialog.Loaded += async (_, _) =>
-        {
-            try
-            {
-                await webView.EnsureCoreWebView2Async();
-                webView.CoreWebView2.Navigate(provider.SetupUrl);
-                StartCompletionPolling();
-
-                webView.CoreWebView2.NavigationCompleted += async (_, args) =>
-                {
-                    if (args.IsSuccess)
-                        await TryCompleteAsync();
-                };
-            }
-            catch (Exception ex)
-            {
-                webView.Visibility = Visibility.Collapsed;
-                dialog.Content = new TextBlock
-                {
-                    Text = $"Failed to initialize WebView2: {ex.Message}",
-                    TextWrapping = TextWrapping.Wrap,
-                };
-            }
-        };
-
-        await dialog.ShowAsync();
-
-        completionPollingCts?.Cancel();
-        completionPollingCts?.Dispose();
-        webView.Close();
-        return completed && !provider.NeedsCookieSetup;
-    }
+    private Task<bool> ShowCookieSetupDialogAsync(ICookieSetupProvider provider)
+        => CookieSetupDialogService.ShowAsync(
+            XamlRoot,
+            DispatcherQueue,
+            provider,
+            ResLoader.GetString("Import_SauceNaoCloseButton"));
 }

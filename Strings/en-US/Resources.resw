@@ -559,7 +559,19 @@
     <value>Installed Plugins</value>
   </data>
   <data name="Plugins_Desc.Text" xml:space="preserve">
-    <value>Plugins add optional features (such as fetching author info from the internet). To install one, drop its folder into the Plugins directory next to the app; to remove it, delete the folder.</value>
+    <value>Plugins add optional features such as import, author info, reverse image search, and website integrations. Install only the plugins you need.</value>
+  </data>
+  <data name="Plugins_InstallHeader.Text" xml:space="preserve">
+    <value>How to install</value>
+  </data>
+  <data name="Plugins_InstallStepDownload.Text" xml:space="preserve">
+    <value>1. Download the single .dll file you need from the plugin's GitHub Release.</value>
+  </data>
+  <data name="Plugins_InstallStepCopy.Text" xml:space="preserve">
+    <value>2. Select Open Plugins Folder, then place the .dll in that Plugins folder.</value>
+  </data>
+  <data name="Plugins_InstallStepRestart.Text" xml:space="preserve">
+    <value>3. Restart the app. After the plugin loads, its related features appear automatically.</value>
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>Open Plugins Folder</value>
@@ -578,6 +590,36 @@
   </data>
   <data name="Plugins_UpdateAvailable" xml:space="preserve">
     <value>Update available: {0}</value>
+  </data>
+  <data name="Plugins_SettingsTitle" xml:space="preserve">
+    <value>{0} settings</value>
+  </data>
+  <data name="Plugins_DetailStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Plugins_DetailVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Plugins_DetailPath" xml:space="preserve">
+    <value>File path</value>
+  </data>
+  <data name="Plugins_DetailUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Plugins_DetailError" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Plugins_NoSettingsTitle" xml:space="preserve">
+    <value>No settings</value>
+  </data>
+  <data name="Plugins_NoSettingsMessage" xml:space="preserve">
+    <value>This plugin does not expose settings in the Settings page. Real-time setup is handled where the feature is used.</value>
+  </data>
+  <data name="Plugins_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Plugins_Save" xml:space="preserve">
+    <value>Save</value>
   </data>
   <!-- ImportPage -->
   <data name="Nav_Import.Content" xml:space="preserve">

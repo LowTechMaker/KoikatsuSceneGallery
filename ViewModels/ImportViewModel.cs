@@ -412,14 +412,22 @@ public partial class ImportViewModel : ObservableObject
         if (group.Files.Count == 0)
             return null;
 
-        var config = await _settingsService.LoadConfigAsync();
-        if (string.IsNullOrWhiteSpace(config.SauceNaoApiKey))
+        var apiKey = GetReverseImageSearchApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("SauceNao API key is not set.");
 
         return await _importService.SearchReverseImageAsync(
             group.Files[0].SourceFilePath,
-            config.SauceNaoApiKey.Trim(),
+            apiKey,
             ct);
+    }
+
+    private static string? GetReverseImageSearchApiKey()
+    {
+        if (App.PluginService.ReverseImageSearchProvider is not IPluginSettingsProvider settingsProvider)
+            return null;
+
+        return settingsProvider.GetSettingValue("sauceNaoApiKey")?.Trim();
     }
 
     public async Task ApplySauceNaoResultToFetchFailedGroupAsync(

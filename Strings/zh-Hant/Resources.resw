@@ -559,7 +559,19 @@
     <value>已安裝外掛</value>
   </data>
   <data name="Plugins_Desc.Text" xml:space="preserve">
-    <value>外掛提供可選功能（例如從網路擷取作者資訊）。安裝：將外掛資料夾放入應用程式旁的 Plugins 目錄；移除：刪除該資料夾。</value>
+    <value>外掛提供可選功能，例如匯入、作者資訊、反向搜尋與網站整合。使用者可以依需求下載安裝。</value>
+  </data>
+  <data name="Plugins_InstallHeader.Text" xml:space="preserve">
+    <value>安裝教學</value>
+  </data>
+  <data name="Plugins_InstallStepDownload.Text" xml:space="preserve">
+    <value>1. 從外掛的 GitHub Release 下載需要的單一 .dll 檔案。</value>
+  </data>
+  <data name="Plugins_InstallStepCopy.Text" xml:space="preserve">
+    <value>2. 按下「開啟外掛資料夾」，將 .dll 放入該 Plugins 資料夾。</value>
+  </data>
+  <data name="Plugins_InstallStepRestart.Text" xml:space="preserve">
+    <value>3. 重新啟動應用程式。成功載入後，相關功能會自動出現在介面中。</value>
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>開啟外掛資料夾</value>
@@ -578,6 +590,36 @@
   </data>
   <data name="Plugins_UpdateAvailable" xml:space="preserve">
     <value>有可用更新：{0}</value>
+  </data>
+  <data name="Plugins_SettingsTitle" xml:space="preserve">
+    <value>{0} 設定</value>
+  </data>
+  <data name="Plugins_DetailStatus" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="Plugins_DetailVersion" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Plugins_DetailPath" xml:space="preserve">
+    <value>檔案位置</value>
+  </data>
+  <data name="Plugins_DetailUpdate" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Plugins_DetailError" xml:space="preserve">
+    <value>錯誤</value>
+  </data>
+  <data name="Plugins_NoSettingsTitle" xml:space="preserve">
+    <value>沒有設定項</value>
+  </data>
+  <data name="Plugins_NoSettingsMessage" xml:space="preserve">
+    <value>此插件目前沒有可在設定頁調整的項目。需要即時取得的資料會在使用該功能時處理。</value>
+  </data>
+  <data name="Plugins_Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="Plugins_Save" xml:space="preserve">
+    <value>儲存</value>
   </data>
   <!-- ImportPage -->
   <data name="Nav_Import.Content" xml:space="preserve">
