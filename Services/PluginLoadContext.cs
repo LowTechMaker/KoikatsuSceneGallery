@@ -15,7 +15,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 internal sealed class PluginLoadContext : AssemblyLoadContext
 {
-    private const string ContractsAssemblyName = "SceneGallery.PluginSdk";
+    internal const string ContractsAssemblyName = "SceneGallery.PluginSdk";
 
     private readonly AssemblyDependencyResolver? _resolver;
 

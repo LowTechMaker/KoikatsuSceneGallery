@@ -471,14 +471,11 @@ public sealed partial class ImportPage : Page
             if (webView.CoreWebView2 is null)
                 return false;
 
-            var cookieManager = webView.CoreWebView2.CookieManager;
-            var cookies = await cookieManager.GetCookiesAsync($"https://{provider.CookieDomain}");
-            if (!cookies.Any(c => c.Name.Equals("cf_clearance", StringComparison.Ordinal)))
+            var cookies = await webView.CoreWebView2.CookieManager
+                .GetCookiesAsync($"https://{provider.CookieDomain}");
+            var cookieDict = cookies.ToDictionary(c => c.Name, c => c.Value);
+            if (!cookieDict.ContainsKey("cf_clearance"))
                 return false;
-
-            var cookieDict = new Dictionary<string, string>();
-            foreach (var cookie in cookies)
-                cookieDict[cookie.Name] = cookie.Value;
 
             var userAgent = await webView.CoreWebView2.ExecuteScriptAsync("navigator.userAgent");
             if (userAgent is not null)

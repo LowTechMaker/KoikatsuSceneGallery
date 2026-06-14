@@ -107,7 +107,7 @@ public sealed class PluginService
             var name = Path.GetFileNameWithoutExtension(dllPath);
             if (_loadedAssemblyNames.Contains(name))
                 continue;
-            if (name.Equals("SceneGallery.PluginSdk", StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(PluginLoadContext.ContractsAssemblyName, StringComparison.OrdinalIgnoreCase))
                 continue;
             LoadPlugin(dllPath);
         }

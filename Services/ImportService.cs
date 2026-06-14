@@ -27,25 +27,13 @@ public sealed class ImportService
         _ => "",
     };
 
-    private string GetProviderFolder(ArtworkId? artworkId)
+    private (string Folder, bool UsesRatingFolders) GetProviderScope(string providerId)
     {
-        if (artworkId is null) return "";
-
-        var provider = FindProvider(artworkId.ProviderId);
-        var folderName = provider is IImportDestinationProvider destinationProvider
-            ? destinationProvider.DestinationFolderName
-            : provider?.Name ?? artworkId.ProviderId;
-
-        return SanitizeRelativePath(folderName);
-    }
-
-    private bool UsesRatingFolders(ArtworkId? artworkId)
-    {
-        if (artworkId is null) return true;
-
-        var provider = FindProvider(artworkId.ProviderId);
-        return provider is not IImportDestinationProvider destinationProvider
-            || destinationProvider.UsesRatingFolders;
+        var provider = FindProvider(providerId);
+        if (provider is IImportDestinationProvider dest)
+            return (SanitizeRelativePath(dest.DestinationFolderName), dest.UsesRatingFolders);
+        var name = provider?.Name ?? providerId;
+        return (SanitizeRelativePath(name), true);
     }
 
     private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
@@ -295,7 +283,7 @@ public sealed class ImportService
 
                 var providerFolders = _importProviders
                     .Where(p => ReferenceEquals(p, _authorProvider))
-                    .Select(p => GetProviderFolder(new ArtworkId(p.ProviderId, "")))
+                    .Select(p => GetProviderScope(p.ProviderId).Folder)
                     .Append("")
                     .Distinct(StringComparer.OrdinalIgnoreCase);
 
@@ -463,9 +451,8 @@ public sealed class ImportService
             var roots = GetRootsForCardType(item.CardType, config);
             if (roots.Count == 0) continue;
 
-            var providerFolder = GetProviderFolder(item.ArtworkId);
-            var usesRatingFolders = UsesRatingFolders(item.ArtworkId);
-            var ratingFolder = usesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
+            var scope = item.ArtworkId is not null ? GetProviderScope(item.ArtworkId.ProviderId) : (Folder: "", UsesRatingFolders: true);
+            var ratingFolder = scope.UsesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
             var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
             string? targetFolder = null;
 
@@ -473,7 +460,7 @@ public sealed class ImportService
             {
                 foreach (var root in roots)
                 {
-                    var scopeKey = BuildScopeKey(root, providerFolder, gameVersionFolder, ratingFolder);
+                    var scopeKey = BuildScopeKey(root, scope.Folder, gameVersionFolder, ratingFolder);
                     if (folderIndex.TryGetValue(scopeKey, out var authorFolders)
                         && authorFolders.TryGetValue(item.AuthorId, out var existing))
                     {
@@ -485,11 +472,11 @@ public sealed class ImportService
                 if (targetFolder is null && item.AuthorName is not null)
                 {
                     var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
-                    targetFolder = BuildTargetBase(roots[0], subfolder, providerFolder, gameVersionFolder, ratingFolder, safeName);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
                 }
             }
 
-            targetFolder ??= BuildTargetBase(roots[0], subfolder, providerFolder, gameVersionFolder, config.UnknownFolderName, null);
+            targetFolder ??= BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, config.UnknownFolderName, null);
 
             if (item.ArtworkId is not null)
             {
@@ -586,10 +573,10 @@ public sealed class ImportService
         var providerScopes = _importProviders
             .Select(p =>
             {
-                var artworkId = new ArtworkId(p.ProviderId, "");
+                var s = GetProviderScope(p.ProviderId);
                 return (
-                    Folder: GetProviderFolder(artworkId),
-                    RatingFolders: UsesRatingFolders(artworkId)
+                    s.Folder,
+                    RatingFolders: s.UsesRatingFolders
                         ? GetRatingFolderNames(config)
                         : [""]
                 );
