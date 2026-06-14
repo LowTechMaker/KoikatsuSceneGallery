@@ -1,6 +1,6 @@
 using System.IO;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.ApplicationModel.Resources;
+using Microsoft.Windows.ApplicationModel.Resources;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
