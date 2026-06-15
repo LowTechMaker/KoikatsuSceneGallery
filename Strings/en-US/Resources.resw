@@ -715,7 +715,7 @@
     <value>Author name</value>
   </data>
   <data name="Import_ArtworkId.PlaceholderText" xml:space="preserve">
-    <value>Artwork ID</value>
+    <value>Artwork ID or URL</value>
   </data>
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>Author ID</value>

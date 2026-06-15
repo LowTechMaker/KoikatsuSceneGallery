@@ -715,7 +715,7 @@
     <value>作者名稱</value>
   </data>
   <data name="Import_ArtworkId.PlaceholderText" xml:space="preserve">
-    <value>作品 ID</value>
+    <value>作品 ID 或連結</value>
   </data>
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>作者 ID</value>

@@ -34,6 +34,13 @@ public interface ICardImportProvider : IPlugin
     /// </summary>
     ArtworkId? TryParseArtworkFolderName(string folderName);
 
+    /// <summary>
+    /// Extracts a provider-specific artwork identity from a URL
+    /// (e.g. "https://www.pixiv.net/artworks/123456"). Pure string work, no I/O.
+    /// Returns null when the URL doesn't match this provider's pattern.
+    /// </summary>
+    ArtworkId? TryParseUrl(string url) => null;
+
     /// <summary>Browser-openable URL for the artwork. No I/O.</summary>
     string GetArtworkUrl(ArtworkId id);
 }

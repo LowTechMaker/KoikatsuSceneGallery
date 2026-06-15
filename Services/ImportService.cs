@@ -112,6 +112,17 @@ public sealed class ImportService
     public ArtworkId CreateManualArtworkId(string id)
     {
         var trimmed = id.Trim();
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            && uri.Scheme is "http" or "https")
+        {
+            foreach (var provider in _importProviders)
+            {
+                var parsed = provider.TryParseUrl(trimmed);
+                if (parsed is not null) return parsed;
+            }
+        }
+
         foreach (var provider in _importProviders)
         {
             var parsed = provider.TryParseFilename(trimmed);
