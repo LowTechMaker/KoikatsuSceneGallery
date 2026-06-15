@@ -84,6 +84,14 @@ public sealed class ImportService
     private ICardImportProvider? FindProvider(string providerId)
         => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
 
+    private IFolderAuthorProvider? FindAuthorProvider(string providerId)
+    {
+        if (_authorProvider?.ProviderId == providerId)
+            return _authorProvider;
+
+        return FindProvider(providerId) as IFolderAuthorProvider;
+    }
+
     public async Task ComputeFingerprintsAsync(IReadOnlyList<ImportItem> items, CancellationToken ct)
     {
         await Parallel.ForEachAsync(items, new ParallelOptions
@@ -120,6 +128,28 @@ public sealed class ImportService
         try
         {
             return await provider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<AuthorInfo?> FetchAuthorInfoAsync(
+        AuthorKey authorKey,
+        bool forceRefresh,
+        CancellationToken ct)
+    {
+        var provider = FindAuthorProvider(authorKey.ProviderId);
+        if (provider is null) return null;
+
+        try
+        {
+            return await provider.GetAuthorInfoAsync(authorKey, forceRefresh, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

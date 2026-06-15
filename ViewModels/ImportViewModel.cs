@@ -39,7 +39,9 @@ public partial class ImportViewModel : ObservableObject
 
     private readonly ImportService _importService;
     private readonly DispatcherQueue _dispatcher;
-    private CancellationTokenSource? _cts;
+    private readonly HashSet<CancellationTokenSource> _analysisCts = [];
+    private CancellationTokenSource? _importCts;
+    private int _activeAnalysisCount;
 
     // Flat collection used by ImportService (source of truth for all items)
     public ObservableCollection<ImportItem> Items { get; } = [];
@@ -306,6 +308,8 @@ public partial class ImportViewModel : ObservableObject
             _manualBaselines.Clear();
             _currentAnalysisPaths.Clear();
             _currentRejectedAnalysisCount = 0;
+            AnalysisTotalCount = 0;
+            AnalysisCompletedCount = 0;
             _lastManualAssignment = null;
             CanUndoManualAssignment = false;
             _authorsLoaded = false;
@@ -450,10 +454,35 @@ public partial class ImportViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("SauceNao API key is not set.");
 
-        return await _importService.SearchReverseImageAsync(
+        var result = await _importService.SearchReverseImageAsync(
             group.Files[0].SourceFilePath,
             apiKey,
             ct);
+
+        return result is null
+            ? null
+            : await PreferCurrentProviderAuthorAsync(result, ct);
+    }
+
+    private async Task<ReverseImageSearchResult> PreferCurrentProviderAuthorAsync(
+        ReverseImageSearchResult result,
+        CancellationToken ct)
+    {
+        if (result.ArtworkId is null)
+            return result;
+
+        var authorInfo = await _importService.FetchAuthorInfoAsync(
+            new AuthorKey(result.ArtworkId.ProviderId, result.AuthorId),
+            forceRefresh: true,
+            ct);
+
+        return authorInfo is null
+            ? result
+            : result with
+            {
+                AuthorName = authorInfo.Name,
+                AuthorId = authorInfo.Key.Id,
+            };
     }
 
     private static string? GetReverseImageSearchApiKey()
@@ -734,7 +763,7 @@ public partial class ImportViewModel : ObservableObject
         UpdateCounts();
     }
 
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task AddFilesAsync(IReadOnlyList<string> filePaths)
     {
         if (filePaths.Count == 0) return;
@@ -742,29 +771,28 @@ public partial class ImportViewModel : ObservableObject
         var newPaths = filePaths
             .Where(p => Path.GetExtension(p).Equals(".png", StringComparison.OrdinalIgnoreCase))
             .Where(p => Items.All(existing => !string.Equals(existing.SourceFilePath, p, StringComparison.OrdinalIgnoreCase)))
+            .Where(p => !_currentAnalysisPaths.Contains(p))
             .ToList();
 
         if (newPaths.Count == 0) return;
 
-        await _settingsLoaded;
-        BeginAnalysisProgress(newPaths);
-        IsAnalyzing = true;
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
+        var cts = BeginAnalysisOperation(newPaths);
+        var rejected = 0;
 
         try
         {
-            int rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, _cts.Token);
-            _currentRejectedAnalysisCount = rejected;
-            UpdateAnalysisProgress();
+            await _settingsLoaded;
+
+            rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, cts.Token);
+            AddRejectedAnalysisCount(rejected);
 
             // Compute fingerprints for all new items (used for subfolder decisions and unknown grouping)
             var newPathSet = new HashSet<string>(newPaths, StringComparer.OrdinalIgnoreCase);
             var newItems = Items.Where(i => newPathSet.Contains(i.SourceFilePath)).ToList();
-            await _importService.ComputeFingerprintsAsync(newItems, _cts.Token);
+            await _importService.ComputeFingerprintsAsync(newItems, cts.Token);
 
             // Re-resolve destinations now that fingerprints are available for subfolder decisions
-            await ReResolveDestinationsAsync(_cts.Token);
+            await ReResolveDestinationsAsync(cts.Token);
 
             // Flush buffered unknowns into groups (fingerprints already computed above)
             FlushPendingUnknowns();
@@ -775,8 +803,7 @@ public partial class ImportViewModel : ObservableObject
         catch (OperationCanceledException) { }
         finally
         {
-            IsAnalyzing = false;
-            EndAnalysisProgress();
+            EndAnalysisOperation(cts, newPaths, rejected);
             UpdateCounts();
         }
     }
@@ -786,18 +813,22 @@ public partial class ImportViewModel : ObservableObject
     {
         if (IsImporting) return;
         IsImporting = true;
-        _cts = new CancellationTokenSource();
+        _importCts?.Cancel();
+        _importCts?.Dispose();
+        _importCts = new CancellationTokenSource();
         bool completed = false;
 
         try
         {
-            await _importService.ImportAsync(Items, _dispatcher, _cts.Token);
+            await _importService.ImportAsync(Items, _dispatcher, _importCts.Token);
             completed = true;
         }
         catch (OperationCanceledException) { }
         finally
         {
             IsImporting = false;
+            _importCts?.Dispose();
+            _importCts = null;
             UpdateCounts();
         }
 
@@ -915,7 +946,9 @@ public partial class ImportViewModel : ObservableObject
     [RelayCommand]
     private void Clear()
     {
-        _cts?.Cancel();
+        foreach (var cts in _analysisCts.ToList())
+            cts.Cancel();
+        _importCts?.Cancel();
         _lastManualAssignment = null;
         CanUndoManualAssignment = false;
         Items.Clear();
@@ -973,23 +1006,69 @@ public partial class ImportViewModel : ObservableObject
         _importService.ReResolveAsync(Items, _dispatcher, ct,
             (int)ArtworkSubfolderThreshold, UseVisualSimilarity);
 
-    private void BeginAnalysisProgress(IReadOnlyList<string> filePaths)
+    private CancellationTokenSource BeginAnalysisOperation(IReadOnlyList<string> filePaths)
     {
-        _currentAnalysisPaths.Clear();
-        foreach (var path in filePaths)
-            _currentAnalysisPaths.Add(path);
-
-        _currentRejectedAnalysisCount = 0;
-        AnalysisTotalCount = filePaths.Count;
-        AnalysisCompletedCount = 0;
+        var cts = new CancellationTokenSource();
+        _analysisCts.Add(cts);
+        _activeAnalysisCount++;
+        IsAnalyzing = true;
+        BeginAnalysisProgress(filePaths);
+        return cts;
     }
 
-    private void EndAnalysisProgress()
+    private void EndAnalysisOperation(
+        CancellationTokenSource cts,
+        IReadOnlyList<string> filePaths,
+        int rejectedCount)
     {
-        _currentAnalysisPaths.Clear();
-        _currentRejectedAnalysisCount = 0;
-        AnalysisTotalCount = 0;
-        AnalysisCompletedCount = 0;
+        if (_analysisCts.Remove(cts))
+            _activeAnalysisCount = Math.Max(0, _activeAnalysisCount - 1);
+
+        cts.Dispose();
+        EndAnalysisProgress(filePaths, rejectedCount);
+        IsAnalyzing = _activeAnalysisCount > 0;
+    }
+
+    private void BeginAnalysisProgress(IReadOnlyList<string> filePaths)
+    {
+        foreach (var path in filePaths)
+        {
+            if (_currentAnalysisPaths.Add(path))
+                AnalysisTotalCount++;
+        }
+
+        UpdateAnalysisProgress();
+    }
+
+    private void AddRejectedAnalysisCount(int rejectedCount)
+    {
+        if (rejectedCount <= 0)
+            return;
+
+        _currentRejectedAnalysisCount += rejectedCount;
+        UpdateAnalysisProgress();
+    }
+
+    private void EndAnalysisProgress(IReadOnlyList<string> filePaths, int rejectedCount)
+    {
+        foreach (var path in filePaths)
+        {
+            if (_currentAnalysisPaths.Remove(path))
+                AnalysisTotalCount = Math.Max(0, AnalysisTotalCount - 1);
+        }
+
+        if (rejectedCount > 0)
+            _currentRejectedAnalysisCount = Math.Max(0, _currentRejectedAnalysisCount - rejectedCount);
+
+        if (AnalysisTotalCount == 0)
+        {
+            _currentAnalysisPaths.Clear();
+            _currentRejectedAnalysisCount = 0;
+            AnalysisCompletedCount = 0;
+            return;
+        }
+
+        UpdateAnalysisProgress();
     }
 
     private void UpdateAnalysisProgress()
