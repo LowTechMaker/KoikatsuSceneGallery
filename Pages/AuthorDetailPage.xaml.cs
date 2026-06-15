@@ -4,6 +4,7 @@ using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -157,6 +158,41 @@ public sealed partial class AuthorDetailPage : Page
         {
             s_restoreSelectedTabOnBack = PostsTabIndex;
             Frame.Navigate(typeof(PostDetailPage), post);
+        }
+    }
+
+    private async void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => await SetDragFiles<SceneCard>(e);
+
+    private async void CharactersGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => await SetDragFiles<CharacterCard>(e);
+
+    private async void CoordinatesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => await SetDragFiles<CoordinateCard>(e);
+
+    private static async Task SetDragFiles<T>(DragItemsStartingEventArgs e) where T : class
+    {
+        var files = new List<StorageFile>();
+        foreach (var item in e.Items)
+        {
+            if (item is T card)
+            {
+                var path = card switch
+                {
+                    SceneCard s => s.FilePath,
+                    CharacterCard c => c.FilePath,
+                    CoordinateCard co => co.FilePath,
+                    _ => null,
+                };
+                if (path is null) continue;
+                try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
+                catch { }
+            }
+        }
+        if (files.Count > 0)
+        {
+            e.Data.SetStorageItems(files);
+            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
         }
     }
 

@@ -5,6 +5,7 @@ using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -61,6 +62,24 @@ public sealed partial class PostDetailPage : Page
     {
         if (e.PropertyName == nameof(PostDetailViewModel.Description))
             RenderDescription();
+    }
+
+    private async void LocalImagesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+    {
+        var files = new List<StorageFile>();
+        foreach (var item in e.Items)
+        {
+            if (item is LocalImagePreview preview)
+            {
+                try { files.Add(await StorageFile.GetFileFromPathAsync(preview.FilePath)); }
+                catch { }
+            }
+        }
+        if (files.Count > 0)
+        {
+            e.Data.SetStorageItems(files);
+            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        }
     }
 
     private void RenderDescription()

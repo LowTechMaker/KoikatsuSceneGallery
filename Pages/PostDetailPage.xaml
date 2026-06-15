@@ -78,6 +78,8 @@
                 Visibility="{x:Bind ViewModel.HasLocalImages, Mode=OneWay}">
                 <GridView
                     ItemsSource="{x:Bind ViewModel.LocalImages, Mode=OneWay}"
+                    CanDragItems="True"
+                    DragItemsStarting="LocalImagesGrid_DragItemsStarting"
                     IsItemClickEnabled="False"
                     SelectionMode="None">
                     <GridView.ItemsPanel>

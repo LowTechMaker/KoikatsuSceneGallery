@@ -115,6 +115,8 @@
                 <GridView
                     x:Name="ScenesGrid"
                     Margin="0,8,0,0"
+                    CanDragItems="True"
+                    DragItemsStarting="ScenesGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="ScenesGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Scenes}"
@@ -188,6 +190,8 @@
                 <GridView
                     x:Name="CharactersGrid"
                     Margin="0,8,0,0"
+                    CanDragItems="True"
+                    DragItemsStarting="CharactersGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="CharactersGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Characters}"
@@ -261,6 +265,8 @@
                 <GridView
                     x:Name="CoordinatesGrid"
                     Margin="0,8,0,0"
+                    CanDragItems="True"
+                    DragItemsStarting="CoordinatesGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="CoordinatesGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Coordinates}"
