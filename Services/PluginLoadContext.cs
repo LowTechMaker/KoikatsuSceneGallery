@@ -35,9 +35,12 @@ internal sealed class PluginLoadContext : AssemblyLoadContext
         var path = _resolver?.ResolveAssemblyToPath(assemblyName);
         if (path is null) return null;
 
-        // COM interop types must live in the default context so their type
-        // identity matches the COM objects created by the native runtime.
-        if (assemblyName.Name is "Microsoft.Web.WebView2.Core")
+        // WebView2/WinRT keep process-wide COM wrapper state. Share these
+        // assemblies across plugins so two WebView2 plugins do not each
+        // initialize their own isolated WinRT runtime.
+        if (assemblyName.Name is "Microsoft.Web.WebView2.Core"
+            or "Microsoft.Windows.SDK.NET"
+            or "WinRT.Runtime")
             return AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
 
         return LoadFromAssemblyPath(path);

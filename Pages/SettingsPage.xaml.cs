@@ -124,6 +124,22 @@ public sealed partial class SettingsPage : Page
 
             foreach (var setting in settingsProvider.Settings)
             {
+                if (setting.ValueType == PluginSettingValueType.Action)
+                {
+                    var actionBtn = new Button
+                    {
+                        Content = setting.DefaultValue ?? setting.Label,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                    };
+                    actionBtn.Click += (_, _) =>
+                    {
+                        settingsProvider.SetSettingValue(setting.Key, null);
+                        actionBtn.Content = "✔ " + (setting.DefaultValue ?? setting.Label);
+                    };
+                    panel.Children.Add(BuildSettingRow(setting, actionBtn));
+                    continue;
+                }
+
                 var value = settingsProvider.GetSettingValue(setting.Key) ?? setting.DefaultValue;
                 var editor = BuildSettingEditor(setting, value);
                 editors[setting.Key] = editor;

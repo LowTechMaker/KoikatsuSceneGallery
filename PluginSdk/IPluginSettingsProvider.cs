@@ -6,6 +6,7 @@ public enum PluginSettingValueType
     Secret,
     Integer,
     Boolean,
+    Action,
 }
 
 public sealed record PluginSettingDefinition(

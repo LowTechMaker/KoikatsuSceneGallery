@@ -607,6 +607,16 @@
                                                 </Button>
 
                                                 <Button Grid.Column="7"
+                                                        x:Uid="Import_SearchSauceNao"
+                                                        CommandParameter="{x:Bind}"
+                                                        Click="SearchSauceNaoForUnknown_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon FontSize="14" Glyph="&#xE721;" />
+                                                        <TextBlock Text="SauceNao" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <Button Grid.Column="8"
                                                         x:Uid="Import_RemoveGroup"
                                                         CommandParameter="{x:Bind}"
                                                         Click="RemoveUnknownGroup_Click">

@@ -94,6 +94,9 @@ public partial class ImportUnknownGroup : ObservableObject
     public partial bool IsSelected { get; set; }
 
     [ObservableProperty]
+    public partial bool IsSauceNaoSearching { get; set; }
+
+    [ObservableProperty]
     public partial bool IsExpanded { get; set; } = true;
 
     public string GroupId { get; }

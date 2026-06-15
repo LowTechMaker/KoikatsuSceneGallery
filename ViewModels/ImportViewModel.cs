@@ -445,9 +445,19 @@ public partial class ImportViewModel : ObservableObject
 
     public async Task<ReverseImageSearchResult?> SearchSauceNaoForFetchFailedGroupAsync(
         ImportArtworkGroup group,
+        CancellationToken ct) =>
+        await SearchSauceNaoForFilesAsync(group.Files, ct);
+
+    public async Task<ReverseImageSearchResult?> SearchSauceNaoForUnknownGroupAsync(
+        ImportUnknownGroup group,
+        CancellationToken ct) =>
+        await SearchSauceNaoForFilesAsync(group.Files, ct);
+
+    private async Task<ReverseImageSearchResult?> SearchSauceNaoForFilesAsync(
+        IReadOnlyList<ImportItem> files,
         CancellationToken ct)
     {
-        if (group.Files.Count == 0)
+        if (files.Count == 0)
             return null;
 
         var apiKey = GetReverseImageSearchApiKey();
@@ -455,7 +465,7 @@ public partial class ImportViewModel : ObservableObject
             throw new InvalidOperationException("SauceNao API key is not set.");
 
         var result = await _importService.SearchReverseImageAsync(
-            group.Files[0].SourceFilePath,
+            files[0].SourceFilePath,
             apiKey,
             ct);
 
@@ -520,6 +530,46 @@ public partial class ImportViewModel : ObservableObject
         }
 
         FetchFailedGroups.Remove(group);
+
+        foreach (var item in files)
+            PlaceItemInTree(item);
+
+        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId);
+
+        await ReResolveDestinationsAsync();
+        UpdateCounts();
+    }
+
+    public async Task ApplySauceNaoResultToUnknownGroupAsync(
+        ImportUnknownGroup group,
+        ReverseImageSearchResult result,
+        ContentRating rating)
+    {
+        var files = group.Files.ToList();
+        if (files.Count == 0)
+            return;
+
+        CaptureUndo(ManualAssignmentSource.Unknown, files);
+
+        foreach (var item in files)
+        {
+            if (result.ArtworkId is not null)
+            {
+                item.ArtworkId = result.ArtworkId;
+                item.ManualArtworkId = result.ArtworkId.Id;
+            }
+
+            item.AuthorName = result.AuthorName;
+            item.AuthorId = result.AuthorId;
+            item.Title = result.Title;
+            item.Rating = rating;
+            item.Tags = [];
+            item.ManualAuthorId = result.AuthorId;
+            item.ErrorMessage = null;
+            item.Status = ImportItemStatus.ReadyToImport;
+        }
+
+        UnknownGroups.Remove(group);
 
         foreach (var item in files)
             PlaceItemInTree(item);

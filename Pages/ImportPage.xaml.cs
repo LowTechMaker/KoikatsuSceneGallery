@@ -261,6 +261,43 @@ public sealed partial class ImportPage : Page
             await ViewModel.AssignArtworkIdToUnknownGroupCommand.ExecuteAsync(group);
     }
 
+    private async void SearchSauceNaoForUnknown_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: ImportUnknownGroup group } button)
+            return;
+
+        button.IsEnabled = false;
+        group.IsSauceNaoSearching = true;
+        try
+        {
+            var result = await ViewModel.SearchSauceNaoForUnknownGroupAsync(group, CancellationToken.None);
+            if (result is null)
+            {
+                await ShowMessageDialog(
+                    ResLoader.GetString("Import_SauceNaoNoResultTitle"),
+                    ResLoader.GetString("Import_SauceNaoNoResultMessage"));
+                return;
+            }
+
+            var rating = await ShowSauceNaoResultDialog(result);
+            if (rating is null)
+                return;
+
+            await ViewModel.ApplySauceNaoResultToUnknownGroupAsync(group, result, rating.Value);
+        }
+        catch (InvalidOperationException)
+        {
+            await ShowMessageDialog(
+                ResLoader.GetString("Import_SauceNaoApiKeyMissingTitle"),
+                ResLoader.GetString("Import_SauceNaoApiKeyMissingMessage"));
+        }
+        finally
+        {
+            group.IsSauceNaoSearching = false;
+            button.IsEnabled = true;
+        }
+    }
+
     private async void SearchSauceNaoForFetchFailed_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { CommandParameter: ImportArtworkGroup group } button)
