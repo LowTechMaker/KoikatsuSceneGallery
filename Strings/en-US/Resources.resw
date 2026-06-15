@@ -478,7 +478,7 @@
   <data name="Settings_OcdHeader.Text" xml:space="preserve">
     <value>Fine-tuning</value>
   </data>
-  <data name="Settings_OcdDesc.Text" xml:space="preserve">
+  <data name="Settings_OcdDesc.Message" xml:space="preserve">
     <value>This option is designed for OCD (Obsessive-Compulsive Disorder), and its features are not guaranteed to be updated or fixed in a timely manner.</value>
   </data>
   <data name="Settings_SizeSelector.Header" xml:space="preserve">
@@ -613,6 +613,9 @@
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>Open Plugins Folder</value>
+  </data>
+  <data name="Plugins_RiskWarning.Message" xml:space="preserve">
+    <value>Plugins may access external services on your behalf. This could result in account suspension, IP bans, or other restrictions from those services. By installing and loading any plugin, you acknowledge and accept these risks.</value>
   </data>
   <data name="Plugins_RestartNote.Text" xml:space="preserve">
     <value>Changes to plugins take effect after restarting the app.</value>

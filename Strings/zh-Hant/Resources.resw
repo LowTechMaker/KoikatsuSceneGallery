@@ -478,7 +478,7 @@
   <data name="Settings_OcdHeader.Text" xml:space="preserve">
     <value>強迫症選項</value>
   </data>
-  <data name="Settings_OcdDesc.Text" xml:space="preserve">
+  <data name="Settings_OcdDesc.Message" xml:space="preserve">
     <value>此選項專為強迫症打造，裡面的功能不保證即時更新或修復。</value>
   </data>
   <data name="Settings_SizeSelector.Header" xml:space="preserve">
@@ -613,6 +613,9 @@
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>開啟外掛資料夾</value>
+  </data>
+  <data name="Plugins_RiskWarning.Message" xml:space="preserve">
+    <value>外掛可能會以您的身分存取外部服務，這可能導致帳號停權、IP 封鎖或其他限制。安裝並載入任何外掛即視為您已了解並接受這些風險。</value>
   </data>
   <data name="Plugins_RestartNote.Text" xml:space="preserve">
     <value>外掛變更需重新啟動應用程式後生效。</value>

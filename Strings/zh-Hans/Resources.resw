@@ -478,7 +478,7 @@
   <data name="Settings_OcdHeader.Text" xml:space="preserve">
     <value>强迫症选项</value>
   </data>
-  <data name="Settings_OcdDesc.Text" xml:space="preserve">
+  <data name="Settings_OcdDesc.Message" xml:space="preserve">
     <value>此选项专为强迫症打造，里面的功能不保证即时更新或修复。</value>
   </data>
   <data name="Settings_SizeSelector.Header" xml:space="preserve">
@@ -613,6 +613,9 @@
   </data>
   <data name="Plugins_OpenFolder.Text" xml:space="preserve">
     <value>打开插件文件夹</value>
+  </data>
+  <data name="Plugins_RiskWarning.Message" xml:space="preserve">
+    <value>插件可能会以您的身份访问外部服务，这可能导致账号封禁、IP 封锁或其他限制。安装并加载任何插件即视为您已了解并接受这些风险。</value>
   </data>
   <data name="Plugins_RestartNote.Text" xml:space="preserve">
     <value>插件更改需重启应用后生效。</value>

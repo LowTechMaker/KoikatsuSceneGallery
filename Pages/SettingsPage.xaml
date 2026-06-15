@@ -777,15 +777,25 @@
             <!-- Plugins Tab -->
             <PivotItem x:Uid="Settings_TabPlugins">
                 <ScrollViewer Padding="0,16,0,24">
-                    <StackPanel Spacing="16">
-                        <TextBlock
-                            x:Uid="Plugins_Header"
-                            Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <TextBlock
-                            x:Uid="Plugins_Desc"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap" />
+                    <StackPanel Spacing="32">
 
+                        <!-- Overview -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Plugins_Header"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Plugins_Desc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                            <InfoBar
+                                x:Uid="Plugins_RiskWarning"
+                                IsOpen="True"
+                                IsClosable="False"
+                                Severity="Warning" />
+                        </StackPanel>
+
+                        <!-- Install Instructions -->
                         <StackPanel Spacing="8">
                             <TextBlock
                                 x:Uid="Plugins_InstallHeader"
@@ -804,101 +814,105 @@
                                 TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <TextBlock
-                            x:Uid="Plugins_RestartNote"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <!-- Installed Plugins -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Plugins_RestartNote"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
-                        <TextBlock
-                            x:Uid="Plugins_Empty"
-                            Opacity="0.6"
-                            Visibility="{x:Bind HasNoPlugins}" />
+                            <TextBlock
+                                x:Uid="Plugins_Empty"
+                                Opacity="0.6"
+                                Visibility="{x:Bind HasNoPlugins}" />
 
-                        <ItemsControl ItemsSource="{x:Bind PluginItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="local:PluginListItem">
-                                    <Button
-                                        Margin="0,0,0,8"
-                                        Padding="0"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Click="PluginItem_Click"
-                                        CommandParameter="{x:Bind}">
-                                        <Grid
-                                            Padding="16,12"
-                                            ColumnSpacing="12"
-                                            CornerRadius="8"
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                            BorderThickness="1">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
+                            <ItemsControl ItemsSource="{x:Bind PluginItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="local:PluginListItem">
+                                        <Button
+                                            Margin="0,0,0,8"
+                                            Padding="0"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="PluginItem_Click"
+                                            CommandParameter="{x:Bind}">
+                                            <Grid
+                                                Padding="16,12"
+                                                ColumnSpacing="12"
+                                                CornerRadius="8"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
 
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                Glyph="&#xEA86;" />
+                                                <FontIcon
+                                                    VerticalAlignment="Center"
+                                                    Glyph="&#xEA86;" />
 
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock
+                                                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                            Text="{x:Bind Name}" />
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                                            Text="{x:Bind Version}"
+                                                            Visibility="{x:Bind HasVersion}" />
+                                                    </StackPanel>
                                                     <TextBlock
-                                                        Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                        Text="{x:Bind Name}" />
-                                                    <TextBlock
-                                                        VerticalAlignment="Center"
                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                         Style="{StaticResource CaptionTextBlockStyle}"
-                                                        Text="{x:Bind Version}"
-                                                        Visibility="{x:Bind HasVersion}" />
+                                                        Text="{x:Bind Description}"
+                                                        TextWrapping="Wrap"
+                                                        Visibility="{x:Bind HasDescription}" />
+                                                    <TextBlock
+                                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind Error}"
+                                                        TextWrapping="Wrap"
+                                                        Visibility="{x:Bind HasError}" />
+                                                    <TextBlock
+                                                        Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind UpdateText}"
+                                                        Visibility="{x:Bind UpdateAvailable}" />
                                                 </StackPanel>
+
                                                 <TextBlock
+                                                    Grid.Column="2"
+                                                    VerticalAlignment="Center"
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                     Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind Description}"
-                                                    TextWrapping="Wrap"
-                                                    Visibility="{x:Bind HasDescription}" />
-                                                <TextBlock
-                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind Error}"
-                                                    TextWrapping="Wrap"
-                                                    Visibility="{x:Bind HasError}" />
-                                                <TextBlock
-                                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind UpdateText}"
-                                                    Visibility="{x:Bind UpdateAvailable}" />
-                                            </StackPanel>
+                                                    Text="{x:Bind StatusText}" />
 
-                                            <TextBlock
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Text="{x:Bind StatusText}" />
+                                                <FontIcon
+                                                    Grid.Column="3"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="12"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Glyph="&#xE76C;" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                                            <FontIcon
-                                                Grid.Column="3"
-                                                VerticalAlignment="Center"
-                                                FontSize="12"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE76C;" />
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            <Button Click="OpenPluginsFolder_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="14" Glyph="&#xE8DA;" />
+                                    <TextBlock x:Uid="Plugins_OpenFolder" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
 
-                        <Button Click="OpenPluginsFolder_Click">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon FontSize="14" Glyph="&#xE8DA;" />
-                                <TextBlock x:Uid="Plugins_OpenFolder" />
-                            </StackPanel>
-                        </Button>
                     </StackPanel>
                 </ScrollViewer>
             </PivotItem>
@@ -908,9 +922,11 @@
                 <ScrollViewer Padding="0,16,0,24">
                     <StackPanel Spacing="32">
                         <StackPanel Spacing="16">
-                            <TextBlock
+                            <InfoBar
                                 x:Uid="Settings_OcdDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                IsOpen="True"
+                                IsClosable="False"
+                                Severity="Warning" />
 
                             <ToggleSwitch
                                 x:Uid="Settings_SizeSelector"
