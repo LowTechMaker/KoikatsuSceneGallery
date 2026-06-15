@@ -8,11 +8,6 @@ namespace KoikatsuSceneGallery;
 
 public sealed partial class MainWindow : Window
 {
-    private static readonly InfoBadge ImportingBadge = new()
-    {
-        Style = (Style)Application.Current.Resources["AttentionIconInfoBadgeStyle"],
-    };
-
     public MainWindow()
     {
         InitializeComponent();
@@ -29,6 +24,7 @@ public sealed partial class MainWindow : Window
         {
             ImportNavItem.Visibility = Visibility.Visible;
             App.ImportViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
+            UpdateImportNavBadge();
         }
 
         NavFrame.Navigate(typeof(GalleryPage));
@@ -36,8 +32,52 @@ public sealed partial class MainWindow : Window
 
     private void ImportViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ViewModels.ImportViewModel.IsImporting))
-            ImportNavItem.InfoBadge = App.ImportViewModel!.IsImporting ? ImportingBadge : null;
+        if (e.PropertyName is nameof(ViewModels.ImportViewModel.IsImporting)
+            or nameof(ViewModels.ImportViewModel.IsAnalyzing)
+            or nameof(ViewModels.ImportViewModel.AnalysisPendingCount)
+            or nameof(ViewModels.ImportViewModel.AnalysisStatusText))
+        {
+            UpdateImportNavBadge();
+        }
+    }
+
+    private void UpdateImportNavBadge()
+    {
+        if (App.ImportViewModel is not { } viewModel)
+            return;
+
+        if (viewModel.IsImporting)
+        {
+            ImportNavItem.InfoBadge = CreateImportStatusBadge();
+            ToolTipService.SetToolTip(ImportNavItem, "Importing");
+            return;
+        }
+
+        if (viewModel.IsAnalyzing)
+        {
+            var pendingCount = viewModel.AnalysisPendingCount;
+            ImportNavItem.InfoBadge = pendingCount > 0
+                ? CreateImportStatusBadge(pendingCount)
+                : CreateImportStatusBadge();
+            ToolTipService.SetToolTip(ImportNavItem, $"Analyzing {pendingCount} pending");
+            return;
+        }
+
+        ImportNavItem.InfoBadge = null;
+        ToolTipService.SetToolTip(ImportNavItem, null);
+    }
+
+    private static InfoBadge CreateImportStatusBadge(int? value = null)
+    {
+        var badge = new InfoBadge
+        {
+            Style = (Style)Application.Current.Resources["AttentionIconInfoBadgeStyle"],
+        };
+
+        if (value is not null)
+            badge.Value = value.Value;
+
+        return badge;
     }
 
     private void TitleBar_PaneToggleRequested(TitleBar sender, object args)

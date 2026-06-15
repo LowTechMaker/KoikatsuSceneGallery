@@ -65,7 +65,9 @@ public partial class ImportViewModel : ObservableObject
     private readonly List<ImportItem> _pendingUnknownItems = [];
     private readonly HashSet<ImportUnknownGroup> _subscribedUnknownGroups = [];
     private readonly Dictionary<ImportItem, ManualItemState> _manualBaselines = [];
+    private readonly HashSet<string> _currentAnalysisPaths = new(StringComparer.OrdinalIgnoreCase);
     private ManualAssignmentUndo? _lastManualAssignment;
+    private int _currentRejectedAnalysisCount;
     private int _unknownGroupCounter;
 
     [ObservableProperty]
@@ -91,6 +93,28 @@ public partial class ImportViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool HasUnknownItems { get; set; }
+
+    public int AnalysisPendingCount => AnalyzingItems.Count;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AnalysisProgressPercent))]
+    [NotifyPropertyChangedFor(nameof(AnalysisStatusText))]
+    public partial int AnalysisTotalCount { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AnalysisProgressPercent))]
+    [NotifyPropertyChangedFor(nameof(AnalysisStatusText))]
+    public partial int AnalysisCompletedCount { get; set; }
+
+    public int AnalysisProgressPercent =>
+        AnalysisTotalCount <= 0
+            ? 0
+            : (int)Math.Round((double)AnalysisCompletedCount / AnalysisTotalCount * 100);
+
+    public string AnalysisStatusText =>
+        AnalysisTotalCount <= 0
+            ? string.Empty
+            : $"{AnalysisCompletedCount}/{AnalysisTotalCount} ({AnalysisProgressPercent}%)";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedUnknownItems))]
@@ -155,9 +179,15 @@ public partial class ImportViewModel : ObservableObject
         _settingsLoaded = LoadSettingsAsync();
 
         Items.CollectionChanged += OnItemsCollectionChanged;
-        AnalyzingItems.CollectionChanged += (_, _) => HasAnalyzingItems = AnalyzingItems.Count > 0;
+        AnalyzingItems.CollectionChanged += OnAnalyzingItemsCollectionChanged;
         FetchFailedGroups.CollectionChanged += OnFetchFailedGroupsCollectionChanged;
         UnknownGroups.CollectionChanged += OnUnknownGroupsCollectionChanged;
+    }
+
+    private void OnAnalyzingItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        HasAnalyzingItems = AnalyzingItems.Count > 0;
+        OnPropertyChanged(nameof(AnalysisPendingCount));
     }
 
     private void OnFetchFailedGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -274,11 +304,14 @@ public partial class ImportViewModel : ObservableObject
             BatchManualArtworkId = null;
             BatchFetchFailedAuthorId = null;
             _manualBaselines.Clear();
+            _currentAnalysisPaths.Clear();
+            _currentRejectedAnalysisCount = 0;
             _lastManualAssignment = null;
             CanUndoManualAssignment = false;
             _authorsLoaded = false;
         }
         UpdateCounts();
+        UpdateAnalysisProgress();
     }
 
     private void PlaceNewItem(ImportItem item)
@@ -301,6 +334,7 @@ public partial class ImportViewModel : ObservableObject
             return;
         }
         if (e.PropertyName != nameof(ImportItem.Status)) return;
+        UpdateAnalysisProgress();
         if (item.Status != ImportItemStatus.ReadyToImport) return;
 
         // Phase 2 has finished for this item — move it to the right place in the tree
@@ -713,6 +747,7 @@ public partial class ImportViewModel : ObservableObject
         if (newPaths.Count == 0) return;
 
         await _settingsLoaded;
+        BeginAnalysisProgress(newPaths);
         IsAnalyzing = true;
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
@@ -720,6 +755,8 @@ public partial class ImportViewModel : ObservableObject
         try
         {
             int rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, _cts.Token);
+            _currentRejectedAnalysisCount = rejected;
+            UpdateAnalysisProgress();
 
             // Compute fingerprints for all new items (used for subfolder decisions and unknown grouping)
             var newPathSet = new HashSet<string>(newPaths, StringComparer.OrdinalIgnoreCase);
@@ -739,6 +776,7 @@ public partial class ImportViewModel : ObservableObject
         finally
         {
             IsAnalyzing = false;
+            EndAnalysisProgress();
             UpdateCounts();
         }
     }
@@ -934,6 +972,40 @@ public partial class ImportViewModel : ObservableObject
     private Task ReResolveDestinationsAsync(CancellationToken ct = default) =>
         _importService.ReResolveAsync(Items, _dispatcher, ct,
             (int)ArtworkSubfolderThreshold, UseVisualSimilarity);
+
+    private void BeginAnalysisProgress(IReadOnlyList<string> filePaths)
+    {
+        _currentAnalysisPaths.Clear();
+        foreach (var path in filePaths)
+            _currentAnalysisPaths.Add(path);
+
+        _currentRejectedAnalysisCount = 0;
+        AnalysisTotalCount = filePaths.Count;
+        AnalysisCompletedCount = 0;
+    }
+
+    private void EndAnalysisProgress()
+    {
+        _currentAnalysisPaths.Clear();
+        _currentRejectedAnalysisCount = 0;
+        AnalysisTotalCount = 0;
+        AnalysisCompletedCount = 0;
+    }
+
+    private void UpdateAnalysisProgress()
+    {
+        if (AnalysisTotalCount <= 0 || _currentAnalysisPaths.Count == 0)
+            return;
+
+        var completedItems = Items.Count(i =>
+            _currentAnalysisPaths.Contains(i.SourceFilePath) &&
+            i.Status != ImportItemStatus.Analyzing);
+
+        AnalysisCompletedCount = Math.Clamp(
+            completedItems + _currentRejectedAnalysisCount,
+            0,
+            AnalysisTotalCount);
+    }
 
     private void UpdateCounts()
     {

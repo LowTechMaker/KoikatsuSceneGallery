@@ -37,6 +37,7 @@
     <Grid Padding="24,16,24,0" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -64,11 +65,10 @@
             </Button>
         </Grid>
 
-        <!-- Rejected files warning (overlays content area) -->
+        <!-- Rejected files warning -->
         <InfoBar
             x:Name="RejectedWarningBar"
             Grid.Row="1"
-            VerticalAlignment="Top"
             IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
             Severity="Warning"
             IsClosable="True" />
@@ -76,7 +76,7 @@
         <!-- Drop zone (shown when empty) -->
         <Border
             x:Name="DropZone"
-            Grid.Row="1"
+            Grid.Row="2"
             CornerRadius="16"
             BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
             BorderThickness="2"
@@ -127,7 +127,7 @@
 
         <!-- Tab view (shown when items exist) -->
         <TabView
-            Grid.Row="1"
+            Grid.Row="2"
             IsAddTabButtonVisible="False"
             TabWidthMode="SizeToContent"
             Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
@@ -686,7 +686,7 @@
 
         <!-- Action bar -->
         <Grid
-            Grid.Row="2"
+            Grid.Row="3"
             Padding="0,8,0,16"
             ColumnSpacing="12"
             Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
