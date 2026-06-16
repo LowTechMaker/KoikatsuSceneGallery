@@ -1,11 +1,13 @@
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
+using System.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -142,6 +144,49 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.BepisDbUrl is { } url)
             await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+    }
+
+    private void PixivButton_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (ViewModel.PixivUrl is { } url)
+        {
+            CopyText(url);
+            e.Handled = true;
+        }
+    }
+
+    private void BepisDbButton_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (ViewModel.BepisDbUrl is { } url)
+        {
+            CopyText(url);
+            e.Handled = true;
+        }
+    }
+
+    private void FilePath_Tapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (ViewModel.Card is { } card)
+        {
+            CopyText(card.FilePath);
+            e.Handled = true;
+        }
+    }
+
+    private void FilePath_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (ViewModel.Card is { } card && Path.GetDirectoryName(card.FilePath) is { } folder)
+        {
+            CopyText(folder);
+            e.Handled = true;
+        }
+    }
+
+    private static void CopyText(string text)
+    {
+        var package = new DataPackage();
+        package.SetText(text);
+        Clipboard.SetContent(package);
     }
 
     private void Author_Click(object sender, RoutedEventArgs e)

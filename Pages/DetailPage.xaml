@@ -145,9 +145,11 @@
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <TextBlock
-                        IsTextSelectionEnabled="True"
+                        RightTapped="FilePath_RightTapped"
+                        Tapped="FilePath_Tapped"
                         Text="{x:Bind ViewModel.Card.FilePath, Mode=OneWay}"
-                        TextWrapping="Wrap" />
+                        TextWrapping="Wrap"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.Card.FilePath, Mode=OneWay}" />
                 </StackPanel>
 
                 <StackPanel Spacing="4">
@@ -183,7 +185,8 @@
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <HyperlinkButton
                         Padding="0"
-                        Click="PixivButton_Click">
+                        Click="PixivButton_Click"
+                        RightTapped="PixivButton_RightTapped">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon FontSize="16" Glyph="&#xE774;" />
                             <TextBlock Text="{x:Bind ViewModel.PixivArtworkId, Mode=OneWay}" />
@@ -200,7 +203,8 @@
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <HyperlinkButton
                         Padding="0"
-                        Click="BepisDbButton_Click">
+                        Click="BepisDbButton_Click"
+                        RightTapped="BepisDbButton_RightTapped">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon FontSize="16" Glyph="&#xE774;" />
                             <TextBlock Text="{x:Bind ViewModel.BepisDbId, Mode=OneWay}" />
@@ -215,43 +219,58 @@
                     <TextBlock
                         x:Uid="Detail_SamePost"
                         Style="{StaticResource SubtitleTextBlockStyle}" />
-                    <GridView
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}">
+                        <Run Text="{x:Bind ViewModel.SiblingCards.Count, Mode=OneWay}" /><Run x:Uid="Detail_SamePostCount" />
+                    </TextBlock>
+                    <ListView
+                        MaxHeight="400"
                         IsItemClickEnabled="True"
                         ItemClick="SiblingCard_ItemClick"
                         ItemsSource="{x:Bind ViewModel.SiblingCards, Mode=OneWay}"
-                        SelectionMode="None">
-                        <GridView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <ItemsWrapGrid Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </GridView.ItemsPanel>
-                        <GridView.ItemContainerStyle>
-                            <Style TargetType="GridViewItem">
-                                <Setter Property="Margin" Value="0,0,4,4" />
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="MinWidth" Value="0" />
-                                <Setter Property="MinHeight" Value="0" />
-                            </Style>
-                        </GridView.ItemContainerStyle>
-                        <GridView.ItemTemplate>
+                        SelectedItem="{x:Bind ViewModel.Card, Mode=OneWay}"
+                        SelectionMode="Single">
+                        <ListView.ItemTemplate>
                             <DataTemplate x:DataType="models:SceneCard">
-                                <Border
-                                    Width="130"
-                                    Height="73"
-                                    CornerRadius="4"
-                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                    ToolTipService.ToolTip="{x:Bind FileName}">
-                                    <Image Stretch="UniformToFill">
-                                        <Image.Source>
-                                            <BitmapImage
-                                                DecodePixelWidth="180"
-                                                UriSource="{x:Bind FileUri}" />
-                                        </Image.Source>
-                                    </Image>
-                                </Border>
+                                <Grid Padding="4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        CornerRadius="4"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                        <Image Stretch="Uniform">
+                                            <Image.Source>
+                                                <BitmapImage
+                                                    DecodePixelWidth="60"
+                                                    UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                            </Image.Source>
+                                        </Image>
+                                    </Border>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                        <TextBlock
+                                            Text="{x:Bind FileName}"
+                                            TextTrimming="CharacterEllipsis"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            ToolTipService.ToolTip="{x:Bind FilePath}" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind Resolution}" />
+                                        <TextBlock
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind FileSize, Converter={StaticResource FileSizeConverter}}" />
+                                    </StackPanel>
+                                </Grid>
                             </DataTemplate>
-                        </GridView.ItemTemplate>
-                    </GridView>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </StackPanel>
             </StackPanel>
             </ScrollViewer>

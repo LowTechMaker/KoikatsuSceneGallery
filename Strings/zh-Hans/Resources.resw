@@ -726,6 +726,12 @@
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>作者 ID</value>
   </data>
+  <data name="Import_SelectAllUnknown.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选取或取消所有未识别分组</value>
+  </data>
+  <data name="Import_SelectAllUnknownLabel.Text" xml:space="preserve">
+    <value>全选/取消</value>
+  </data>
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>用 SauceNao 搜索</value>
   </data>
@@ -830,5 +836,8 @@
   </data>
   <data name="Detail_SamePost.Text" xml:space="preserve">
     <value>同投稿</value>
+  </data>
+  <data name="Detail_SamePostCount.Text" xml:space="preserve">
+    <value> 件</value>
   </data>
 </root>

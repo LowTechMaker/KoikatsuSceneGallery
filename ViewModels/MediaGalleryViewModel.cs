@@ -68,6 +68,13 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
 
         CardsView = new AdvancedCollectionView(Cards, true);
         Cards.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
+
+        if (!_isVideo)
+        {
+            SelectedSort = SortOption.DateModified;
+            SortAscending = false;
+        }
+
         ApplySort();
 
         _cardService.CardAdded += OnCardAdded;

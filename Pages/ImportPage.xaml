@@ -228,7 +228,9 @@
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Stretch">
                                             <Expander.Header>
-                                                <Grid ColumnSpacing="8">
+                                                <Grid ColumnSpacing="8"
+                                                      MinHeight="32"
+                                                      VerticalAlignment="Top">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
@@ -260,11 +262,15 @@
                                                     <TextBox
                                                         Grid.Column="4"
                                                         x:Uid="Import_AuthorId"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         Text="{x:Bind ManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                     <Button
                                                         Grid.Column="3"
                                                         x:Uid="Import_SearchSauceNao"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         CommandParameter="{x:Bind}"
                                                         Click="SearchSauceNaoForFetchFailed_Click">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -276,6 +282,8 @@
                                                     <Button
                                                         Grid.Column="5"
                                                         x:Uid="Import_SelectAuthor"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         CommandParameter="{x:Bind}"
                                                         Click="PickAuthor_Click">
                                                         <FontIcon FontSize="14" Glyph="&#xE716;" />
@@ -283,6 +291,8 @@
 
                                                     <Button
                                                         Grid.Column="6"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         IsEnabled="{x:Bind CanAssignAuthor, Mode=OneWay}"
                                                         CommandParameter="{x:Bind}"
                                                         Click="AssignAuthor_Click">
@@ -505,6 +515,7 @@
                         x:Uid="Import_UnknownHint" />
                     <Grid Grid.Row="1" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" MaxWidth="180" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" MaxWidth="180" />
@@ -513,24 +524,34 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
+                        <Button
+                            x:Uid="Import_SelectAllUnknown"
+                            Command="{x:Bind ViewModel.ToggleAllUnknownSelectionCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="14" Glyph="&#xE8FB;" />
+                                <TextBlock x:Uid="Import_SelectAllUnknownLabel" />
+                            </StackPanel>
+                        </Button>
+
                         <TextBox
+                            Grid.Column="1"
                             x:Uid="Import_ArtworkId"
                             Text="{x:Bind ViewModel.BatchManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Button
-                            Grid.Column="1"
+                            Grid.Column="2"
                             x:Uid="Import_ResolveSelectedArtwork"
                             Command="{x:Bind ViewModel.AssignBatchArtworkIdToUnknownCommand}">
                             <FontIcon FontSize="14" Glyph="&#xE721;" />
                         </Button>
 
                         <TextBox
-                            Grid.Column="2"
+                            Grid.Column="3"
                             x:Uid="Import_AuthorId"
                             Text="{x:Bind ViewModel.BatchManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Button
-                            Grid.Column="3"
+                            Grid.Column="4"
                             x:Uid="Import_SelectAuthor"
                             Click="PickAuthorForUnknownBatch_Click"
                             IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}">
@@ -538,7 +559,7 @@
                         </Button>
 
                         <Button
-                            Grid.Column="4"
+                            Grid.Column="5"
                             Command="{x:Bind ViewModel.AssignBatchAuthorIdToUnknownCommand}">
                             <FontIcon FontSize="14" Glyph="&#xE8FB;" />
                         </Button>
@@ -553,7 +574,9 @@
                                         HorizontalContentAlignment="Stretch"
                                         Margin="0,0,0,4">
                                         <Expander.Header>
-                                            <Grid ColumnSpacing="8">
+                                            <Grid ColumnSpacing="8"
+                                                  MinHeight="32"
+                                                  VerticalAlignment="Top">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -566,21 +589,31 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" />
+                                                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                                          MinWidth="0"
+                                                          VerticalAlignment="Top" />
 
                                                 <TextBlock Grid.Column="1"
                                                            Text="{x:Bind HeaderText, Mode=OneWay}"
                                                            Style="{StaticResource BodyStrongTextBlockStyle}"
                                                            VerticalAlignment="Center"
+                                                           MaxLines="1"
+                                                           TextWrapping="NoWrap"
                                                            TextTrimming="CharacterEllipsis" />
 
                                                 <TextBox Grid.Column="2"
                                                          x:Uid="Import_ArtworkId"
+                                                         Height="32"
+                                                         Width="240"
                                                          MinWidth="140"
+                                                         MaxWidth="240"
+                                                         VerticalAlignment="Top"
                                                          Text="{x:Bind ManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                 <Button Grid.Column="3"
                                                         x:Uid="Import_ResolveArtwork"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         IsEnabled="{x:Bind CanAssignArtworkId, Mode=OneWay}"
                                                         CommandParameter="{x:Bind}"
                                                         Click="AssignArtworkIdToUnknownGroup_Click">
@@ -589,17 +622,25 @@
 
                                                 <TextBox Grid.Column="4"
                                                          x:Uid="Import_AuthorId"
+                                                         Height="32"
+                                                         Width="140"
                                                          MinWidth="140"
+                                                         MaxWidth="140"
+                                                         VerticalAlignment="Top"
                                                          Text="{x:Bind ManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                 <Button Grid.Column="5"
                                                         x:Uid="Import_SelectAuthor"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         CommandParameter="{x:Bind}"
                                                         Click="PickAuthorForUnknownGroup_Click">
                                                     <FontIcon FontSize="14" Glyph="&#xE716;" />
                                                 </Button>
 
                                                 <Button Grid.Column="6"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         IsEnabled="{x:Bind CanAssignAuthor, Mode=OneWay}"
                                                         CommandParameter="{x:Bind}"
                                                         Click="AssignAuthorToUnknownGroup_Click">
@@ -608,6 +649,8 @@
 
                                                 <Button Grid.Column="7"
                                                         x:Uid="Import_SearchSauceNao"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         CommandParameter="{x:Bind}"
                                                         Click="SearchSauceNaoForUnknown_Click">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -618,6 +661,8 @@
 
                                                 <Button Grid.Column="8"
                                                         x:Uid="Import_RemoveGroup"
+                                                        Height="32"
+                                                        VerticalAlignment="Top"
                                                         CommandParameter="{x:Bind}"
                                                         Click="RemoveUnknownGroup_Click">
                                                     <FontIcon FontSize="14" Glyph="&#xE74D;" />

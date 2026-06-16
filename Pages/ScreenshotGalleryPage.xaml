@@ -89,7 +89,7 @@
                 Width="160"
                 Height="32"
                 VerticalAlignment="Top"
-                SelectedIndex="0"
+                SelectedIndex="1"
                 SelectionChanged="SortComboBox_SelectionChanged">
                 <ComboBoxItem x:Uid="Gallery_SortName" Tag="Name" />
                 <ComboBoxItem x:Uid="Gallery_SortDateModified" Tag="DateModified" />
@@ -104,12 +104,13 @@
                 Width="40"
                 Height="32"
                 Padding="0"
+                IsChecked="True"
                 VerticalAlignment="Top"
                 Click="SortDirectionButton_Click">
                 <FontIcon
                     x:Name="SortDirectionIcon"
                     FontSize="14"
-                    Glyph="&#xE74A;" />
+                    Glyph="&#xE74B;" />
             </ToggleButton>
 
             <StackPanel

@@ -726,6 +726,12 @@
   <data name="Import_AuthorId.PlaceholderText" xml:space="preserve">
     <value>Author ID</value>
   </data>
+  <data name="Import_SelectAllUnknown.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select or clear all unrecognized groups</value>
+  </data>
+  <data name="Import_SelectAllUnknownLabel.Text" xml:space="preserve">
+    <value>All / none</value>
+  </data>
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Search with SauceNao</value>
   </data>
@@ -830,5 +836,8 @@
   </data>
   <data name="Detail_SamePost.Text" xml:space="preserve">
     <value>Same Post</value>
+  </data>
+  <data name="Detail_SamePostCount.Text" xml:space="preserve">
+    <value> cards</value>
   </data>
 </root>

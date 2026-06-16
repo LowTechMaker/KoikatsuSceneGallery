@@ -270,6 +270,16 @@ public partial class ImportViewModel : ObservableObject
     private void UpdateSelectedUnknownCount() =>
         SelectedUnknownCount = UnknownGroups.Count(g => g.IsSelected);
 
+    [RelayCommand]
+    private void ToggleAllUnknownSelection()
+    {
+        bool shouldSelect = SelectedUnknownCount < UnknownGroups.Count;
+        foreach (var group in UnknownGroups)
+            group.IsSelected = shouldSelect;
+
+        UpdateSelectedUnknownCount();
+    }
+
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
@@ -621,13 +631,7 @@ public partial class ImportViewModel : ObservableObject
         // Remove old groups and rebuild from the combined set
         UnknownGroups.Clear();
 
-        var groups = CardGroupingService.GroupByVisualSimilarity(allUnknownItems);
-        foreach (var groupItems in groups)
-        {
-            var groupId = $"Group {++_unknownGroupCounter}";
-            var group = new ImportUnknownGroup(groupId, groupItems);
-            UnknownGroups.Add(group);
-        }
+        AddUnknownGroups(GroupUnknownItems(allUnknownItems));
 
         if (!_authorsLoaded && UnknownGroups.Count > 0)
         {
@@ -836,7 +840,7 @@ public partial class ImportViewModel : ObservableObject
             rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, cts.Token);
             AddRejectedAnalysisCount(rejected);
 
-            // Compute fingerprints for all new items (used for subfolder decisions and unknown grouping)
+            // Compute fingerprints for subfolder decisions and optional unknown visual grouping.
             var newPathSet = new HashSet<string>(newPaths, StringComparer.OrdinalIgnoreCase);
             var newItems = Items.Where(i => newPathSet.Contains(i.SourceFilePath)).ToList();
             await _importService.ComputeFingerprintsAsync(newItems, cts.Token);
@@ -974,13 +978,7 @@ public partial class ImportViewModel : ObservableObject
 
         if (unknownItems.Count > 0)
         {
-            var groups = CardGroupingService.GroupByVisualSimilarity(unknownItems);
-            foreach (var groupItems in groups)
-            {
-                var groupId = $"Group {++_unknownGroupCounter}";
-                var group = new ImportUnknownGroup(groupId, groupItems);
-                UnknownGroups.Add(group);
-            }
+            AddUnknownGroups(GroupUnknownItems(unknownItems));
 
             if (!_authorsLoaded && UnknownGroups.Count > 0)
             {
@@ -1036,8 +1034,34 @@ public partial class ImportViewModel : ObservableObject
 
     partial void OnUseVisualSimilarityChanged(bool value)
     {
+        RegroupUnknowns();
+
         if (HasItems)
             _ = DebouncedReResolveAsync();
+    }
+
+    private List<List<ImportItem>> GroupUnknownItems(IReadOnlyList<ImportItem> items) =>
+        UseVisualSimilarity
+            ? CardGroupingService.GroupByVisualSimilarity(items)
+            : items.Select(item => new List<ImportItem> { item }).ToList();
+
+    private void AddUnknownGroups(IEnumerable<List<ImportItem>> groups)
+    {
+        foreach (var groupItems in groups)
+        {
+            var groupId = $"Group {++_unknownGroupCounter}";
+            var group = new ImportUnknownGroup(groupId, groupItems);
+            UnknownGroups.Add(group);
+        }
+    }
+
+    private void RegroupUnknowns()
+    {
+        if (UnknownGroups.Count == 0) return;
+
+        var allUnknownItems = UnknownGroups.SelectMany(group => group.Files).ToList();
+        UnknownGroups.Clear();
+        AddUnknownGroups(GroupUnknownItems(allUnknownItems));
     }
 
     private async Task DebouncedReResolveAsync()
