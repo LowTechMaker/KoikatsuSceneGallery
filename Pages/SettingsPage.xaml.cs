@@ -19,7 +19,9 @@ public sealed class PluginListItem(
     string? error,
     string? description,
     string filePath,
-    string? updateText = null)
+    string? updateText = null,
+    string? downloadUrl = null,
+    string? changelog = null)
 {
     public string Name { get; } = name;
     public string Version { get; } = version;
@@ -32,6 +34,10 @@ public sealed class PluginListItem(
     public string FilePath { get; } = filePath;
     public bool UpdateAvailable => UpdateText is not null;
     public string? UpdateText { get; } = updateText;
+    public string? DownloadUrl { get; } = downloadUrl;
+    public bool HasDownloadUrl => !string.IsNullOrWhiteSpace(DownloadUrl);
+    public string? Changelog { get; } = changelog;
+    public bool HasChangelog => !string.IsNullOrWhiteSpace(Changelog);
 }
 
 public sealed partial class SettingsPage : Page
@@ -61,7 +67,9 @@ public sealed partial class SettingsPage : Page
                 p.FilePath,
                 p.AvailableVersion is not null
                     ? string.Format(updateFmt, p.AvailableVersion)
-                    : null))
+                    : null,
+                p.AvailableDownloadUrl,
+                p.Changelog))
             .ToList();
         InitializeComponent();
     }
@@ -106,6 +114,12 @@ public sealed partial class SettingsPage : Page
 
         if (item.UpdateAvailable)
             details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailUpdate"), item.UpdateText!));
+
+        if (item.HasDownloadUrl)
+            details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailDownload"), item.DownloadUrl!));
+
+        if (item.HasChangelog)
+            details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailChangelog"), item.Changelog!));
 
         if (item.HasError)
             details.Children.Add(BuildDetailRow(ResLoader.GetString("Plugins_DetailError"), item.Error!));

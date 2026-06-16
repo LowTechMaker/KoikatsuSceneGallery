@@ -17,7 +17,9 @@ public sealed record LoadedPluginInfo(
     string FilePath,
     string? Description = null,
     string? UpdateUrl = null,
-    string? AvailableVersion = null);
+    string? AvailableVersion = null,
+    string? AvailableDownloadUrl = null,
+    string? Changelog = null);
 
 /// <summary>
 /// Discovers and loads plugins from the Plugins folder next to the exe. Each
@@ -93,6 +95,10 @@ public sealed class PluginService
 
     /// <summary>First loaded reverse image search provider, or null when none is installed.</summary>
     public IReverseImageSearchProvider? ReverseImageSearchProvider { get; private set; }
+
+    /// <summary>All loaded plugin update providers, tried in load order.</summary>
+    public IReadOnlyList<IPluginUpdateProvider> UpdateProviders => _updateProviders;
+    private readonly List<IPluginUpdateProvider> _updateProviders = [];
 
     public IPluginSettingsProvider? GetSettingsProvider(string pluginName)
         => _settingsProviders.GetValueOrDefault(pluginName);
@@ -207,6 +213,9 @@ public sealed class PluginService
             if (plugin is IReverseImageSearchProvider reverseImageSearchProvider)
                 ReverseImageSearchProvider ??= reverseImageSearchProvider;
 
+            if (plugin is IPluginUpdateProvider updateProvider)
+                _updateProviders.Add(updateProvider);
+
             if (plugin is IPluginSettingsProvider settingsProvider)
                 _settingsProviders[plugin.Name] = settingsProvider;
 
@@ -232,7 +241,14 @@ public sealed class PluginService
             for (var i = 0; i < _plugins.Count; i++)
             {
                 if (updates.TryGetValue(_plugins[i].Name, out var info) && info.Version is not null)
-                    _plugins[i] = _plugins[i] with { AvailableVersion = info.Version };
+                {
+                    _plugins[i] = _plugins[i] with
+                    {
+                        AvailableVersion = info.Version,
+                        AvailableDownloadUrl = info.DownloadUrl,
+                        Changelog = info.Changelog,
+                    };
+                }
             }
         }
     }

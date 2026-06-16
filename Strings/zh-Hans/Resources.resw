@@ -650,6 +650,12 @@
   <data name="Plugins_DetailUpdate" xml:space="preserve">
     <value>更新</value>
   </data>
+  <data name="Plugins_DetailDownload" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="Plugins_DetailChangelog" xml:space="preserve">
+    <value>更新内容</value>
+  </data>
   <data name="Plugins_DetailError" xml:space="preserve">
     <value>错误</value>
   </data>

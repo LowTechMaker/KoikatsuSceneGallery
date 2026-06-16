@@ -650,6 +650,12 @@
   <data name="Plugins_DetailUpdate" xml:space="preserve">
     <value>Update</value>
   </data>
+  <data name="Plugins_DetailDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Plugins_DetailChangelog" xml:space="preserve">
+    <value>Changelog</value>
+  </data>
   <data name="Plugins_DetailError" xml:space="preserve">
     <value>Error</value>
   </data>

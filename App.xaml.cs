@@ -95,7 +95,10 @@ public partial class App : Application
             try
             {
                 var updates = await new PluginUpdateChecker()
-                    .CheckUpdatesAsync(PluginService.Plugins, CancellationToken.None);
+                    .CheckUpdatesAsync(
+                        PluginService.Plugins,
+                        PluginService.UpdateProviders,
+                        CancellationToken.None);
                 if (updates.Count > 0)
                     PluginService.ApplyUpdateInfo(updates);
             }
