@@ -245,6 +245,9 @@
     <value>无印 (HF)</value>
   </data>
   <!-- DetailPage -->
+  <data name="Detail_GoBack.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>返回上一页</value>
+  </data>
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>上一张（左方向键）</value>
   </data>
@@ -824,5 +827,8 @@
   </data>
   <data name="Settings_R18GFolderName.Header" xml:space="preserve">
     <value>R-18G 文件夹名称</value>
+  </data>
+  <data name="Detail_SamePost.Text" xml:space="preserve">
+    <value>同投稿</value>
   </data>
 </root>

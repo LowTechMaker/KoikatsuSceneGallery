@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -24,20 +25,29 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid>
+        <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <Button
+                x:Uid="Detail_GoBack"
+                Click="GoBack_Click"
+                Style="{StaticResource SubtleButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE72B;" />
+            </Button>
+
             <TextBlock
+                Grid.Column="1"
                 Margin="0,0,12,0"
                 VerticalAlignment="Center"
                 Style="{StaticResource TitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}" />
 
             <StackPanel
-                Grid.Column="1"
+                Grid.Column="2"
                 VerticalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="8">
@@ -84,14 +94,35 @@
                     Stretch="Uniform" />
             </ScrollViewer>
 
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel
-                Grid.Column="1"
                 Padding="16"
                 CornerRadius="8"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 Spacing="16">
+
+                <!-- Author banner -->
+                <Button
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Padding="8"
+                    Click="Author_Click"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Visibility="{x:Bind ViewModel.HasAuthor, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <PersonPicture
+                            Width="40"
+                            Height="40"
+                            DisplayName="{x:Bind ViewModel.Author.Name, Mode=OneWay}"
+                            ProfilePicture="{x:Bind ViewModel.Author.AvatarSource, Mode=OneWay}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Style="{StaticResource BodyStrongTextBlockStyle}"
+                            Text="{x:Bind ViewModel.Author.Name, Mode=OneWay}" />
+                    </StackPanel>
+                </Button>
 
                 <TextBlock
                     x:Uid="Detail_FileInfo"
@@ -176,7 +207,54 @@
                         </StackPanel>
                     </HyperlinkButton>
                 </StackPanel>
+
+                <!-- Same post cards -->
+                <StackPanel
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.HasSiblingCards, Mode=OneWay}">
+                    <TextBlock
+                        x:Uid="Detail_SamePost"
+                        Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <GridView
+                        IsItemClickEnabled="True"
+                        ItemClick="SiblingCard_ItemClick"
+                        ItemsSource="{x:Bind ViewModel.SiblingCards, Mode=OneWay}"
+                        SelectionMode="None">
+                        <GridView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ItemsWrapGrid Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </GridView.ItemsPanel>
+                        <GridView.ItemContainerStyle>
+                            <Style TargetType="GridViewItem">
+                                <Setter Property="Margin" Value="0,0,4,4" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="MinWidth" Value="0" />
+                                <Setter Property="MinHeight" Value="0" />
+                            </Style>
+                        </GridView.ItemContainerStyle>
+                        <GridView.ItemTemplate>
+                            <DataTemplate x:DataType="models:SceneCard">
+                                <Border
+                                    Width="130"
+                                    Height="73"
+                                    CornerRadius="4"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    ToolTipService.ToolTip="{x:Bind FileName}">
+                                    <Image Stretch="UniformToFill">
+                                        <Image.Source>
+                                            <BitmapImage
+                                                DecodePixelWidth="180"
+                                                UriSource="{x:Bind FileUri}" />
+                                        </Image.Source>
+                                    </Image>
+                                </Border>
+                            </DataTemplate>
+                        </GridView.ItemTemplate>
+                    </GridView>
+                </StackPanel>
             </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Page>

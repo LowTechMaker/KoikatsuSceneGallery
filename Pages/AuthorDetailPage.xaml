@@ -19,18 +19,28 @@
         <Grid ColumnSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <Button
+                x:Uid="Detail_GoBack"
+                VerticalAlignment="Center"
+                Click="GoBack_Click"
+                Style="{StaticResource SubtleButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE72B;" />
+            </Button>
+
             <PersonPicture
+                Grid.Column="1"
                 Width="64"
                 Height="64"
                 DisplayName="{x:Bind ViewModel.Author.Name, Mode=OneWay}"
                 ProfilePicture="{x:Bind ViewModel.Author.AvatarSource, Mode=OneWay}" />
 
             <StackPanel
-                Grid.Column="1"
+                Grid.Column="2"
                 VerticalAlignment="Center"
                 Spacing="4">
                 <TextBlock
@@ -71,7 +81,7 @@
             </StackPanel>
 
             <StackPanel
-                Grid.Column="2"
+                Grid.Column="3"
                 VerticalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="8">

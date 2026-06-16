@@ -245,6 +245,9 @@
     <value>Koikatsu (HF)</value>
   </data>
   <!-- DetailPage -->
+  <data name="Detail_GoBack.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Go back</value>
+  </data>
   <data name="Detail_PrevButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Previous (Left Arrow)</value>
   </data>
@@ -824,5 +827,8 @@
   </data>
   <data name="Settings_R18GFolderName.Header" xml:space="preserve">
     <value>R-18G folder name</value>
+  </data>
+  <data name="Detail_SamePost.Text" xml:space="preserve">
+    <value>Same Post</value>
   </data>
 </root>

@@ -24,20 +24,29 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid>
+        <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
+            <Button
+                x:Uid="Detail_GoBack"
+                Click="GoBack_Click"
+                Style="{StaticResource SubtleButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE72B;" />
+            </Button>
+
             <TextBlock
+                Grid.Column="1"
                 Margin="0,0,12,0"
                 VerticalAlignment="Center"
                 Style="{StaticResource TitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}" />
 
             <StackPanel
-                Grid.Column="1"
+                Grid.Column="2"
                 VerticalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="8">

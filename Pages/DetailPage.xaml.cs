@@ -1,4 +1,5 @@
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -98,6 +99,7 @@ public sealed partial class DetailPage : Page
             ShowCard(card);
     }
 
+    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
     private void PrevButton_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void NextButton_Click(object sender, RoutedEventArgs e) => Navigate(1);
 
@@ -140,6 +142,18 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.BepisDbUrl is { } url)
             await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+    }
+
+    private void Author_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.AuthorSummary is { } summary)
+            Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+    }
+
+    private void SiblingCard_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is SceneCard card)
+            ShowCard(card);
     }
 
     private async void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)

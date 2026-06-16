@@ -125,61 +125,76 @@ public partial class SettingsViewModel : ObservableObject
         FolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoFolders));
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 SceneFolderPathsChanged?.Invoke();
         };
         CharacterFolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoCharacterFolders));
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 CharacterFolderPathsChanged?.Invoke();
         };
         CoordinateFolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoCoordinateFolders));
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 CoordinateFolderPathsChanged?.Invoke();
         };
         ScreenshotFolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoScreenshotFolders));
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 ScreenshotFolderPathsChanged?.Invoke();
         };
         VideoFolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoVideoFolders));
-            if (e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 VideoFolderPathsChanged?.Invoke();
         };
     }
 
     partial void OnResolutionFilterEnabledChanged(bool value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
     }
 
     partial void OnCharacterResolutionFilterEnabledChanged(bool value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
         CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
     }
 
     partial void OnCoordinateResolutionFilterEnabledChanged(bool value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
     partial void OnShowFileNamesChanged(bool value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
         ShowFileNamesChanged?.Invoke(value);
     }
 
     partial void OnScrollToTopOnSortChanged(bool value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
     }
 
@@ -219,22 +234,59 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnImportSubfolderChanged(string value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
     }
 
     partial void OnArtworkSubfolderThresholdChanged(double value)
     {
+        if (_isLoading)
+            return;
+
         _ = SaveConfigAsync();
     }
 
-    partial void OnAuthorFolderFormatChanged(string value) => _ = SaveConfigAsync();
-    partial void OnArtworkFolderFormatChanged(string value) => _ = SaveConfigAsync();
-    partial void OnUnknownFolderNameChanged(string value) => _ = SaveConfigAsync();
-    partial void OnKoikatsuFolderNameChanged(string value) => _ = SaveConfigAsync();
-    partial void OnKoikatsuSunshineFolderNameChanged(string value) => _ = SaveConfigAsync();
-    partial void OnGFolderNameChanged(string value) => _ = SaveConfigAsync();
-    partial void OnR18FolderNameChanged(string value) => _ = SaveConfigAsync();
-    partial void OnR18GFolderNameChanged(string value) => _ = SaveConfigAsync();
+    partial void OnAuthorFolderFormatChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnArtworkFolderFormatChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnUnknownFolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnKoikatsuFolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnKoikatsuSunshineFolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnGFolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnR18FolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
+
+    partial void OnR18GFolderNameChanged(string value)
+    {
+        if (!_isLoading) _ = SaveConfigAsync();
+    }
     partial void OnSauceNaoApiKeyChanged(string value)
     {
         if (_isLoading)
@@ -246,67 +298,77 @@ public partial class SettingsViewModel : ObservableObject
     public async Task LoadAsync()
     {
         var config = await _settingsService.LoadConfigAsync();
+        Load(config);
+    }
 
-        FolderPaths.Clear();
-        foreach (var path in config.FolderPaths)
-            FolderPaths.Add(path);
-
-        CharacterFolderPaths.Clear();
-        foreach (var path in config.CharacterFolderPaths)
-            CharacterFolderPaths.Add(path);
-
-        AllowedResolutions.Clear();
-        foreach (var res in config.AllowedResolutions)
-            AllowedResolutions.Add(res);
-
-        CharacterAllowedResolutions.Clear();
-        foreach (var res in config.CharacterAllowedResolutions)
-            CharacterAllowedResolutions.Add(res);
-
-        CoordinateFolderPaths.Clear();
-        foreach (var path in config.CoordinateFolderPaths)
-            CoordinateFolderPaths.Add(path);
-
-        CoordinateAllowedResolutions.Clear();
-        foreach (var res in config.CoordinateAllowedResolutions)
-            CoordinateAllowedResolutions.Add(res);
-
-        ScreenshotFolderPaths.Clear();
-        foreach (var path in config.ScreenshotFolderPaths)
-            ScreenshotFolderPaths.Add(path);
-
-        VideoFolderPaths.Clear();
-        foreach (var path in config.VideoFolderPaths)
-            VideoFolderPaths.Add(path);
-
-        ResolutionFilterEnabled = config.ResolutionFilterEnabled;
-        CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
-        CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
-        ShowFileNames = config.ShowFileNames;
-        ScrollToTopOnSort = config.ScrollToTopOnSort;
-        ThumbnailWidth = config.ThumbnailWidth;
-        CacheFolderPath = config.CacheFolderPath;
-
-        ImportSubfolder = config.ImportSubfolder;
-        ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
-        UseVisualSimilarity = config.UseVisualSimilarity;
-
-        AuthorFolderFormat = config.AuthorFolderFormat;
-        ArtworkFolderFormat = config.ArtworkFolderFormat;
-        UnknownFolderName = config.UnknownFolderName;
-        KoikatsuFolderName = config.KoikatsuFolderName;
-        KoikatsuSunshineFolderName = config.KoikatsuSunshineFolderName;
-        GFolderName = config.GFolderName;
-        R18FolderName = config.R18FolderName;
-        R18GFolderName = config.R18GFolderName;
-
+    public void Load(SettingsService.ConfigData config)
+    {
         _isLoading = true;
-        PluginAnalysisEnabled = config.PluginAnalysisEnabled;
-        SelectedLanguage = config.Language;
-        CacheLength = config.CacheLength;
-        SizeSelectorEnabled = config.SizeSelectorEnabled;
-        SauceNaoApiKey = config.SauceNaoApiKey;
-        _isLoading = false;
+        try
+        {
+            FolderPaths.Clear();
+            foreach (var path in config.FolderPaths)
+                FolderPaths.Add(path);
+
+            CharacterFolderPaths.Clear();
+            foreach (var path in config.CharacterFolderPaths)
+                CharacterFolderPaths.Add(path);
+
+            AllowedResolutions.Clear();
+            foreach (var res in config.AllowedResolutions)
+                AllowedResolutions.Add(res);
+
+            CharacterAllowedResolutions.Clear();
+            foreach (var res in config.CharacterAllowedResolutions)
+                CharacterAllowedResolutions.Add(res);
+
+            CoordinateFolderPaths.Clear();
+            foreach (var path in config.CoordinateFolderPaths)
+                CoordinateFolderPaths.Add(path);
+
+            CoordinateAllowedResolutions.Clear();
+            foreach (var res in config.CoordinateAllowedResolutions)
+                CoordinateAllowedResolutions.Add(res);
+
+            ScreenshotFolderPaths.Clear();
+            foreach (var path in config.ScreenshotFolderPaths)
+                ScreenshotFolderPaths.Add(path);
+
+            VideoFolderPaths.Clear();
+            foreach (var path in config.VideoFolderPaths)
+                VideoFolderPaths.Add(path);
+
+            ResolutionFilterEnabled = config.ResolutionFilterEnabled;
+            CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
+            CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
+            ShowFileNames = config.ShowFileNames;
+            ScrollToTopOnSort = config.ScrollToTopOnSort;
+            ThumbnailWidth = config.ThumbnailWidth;
+            CacheFolderPath = config.CacheFolderPath;
+
+            ImportSubfolder = config.ImportSubfolder;
+            ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
+            UseVisualSimilarity = config.UseVisualSimilarity;
+
+            AuthorFolderFormat = config.AuthorFolderFormat;
+            ArtworkFolderFormat = config.ArtworkFolderFormat;
+            UnknownFolderName = config.UnknownFolderName;
+            KoikatsuFolderName = config.KoikatsuFolderName;
+            KoikatsuSunshineFolderName = config.KoikatsuSunshineFolderName;
+            GFolderName = config.GFolderName;
+            R18FolderName = config.R18FolderName;
+            R18GFolderName = config.R18GFolderName;
+
+            PluginAnalysisEnabled = config.PluginAnalysisEnabled;
+            SelectedLanguage = config.Language;
+            CacheLength = config.CacheLength;
+            SizeSelectorEnabled = config.SizeSelectorEnabled;
+            SauceNaoApiKey = config.SauceNaoApiKey;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
 
         OnPropertyChanged(nameof(CacheFolderDisplay));
     }

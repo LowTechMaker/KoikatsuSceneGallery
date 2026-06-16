@@ -33,6 +33,8 @@ public partial class App : Application
     public static ImportViewModel? ImportViewModel { get; private set; }
     public static AuthorPostService? AuthorPostService { get; private set; }
 
+    private static Task? _authorSourcesWarmupTask;
+
     public App()
     {
         InitializeComponent();
@@ -108,6 +110,7 @@ public partial class App : Application
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
 
         SettingsViewModel = new SettingsViewModel(SettingsService);
+        SettingsViewModel.Load(config ?? new SettingsService.ConfigData());
         GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
         CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
         CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
@@ -158,6 +161,8 @@ public partial class App : Application
         _mainWindow = new MainWindow();
         _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
+
+        QueueAuthorSourcesWarmup();
     }
 
     private static void OnAnyFolderPathsChanged()
@@ -165,5 +170,46 @@ public partial class App : Application
         var vm = SettingsViewModel;
         AuthorInfoService.UpdateRoots(
             [.. vm.FolderPaths, .. vm.CharacterFolderPaths, .. vm.CoordinateFolderPaths]);
+    }
+
+    public static Task EnsureAuthorSourcesLoadedAsync()
+    {
+        if (!AuthorInfoService.IsAvailable)
+            return Task.CompletedTask;
+
+        if (_authorSourcesWarmupTask is { IsCompleted: false } runningTask)
+            return runningTask;
+
+        _authorSourcesWarmupTask = LoadAuthorSourcesAsync();
+        return _authorSourcesWarmupTask;
+    }
+
+    private static void QueueAuthorSourcesWarmup()
+    {
+        if (!AuthorInfoService.IsAvailable)
+            return;
+
+        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()
+            .TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                _ = EnsureAuthorSourcesLoadedAsync();
+            });
+    }
+
+    private static async Task LoadAuthorSourcesAsync()
+    {
+        var loadTasks = new List<Task>(3);
+
+        if (GalleryViewModel.Cards.Count == 0 && !GalleryViewModel.IsLoading)
+            loadTasks.Add(GalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
+
+        if (CharacterGalleryViewModel.Cards.Count == 0 && !CharacterGalleryViewModel.IsLoading)
+            loadTasks.Add(CharacterGalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
+
+        if (CoordinateGalleryViewModel.Cards.Count == 0 && !CoordinateGalleryViewModel.IsLoading)
+            loadTasks.Add(CoordinateGalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
+
+        if (loadTasks.Count > 0)
+            await Task.WhenAll(loadTasks);
     }
 }

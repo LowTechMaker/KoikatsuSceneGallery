@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -44,6 +45,23 @@ public sealed partial class PostDetailPage : Page
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+    }
+
+    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
+
+    private void LocalImage_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not LocalImagePreview preview) return;
+
+        var path = preview.FilePath;
+        var scene = App.GalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (scene is not null) { Frame.Navigate(typeof(DetailPage), scene); return; }
+
+        var character = App.CharacterGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (character is not null) { Frame.Navigate(typeof(CharacterDetailPage), character); return; }
+
+        var coordinate = App.CoordinateGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
     }
 
     private async void OpenInBrowser_Click(object sender, RoutedEventArgs e)

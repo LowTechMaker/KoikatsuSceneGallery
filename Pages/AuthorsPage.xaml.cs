@@ -20,14 +20,7 @@ public sealed partial class AuthorsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        // Counts come from the gallery collections, so galleries the user
-        // hasn't visited yet would show as zero — load any that are empty.
-        if (App.GalleryViewModel.Cards.Count == 0 && !App.GalleryViewModel.IsLoading)
-            _ = App.GalleryViewModel.LoadCardsCommand.ExecuteAsync(null);
-        if (App.CharacterGalleryViewModel.Cards.Count == 0 && !App.CharacterGalleryViewModel.IsLoading)
-            _ = App.CharacterGalleryViewModel.LoadCardsCommand.ExecuteAsync(null);
-        if (App.CoordinateGalleryViewModel.Cards.Count == 0 && !App.CoordinateGalleryViewModel.IsLoading)
-            _ = App.CoordinateGalleryViewModel.LoadCardsCommand.ExecuteAsync(null);
+        _ = App.EnsureAuthorSourcesLoadedAsync();
     }
 
     private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
@@ -43,7 +36,7 @@ public sealed partial class AuthorsPage : Page
     }
 
     private void OpenAuthorDetail(AuthorSummary summary)
-        => Frame.Navigate(typeof(AuthorDetailPage), summary);
+        => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
 
     private async void RefreshOne_Click(object sender, RoutedEventArgs e)
     {

@@ -21,11 +21,21 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Spacing="4">
-                    <TextBlock
-                        x:Name="TitleText"
-                        Style="{StaticResource TitleTextBlockStyle}"
-                        Text="{x:Bind ViewModel.DisplayTitle, Mode=OneWay}"
-                        TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button
+                            x:Uid="Detail_GoBack"
+                            VerticalAlignment="Center"
+                            Click="GoBack_Click"
+                            Style="{StaticResource SubtleButtonStyle}">
+                            <FontIcon FontSize="14" Glyph="&#xE72B;" />
+                        </Button>
+                        <TextBlock
+                            x:Name="TitleText"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource TitleTextBlockStyle}"
+                            Text="{x:Bind ViewModel.DisplayTitle, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}"
@@ -80,7 +90,8 @@
                     ItemsSource="{x:Bind ViewModel.LocalImages, Mode=OneWay}"
                     CanDragItems="True"
                     DragItemsStarting="LocalImagesGrid_DragItemsStarting"
-                    IsItemClickEnabled="False"
+                    IsItemClickEnabled="True"
+                    ItemClick="LocalImage_ItemClick"
                     SelectionMode="None">
                     <GridView.ItemsPanel>
                         <ItemsPanelTemplate>

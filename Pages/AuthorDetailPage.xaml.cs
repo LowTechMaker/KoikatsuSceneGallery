@@ -25,7 +25,7 @@ public sealed partial class AuthorDetailPage : Page
     private const int PostsTabIndex = 3;
 
     private CancellationTokenSource? _postsCts;
-    private static int? s_restoreSelectedTabOnBack;
+    private AuthorDetailNavigationParameter? _navigationParameter;
 
     public AuthorDetailPage()
     {
@@ -35,9 +35,10 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is AuthorSummary summary)
+        if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
-            ViewModel.Load(summary);
+            _navigationParameter = navigationParameter;
+            ViewModel.Load(navigationParameter.Summary);
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts && App.AuthorPostService is { } postService)
             {
@@ -94,6 +95,8 @@ public sealed partial class AuthorDetailPage : Page
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
+    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
+
     private async void OpenProfile_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Author is { } author)
@@ -105,16 +108,24 @@ public sealed partial class AuthorDetailPage : Page
         switch (TabPivot.SelectedIndex)
         {
             case 0 when ViewModel.Scenes.Count > 0:
+                SetRestoreSelectedTabOnBack(ScenesTabIndex);
                 Frame.Navigate(typeof(DetailPage),
                     ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]);
                 break;
             case 1 when ViewModel.Characters.Count > 0:
+                SetRestoreSelectedTabOnBack(CharactersTabIndex);
                 Frame.Navigate(typeof(CharacterDetailPage),
                     ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]);
                 break;
             case 2 when ViewModel.Coordinates.Count > 0:
+                SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
                 Frame.Navigate(typeof(CoordinateDetailPage),
                     ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]);
+                break;
+            case 3 when ViewModel.Posts.Count > 0:
+                SetRestoreSelectedTabOnBack(PostsTabIndex);
+                Frame.Navigate(typeof(PostDetailPage),
+                    ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]);
                 break;
         }
     }
@@ -129,7 +140,7 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (e.ClickedItem is SceneCard card)
         {
-            s_restoreSelectedTabOnBack = ScenesTabIndex;
+            SetRestoreSelectedTabOnBack(ScenesTabIndex);
             Frame.Navigate(typeof(DetailPage), card);
         }
     }
@@ -138,7 +149,7 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (e.ClickedItem is CharacterCard card)
         {
-            s_restoreSelectedTabOnBack = CharactersTabIndex;
+            SetRestoreSelectedTabOnBack(CharactersTabIndex);
             Frame.Navigate(typeof(CharacterDetailPage), card);
         }
     }
@@ -147,7 +158,7 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (e.ClickedItem is CoordinateCard card)
         {
-            s_restoreSelectedTabOnBack = CoordinatesTabIndex;
+            SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
             Frame.Navigate(typeof(CoordinateDetailPage), card);
         }
     }
@@ -156,7 +167,7 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (e.ClickedItem is AuthorPost post)
         {
-            s_restoreSelectedTabOnBack = PostsTabIndex;
+            SetRestoreSelectedTabOnBack(PostsTabIndex);
             Frame.Navigate(typeof(PostDetailPage), post);
         }
     }
@@ -196,11 +207,34 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
+    private static bool TryGetNavigationParameter(object? parameter, out AuthorDetailNavigationParameter navigationParameter)
+    {
+        switch (parameter)
+        {
+            case AuthorDetailNavigationParameter value:
+                navigationParameter = value;
+                return true;
+            case AuthorSummary summary:
+                navigationParameter = new AuthorDetailNavigationParameter(summary);
+                return true;
+            default:
+                navigationParameter = null!;
+                return false;
+        }
+    }
+
+    private void SetRestoreSelectedTabOnBack(int tabIndex)
+    {
+        if (_navigationParameter is not null)
+            _navigationParameter.RestoreSelectedTabOnBack = tabIndex;
+    }
+
     private void RestoreSelectedTab(NavigationMode navigationMode)
     {
-        if (navigationMode == NavigationMode.Back && s_restoreSelectedTabOnBack is { } tabIndex)
+        if (navigationMode == NavigationMode.Back && _navigationParameter?.RestoreSelectedTabOnBack is { } tabIndex)
             TabPivot.SelectedIndex = tabIndex;
 
-        s_restoreSelectedTabOnBack = null;
+        if (_navigationParameter is not null)
+            _navigationParameter.RestoreSelectedTabOnBack = null;
     }
 }
