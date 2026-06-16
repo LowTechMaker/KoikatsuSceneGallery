@@ -20,7 +20,7 @@ public sealed partial class AuthorsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        _ = App.EnsureAuthorSourcesLoadedAsync();
+        App.RefreshAuthorSources();
     }
 
     private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)

@@ -50,6 +50,7 @@ public sealed class AuthorInfoService
         [AuthorCardKind.Coordinate] = [],
     };
     private List<string> _roots = [];
+    private bool _isRebuilding;
 
     /// <summary>Fired (on the UI thread) whenever author assignments or counts change.</summary>
     public event Action? AuthorsChanged;
@@ -134,6 +135,47 @@ public sealed class AuthorInfoService
         return summaries;
     }
 
+    public void RebuildAssignments(
+        IEnumerable<SceneCard> scenes,
+        IEnumerable<CharacterCard> characters,
+        IEnumerable<CoordinateCard> coordinates)
+    {
+        if (_providers.Count == 0) return;
+
+        _isRebuilding = true;
+        try
+        {
+            _directoryCache.Clear();
+            _displays.Clear();
+            foreach (var counts in _counts.Values)
+                counts.Clear();
+
+            foreach (var card in scenes)
+            {
+                card.Author = null;
+                AssignAuthor(card, AuthorCardKind.Scene);
+            }
+
+            foreach (var card in characters)
+            {
+                card.Author = null;
+                AssignAuthor(card, AuthorCardKind.Character);
+            }
+
+            foreach (var card in coordinates)
+            {
+                card.Author = null;
+                AssignAuthor(card, AuthorCardKind.Coordinate);
+            }
+        }
+        finally
+        {
+            _isRebuilding = false;
+        }
+
+        AuthorsChanged?.Invoke();
+    }
+
     /// <summary>Re-fetches one author from the network, bypassing the plugin's cache.</summary>
     public async Task RefreshAuthorAsync(AuthorKey key, CancellationToken ct = default)
     {
@@ -155,7 +197,7 @@ public sealed class AuthorInfoService
         card.Author = display;
         var counts = _counts[kind];
         counts[display] = counts.GetValueOrDefault(display) + 1;
-        AuthorsChanged?.Invoke();
+        NotifyAuthorsChanged();
     }
 
     private void UnassignAuthor(IAuthorOwner card, AuthorCardKind kind)
@@ -167,7 +209,7 @@ public sealed class AuthorInfoService
             if (count <= 1) counts.Remove(display);
             else counts[display] = count - 1;
         }
-        AuthorsChanged?.Invoke();
+        NotifyAuthorsChanged();
     }
 
     private void PruneOrphanedDisplays()
@@ -282,8 +324,14 @@ public sealed class AuthorInfoService
             if (!_displays.TryGetValue(info.Key, out var display)) return;
             display.Name = info.Name;
             display.AvatarPath = info.AvatarFilePath;
-            AuthorsChanged?.Invoke();
+            NotifyAuthorsChanged();
         });
+    }
+
+    private void NotifyAuthorsChanged()
+    {
+        if (!_isRebuilding)
+            AuthorsChanged?.Invoke();
     }
 
     private IFolderAuthorProvider? FindProvider(string providerId)

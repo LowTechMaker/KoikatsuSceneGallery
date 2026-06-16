@@ -119,9 +119,7 @@ public partial class App : Application
 
         if (AuthorInfoService.IsAvailable)
         {
-            if (config is not null)
-                AuthorInfoService.UpdateRoots(
-                    [.. config.FolderPaths, .. config.CharacterFolderPaths, .. config.CoordinateFolderPaths]);
+            ApplyAuthorLibraryRoots();
             AuthorInfoService.Attach(GalleryViewModel.Cards, AuthorCardKind.Scene);
             AuthorInfoService.Attach(CharacterGalleryViewModel.Cards, AuthorCardKind.Character);
             AuthorInfoService.Attach(CoordinateGalleryViewModel.Cards, AuthorCardKind.Coordinate);
@@ -162,10 +160,28 @@ public partial class App : Application
         _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
 
-        QueueAuthorSourcesWarmup();
+        _ = EnsureAuthorSourcesLoadedAsync();
     }
 
     private static void OnAnyFolderPathsChanged()
+    {
+        RefreshAuthorSources(reloadLoadedSources: true);
+    }
+
+    public static void RefreshAuthorSources(bool reloadLoadedSources = false)
+    {
+        if (!AuthorInfoService.IsAvailable)
+            return;
+
+        ApplyAuthorLibraryRoots();
+        AuthorInfoService.RebuildAssignments(
+            GalleryViewModel.Cards,
+            CharacterGalleryViewModel.Cards,
+            CoordinateGalleryViewModel.Cards);
+        _authorSourcesWarmupTask = LoadAuthorSourcesAsync(reloadLoadedSources);
+    }
+
+    private static void ApplyAuthorLibraryRoots()
     {
         var vm = SettingsViewModel;
         AuthorInfoService.UpdateRoots(
@@ -184,32 +200,24 @@ public partial class App : Application
         return _authorSourcesWarmupTask;
     }
 
-    private static void QueueAuthorSourcesWarmup()
-    {
-        if (!AuthorInfoService.IsAvailable)
-            return;
-
-        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread()
-            .TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
-            {
-                _ = EnsureAuthorSourcesLoadedAsync();
-            });
-    }
-
-    private static async Task LoadAuthorSourcesAsync()
+    private static async Task LoadAuthorSourcesAsync(bool forceReload = false)
     {
         var loadTasks = new List<Task>(3);
 
-        if (GalleryViewModel.Cards.Count == 0 && !GalleryViewModel.IsLoading)
-            loadTasks.Add(GalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
-
-        if (CharacterGalleryViewModel.Cards.Count == 0 && !CharacterGalleryViewModel.IsLoading)
-            loadTasks.Add(CharacterGalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
-
-        if (CoordinateGalleryViewModel.Cards.Count == 0 && !CoordinateGalleryViewModel.IsLoading)
-            loadTasks.Add(CoordinateGalleryViewModel.LoadCardsCommand.ExecuteAsync(null));
+        AwaitOrLoad(loadTasks, GalleryViewModel.Cards.Count, GalleryViewModel.IsLoading, GalleryViewModel.LoadCardsCommand, forceReload);
+        AwaitOrLoad(loadTasks, CharacterGalleryViewModel.Cards.Count, CharacterGalleryViewModel.IsLoading, CharacterGalleryViewModel.LoadCardsCommand, forceReload);
+        AwaitOrLoad(loadTasks, CoordinateGalleryViewModel.Cards.Count, CoordinateGalleryViewModel.IsLoading, CoordinateGalleryViewModel.LoadCardsCommand, forceReload);
 
         if (loadTasks.Count > 0)
             await Task.WhenAll(loadTasks);
+
+        static void AwaitOrLoad(List<Task> tasks, int cardCount, bool isLoading, CommunityToolkit.Mvvm.Input.IAsyncRelayCommand cmd, bool forceReload)
+        {
+            if (!forceReload && cardCount > 0) return;
+            if (isLoading)
+                tasks.Add(cmd.ExecutionTask ?? Task.CompletedTask);
+            else
+                tasks.Add(cmd.ExecuteAsync(null));
+        }
     }
 }
