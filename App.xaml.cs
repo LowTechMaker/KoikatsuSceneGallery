@@ -138,7 +138,7 @@ public partial class App : Application
         {
             ImportService = new ImportService(
                 PluginService.ImportProviders,
-                PluginService.AuthorProvider,
+                PluginService.AuthorProviders,
                 PluginService.ReverseImageSearchProvider,
                 SettingsService);
             ImportViewModel = new ImportViewModel(

@@ -55,18 +55,18 @@ public sealed class ImportService
                 .Replace("{id}", artworkId));
 
     private readonly IReadOnlyList<ICardImportProvider> _importProviders;
-    private readonly IFolderAuthorProvider? _authorProvider;
+    private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly IReverseImageSearchProvider? _reverseImageSearchProvider;
     private readonly SettingsService _settingsService;
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
-        IFolderAuthorProvider? authorProvider,
+        IReadOnlyList<IFolderAuthorProvider> authorProviders,
         IReverseImageSearchProvider? reverseImageSearchProvider,
         SettingsService settingsService)
     {
         _importProviders = importProviders;
-        _authorProvider = authorProvider;
+        _authorProviders = authorProviders;
         _reverseImageSearchProvider = reverseImageSearchProvider;
         _settingsService = settingsService;
     }
@@ -82,15 +82,11 @@ public sealed class ImportService
     }
 
     private ICardImportProvider? FindProvider(string providerId)
-        => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
+        => _importProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
 
     private IFolderAuthorProvider? FindAuthorProvider(string providerId)
-    {
-        if (_authorProvider?.ProviderId == providerId)
-            return _authorProvider;
-
-        return FindProvider(providerId) as IFolderAuthorProvider;
-    }
+        => _authorProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase))
+           ?? FindProvider(providerId) as IFolderAuthorProvider;
 
     public async Task ComputeFingerprintsAsync(IReadOnlyList<ImportItem> items, CancellationToken ct)
     {
@@ -302,10 +298,9 @@ public sealed class ImportService
     /// </summary>
     public async Task<List<(string Name, string Id)>> GetKnownAuthorsAsync(CancellationToken ct)
     {
-        if (_authorProvider is null) return [];
+        if (_authorProviders.Count == 0) return [];
 
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var provider = _authorProvider;
 
         return await Task.Run(() =>
         {
@@ -322,32 +317,35 @@ public sealed class ImportService
             {
                 if (!Directory.Exists(root)) continue;
 
-                var providerFolders = _importProviders
-                    .Where(p => ReferenceEquals(p, _authorProvider))
-                    .Select(p => GetProviderScope(p.ProviderId).Folder)
-                    .Append("")
-                    .Distinct(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var providerFolder in providerFolders)
+                foreach (var authorProvider in _authorProviders)
                 {
-                    foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
+                    var providerScopes = _importProviders
+                        .Where(p => p.ProviderId.Equals(authorProvider.ProviderId, StringComparison.OrdinalIgnoreCase))
+                        .Select(p => GetProviderScope(p.ProviderId))
+                        .Append((Folder: "", UsesRatingFolders: true))
+                        .DistinctBy(s => $"{s.Folder}\u001F{s.UsesRatingFolders}");
+
+                    foreach (var providerScope in providerScopes)
                     {
-                        foreach (var ratingFolder in GetRatingFolderNames(config))
+                        foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
                         {
-                            var ratingDir = BuildTargetBase(root, subfolder, providerFolder, gameVersionFolder, ratingFolder, null);
-                            if (!Directory.Exists(ratingDir)) continue;
-                            try
+                            foreach (var ratingFolder in providerScope.UsesRatingFolders ? GetRatingFolderNames(config) : [""])
                             {
-                                foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                                var ratingDir = BuildTargetBase(root, subfolder, providerScope.Folder, gameVersionFolder, ratingFolder, null);
+                                if (!Directory.Exists(ratingDir)) continue;
+                                try
                                 {
-                                    ct.ThrowIfCancellationRequested();
-                                    var parsed = provider.TryParseFolderName(Path.GetFileName(dir));
-                                    if (parsed is not null && seen.Add(parsed.Key.Id))
-                                        result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                                    foreach (var dir in Directory.EnumerateDirectories(ratingDir))
+                                    {
+                                        ct.ThrowIfCancellationRequested();
+                                        var parsed = authorProvider.TryParseFolderName(Path.GetFileName(dir));
+                                        if (parsed is not null && seen.Add($"{parsed.Key.ProviderId}\u001F{parsed.Key.Id}"))
+                                            result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                                    }
                                 }
+                                catch (OperationCanceledException) { throw; }
+                                catch { }
                             }
-                            catch (OperationCanceledException) { throw; }
-                            catch { }
                         }
                     }
                 }
@@ -616,6 +614,7 @@ public sealed class ImportService
             {
                 var s = GetProviderScope(p.ProviderId);
                 return (
+                    p.ProviderId,
                     s.Folder,
                     RatingFolders: s.UsesRatingFolders
                         ? GetRatingFolderNames(config)
@@ -643,7 +642,7 @@ public sealed class ImportService
                             {
                                 foreach (var dir in Directory.EnumerateDirectories(ratingDir))
                                 {
-                                    var parsed = _authorProvider?.TryParseFolderName(Path.GetFileName(dir));
+                                    var parsed = FindAuthorProvider(providerScope.ProviderId)?.TryParseFolderName(Path.GetFileName(dir));
                                     if (parsed is not null)
                                         authorFolders.TryAdd(parsed.Key.Id, dir);
                                 }
