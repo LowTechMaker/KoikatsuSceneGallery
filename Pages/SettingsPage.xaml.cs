@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -48,17 +49,34 @@ public sealed partial class SettingsPage : Page
 
     public GalleryViewModel GalleryViewModel => App.GalleryViewModel;
 
-    /// <summary>Plugin list is fixed for the app's lifetime (changes need a restart).</summary>
-    public List<PluginListItem> PluginItems { get; }
+    public ObservableCollection<PluginListItem> PluginItems { get; } = [];
 
     public bool HasNoPlugins => PluginItems.Count == 0;
 
     public SettingsPage()
     {
         ViewModel = App.SettingsViewModel;
+        RefreshPluginItems();
+        App.PluginService.PluginsChanged += OnPluginsChanged;
+        Unloaded += (_, _) => App.PluginService.PluginsChanged -= OnPluginsChanged;
+        InitializeComponent();
+    }
+
+    private void OnPluginsChanged()
+    {
+        if (DispatcherQueue.HasThreadAccess)
+            RefreshPluginItems();
+        else
+            DispatcherQueue.TryEnqueue(RefreshPluginItems);
+    }
+
+    private void RefreshPluginItems()
+    {
         var updateFmt = ResLoader.GetString("Plugins_UpdateAvailable");
-        PluginItems = App.PluginService.Plugins
-            .Select(p => new PluginListItem(
+        PluginItems.Clear();
+        foreach (var p in App.PluginService.Plugins)
+        {
+            PluginItems.Add(new PluginListItem(
                 p.Name,
                 p.Version == "?" ? "" : $"v{p.Version}",
                 ResLoader.GetString(p.Status == PluginStatus.Loaded ? "Plugins_StatusLoaded" : "Plugins_StatusFailed"),
@@ -69,9 +87,8 @@ public sealed partial class SettingsPage : Page
                     ? string.Format(updateFmt, p.AvailableVersion)
                     : null,
                 p.AvailableDownloadUrl,
-                p.Changelog))
-            .ToList();
-        InitializeComponent();
+                p.Changelog));
+        }
     }
 
     private async void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)

@@ -36,6 +36,8 @@ public sealed class PluginService
     private readonly HashSet<string> _loadedPluginNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IPluginSettingsProvider> _settingsProviders = new(StringComparer.OrdinalIgnoreCase);
 
+    public event Action? PluginsChanged;
+
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
     public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
 
@@ -236,6 +238,7 @@ public sealed class PluginService
 
     internal void ApplyUpdateInfo(IReadOnlyDictionary<string, PluginUpdateInfo> updates)
     {
+        var changed = false;
         lock (_pluginLock)
         {
             for (var i = 0; i < _plugins.Count; i++)
@@ -248,9 +251,13 @@ public sealed class PluginService
                         AvailableDownloadUrl = info.DownloadUrl,
                         Changelog = info.Changelog,
                     };
+                    changed = true;
                 }
             }
         }
+
+        if (changed)
+            PluginsChanged?.Invoke();
     }
 
     public void Shutdown()
