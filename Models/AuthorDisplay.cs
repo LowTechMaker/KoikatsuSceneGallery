@@ -56,5 +56,6 @@ public partial class AuthorDisplay : ObservableObject
 public interface IAuthorOwner
 {
     string FilePath { get; }
+    DateTime DateModified { get; }
     AuthorDisplay? Author { get; set; }
 }

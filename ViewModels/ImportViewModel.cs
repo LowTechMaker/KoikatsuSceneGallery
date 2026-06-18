@@ -280,6 +280,16 @@ public partial class ImportViewModel : ObservableObject
         UpdateSelectedUnknownCount();
     }
 
+    [RelayCommand]
+    private void ToggleAllFetchFailedSelection()
+    {
+        bool shouldSelect = SelectedFetchFailedCount < FetchFailedGroups.Count;
+        foreach (var group in FetchFailedGroups)
+            group.IsSelected = shouldSelect;
+
+        UpdateSelectedFetchFailedCount();
+    }
+
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)

@@ -3,8 +3,51 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace KoikatsuSceneGallery.ViewModels;
+
+public enum AuthorSortMode
+{
+    Count,
+    LastUpdated,
+    Name,
+}
+
+public partial class AuthorGroupViewModel(string key, string header, bool showHeader = true) : ObservableObject
+{
+    public string Key { get; } = key;
+
+    public string Header { get; } = header;
+
+    [ObservableProperty]
+    public partial bool ShowHeader { get; set; } = showHeader;
+
+    public ObservableCollection<AuthorSummary> Authors { get; } = [];
+
+    public int AuthorCount => Authors.Count;
+
+    public string CountText => AuthorCount > 0 ? $"({AuthorCount})" : "";
+
+    public void NotifyCountChanged()
+    {
+        OnPropertyChanged(nameof(AuthorCount));
+        OnPropertyChanged(nameof(CountText));
+    }
+}
+
+public partial class AuthorIndexItemViewModel(string key, string display, AuthorGroupViewModel? group) : ObservableObject
+{
+    public string Key { get; } = key;
+
+    public string Display { get; } = display;
+
+    public AuthorGroupViewModel? Group { get; } = group;
+
+    public bool IsAvailable => Group is not null;
+
+    public double Opacity => IsAvailable ? 1.0 : 0.35;
+}
 
 public partial class AuthorProviderTabViewModel : ObservableObject
 {
@@ -19,6 +62,10 @@ public partial class AuthorProviderTabViewModel : ObservableObject
     public string DisplayName { get; }
 
     public ObservableCollection<AuthorSummary> Authors { get; } = [];
+
+    public ObservableCollection<AuthorGroupViewModel> Groups { get; } = [];
+
+    public ObservableCollection<AuthorIndexItemViewModel> QuickJumpItems { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -42,6 +89,7 @@ public partial class AuthorProviderTabViewModel : ObservableObject
 public partial class AuthorsViewModel : ObservableObject
 {
     private static readonly TimeSpan RebuildDebounce = TimeSpan.FromMilliseconds(500);
+    private static readonly ResourceLoader ResLoader = new();
 
     private readonly AuthorInfoService _authorInfoService;
     private readonly DispatcherQueueTimer _rebuildTimer;
@@ -53,6 +101,19 @@ public partial class AuthorsViewModel : ObservableObject
     public partial bool HasAuthors { get; set; }
 
     public bool IsEmpty => !HasAuthors;
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    partial void OnSearchTextChanged(string value) => Rebuild();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSortByName))]
+    public partial AuthorSortMode SortMode { get; set; }
+
+    public bool IsSortByName => SortMode == AuthorSortMode.Name;
+
+    partial void OnSortModeChanged(AuthorSortMode value) => Rebuild();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotRefreshing))]
@@ -81,11 +142,22 @@ public partial class AuthorsViewModel : ObservableObject
 
     private void Rebuild()
     {
-        var summaries = _authorInfoService.GetSummaries()
+        var search = SearchText.Trim();
+        var filtered = _authorInfoService.GetSummaries()
             .Where(s => s.TotalCount > 0)
-            .OrderByDescending(s => s.TotalCount)
-            .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+            .Where(s => MatchesSearch(s, search));
+
+        var summaries = (SortMode switch
+        {
+            AuthorSortMode.Name => filtered
+                .OrderBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
+            AuthorSortMode.LastUpdated => filtered
+                .OrderByDescending(s => s.LastUpdated)
+                .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
+            _ => filtered
+                .OrderByDescending(s => s.TotalCount)
+                .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
+        }).ToList();
 
         foreach (var tab in ProviderTabs)
         {
@@ -103,6 +175,19 @@ public partial class AuthorsViewModel : ObservableObject
             while (tab.Authors.Count > tabSummaries.Count)
                 tab.Authors.RemoveAt(tab.Authors.Count - 1);
 
+            var sortByName = SortMode == AuthorSortMode.Name;
+
+            List<AuthorGroupViewModel> groups = tabSummaries.Count == 0
+                ? []
+                : sortByName
+                    ? BuildNameGroups(tabSummaries)
+                    : [BuildUngroupedAuthors(tabSummaries)];
+
+            SyncGroups(tab.Groups, groups);
+            if (sortByName)
+                SyncIndex(tab);
+            else
+                tab.QuickJumpItems.Clear();
             tab.AuthorCount = tab.Authors.Count;
             tab.HasAuthors = tab.Authors.Count > 0;
         }
@@ -138,4 +223,147 @@ public partial class AuthorsViewModel : ObservableObject
 
     public Task RefreshOneAsync(AuthorSummary summary)
         => _authorInfoService.RefreshAuthorAsync(summary.Display.Key);
+
+    private static bool MatchesSearch(AuthorSummary summary, string search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+            return true;
+
+        return summary.Display.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+            summary.Display.Key.Id.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+            summary.Display.ProfileUrl.Contains(search, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<AuthorGroupViewModel> BuildNameGroups(IReadOnlyList<AuthorSummary> summaries)
+        => summaries
+            .GroupBy(s => GetGroupKey(s.Display.Name))
+            .OrderBy(g => GetGroupOrder(g.Key))
+            .ThenBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g =>
+            {
+                var group = new AuthorGroupViewModel(g.Key, GetGroupHeader(g.Key));
+                foreach (var author in g)
+                    group.Authors.Add(author);
+                return group;
+            })
+            .ToList();
+
+    private static AuthorGroupViewModel BuildUngroupedAuthors(IReadOnlyList<AuthorSummary> summaries)
+    {
+        var group = new AuthorGroupViewModel("__all", string.Empty, showHeader: false);
+        foreach (var author in summaries)
+            group.Authors.Add(author);
+        return group;
+    }
+
+    private static string GetGroupKey(string name)
+    {
+        var first = name.Trim().FirstOrDefault();
+        if (first == default)
+            return "#";
+
+        if (char.IsAsciiLetter(first))
+            return char.ToUpperInvariant(first).ToString();
+
+        if (char.IsDigit(first))
+            return "#";
+
+        if (char.IsPunctuation(first) || char.IsSymbol(first))
+            return "&";
+
+        return "他";
+    }
+
+    private static string GetGroupHeader(string key)
+        => key switch
+        {
+            "&" => ResLoader.GetString("Authors_GroupSymbols"),
+            "他" => ResLoader.GetString("Authors_GroupOther"),
+            _ => key,
+        };
+
+    private static int GetGroupOrder(string key)
+    {
+        if (key == "&") return -1;
+        if (key == "#") return 0;
+        if (key.Length == 1 && key[0] is >= 'A' and <= 'Z')
+            return key[0] - 'A' + 1;
+        return 100;
+    }
+
+    private static void SyncGroups(
+        ObservableCollection<AuthorGroupViewModel> target,
+        IReadOnlyList<AuthorGroupViewModel> source)
+    {
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (i < target.Count && target[i].Key == source[i].Key)
+            {
+                SyncAuthors(target[i].Authors, source[i].Authors);
+                target[i].ShowHeader = source[i].ShowHeader;
+                target[i].NotifyCountChanged();
+            }
+            else
+            {
+                if (i < target.Count)
+                    target[i] = source[i];
+                else
+                    target.Add(source[i]);
+            }
+        }
+
+        while (target.Count > source.Count)
+            target.RemoveAt(target.Count - 1);
+    }
+
+    private static void SyncAuthors(
+        ObservableCollection<AuthorSummary> target,
+        IReadOnlyList<AuthorSummary> source)
+    {
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (i < target.Count)
+                target[i] = source[i];
+            else
+                target.Add(source[i]);
+        }
+
+        while (target.Count > source.Count)
+            target.RemoveAt(target.Count - 1);
+    }
+
+    private static void SyncIndex(AuthorProviderTabViewModel tab)
+    {
+        var groupMap = tab.Groups.ToDictionary(g => g.Key, StringComparer.Ordinal);
+        var keys = new[] { "&", "#" }
+            .Concat(Enumerable.Range('A', 26).Select(c => ((char)c).ToString()))
+            .Concat(["他"])
+            .Select(k =>
+            {
+                groupMap.TryGetValue(k, out var group);
+                return new AuthorIndexItemViewModel(k, GetIndexDisplay(k), group);
+            })
+            .ToList();
+
+        SyncIndexItems(tab.QuickJumpItems, keys.Where(i => i.IsAvailable).ToList());
+    }
+
+    private static string GetIndexDisplay(string key)
+        => key == "他" ? ResLoader.GetString("Authors_GroupOtherIndex") : key;
+
+    private static void SyncIndexItems(
+        ObservableCollection<AuthorIndexItemViewModel> target,
+        IReadOnlyList<AuthorIndexItemViewModel> source)
+    {
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (i < target.Count)
+                target[i] = source[i];
+            else
+                target.Add(source[i]);
+        }
+
+        while (target.Count > source.Count)
+            target.RemoveAt(target.Count - 1);
+    }
 }

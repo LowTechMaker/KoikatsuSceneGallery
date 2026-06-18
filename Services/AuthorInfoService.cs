@@ -17,7 +17,8 @@ public sealed record AuthorSummary(
     AuthorDisplay Display,
     int SceneCount,
     int CharacterCount,
-    int CoordinateCount)
+    int CoordinateCount,
+    DateTime LastUpdated)
 {
     public int TotalCount => SceneCount + CharacterCount + CoordinateCount;
 }
@@ -44,6 +45,12 @@ public sealed class AuthorInfoService
     private readonly Dictionary<string, AuthorDisplay?> _directoryCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<AuthorKey, AuthorDisplay> _displays = [];
     private readonly Dictionary<AuthorCardKind, Dictionary<AuthorDisplay, int>> _counts = new()
+    {
+        [AuthorCardKind.Scene] = [],
+        [AuthorCardKind.Character] = [],
+        [AuthorCardKind.Coordinate] = [],
+    };
+    private readonly Dictionary<AuthorCardKind, Dictionary<AuthorDisplay, List<DateTime>>> _updatedTimes = new()
     {
         [AuthorCardKind.Scene] = [],
         [AuthorCardKind.Character] = [],
@@ -113,6 +120,7 @@ public sealed class AuthorInfoService
                     break;
                 case NotifyCollectionChangedAction.Reset:
                     _counts[kind].Clear();
+                    _updatedTimes[kind].Clear();
                     PruneOrphanedDisplays();
                     AuthorsChanged?.Invoke();
                     break;
@@ -130,7 +138,8 @@ public sealed class AuthorInfoService
                 display,
                 _counts[AuthorCardKind.Scene].GetValueOrDefault(display),
                 _counts[AuthorCardKind.Character].GetValueOrDefault(display),
-                _counts[AuthorCardKind.Coordinate].GetValueOrDefault(display)));
+                _counts[AuthorCardKind.Coordinate].GetValueOrDefault(display),
+                GetLastUpdated(display)));
         }
         return summaries;
     }
@@ -149,6 +158,8 @@ public sealed class AuthorInfoService
             _displays.Clear();
             foreach (var counts in _counts.Values)
                 counts.Clear();
+            foreach (var updatedTimes in _updatedTimes.Values)
+                updatedTimes.Clear();
 
             foreach (var card in scenes)
             {
@@ -197,6 +208,7 @@ public sealed class AuthorInfoService
         card.Author = display;
         var counts = _counts[kind];
         counts[display] = counts.GetValueOrDefault(display) + 1;
+        AddUpdatedTime(kind, display, card.DateModified);
         NotifyAuthorsChanged();
     }
 
@@ -209,6 +221,7 @@ public sealed class AuthorInfoService
             if (count <= 1) counts.Remove(display);
             else counts[display] = count - 1;
         }
+        RemoveUpdatedTime(kind, display, card.DateModified);
         NotifyAuthorsChanged();
     }
 
@@ -227,7 +240,44 @@ public sealed class AuthorInfoService
         }
         if (toRemove is null) return;
         foreach (var key in toRemove)
+        {
+            if (_displays.TryGetValue(key, out var display))
+            {
+                foreach (var updatedTimes in _updatedTimes.Values)
+                    updatedTimes.Remove(display);
+            }
             _displays.Remove(key);
+        }
+    }
+
+    private void AddUpdatedTime(AuthorCardKind kind, AuthorDisplay display, DateTime updated)
+    {
+        var updatedTimes = _updatedTimes[kind];
+        if (!updatedTimes.TryGetValue(display, out var times))
+            updatedTimes[display] = times = [];
+        times.Add(updated);
+    }
+
+    private void RemoveUpdatedTime(AuthorCardKind kind, AuthorDisplay display, DateTime updated)
+    {
+        var updatedTimes = _updatedTimes[kind];
+        if (!updatedTimes.TryGetValue(display, out var times))
+            return;
+
+        times.Remove(updated);
+        if (times.Count == 0)
+            updatedTimes.Remove(display);
+    }
+
+    private DateTime GetLastUpdated(AuthorDisplay display)
+    {
+        var latest = DateTime.MinValue;
+        foreach (var updatedTimes in _updatedTimes.Values)
+        {
+            if (updatedTimes.TryGetValue(display, out var times) && times.Count > 0)
+                latest = latest > times.Max() ? latest : times.Max();
+        }
+        return latest;
     }
 
     /// <summary>

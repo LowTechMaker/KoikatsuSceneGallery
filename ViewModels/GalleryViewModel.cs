@@ -649,15 +649,13 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsEmpty));
     }
 
-    private async void OnCardAdded(SceneCard card)
+    private void OnCardAdded(SceneCard card)
     {
-        var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card);
         _dispatcherQueue.TryEnqueue(() =>
         {
             // Guard against re-adding a file that's already present.
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;
             card.IsR18Content = IsR18Path(card.FilePath);
-            card.ThumbnailPath = thumbnailPath;
             Cards.Add(card);
             QueueMetadata(card);
         });

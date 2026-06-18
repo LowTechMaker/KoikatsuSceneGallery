@@ -548,6 +548,9 @@
   <data name="Authors_Empty.Text" xml:space="preserve">
     <value>No authors detected yet. Name card folders like "Artist (12345678)" using the pixiv user ID, then reload the galleries.</value>
   </data>
+  <data name="Authors_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search authors</value>
+  </data>
   <data name="Authors_RefreshAllLabel.Text" xml:space="preserve">
     <value>Refresh all</value>
   </data>
@@ -556,6 +559,24 @@
   </data>
   <data name="Authors_RefreshOne.Text" xml:space="preserve">
     <value>Refresh</value>
+  </data>
+  <data name="Authors_SortCount.Content" xml:space="preserve">
+    <value>Card count</value>
+  </data>
+  <data name="Authors_SortLastUpdated.Content" xml:space="preserve">
+    <value>Recently updated</value>
+  </data>
+  <data name="Authors_SortName.Content" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Authors_GroupSymbols" xml:space="preserve">
+    <value>Symbols</value>
+  </data>
+  <data name="Authors_GroupOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Authors_GroupOtherIndex" xml:space="preserve">
+    <value>Other</value>
   </data>
   <!-- AuthorDetailPage -->
   <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
@@ -736,6 +757,12 @@
     <value>Select or clear all unrecognized groups</value>
   </data>
   <data name="Import_SelectAllUnknownLabel.Text" xml:space="preserve">
+    <value>All / none</value>
+  </data>
+  <data name="Import_SelectAllFetchFailed.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select or clear all deleted-post groups</value>
+  </data>
+  <data name="Import_SelectAllFetchFailedLabel.Text" xml:space="preserve">
     <value>All / none</value>
   </data>
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">

@@ -548,6 +548,9 @@
   <data name="Authors_Empty.Text" xml:space="preserve">
     <value>尚未检测到作者。请将卡片文件夹命名为“作者名 (12345678)”（pixiv 用户 ID），然后重新加载图库。</value>
   </data>
+  <data name="Authors_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索作者</value>
+  </data>
   <data name="Authors_RefreshAllLabel.Text" xml:space="preserve">
     <value>全部刷新</value>
   </data>
@@ -556,6 +559,24 @@
   </data>
   <data name="Authors_RefreshOne.Text" xml:space="preserve">
     <value>刷新</value>
+  </data>
+  <data name="Authors_SortCount.Content" xml:space="preserve">
+    <value>卡片数量</value>
+  </data>
+  <data name="Authors_SortLastUpdated.Content" xml:space="preserve">
+    <value>最近更新</value>
+  </data>
+  <data name="Authors_SortName.Content" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Authors_GroupSymbols" xml:space="preserve">
+    <value>符号</value>
+  </data>
+  <data name="Authors_GroupOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="Authors_GroupOtherIndex" xml:space="preserve">
+    <value>他</value>
   </data>
   <!-- AuthorDetailPage -->
   <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
@@ -736,6 +757,12 @@
     <value>选取或取消所有未识别分组</value>
   </data>
   <data name="Import_SelectAllUnknownLabel.Text" xml:space="preserve">
+    <value>全选/取消</value>
+  </data>
+  <data name="Import_SelectAllFetchFailed.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选取或取消所有帖文已删除分组</value>
+  </data>
+  <data name="Import_SelectAllFetchFailedLabel.Text" xml:space="preserve">
     <value>全选/取消</value>
   </data>
   <data name="Import_SearchSauceNao.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">

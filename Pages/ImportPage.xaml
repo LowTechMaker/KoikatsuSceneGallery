@@ -192,18 +192,29 @@
                             <StackPanel Spacing="8" Margin="24,4,0,4">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" MaxWidth="180" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
+                                    <Button
+                                        x:Uid="Import_SelectAllFetchFailed"
+                                        Command="{x:Bind ViewModel.ToggleAllFetchFailedSelectionCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontSize="14" Glyph="&#xE8FB;" />
+                                            <TextBlock x:Uid="Import_SelectAllFetchFailedLabel" />
+                                        </StackPanel>
+                                    </Button>
+
                                     <TextBox
+                                        Grid.Column="1"
                                         x:Uid="Import_AuthorId"
                                         Text="{x:Bind ViewModel.BatchFetchFailedAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Button
-                                        Grid.Column="1"
+                                        Grid.Column="2"
                                         x:Uid="Import_SelectAuthor"
                                         Click="PickAuthorForFetchFailedBatch_Click"
                                         IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}">
@@ -211,7 +222,7 @@
                                     </Button>
 
                                     <Button
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Command="{x:Bind ViewModel.AssignBatchAuthorIdToFetchFailedCommand}">
                                         <FontIcon FontSize="14" Glyph="&#xE8FB;" />
                                     </Button>
