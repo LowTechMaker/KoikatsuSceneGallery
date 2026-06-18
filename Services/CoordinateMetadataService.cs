@@ -16,14 +16,17 @@ public sealed class CoordinateMetadataService
     private Timer? _saveTimer;
     private bool _dirty;
 
+    private volatile bool _loaded;
+
     public CoordinateMetadataService()
     {
         _cachePath = Path.Combine(AppPaths.LocalFolder, CacheFileName);
-        Load();
     }
 
-    private void Load()
+    private void EnsureLoaded()
     {
+        if (_loaded) return;
+        _loaded = true;
         try
         {
             if (!File.Exists(_cachePath)) return;
@@ -40,6 +43,7 @@ public sealed class CoordinateMetadataService
 
     public bool TryGetCached(CoordinateCard card, out CoordinateMetadata metadata)
     {
+        EnsureLoaded();
         var key = ComputeCacheKey(card.FilePath, card.DateModified);
         return _cache.TryGetValue(key, out metadata!);
     }

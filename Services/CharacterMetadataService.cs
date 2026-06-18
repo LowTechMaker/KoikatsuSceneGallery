@@ -27,14 +27,17 @@ public sealed class CharacterMetadataService
     private Timer? _saveTimer;
     private bool _dirty;
 
+    private volatile bool _loaded;
+
     public CharacterMetadataService()
     {
         _cachePath = Path.Combine(AppPaths.LocalFolder, CacheFileName);
-        Load();
     }
 
-    private void Load()
+    private void EnsureLoaded()
     {
+        if (_loaded) return;
+        _loaded = true;
         try
         {
             if (!File.Exists(_cachePath)) return;
@@ -52,6 +55,7 @@ public sealed class CharacterMetadataService
 
     public bool TryGetCached(CharacterCard card, out CharacterMetadata metadata)
     {
+        EnsureLoaded();
         var key = ComputeCacheKey(card.FilePath, card.DateModified);
         return _cache.TryGetValue(key, out metadata!);
     }

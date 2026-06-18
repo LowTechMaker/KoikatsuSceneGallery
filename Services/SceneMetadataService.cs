@@ -28,14 +28,17 @@ public sealed class SceneMetadataService
     private Timer? _saveTimer;
     private bool _dirty;
 
+    private volatile bool _loaded;
+
     public SceneMetadataService()
     {
         _cachePath = Path.Combine(AppPaths.LocalFolder, CacheFileName);
-        Load();
     }
 
-    private void Load()
+    private void EnsureLoaded()
     {
+        if (_loaded) return;
+        _loaded = true;
         try
         {
             if (!File.Exists(_cachePath)) return;
@@ -54,6 +57,7 @@ public sealed class SceneMetadataService
     /// <summary>Returns cached metadata for the card if present.</summary>
     public bool TryGetCached(SceneCard card, out SceneMetadata metadata)
     {
+        EnsureLoaded();
         var key = ComputeCacheKey(card.FilePath, card.DateModified);
         return _cache.TryGetValue(key, out metadata!);
     }
