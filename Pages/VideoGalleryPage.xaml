@@ -203,6 +203,7 @@
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <Grid>
                                 <Image
+                                    x:Phase="1"
                                     Stretch="Uniform"
                                     Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                                 <FontIcon
@@ -217,6 +218,7 @@
 
                         <TextBlock
                             x:Name="FileNameText"
+                            x:Phase="1"
                             Grid.Row="1"
                             Margin="8,4"
                             MaxLines="1"

@@ -219,8 +219,8 @@ public sealed partial class CharacterGalleryPage : Page
                 ViewModel.ReleaseThumbnail(recycled);
             return;
         }
-        if (args.Item is CharacterCard card)
-            ViewModel.RequestThumbnail(card);
+
+        args.RegisterUpdateCallback(GalleryGrid_Phase1);
 
         if (_appliedColumns < 0)
         {
@@ -230,6 +230,12 @@ public sealed partial class CharacterGalleryPage : Page
                 ApplyLayout();
             });
         }
+    }
+
+    private void GalleryGrid_Phase1(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CharacterCard card)
+            ViewModel.RequestThumbnail(card);
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

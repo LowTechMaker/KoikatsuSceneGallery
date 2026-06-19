@@ -276,6 +276,7 @@
                             CornerRadius="{StaticResource ControlCornerRadius}"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <Image
+                                x:Phase="1"
                                 Stretch="Uniform"
                                 Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                         </Border>
@@ -283,6 +284,7 @@
                         <!--  Author badge (plugin-provided); overlays the thumbnail so
                               the fixed cell-height layout math stays untouched.  -->
                         <Border
+                            x:Phase="1"
                             Margin="6"
                             Padding="6,3"
                             HorizontalAlignment="Left"
@@ -311,6 +313,7 @@
 
                         <TextBlock
                             x:Name="FileNameText"
+                            x:Phase="1"
                             Grid.Row="1"
                             Margin="8,4"
                             MaxLines="1"

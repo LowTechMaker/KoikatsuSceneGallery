@@ -121,6 +121,9 @@
                             IsItemClickEnabled="False"
                             ItemsSource="{x:Bind Groups, Mode=OneWay}"
                             SelectionMode="None">
+                            <ListView.ItemContainerTransitions>
+                                <TransitionCollection />
+                            </ListView.ItemContainerTransitions>
                             <ListView.ItemContainerStyle>
                                 <Style TargetType="ListViewItem">
                                     <Setter Property="Padding" Value="0" />
@@ -150,6 +153,9 @@
                                                 ItemClick="AuthorsGrid_ItemClick"
                                                 ItemsSource="{x:Bind Authors, Mode=OneWay}"
                                                 SelectionMode="None">
+                                                <GridView.ItemContainerTransitions>
+                                                    <TransitionCollection />
+                                                </GridView.ItemContainerTransitions>
                                                 <GridView.ItemContainerStyle>
                                                     <Style TargetType="GridViewItem">
                                                         <Setter Property="Margin" Value="0" />

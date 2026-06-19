@@ -176,7 +176,10 @@ public partial class AuthorsViewModel : ObservableObject
             for (int i = 0; i < tabSummaries.Count; i++)
             {
                 if (i < tab.Authors.Count)
-                    tab.Authors[i] = tabSummaries[i];
+                {
+                    if (SummaryChanged(tab.Authors[i], tabSummaries[i]))
+                        tab.Authors[i] = tabSummaries[i];
+                }
                 else
                     tab.Authors.Add(tabSummaries[i]);
             }
@@ -331,6 +334,12 @@ public partial class AuthorsViewModel : ObservableObject
             target.Add(group);
     }
 
+    private static bool SummaryChanged(AuthorSummary a, AuthorSummary b) =>
+        !ReferenceEquals(a.Display, b.Display) ||
+        a.SceneCount != b.SceneCount ||
+        a.CharacterCount != b.CharacterCount ||
+        a.CoordinateCount != b.CoordinateCount;
+
     private static void SyncAuthors(
         ObservableCollection<AuthorSummary> target,
         IReadOnlyList<AuthorSummary> source)
@@ -338,7 +347,10 @@ public partial class AuthorsViewModel : ObservableObject
         for (var i = 0; i < source.Count; i++)
         {
             if (i < target.Count)
-                target[i] = source[i];
+            {
+                if (SummaryChanged(target[i], source[i]))
+                    target[i] = source[i];
+            }
             else
                 target.Add(source[i]);
         }

@@ -351,7 +351,7 @@
                                                                     BorderThickness="1">
                                                                 <Image Stretch="UniformToFill">
                                                                     <Image.Source>
-                                                                        <BitmapImage DecodePixelWidth="360"
+                                                                        <BitmapImage DecodePixelWidth="200"
                                                                                      UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
                                                                     </Image.Source>
                                                                 </Image>
@@ -735,7 +735,7 @@
                                                                 BorderThickness="1">
                                                             <Image Stretch="UniformToFill">
                                                                 <Image.Source>
-                                                                    <BitmapImage DecodePixelWidth="360"
+                                                                    <BitmapImage DecodePixelWidth="200"
                                                                                  UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
                                                                 </Image.Source>
                                                             </Image>

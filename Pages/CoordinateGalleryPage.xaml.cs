@@ -214,8 +214,8 @@ public sealed partial class CoordinateGalleryPage : Page
                 ViewModel.ReleaseThumbnail(recycled);
             return;
         }
-        if (args.Item is CoordinateCard card)
-            ViewModel.RequestThumbnail(card);
+
+        args.RegisterUpdateCallback(GalleryGrid_Phase1);
 
         if (_appliedColumns < 0)
         {
@@ -225,6 +225,12 @@ public sealed partial class CoordinateGalleryPage : Page
                 ApplyLayout();
             });
         }
+    }
+
+    private void GalleryGrid_Phase1(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CoordinateCard card)
+            ViewModel.RequestThumbnail(card);
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

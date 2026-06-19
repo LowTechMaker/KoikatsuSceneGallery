@@ -265,12 +265,9 @@ public sealed partial class GalleryPage : Page
                 ViewModel.ReleaseThumbnail(recycled);
             return;
         }
-        if (args.Item is SceneCard card)
-            ViewModel.RequestThumbnail(card);
 
-        // Cards size themselves to the cells now (ItemsWrapGrid.ItemWidth/Height),
-        // so there's no per-card sizing to do here. Just size the cells + apply
-        // the cache buffer once the panel first exists.
+        args.RegisterUpdateCallback(GalleryGrid_Phase1);
+
         if (_appliedColumns < 0)
         {
             DispatcherQueue.TryEnqueue(() =>
@@ -279,6 +276,12 @@ public sealed partial class GalleryPage : Page
                 ApplyLayout();
             });
         }
+    }
+
+    private void GalleryGrid_Phase1(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is SceneCard card)
+            ViewModel.RequestThumbnail(card);
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
