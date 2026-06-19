@@ -12,6 +12,7 @@ namespace KoikatsuSceneGallery.Services;
 public sealed class ImportService
 {
     private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
+    private const string UnrecognizedFolderName = "!unrecognized";
 
     private static string GetRatingFolder(ContentRating rating, SettingsService.ConfigData config) => rating switch
     {
@@ -553,6 +554,9 @@ public sealed class ImportService
                     }
                 }
             }
+
+            if (item.ArtworkId is null && item.AuthorId is not null)
+                targetFolder = Path.Combine(targetFolder, UnrecognizedFolderName);
 
             item.DestinationPath = Path.Combine(targetFolder, item.FileName);
         }
