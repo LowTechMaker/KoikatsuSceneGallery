@@ -24,12 +24,6 @@ public partial class SceneCard : ObservableObject, IAuthorOwner
     public partial bool MetadataLoaded { get; set; }
 
     [ObservableProperty]
-    public partial bool UsesTimeline { get; set; }
-
-    [ObservableProperty]
-    public partial SceneEnvironment Environment { get; set; } = SceneEnvironment.Unknown;
-
-    [ObservableProperty]
     public partial GameVersion Game { get; set; } = GameVersion.Unknown;
 
     [ObservableProperty]

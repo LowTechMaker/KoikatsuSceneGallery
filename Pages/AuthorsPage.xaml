@@ -136,8 +136,7 @@
                                                          Margin="0,8,0,0"
                                                          Visibility="{x:Bind ShowHeader, Mode=OneWay}">
                                                 <TextBlock
-                                                    FontSize="19"
-                                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                    Style="{StaticResource SubtitleTextBlockStyle}"
                                                     Text="{x:Bind Header}" />
                                                 <TextBlock
                                                     VerticalAlignment="Center"

@@ -335,7 +335,7 @@
             Grid.Row="3"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Opacity="0.6"
+            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
             Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
 
         <Button

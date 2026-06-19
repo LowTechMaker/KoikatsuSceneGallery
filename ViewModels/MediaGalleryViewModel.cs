@@ -126,7 +126,7 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
                         RequestThumbnail(card);
                     processed.Set();
                 });
-                processed.Wait();
+                processed.Wait(TimeSpan.FromSeconds(10));
                 processed.Dispose();
             });
 

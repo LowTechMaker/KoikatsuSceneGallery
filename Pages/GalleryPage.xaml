@@ -144,6 +144,7 @@
                 <ToggleButton
                     x:Name="SizeSmallButton"
                     x:Uid="Gallery_SizeSmall"
+                    AutomationProperties.AutomationId="GallerySizeSmallButton"
                     MinWidth="36"
                     Width="36"
                     Height="32"
@@ -153,6 +154,7 @@
                 <ToggleButton
                     x:Name="SizeMediumButton"
                     x:Uid="Gallery_SizeMedium"
+                    AutomationProperties.AutomationId="GallerySizeMediumButton"
                     MinWidth="36"
                     Width="36"
                     Height="32"
@@ -162,6 +164,7 @@
                 <ToggleButton
                     x:Name="SizeLargeButton"
                     x:Uid="Gallery_SizeLarge"
+                    AutomationProperties.AutomationId="GallerySizeLargeButton"
                     MinWidth="36"
                     Width="36"
                     Height="32"
@@ -196,41 +199,6 @@
                 <ComboBoxItem Content="Koikatsu" Tag="Koikatsu" />
                 <ComboBoxItem Content="Koikatsu Sunshine" Tag="KoikatsuSunshine" />
                 <ComboBoxItem x:Uid="Gallery_EnvUnknown" Tag="Unknown" />
-            </ComboBox>
-            <TextBlock
-                x:Uid="Gallery_EnvironmentFilterLabel"
-                Margin="8,0,0,0"
-                VerticalAlignment="Center"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Style="{StaticResource CaptionTextBlockStyle}" />
-            <ComboBox
-                x:Name="EnvironmentFilterComboBox"
-                AutomationProperties.AutomationId="GalleryEnvironmentFilterComboBox"
-                Width="150"
-                Height="32"
-                SelectedIndex="0"
-                SelectionChanged="EnvironmentFilterComboBox_SelectionChanged">
-                <ComboBoxItem x:Uid="Gallery_FilterAll" Tag="All" />
-                <ComboBoxItem Content="Madevil" Tag="Madevil" />
-                <ComboBoxItem x:Uid="Gallery_EnvNonMadevil" Tag="NonMadevil" />
-                <ComboBoxItem x:Uid="Gallery_EnvUnknown" Tag="Unknown" />
-            </ComboBox>
-            <TextBlock
-                x:Uid="Gallery_TimelineFilterLabel"
-                Margin="8,0,0,0"
-                VerticalAlignment="Center"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Style="{StaticResource CaptionTextBlockStyle}" />
-            <ComboBox
-                x:Name="TimelineFilterComboBox"
-                AutomationProperties.AutomationId="GalleryTimelineFilterComboBox"
-                Width="150"
-                Height="32"
-                SelectedIndex="0"
-                SelectionChanged="TimelineFilterComboBox_SelectionChanged">
-                <ComboBoxItem x:Uid="Gallery_FilterAll" Tag="All" />
-                <ComboBoxItem x:Uid="Gallery_TimelineOnly" Tag="Only" />
-                <ComboBoxItem x:Uid="Gallery_TimelineExclude" Tag="Exclude" />
             </ComboBox>
             <StackPanel
                 Orientation="Horizontal"
@@ -366,11 +334,12 @@
             Grid.Row="3"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Opacity="0.6"
+            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
             Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" />
 
         <Button
             x:Uid="Gallery_FeelingLucky"
+            AutomationProperties.AutomationId="GalleryFeelingLuckyButton"
             Grid.Row="3"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"

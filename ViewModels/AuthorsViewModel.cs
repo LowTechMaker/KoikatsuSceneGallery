@@ -303,25 +303,32 @@ public partial class AuthorsViewModel : ObservableObject
         ObservableCollection<AuthorGroupViewModel> target,
         IReadOnlyList<AuthorGroupViewModel> source)
     {
-        for (var i = 0; i < source.Count; i++)
+        // Check if the group keys are identical — if so, update in place.
+        // Otherwise clear-and-rebuild to avoid Replace events that trigger
+        // re-entrant layout crashes inside the Pivot's ListView.
+        bool sameStructure = target.Count == source.Count;
+        if (sameStructure)
         {
-            if (i < target.Count && target[i].Key == source[i].Key)
+            for (var i = 0; i < target.Count; i++)
+            {
+                if (target[i].Key != source[i].Key) { sameStructure = false; break; }
+            }
+        }
+
+        if (sameStructure)
+        {
+            for (var i = 0; i < source.Count; i++)
             {
                 SyncAuthors(target[i].Authors, source[i].Authors);
                 target[i].ShowHeader = source[i].ShowHeader;
                 target[i].NotifyCountChanged();
             }
-            else
-            {
-                if (i < target.Count)
-                    target[i] = source[i];
-                else
-                    target.Add(source[i]);
-            }
+            return;
         }
 
-        while (target.Count > source.Count)
-            target.RemoveAt(target.Count - 1);
+        target.Clear();
+        foreach (var group in source)
+            target.Add(group);
     }
 
     private static void SyncAuthors(

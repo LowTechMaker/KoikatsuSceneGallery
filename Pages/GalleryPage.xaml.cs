@@ -304,24 +304,6 @@ public sealed partial class GalleryPage : Page
         }
     }
 
-    private void EnvironmentFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (EnvironmentFilterComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            ViewModel.EnvironmentFilter = Enum.Parse<EnvironmentFilterOption>(tag);
-            ScrollToTop();
-        }
-    }
-
-    private void TimelineFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (TimelineFilterComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            ViewModel.TimelineFilter = Enum.Parse<TimelineFilterOption>(tag);
-            ScrollToTop();
-        }
-    }
-
     private void SortDirectionButton_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.SortAscending = !SortDirectionButton.IsChecked.GetValueOrDefault();

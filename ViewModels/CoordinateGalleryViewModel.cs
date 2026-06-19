@@ -145,7 +145,7 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
                         RequestThumbnail(card);
                     processed.Set();
                 });
-                processed.Wait();
+                processed.Wait(TimeSpan.FromSeconds(10));
                 processed.Dispose();
             });
 

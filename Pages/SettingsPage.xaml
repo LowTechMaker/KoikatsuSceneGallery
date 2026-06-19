@@ -717,7 +717,7 @@
 
                             <TextBlock
                                 x:Uid="Plugins_Empty"
-                                Opacity="0.6"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                 Visibility="{x:Bind HasNoPlugins}" />
 
                             <ItemsControl ItemsSource="{x:Bind PluginItems}">

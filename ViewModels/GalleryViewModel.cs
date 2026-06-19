@@ -17,21 +17,6 @@ public enum SortOption
     Shuffle
 }
 
-public enum EnvironmentFilterOption
-{
-    All,
-    Madevil,
-    NonMadevil,
-    Unknown
-}
-
-public enum TimelineFilterOption
-{
-    All,
-    Only,
-    Exclude
-}
-
 public enum GameFilterOption
 {
     All,
@@ -101,18 +86,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public partial bool ShowMetadataFilters { get; set; }
 
     [ObservableProperty]
-    public partial EnvironmentFilterOption EnvironmentFilter { get; set; } = EnvironmentFilterOption.All;
-
-    [ObservableProperty]
-    public partial TimelineFilterOption TimelineFilter { get; set; } = TimelineFilterOption.All;
-
-    [ObservableProperty]
     public partial GameFilterOption GameFilter { get; set; } = GameFilterOption.All;
 
     private bool HasMetadataFilter =>
-        EnvironmentFilter != EnvironmentFilterOption.All
-        || TimelineFilter != TimelineFilterOption.All
-        || GameFilter != GameFilterOption.All;
+        GameFilter != GameFilterOption.All;
 
     private bool _resolutionFilterEnabled;
     private HashSet<string> _allowedResolutions = [];
@@ -171,8 +148,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 _metadataCts?.Cancel();
                 _metadataRefreshTimer?.Stop();
                 PendingMetadataCount = 0;
-                EnvironmentFilter = EnvironmentFilterOption.All;
-                TimelineFilter = TimelineFilterOption.All;
                 GameFilter = GameFilterOption.All;
             }
         });
@@ -184,16 +159,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     }
 
     partial void OnShowR18ContentChanged(bool value)
-    {
-        ApplyFilter();
-    }
-
-    partial void OnEnvironmentFilterChanged(EnvironmentFilterOption value)
-    {
-        ApplyFilter();
-    }
-
-    partial void OnTimelineFilterChanged(TimelineFilterOption value)
     {
         ApplyFilter();
     }
@@ -273,7 +238,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                         RequestThumbnail(card);
                     processed.Set();
                 });
-                processed.Wait();
+                processed.Wait(TimeSpan.FromSeconds(10));
                 processed.Dispose();
             });
 
@@ -378,10 +343,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     private static void ApplyMetadata(SceneCard card, SceneMetadata meta)
     {
-        card.Environment = meta.Environment;
-        card.UsesTimeline = meta.UsesTimeline;
         card.Game = meta.Game;
-        // Set last so a filter refresh observing this flag sees final values.
         card.MetadataLoaded = true;
     }
 
@@ -512,6 +474,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     public void SetShuffleCount(int count)
     {
+        if (_shuffleCount == count) return;
         _shuffleCount = count;
         if (IsShuffleMode) ApplyFilter();
     }
@@ -552,13 +515,9 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             .ToArray();
         var hasSearch = keywords.Length > 0;
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
-        var envFilter = EnvironmentFilter;
-        var timelineFilter = TimelineFilter;
         var gameFilter = GameFilter;
         var showR18Content = ShowR18Content;
-        var hasMetadataFilter = envFilter != EnvironmentFilterOption.All
-            || timelineFilter != TimelineFilterOption.All
-            || gameFilter != GameFilterOption.All;
+        var hasMetadataFilter = gameFilter != GameFilterOption.All;
         var isShuffleMode = IsShuffleMode;
 
         Func<SceneCard, bool> baseFilter = card =>
@@ -577,27 +536,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
             if (filterRes && !_allowedResolutions.Contains(card.Resolution))
                 return false;
-
-            if (envFilter != EnvironmentFilterOption.All)
-            {
-                if (!card.MetadataLoaded) return false;
-                var target = envFilter switch
-                {
-                    EnvironmentFilterOption.Madevil => SceneEnvironment.Madevil,
-                    EnvironmentFilterOption.NonMadevil => SceneEnvironment.NonMadevil,
-                    _ => SceneEnvironment.Unknown
-                };
-                if (card.Environment != target) return false;
-            }
-
-            if (timelineFilter == TimelineFilterOption.Only)
-            {
-                if (!card.MetadataLoaded || !card.UsesTimeline) return false;
-            }
-            else if (timelineFilter == TimelineFilterOption.Exclude)
-            {
-                if (!card.MetadataLoaded || card.UsesTimeline) return false;
-            }
 
             if (gameFilter != GameFilterOption.All)
             {

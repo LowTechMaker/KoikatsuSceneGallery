@@ -70,10 +70,10 @@ public partial class PostDetailViewModel : ObservableObject
         LocalFileInfo = post.LocalFileCount == 1
             ? "1 local file"
             : $"{post.LocalFileCount} local files";
-        LocalImages = new ObservableCollection<LocalImagePreview>(
-            post.LocalFilePaths
-                .Where(File.Exists)
-                .Select(path => new LocalImagePreview(new Uri(path), Path.GetFileName(path), path)));
+        LocalImages.Clear();
+        foreach (var path in post.LocalFilePaths.Where(File.Exists))
+            LocalImages.Add(new LocalImagePreview(new Uri(path), Path.GetFileName(path), path));
+        OnPropertyChanged(nameof(HasLocalImages));
         IsDetailLoaded = post.IsDetailLoaded;
         IsSaved = post.IsSaved;
 
@@ -161,14 +161,14 @@ public partial class PostDetailViewModel : ObservableObject
             _ => "",
         };
 
-        Tags = new ObservableCollection<TagDisplay>(
-            (post.Tags ?? Array.Empty<ArtworkTag>())
-            .Select(tag =>
-            {
-                var display = !string.IsNullOrWhiteSpace(tag.TranslatedName)
-                    ? $"{tag.Name} ({tag.TranslatedName})"
-                    : tag.Name;
-                return new TagDisplay(display);
-            }));
+        Tags.Clear();
+        foreach (var tag in post.Tags ?? Array.Empty<ArtworkTag>())
+        {
+            var display = !string.IsNullOrWhiteSpace(tag.TranslatedName)
+                ? $"{tag.Name} ({tag.TranslatedName})"
+                : tag.Name;
+            Tags.Add(new TagDisplay(display));
+        }
+        OnPropertyChanged(nameof(HasTags));
     }
 }

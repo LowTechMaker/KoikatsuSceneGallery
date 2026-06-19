@@ -91,7 +91,7 @@
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
                     <FontIcon
-                        FontSize="64"
+                        FontSize="48"
                         Glyph="&#xE896;"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         HorizontalAlignment="Center" />
