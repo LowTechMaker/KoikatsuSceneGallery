@@ -73,6 +73,25 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial double ArtworkSubfolderThreshold { get; set; } = 1;
 
+    // ── Navigation visibility ──────────────────────────────────
+    [ObservableProperty]
+    public partial bool ShowGalleryNav { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowCharactersNav { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowCoordinatesNav { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowScreenshotsNav { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowVideosNav { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool AuthorLiveTilesEnabled { get; set; } = true;
+
     // ── OCD ─────────────────────────────────────────────────────
     [ObservableProperty]
     public partial bool UseVisualSimilarity { get; set; }
@@ -118,6 +137,7 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? CoordinateFolderPathsChanged;
     public event Action? ScreenshotFolderPathsChanged;
     public event Action? VideoFolderPathsChanged;
+    public event Action<string, bool>? NavItemVisibilityChanged;
 
     public SettingsViewModel(SettingsService settingsService)
     {
@@ -287,6 +307,25 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_isLoading) _ = SaveConfigAsync();
     }
+    partial void OnShowGalleryNavChanged(bool value) => OnNavVisibilityChanged("gallery", value);
+    partial void OnShowCharactersNavChanged(bool value) => OnNavVisibilityChanged("characters", value);
+    partial void OnShowCoordinatesNavChanged(bool value) => OnNavVisibilityChanged("coordinates", value);
+    partial void OnShowScreenshotsNavChanged(bool value) => OnNavVisibilityChanged("screenshots", value);
+    partial void OnShowVideosNavChanged(bool value) => OnNavVisibilityChanged("videos", value);
+
+    private void OnNavVisibilityChanged(string tag, bool value)
+    {
+        if (_isLoading) return;
+        _ = SaveConfigAsync();
+        NavItemVisibilityChanged?.Invoke(tag, value);
+    }
+
+    partial void OnAuthorLiveTilesEnabledChanged(bool value)
+    {
+        if (_isLoading) return;
+        _ = SaveConfigAsync();
+    }
+
     partial void OnSauceNaoApiKeyChanged(string value)
     {
         if (_isLoading)
@@ -349,6 +388,7 @@ public partial class SettingsViewModel : ObservableObject
             ImportSubfolder = config.ImportSubfolder;
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
+            AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
 
             AuthorFolderFormat = config.AuthorFolderFormat;
             ArtworkFolderFormat = config.ArtworkFolderFormat;
@@ -364,6 +404,13 @@ public partial class SettingsViewModel : ObservableObject
             CacheLength = config.CacheLength;
             SizeSelectorEnabled = config.SizeSelectorEnabled;
             SauceNaoApiKey = config.SauceNaoApiKey;
+
+            var hidden = config.HiddenNavItems;
+            ShowGalleryNav = !hidden.Contains("gallery");
+            ShowCharactersNav = !hidden.Contains("characters");
+            ShowCoordinatesNav = !hidden.Contains("coordinates");
+            ShowScreenshotsNav = !hidden.Contains("screenshots");
+            ShowVideosNav = !hidden.Contains("videos");
         }
         finally
         {
@@ -640,6 +687,8 @@ public partial class SettingsViewModel : ObservableObject
                 ImportSubfolder = ImportSubfolder,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
+                AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
+                HiddenNavItems = GetHiddenNavItems(),
                 AuthorFolderFormat = AuthorFolderFormat,
                 ArtworkFolderFormat = ArtworkFolderFormat,
                 UnknownFolderName = UnknownFolderName,
@@ -656,5 +705,16 @@ public partial class SettingsViewModel : ObservableObject
         {
             _saveLock.Release();
         }
+    }
+
+    private List<string> GetHiddenNavItems()
+    {
+        var list = new List<string>();
+        if (!ShowGalleryNav) list.Add("gallery");
+        if (!ShowCharactersNav) list.Add("characters");
+        if (!ShowCoordinatesNav) list.Add("coordinates");
+        if (!ShowScreenshotsNav) list.Add("screenshots");
+        if (!ShowVideosNav) list.Add("videos");
+        return list;
     }
 }

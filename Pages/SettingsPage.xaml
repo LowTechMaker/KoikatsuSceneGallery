@@ -38,6 +38,38 @@
                             <ToggleSwitch
                                 x:Uid="Settings_ScrollToTop"
                                 IsOn="{x:Bind ViewModel.ScrollToTopOnSort, Mode=TwoWay}" />
+
+                            <ToggleSwitch
+                                x:Uid="Settings_AuthorLiveTiles"
+                                IsOn="{x:Bind ViewModel.AuthorLiveTilesEnabled, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <!-- Navigation Visibility Section -->
+                        <StackPanel Spacing="16">
+                            <TextBlock
+                                x:Uid="Settings_NavigationHeader"
+                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                x:Uid="Settings_NavigationDesc"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                            <StackPanel Orientation="Horizontal" Spacing="24">
+                                <CheckBox
+                                    x:Uid="Settings_ShowGalleryNav"
+                                    IsChecked="{x:Bind ViewModel.ShowGalleryNav, Mode=TwoWay}" />
+                                <CheckBox
+                                    x:Uid="Settings_ShowCharactersNav"
+                                    IsChecked="{x:Bind ViewModel.ShowCharactersNav, Mode=TwoWay}" />
+                                <CheckBox
+                                    x:Uid="Settings_ShowCoordinatesNav"
+                                    IsChecked="{x:Bind ViewModel.ShowCoordinatesNav, Mode=TwoWay}" />
+                                <CheckBox
+                                    x:Uid="Settings_ShowScreenshotsNav"
+                                    IsChecked="{x:Bind ViewModel.ShowScreenshotsNav, Mode=TwoWay}" />
+                                <CheckBox
+                                    x:Uid="Settings_ShowVideosNav"
+                                    IsChecked="{x:Bind ViewModel.ShowVideosNav, Mode=TwoWay}" />
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Language Section -->
@@ -78,317 +110,232 @@
             <!-- Folders Tab -->
             <PivotItem x:Uid="Settings_TabFolders">
                 <ScrollViewer Padding="0,16,0,24">
-                    <StackPanel Spacing="32">
+                    <StackPanel Spacing="8">
 
-                        <!-- Scene Folder Paths Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_FoldersHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_FoldersDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <!-- Scene Folders -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.ShowGalleryNav, Mode=OneWay}">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_FoldersHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <InfoBadge Grid.Column="1" Value="{x:Bind ViewModel.FolderPaths.Count, Mode=OneWay}" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_FoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button Command="{x:Bind ViewModel.AddFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_AddFolder" />
+                                    </StackPanel>
+                                </Button>
+                                <ListView
+                                    x:Name="FolderListView"
+                                    ItemsSource="{x:Bind ViewModel.FolderPaths, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,12" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveFolder_Click" Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoFolders, Mode=OneWay}" />
+                            </StackPanel>
+                        </Expander>
 
-                            <Button Command="{x:Bind ViewModel.AddFolderCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                    <TextBlock x:Uid="Settings_AddFolder" />
-                                </StackPanel>
-                            </Button>
+                        <!-- Character Card Folders -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.ShowCharactersNav, Mode=OneWay}">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_CharaFoldersHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <InfoBadge Grid.Column="1" Value="{x:Bind ViewModel.CharacterFolderPaths.Count, Mode=OneWay}" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_CharaFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_AddFolder" />
+                                    </StackPanel>
+                                </Button>
+                                <ListView
+                                    x:Name="CharacterFolderListView"
+                                    ItemsSource="{x:Bind ViewModel.CharacterFolderPaths, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,12" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCharacterFolder_Click" Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoCharacterFolders, Mode=OneWay}" />
+                            </StackPanel>
+                        </Expander>
 
-                            <ListView
-                                x:Name="FolderListView"
-                                ItemsSource="{x:Bind ViewModel.FolderPaths, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Grid Padding="8,12" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
+                        <!-- Coordinate Card Folders -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.ShowCoordinatesNav, Mode=OneWay}">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_CoordFoldersHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <InfoBadge Grid.Column="1" Value="{x:Bind ViewModel.CoordinateFolderPaths.Count, Mode=OneWay}" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_CoordFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button Command="{x:Bind ViewModel.AddCoordinateFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_AddFolder" />
+                                    </StackPanel>
+                                </Button>
+                                <ListView
+                                    x:Name="CoordinateFolderListView"
+                                    ItemsSource="{x:Bind ViewModel.CoordinateFolderPaths, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,12" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCoordinateFolder_Click" Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoCoordinateFolders, Mode=OneWay}" />
+                            </StackPanel>
+                        </Expander>
 
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                FontSize="16"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE8B7;" />
+                        <!-- Screenshot Folders -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.ShowScreenshotsNav, Mode=OneWay}">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_ScreenshotFoldersHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <InfoBadge Grid.Column="1" Value="{x:Bind ViewModel.ScreenshotFolderPaths.Count, Mode=OneWay}" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_ScreenshotFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button Command="{x:Bind ViewModel.AddScreenshotFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_AddFolder" />
+                                    </StackPanel>
+                                </Button>
+                                <ListView
+                                    x:Name="ScreenshotFolderListView"
+                                    ItemsSource="{x:Bind ViewModel.ScreenshotFolderPaths, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,12" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveScreenshotFolder_Click" Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoScreenshotFolders, Mode=OneWay}" />
+                            </StackPanel>
+                        </Expander>
 
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Text="{x:Bind}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{x:Bind}" />
-
-                                            <Button
-                                                x:Uid="Settings_RemoveFolder"
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                CommandParameter="{x:Bind}"
-                                                Click="RemoveFolder_Click"
-                                                Style="{StaticResource SubtleButtonStyle}">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <TextBlock
-                                x:Uid="Settings_NoFolders"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Visibility="{x:Bind ViewModel.HasNoFolders, Mode=OneWay}" />
-                        </StackPanel>
-
-                        <!-- Character Card Folders Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_CharaFoldersHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_CharaFoldersDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <Button Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                    <TextBlock x:Uid="Settings_AddFolder" />
-                                </StackPanel>
-                            </Button>
-
-                            <ListView
-                                x:Name="CharacterFolderListView"
-                                ItemsSource="{x:Bind ViewModel.CharacterFolderPaths, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Grid Padding="8,12" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                FontSize="16"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE8B7;" />
-
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Text="{x:Bind}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{x:Bind}" />
-
-                                            <Button
-                                                x:Uid="Settings_RemoveFolder"
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                CommandParameter="{x:Bind}"
-                                                Click="RemoveCharacterFolder_Click"
-                                                Style="{StaticResource SubtleButtonStyle}">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <TextBlock
-                                x:Uid="Settings_NoFolders"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Visibility="{x:Bind ViewModel.HasNoCharacterFolders, Mode=OneWay}" />
-                        </StackPanel>
-
-                        <!-- Coordinate Card Folders Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_CoordFoldersHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_CoordFoldersDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <Button Command="{x:Bind ViewModel.AddCoordinateFolderCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                    <TextBlock x:Uid="Settings_AddFolder" />
-                                </StackPanel>
-                            </Button>
-
-                            <ListView
-                                x:Name="CoordinateFolderListView"
-                                ItemsSource="{x:Bind ViewModel.CoordinateFolderPaths, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Grid Padding="8,12" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                FontSize="16"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE8B7;" />
-
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Text="{x:Bind}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{x:Bind}" />
-
-                                            <Button
-                                                x:Uid="Settings_RemoveFolder"
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                CommandParameter="{x:Bind}"
-                                                Click="RemoveCoordinateFolder_Click"
-                                                Style="{StaticResource SubtleButtonStyle}">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <TextBlock
-                                x:Uid="Settings_NoFolders"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Visibility="{x:Bind ViewModel.HasNoCoordinateFolders, Mode=OneWay}" />
-                        </StackPanel>
-
-                        <!-- Screenshot Folders Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_ScreenshotFoldersHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_ScreenshotFoldersDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <Button Command="{x:Bind ViewModel.AddScreenshotFolderCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                    <TextBlock x:Uid="Settings_AddFolder" />
-                                </StackPanel>
-                            </Button>
-
-                            <ListView
-                                x:Name="ScreenshotFolderListView"
-                                ItemsSource="{x:Bind ViewModel.ScreenshotFolderPaths, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Grid Padding="8,12" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                FontSize="16"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE8B7;" />
-
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Text="{x:Bind}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{x:Bind}" />
-
-                                            <Button
-                                                x:Uid="Settings_RemoveFolder"
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                CommandParameter="{x:Bind}"
-                                                Click="RemoveScreenshotFolder_Click"
-                                                Style="{StaticResource SubtleButtonStyle}">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <TextBlock
-                                x:Uid="Settings_NoFolders"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Visibility="{x:Bind ViewModel.HasNoScreenshotFolders, Mode=OneWay}" />
-                        </StackPanel>
-
-                        <!-- Video Folders Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_VideoFoldersHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_VideoFoldersDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <Button Command="{x:Bind ViewModel.AddVideoFolderCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                    <TextBlock x:Uid="Settings_AddFolder" />
-                                </StackPanel>
-                            </Button>
-
-                            <ListView
-                                x:Name="VideoFolderListView"
-                                ItemsSource="{x:Bind ViewModel.VideoFolderPaths, Mode=OneWay}"
-                                SelectionMode="None">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Grid Padding="8,12" ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <FontIcon
-                                                VerticalAlignment="Center"
-                                                FontSize="16"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Glyph="&#xE8B7;" />
-
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                Text="{x:Bind}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{x:Bind}" />
-
-                                            <Button
-                                                x:Uid="Settings_RemoveFolder"
-                                                Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                CommandParameter="{x:Bind}"
-                                                Click="RemoveVideoFolder_Click"
-                                                Style="{StaticResource SubtleButtonStyle}">
-                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <TextBlock
-                                x:Uid="Settings_NoFolders"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Visibility="{x:Bind ViewModel.HasNoVideoFolders, Mode=OneWay}" />
-                        </StackPanel>
+                        <!-- Video Folders -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.ShowVideosNav, Mode=OneWay}">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_VideoFoldersHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <InfoBadge Grid.Column="1" Value="{x:Bind ViewModel.VideoFolderPaths.Count, Mode=OneWay}" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_VideoFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button Command="{x:Bind ViewModel.AddVideoFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="16" Glyph="&#xE8DA;" />
+                                        <TextBlock x:Uid="Settings_AddFolder" />
+                                    </StackPanel>
+                                </Button>
+                                <ListView
+                                    x:Name="VideoFolderListView"
+                                    ItemsSource="{x:Bind ViewModel.VideoFolderPaths, Mode=OneWay}"
+                                    SelectionMode="None">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Grid Padding="8,12" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveVideoFolder_Click" Style="{StaticResource SubtleButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoVideoFolders, Mode=OneWay}" />
+                            </StackPanel>
+                        </Expander>
 
                     </StackPanel>
                 </ScrollViewer>
@@ -397,51 +344,40 @@
             <!-- Filters Tab -->
             <PivotItem x:Uid="Settings_TabFilters">
                 <ScrollViewer Padding="0,16,0,24">
-                    <StackPanel Spacing="32">
+                    <StackPanel Spacing="8">
 
-                        <!-- Scene Resolution Filter Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_ResolutionHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_ResolutionDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <ToggleSwitch
-                                x:Uid="Settings_ResolutionToggle"
-                                IsOn="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=TwoWay}" />
-
-                            <StackPanel
-                                Spacing="12"
-                                Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
-
-                                <Grid ColumnSpacing="8">
+                        <!-- Scene Resolution Filter -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_ResolutionHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" Margin="0,-4,0,-4" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_ResolutionDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" MaxWidth="240" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <TextBox
-                                        x:Name="ResolutionInput"
-                                        x:Uid="Settings_ResolutionInput"
-                                        KeyDown="ResolutionInput_KeyDown" />
-
-                                    <Button
-                                        Grid.Column="1"
-                                        Click="AddResolution_Click"
-                                        Style="{StaticResource AccentButtonStyle}">
+                                    <TextBox x:Name="ResolutionInput" x:Uid="Settings_ResolutionInput" KeyDown="ResolutionInput_KeyDown" />
+                                    <Button Grid.Column="1" Click="AddResolution_Click" Style="{StaticResource AccentButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon FontSize="14" Glyph="&#xE710;" />
                                             <TextBlock x:Uid="Settings_AddResolution" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
-
                                 <ListView
                                     x:Name="ResolutionListView"
                                     ItemsSource="{x:Bind ViewModel.AllowedResolutions, Mode=OneWay}"
-                                    SelectionMode="None">
+                                    SelectionMode="None"
+                                    Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
                                             <Grid Padding="8,8" ColumnSpacing="12">
@@ -450,25 +386,9 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-
-                                                <FontIcon
-                                                    VerticalAlignment="Center"
-                                                    FontSize="16"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Glyph="&#xE740;" />
-
-                                                <TextBlock
-                                                    Grid.Column="1"
-                                                    VerticalAlignment="Center"
-                                                    Text="{x:Bind}" />
-
-                                                <Button
-                                                    x:Uid="Settings_RemoveResolution"
-                                                    Grid.Column="2"
-                                                    VerticalAlignment="Center"
-                                                    CommandParameter="{x:Bind}"
-                                                    Click="RemoveResolution_Click"
-                                                    Style="{StaticResource SubtleButtonStyle}">
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE740;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveResolution" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveResolution_Click" Style="{StaticResource SubtleButtonStyle}">
                                                     <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
@@ -476,51 +396,40 @@
                                     </ListView.ItemTemplate>
                                 </ListView>
                             </StackPanel>
-                        </StackPanel>
+                        </Expander>
 
-                        <!-- Character Resolution Filter Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_CharaResolutionHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_CharaResolutionDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <ToggleSwitch
-                                x:Uid="Settings_CharaResolutionToggle"
-                                IsOn="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=TwoWay}" />
-
-                            <StackPanel
-                                Spacing="12"
-                                Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
-
-                                <Grid ColumnSpacing="8">
+                        <!-- Character Resolution Filter -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_CharaResolutionHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" Margin="0,-4,0,-4" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_CharaResolutionDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" MaxWidth="240" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <TextBox
-                                        x:Name="CharacterResolutionInput"
-                                        x:Uid="Settings_CharaResolutionInput"
-                                        KeyDown="CharacterResolutionInput_KeyDown" />
-
-                                    <Button
-                                        Grid.Column="1"
-                                        Click="AddCharacterResolution_Click"
-                                        Style="{StaticResource AccentButtonStyle}">
+                                    <TextBox x:Name="CharacterResolutionInput" x:Uid="Settings_CharaResolutionInput" KeyDown="CharacterResolutionInput_KeyDown" />
+                                    <Button Grid.Column="1" Click="AddCharacterResolution_Click" Style="{StaticResource AccentButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon FontSize="14" Glyph="&#xE710;" />
                                             <TextBlock x:Uid="Settings_AddCharaResolution" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
-
                                 <ListView
                                     x:Name="CharacterResolutionListView"
                                     ItemsSource="{x:Bind ViewModel.CharacterAllowedResolutions, Mode=OneWay}"
-                                    SelectionMode="None">
+                                    SelectionMode="None"
+                                    Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
                                             <Grid Padding="8,8" ColumnSpacing="12">
@@ -529,25 +438,9 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-
-                                                <FontIcon
-                                                    VerticalAlignment="Center"
-                                                    FontSize="16"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Glyph="&#xE740;" />
-
-                                                <TextBlock
-                                                    Grid.Column="1"
-                                                    VerticalAlignment="Center"
-                                                    Text="{x:Bind}" />
-
-                                                <Button
-                                                    x:Uid="Settings_RemoveCharaResolution"
-                                                    Grid.Column="2"
-                                                    VerticalAlignment="Center"
-                                                    CommandParameter="{x:Bind}"
-                                                    Click="RemoveCharacterResolution_Click"
-                                                    Style="{StaticResource SubtleButtonStyle}">
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE740;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveCharaResolution" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCharacterResolution_Click" Style="{StaticResource SubtleButtonStyle}">
                                                     <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
@@ -555,51 +448,40 @@
                                     </ListView.ItemTemplate>
                                 </ListView>
                             </StackPanel>
-                        </StackPanel>
+                        </Expander>
 
-                        <!-- Coordinate Resolution Filter Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_CoordResolutionHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_CoordResolutionDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <ToggleSwitch
-                                x:Uid="Settings_CoordResolutionToggle"
-                                IsOn="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=TwoWay}" />
-
-                            <StackPanel
-                                Spacing="12"
-                                Visibility="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=OneWay}">
-
-                                <Grid ColumnSpacing="8">
+                        <!-- Coordinate Resolution Filter -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_CoordResolutionHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" Margin="0,-4,0,-4" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_CoordResolutionDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=OneWay}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" MaxWidth="240" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <TextBox
-                                        x:Name="CoordinateResolutionInput"
-                                        x:Uid="Settings_CoordResolutionInput"
-                                        KeyDown="CoordinateResolutionInput_KeyDown" />
-
-                                    <Button
-                                        Grid.Column="1"
-                                        Click="AddCoordinateResolution_Click"
-                                        Style="{StaticResource AccentButtonStyle}">
+                                    <TextBox x:Name="CoordinateResolutionInput" x:Uid="Settings_CoordResolutionInput" KeyDown="CoordinateResolutionInput_KeyDown" />
+                                    <Button Grid.Column="1" Click="AddCoordinateResolution_Click" Style="{StaticResource AccentButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon FontSize="14" Glyph="&#xE710;" />
                                             <TextBlock x:Uid="Settings_AddCoordResolution" />
                                         </StackPanel>
                                     </Button>
                                 </Grid>
-
                                 <ListView
                                     x:Name="CoordinateResolutionListView"
                                     ItemsSource="{x:Bind ViewModel.CoordinateAllowedResolutions, Mode=OneWay}"
-                                    SelectionMode="None">
+                                    SelectionMode="None"
+                                    Visibility="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=OneWay}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
                                             <Grid Padding="8,8" ColumnSpacing="12">
@@ -608,25 +490,9 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-
-                                                <FontIcon
-                                                    VerticalAlignment="Center"
-                                                    FontSize="16"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Glyph="&#xE740;" />
-
-                                                <TextBlock
-                                                    Grid.Column="1"
-                                                    VerticalAlignment="Center"
-                                                    Text="{x:Bind}" />
-
-                                                <Button
-                                                    x:Uid="Settings_RemoveCoordResolution"
-                                                    Grid.Column="2"
-                                                    VerticalAlignment="Center"
-                                                    CommandParameter="{x:Bind}"
-                                                    Click="RemoveCoordinateResolution_Click"
-                                                    Style="{StaticResource SubtleButtonStyle}">
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE740;" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" />
+                                                <Button x:Uid="Settings_RemoveCoordResolution" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCoordinateResolution_Click" Style="{StaticResource SubtleButtonStyle}">
                                                     <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
@@ -634,64 +500,53 @@
                                     </ListView.ItemTemplate>
                                 </ListView>
                             </StackPanel>
-                        </StackPanel>
+                        </Expander>
 
-                        <!-- Plugin Analysis Section -->
-                        <StackPanel Spacing="16">
-                            <TextBlock
-                                x:Uid="Settings_PluginHeader"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock
-                                x:Uid="Settings_PluginDesc"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-
-                            <ToggleSwitch
-                                x:Uid="Settings_PluginToggle"
-                                IsOn="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=TwoWay}" />
-
-                            <StackPanel
-                                Spacing="12"
-                                Visibility="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=OneWay}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button
-                                        Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
-                                        IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon FontSize="14" Glyph="&#xE895;" />
-                                            <TextBlock x:Uid="Settings_ScanMissing" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <Button
-                                        Command="{x:Bind ViewModel.RescanMetadataCommand}"
-                                        IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                                            <TextBlock x:Uid="Settings_RescanAll" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-
-                                <StackPanel
-                                    Orientation="Horizontal"
-                                    Spacing="8"
-                                    VerticalAlignment="Center"
-                                    Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
-                                    <ProgressRing
-                                        Width="16"
-                                        Height="16"
-                                        IsActive="True" />
-                                    <TextBlock
-                                        x:Uid="Settings_ScanProgress"
+                        <!-- Plugin Analysis -->
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Settings_PluginHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" Margin="0,-4,0,-4" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Uid="Settings_PluginDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.PluginAnalysisEnabled, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button
+                                            Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
+                                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon FontSize="14" Glyph="&#xE895;" />
+                                                <TextBlock x:Uid="Settings_ScanMissing" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button
+                                            Command="{x:Bind ViewModel.RescanMetadataCommand}"
+                                            IsEnabled="{x:Bind GalleryViewModel.IsNotParsingMetadata, Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                                <TextBlock x:Uid="Settings_RescanAll" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel
+                                        Orientation="Horizontal"
+                                        Spacing="8"
                                         VerticalAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
+                                        Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
+                                        <ProgressRing Width="16" Height="16" IsActive="True" />
+                                        <TextBlock x:Uid="Settings_ScanProgress" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                        </Expander>
 
                     </StackPanel>
                 </ScrollViewer>

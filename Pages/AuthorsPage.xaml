@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls"
     xmlns:services="using:KoikatsuSceneGallery.Services"
     xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
@@ -156,67 +157,9 @@
                                                 </GridView.ItemContainerStyle>
                                                 <GridView.ItemTemplate>
                                                     <DataTemplate x:DataType="services:AuthorSummary">
-                                                        <Grid
-                                                            Width="280"
-                                                            Margin="4"
-                                                            Padding="12"
-                                                            ColumnSpacing="12"
-                                                            CornerRadius="8"
-                                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                            BorderThickness="1"
-                                                            ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <PersonPicture
-                                                                Width="48"
-                                                                Height="48"
-                                                                DisplayName="{x:Bind Display.Name, Mode=OneWay}"
-                                                                ProfilePicture="{x:Bind Display.AvatarSource, Mode=OneWay}" />
-
-                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                                                                <TextBlock
-                                                                    MaxLines="1"
-                                                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                                    Text="{x:Bind Display.Name, Mode=OneWay}"
-                                                                    TextTrimming="CharacterEllipsis" />
-                                                                <StackPanel Orientation="Horizontal" Spacing="12">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <FontIcon
-                                                                            FontSize="12"
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Glyph="&#xE8B9;" />
-                                                                        <TextBlock
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                                                            Text="{x:Bind SceneCount}" />
-                                                                    </StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <FontIcon
-                                                                            FontSize="12"
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Glyph="&#xE77B;" />
-                                                                        <TextBlock
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                                                            Text="{x:Bind CharacterCount}" />
-                                                                    </StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <FontIcon
-                                                                            FontSize="12"
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Glyph="&#xE78A;" />
-                                                                        <TextBlock
-                                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                                                            Text="{x:Bind CoordinateCount}" />
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                            </StackPanel>
-
+                                                        <Grid Margin="4"
+                                                              ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
+                                                            <controls:AuthorLiveTileControl Summary="{x:Bind}" />
                                                             <Grid.ContextFlyout>
                                                                 <MenuFlyout>
                                                                     <MenuFlyoutItem

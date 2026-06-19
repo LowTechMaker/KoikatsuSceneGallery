@@ -27,6 +27,9 @@ public sealed partial class MainWindow : Window
             UpdateImportNavBadge();
         }
 
+        ApplyNavVisibility();
+        App.SettingsViewModel.NavItemVisibilityChanged += OnNavItemVisibilityChanged;
+
         NavFrame.Navigate(typeof(GalleryPage));
     }
 
@@ -89,6 +92,36 @@ public sealed partial class MainWindow : Window
     {
         if (NavFrame.CanGoBack)
             NavFrame.GoBack();
+    }
+
+    private void ApplyNavVisibility()
+    {
+        var vm = App.SettingsViewModel;
+        SetNavItemVisibility("gallery", vm.ShowGalleryNav);
+        SetNavItemVisibility("characters", vm.ShowCharactersNav);
+        SetNavItemVisibility("coordinates", vm.ShowCoordinatesNav);
+        SetNavItemVisibility("screenshots", vm.ShowScreenshotsNav);
+        SetNavItemVisibility("videos", vm.ShowVideosNav);
+    }
+
+    private void OnNavItemVisibilityChanged(string tag, bool visible)
+    {
+        DispatcherQueue.TryEnqueue(() => SetNavItemVisibility(tag, visible));
+    }
+
+    private void SetNavItemVisibility(string tag, bool visible)
+    {
+        var item = tag switch
+        {
+            "gallery" => GalleryNavItem,
+            "characters" => CharactersNavItem,
+            "coordinates" => CoordinatesNavItem,
+            "screenshots" => ScreenshotsNavItem,
+            "videos" => VideosNavItem,
+            _ => null
+        };
+        if (item is not null)
+            item.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

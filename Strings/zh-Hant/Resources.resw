@@ -187,7 +187,7 @@
     <value>服裝名稱</value>
   </data>
   <data name="Settings_CoordFoldersHeader.Text" xml:space="preserve">
-    <value>服裝卡資料夾</value>
+    <value>服裝卡</value>
   </data>
   <data name="Settings_CoordFoldersDesc.Text" xml:space="preserve">
     <value>新增包含 Koikatsu 服裝卡 .png 檔案的資料夾。子資料夾會自動掃描。</value>
@@ -211,7 +211,7 @@
     <value>當同一貼文的卡片數量嚴格大於此值時，在作者資料夾下建立以貼文名稱命名的子資料夾。0 = 永遠建立；-1 = 永不建立。</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
-    <value>服裝卡解析度篩選</value>
+    <value>服裝卡解析度</value>
   </data>
   <data name="Settings_CoordResolutionDesc.Text" xml:space="preserve">
     <value>僅顯示符合特定解析度的服裝卡片。停用則顯示全部卡片。</value>
@@ -341,7 +341,7 @@
     <value>強迫症選項</value>
   </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
-    <value>場景卡片資料夾</value>
+    <value>場景卡片</value>
   </data>
   <data name="Settings_FoldersDesc.Text" xml:space="preserve">
     <value>新增包含 Koikatsu 場景卡片 .png 檔案的資料夾。子資料夾會自動掃描。</value>
@@ -356,19 +356,19 @@
     <value>尚未設定任何資料夾。</value>
   </data>
   <data name="Settings_CharaFoldersHeader.Text" xml:space="preserve">
-    <value>角色卡資料夾</value>
+    <value>角色卡</value>
   </data>
   <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
     <value>新增包含 Koikatsu 角色卡 .png 檔案的資料夾。子資料夾會自動掃描。</value>
   </data>
   <data name="Settings_ScreenshotFoldersHeader.Text" xml:space="preserve">
-    <value>截圖資料夾</value>
+    <value>截圖</value>
   </data>
   <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
     <value>新增包含截圖的資料夾（.png、.jpg、.jpeg、.bmp）。子資料夾會自動掃描。</value>
   </data>
   <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
-    <value>影片資料夾</value>
+    <value>影片</value>
   </data>
   <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
     <value>新增包含影片檔案的資料夾（.mp4、.avi、.webm、.mov、.mkv、.gif）。子資料夾會自動掃描。</value>
@@ -393,6 +393,15 @@
   </data>
   <data name="Settings_ScrollToTop.OffContent" xml:space="preserve">
     <value>停用</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.Header" xml:space="preserve">
+    <value>作者動態磚</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.OnContent" xml:space="preserve">
+    <value>開</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.OffContent" xml:space="preserve">
+    <value>關</value>
   </data>
   <data name="Settings_CacheHeader.Text" xml:space="preserve">
     <value>縮圖快取</value>
@@ -437,7 +446,7 @@
     <value>掃描中…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
-    <value>解析度篩選</value>
+    <value>解析度</value>
   </data>
   <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
     <value>僅顯示符合特定解析度的場景卡片。停用則顯示全部卡片。</value>
@@ -458,7 +467,7 @@
     <value>移除解析度</value>
   </data>
   <data name="Settings_CharaResolutionHeader.Text" xml:space="preserve">
-    <value>角色卡解析度篩選</value>
+    <value>角色卡解析度</value>
   </data>
   <data name="Settings_CharaResolutionDesc.Text" xml:space="preserve">
     <value>僅顯示符合特定解析度的角色卡片。停用則顯示全部卡片。</value>
@@ -872,5 +881,26 @@
   </data>
   <data name="Detail_SamePostCount.Text" xml:space="preserve">
     <value> 件</value>
+  </data>
+  <data name="Settings_NavigationHeader.Text" xml:space="preserve">
+    <value>導覽列</value>
+  </data>
+  <data name="Settings_NavigationDesc.Text" xml:space="preserve">
+    <value>選擇要在側邊欄顯示的頁面。</value>
+  </data>
+  <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
+    <value>圖庫</value>
+  </data>
+  <data name="Settings_ShowCharactersNav.Content" xml:space="preserve">
+    <value>角色卡</value>
+  </data>
+  <data name="Settings_ShowCoordinatesNav.Content" xml:space="preserve">
+    <value>服裝卡</value>
+  </data>
+  <data name="Settings_ShowScreenshotsNav.Content" xml:space="preserve">
+    <value>截圖</value>
+  </data>
+  <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
+    <value>影片</value>
   </data>
 </root>

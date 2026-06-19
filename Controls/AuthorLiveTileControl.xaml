@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="KoikatsuSceneGallery.Controls.AuthorLiveTileControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <!-- Live tile mode: scene thumbnails cycling behind author info -->
+    <Grid
+        x:Name="RootGrid"
+        Width="280"
+        Height="160"
+        CornerRadius="8"
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1">
+
+        <!-- Thumbnail layer (only visible in live-tile mode) -->
+        <Grid x:Name="ThumbnailContainer" Visibility="Collapsed">
+            <Image x:Name="ImageA" Stretch="UniformToFill" />
+            <Image x:Name="ImageB" Stretch="UniformToFill" Opacity="0" />
+        </Grid>
+
+        <!-- Gradient scrim (only visible in live-tile mode) -->
+        <Grid x:Name="GradientOverlay" Visibility="Collapsed">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="Transparent" Offset="0.25" />
+                    <GradientStop Color="#CC000000" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
+        </Grid>
+
+        <!-- Live tile info overlay (bottom-aligned, white text) -->
+        <Grid
+            x:Name="LiveOverlay"
+            Padding="12"
+            VerticalAlignment="Bottom"
+            ColumnSpacing="10"
+            Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <PersonPicture
+                x:Name="LiveAvatar"
+                Width="36"
+                Height="36" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                <TextBlock
+                    x:Name="LiveName"
+                    MaxLines="1"
+                    Foreground="White"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE8B9;" />
+                        <TextBlock
+                            x:Name="LiveSceneCount"
+                            Foreground="#CCFFFFFF"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE77B;" />
+                        <TextBlock
+                            x:Name="LiveCharacterCount"
+                            Foreground="#CCFFFFFF"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE78A;" />
+                        <TextBlock
+                            x:Name="LiveCoordinateCount"
+                            Foreground="#CCFFFFFF"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Classic flat card (shown when live tiles disabled or no thumbnails) -->
+        <Grid
+            x:Name="ClassicLayout"
+            Padding="12"
+            VerticalAlignment="Center"
+            ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <PersonPicture
+                x:Name="ClassicAvatar"
+                Width="48"
+                Height="48" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                <TextBlock
+                    x:Name="ClassicName"
+                    MaxLines="1"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE8B9;" />
+                        <TextBlock
+                            x:Name="ClassicSceneCount"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE77B;" />
+                        <TextBlock
+                            x:Name="ClassicCharacterCount"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <FontIcon
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE78A;" />
+                        <TextBlock
+                            x:Name="ClassicCoordinateCount"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

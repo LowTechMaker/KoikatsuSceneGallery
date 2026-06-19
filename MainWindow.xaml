@@ -39,6 +39,7 @@
             SelectionChanged="NavView_SelectionChanged">
             <NavigationView.MenuItems>
                 <NavigationViewItem
+                    x:Name="GalleryNavItem"
                     x:Uid="Nav_Gallery"
                     IsSelected="True"
                     Tag="gallery">
@@ -47,6 +48,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem
+                    x:Name="CharactersNavItem"
                     x:Uid="Nav_Characters"
                     Tag="characters">
                     <NavigationViewItem.Icon>
@@ -54,6 +56,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem
+                    x:Name="CoordinatesNavItem"
                     x:Uid="Nav_Coordinates"
                     Tag="coordinates">
                     <NavigationViewItem.Icon>
@@ -61,6 +64,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem
+                    x:Name="ScreenshotsNavItem"
                     x:Uid="Nav_Screenshots"
                     Tag="screenshots">
                     <NavigationViewItem.Icon>
@@ -68,6 +72,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem
+                    x:Name="VideosNavItem"
                     x:Uid="Nav_Videos"
                     Tag="videos">
                     <NavigationViewItem.Icon>

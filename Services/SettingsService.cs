@@ -129,6 +129,10 @@ public class SettingsService
 
         public bool UseVisualSimilarity { get; set; }
 
+        public bool AuthorLiveTilesEnabled { get; set; } = true;
+
+        public List<string> HiddenNavItems { get; set; } = [];
+
         // ── Folder naming (OCD) ─────────────────────────────────────
         public string AuthorFolderFormat { get; set; } = "{name} ({id})";
         public string ArtworkFolderFormat { get; set; } = "{title} ({id})";

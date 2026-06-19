@@ -187,7 +187,7 @@
     <value>Coordinate Name</value>
   </data>
   <data name="Settings_CoordFoldersHeader.Text" xml:space="preserve">
-    <value>Coordinate Card Folders</value>
+    <value>Coordinates</value>
   </data>
   <data name="Settings_CoordFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing Koikatsu coordinate card .png files. Subfolders are scanned automatically.</value>
@@ -211,7 +211,7 @@
     <value>Create a subfolder named after the artwork when the number of files from the same artwork in one import batch is strictly greater than this value. 0 = always; -1 = never.</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
-    <value>Coordinate Resolution Filter</value>
+    <value>Coordinate Resolution</value>
   </data>
   <data name="Settings_CoordResolutionDesc.Text" xml:space="preserve">
     <value>Only show coordinate cards matching specific resolutions. Disable to show all cards.</value>
@@ -341,7 +341,7 @@
     <value>OCD</value>
   </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
-    <value>Scene Card Folders</value>
+    <value>Scene Cards</value>
   </data>
   <data name="Settings_FoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing Koikatsu scene card .png files. Subfolders are scanned automatically.</value>
@@ -356,19 +356,19 @@
     <value>No folders configured.</value>
   </data>
   <data name="Settings_CharaFoldersHeader.Text" xml:space="preserve">
-    <value>Character Card Folders</value>
+    <value>Characters</value>
   </data>
   <data name="Settings_CharaFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing Koikatsu character card .png files. Subfolders are scanned automatically.</value>
   </data>
   <data name="Settings_ScreenshotFoldersHeader.Text" xml:space="preserve">
-    <value>Screenshot Folders</value>
+    <value>Screenshots</value>
   </data>
   <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing screenshot images (.png, .jpg, .jpeg, .bmp). Subfolders are scanned automatically.</value>
   </data>
   <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
-    <value>Video Folders</value>
+    <value>Videos</value>
   </data>
   <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing video files (.mp4, .avi, .webm, .mov, .mkv, .gif). Subfolders are scanned automatically.</value>
@@ -393,6 +393,15 @@
   </data>
   <data name="Settings_ScrollToTop.OffContent" xml:space="preserve">
     <value>Disabled</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.Header" xml:space="preserve">
+    <value>Author live tiles</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Settings_AuthorLiveTiles.OffContent" xml:space="preserve">
+    <value>Off</value>
   </data>
   <data name="Settings_CacheHeader.Text" xml:space="preserve">
     <value>Thumbnail Cache</value>
@@ -437,7 +446,7 @@
     <value>Scanning…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
-    <value>Resolution Filter</value>
+    <value>Resolution</value>
   </data>
   <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
     <value>Only show scene cards matching specific resolutions. Disable to show all cards.</value>
@@ -458,7 +467,7 @@
     <value>Remove resolution</value>
   </data>
   <data name="Settings_CharaResolutionHeader.Text" xml:space="preserve">
-    <value>Character Resolution Filter</value>
+    <value>Character Resolution</value>
   </data>
   <data name="Settings_CharaResolutionDesc.Text" xml:space="preserve">
     <value>Only show character cards matching specific resolutions. Disable to show all cards.</value>
@@ -872,5 +881,26 @@
   </data>
   <data name="Detail_SamePostCount.Text" xml:space="preserve">
     <value> cards</value>
+  </data>
+  <data name="Settings_NavigationHeader.Text" xml:space="preserve">
+    <value>Navigation</value>
+  </data>
+  <data name="Settings_NavigationDesc.Text" xml:space="preserve">
+    <value>Choose which pages to show in the sidebar.</value>
+  </data>
+  <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="Settings_ShowCharactersNav.Content" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="Settings_ShowCoordinatesNav.Content" xml:space="preserve">
+    <value>Coordinates</value>
+  </data>
+  <data name="Settings_ShowScreenshotsNav.Content" xml:space="preserve">
+    <value>Screenshots</value>
+  </data>
+  <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
+    <value>Videos</value>
   </data>
 </root>

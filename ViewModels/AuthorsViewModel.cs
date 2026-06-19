@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -93,6 +94,7 @@ public partial class AuthorsViewModel : ObservableObject
 
     private readonly AuthorInfoService _authorInfoService;
     private readonly DispatcherQueueTimer _rebuildTimer;
+    private Dictionary<AuthorDisplay, IReadOnlyList<string>>? _thumbnailCache;
 
     public ObservableCollection<AuthorProviderTabViewModel> ProviderTabs { get; } = [];
 
@@ -136,7 +138,11 @@ public partial class AuthorsViewModel : ObservableObject
         _rebuildTimer.IsRepeating = false;
         _rebuildTimer.Tick += (_, _) => Rebuild();
 
-        _authorInfoService.AuthorsChanged += () => _rebuildTimer.Start();
+        _authorInfoService.AuthorsChanged += () =>
+        {
+            _thumbnailCache = null;
+            _rebuildTimer.Start();
+        };
         Rebuild();
     }
 
@@ -147,7 +153,7 @@ public partial class AuthorsViewModel : ObservableObject
             .Where(s => s.TotalCount > 0)
             .Where(s => MatchesSearch(s, search));
 
-        var summaries = (SortMode switch
+        var sorted = (SortMode switch
         {
             AuthorSortMode.Name => filtered
                 .OrderBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
@@ -158,6 +164,8 @@ public partial class AuthorsViewModel : ObservableObject
                 .OrderByDescending(s => s.TotalCount)
                 .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
         }).ToList();
+
+        var summaries = EnrichWithThumbnails(sorted);
 
         foreach (var tab in ProviderTabs)
         {
@@ -365,5 +373,56 @@ public partial class AuthorsViewModel : ObservableObject
 
         while (target.Count > source.Count)
             target.RemoveAt(target.Count - 1);
+    }
+
+    private const int MaxThumbnailsPerAuthor = 6;
+
+    private List<AuthorSummary> EnrichWithThumbnails(List<AuthorSummary> summaries)
+    {
+        if (App.SettingsViewModel is not { AuthorLiveTilesEnabled: true })
+            return summaries;
+
+        var thumbsByAuthor = _thumbnailCache ?? BuildThumbnailCache();
+        if (thumbsByAuthor.Count == 0)
+            return summaries;
+
+        for (var i = 0; i < summaries.Count; i++)
+        {
+            if (thumbsByAuthor.TryGetValue(summaries[i].Display, out var paths) && paths.Count > 0)
+                summaries[i] = summaries[i] with { ThumbnailPaths = paths };
+        }
+
+        return summaries;
+    }
+
+    private Dictionary<AuthorDisplay, IReadOnlyList<string>> BuildThumbnailCache()
+    {
+        var cache = App.ThumbnailCacheService;
+        var cards = App.GalleryViewModel?.Cards;
+        var result = new Dictionary<AuthorDisplay, IReadOnlyList<string>>();
+
+        if (cache is null || cards is null || cards.Count == 0)
+        {
+            _thumbnailCache = result;
+            return result;
+        }
+
+        var temp = new Dictionary<AuthorDisplay, List<string>>();
+        foreach (var card in cards)
+        {
+            if (card.Author is not { } author) continue;
+            if (!temp.TryGetValue(author, out var list))
+                temp[author] = list = [];
+            if (list.Count >= MaxThumbnailsPerAuthor) continue;
+            var path = cache.TryGetCachedPath(card);
+            if (path is not null)
+                list.Add(path);
+        }
+
+        foreach (var (key, list) in temp)
+            result[key] = list;
+
+        _thumbnailCache = result;
+        return result;
     }
 }

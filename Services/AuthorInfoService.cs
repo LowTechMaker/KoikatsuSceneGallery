@@ -20,6 +20,7 @@ public sealed record AuthorSummary(
     int CoordinateCount,
     DateTime LastUpdated)
 {
+    public IReadOnlyList<string> ThumbnailPaths { get; init; } = [];
     public int TotalCount => SceneCount + CharacterCount + CoordinateCount;
 }
 
