@@ -194,6 +194,7 @@
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" MaxWidth="180" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
@@ -209,13 +210,30 @@
                                         </StackPanel>
                                     </Button>
 
-                                    <TextBox
+                                    <StackPanel
                                         Grid.Column="1"
+                                        x:Uid="Import_BatchRatingTooltip"
+                                        Orientation="Horizontal"
+                                        Spacing="4"
+                                        VerticalAlignment="Center">
+                                        <Button MinWidth="48" Content="G"
+                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
+                                                Click="SetBatchRatingFetchFailed_AllAges" />
+                                        <Button MinWidth="64" Content="R-18"
+                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
+                                                Click="SetBatchRatingFetchFailed_R18" />
+                                        <Button MinWidth="72" Content="R-18G"
+                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
+                                                Click="SetBatchRatingFetchFailed_R18G" />
+                                    </StackPanel>
+
+                                    <TextBox
+                                        Grid.Column="2"
                                         x:Uid="Import_AuthorId"
                                         Text="{x:Bind ViewModel.BatchFetchFailedAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <Button
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         x:Uid="Import_SelectAuthor"
                                         Click="PickAuthorForFetchFailedBatch_Click"
                                         IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}">
@@ -223,7 +241,7 @@
                                     </Button>
 
                                     <Button
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Command="{x:Bind ViewModel.AssignBatchAuthorIdToFetchFailedCommand}">
                                         <FontIcon FontSize="14" Glyph="&#xE8FB;" />
                                     </Button>
@@ -528,6 +546,7 @@
                     <Grid Grid.Row="1" ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" MaxWidth="180" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" MaxWidth="180" />
@@ -545,25 +564,42 @@
                             </StackPanel>
                         </Button>
 
-                        <TextBox
+                        <StackPanel
                             Grid.Column="1"
+                            x:Uid="Import_BatchRatingTooltip"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            VerticalAlignment="Center">
+                            <Button MinWidth="48" Content="G"
+                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
+                                    Click="SetBatchRatingUnknown_AllAges" />
+                            <Button MinWidth="64" Content="R-18"
+                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
+                                    Click="SetBatchRatingUnknown_R18" />
+                            <Button MinWidth="72" Content="R-18G"
+                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
+                                    Click="SetBatchRatingUnknown_R18G" />
+                        </StackPanel>
+
+                        <TextBox
+                            Grid.Column="2"
                             x:Uid="Import_ArtworkId"
                             Text="{x:Bind ViewModel.BatchManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Button
-                            Grid.Column="2"
+                            Grid.Column="3"
                             x:Uid="Import_ResolveSelectedArtwork"
                             Command="{x:Bind ViewModel.AssignBatchArtworkIdToUnknownCommand}">
                             <FontIcon FontSize="14" Glyph="&#xE721;" />
                         </Button>
 
                         <TextBox
-                            Grid.Column="3"
+                            Grid.Column="4"
                             x:Uid="Import_AuthorId"
                             Text="{x:Bind ViewModel.BatchManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Button
-                            Grid.Column="4"
+                            Grid.Column="5"
                             x:Uid="Import_SelectAuthor"
                             Click="PickAuthorForUnknownBatch_Click"
                             IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}">
@@ -571,7 +607,7 @@
                         </Button>
 
                         <Button
-                            Grid.Column="5"
+                            Grid.Column="6"
                             Command="{x:Bind ViewModel.AssignBatchAuthorIdToUnknownCommand}">
                             <FontIcon FontSize="14" Glyph="&#xE8FB;" />
                         </Button>

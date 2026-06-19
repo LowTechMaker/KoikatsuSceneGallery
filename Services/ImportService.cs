@@ -266,6 +266,7 @@ public sealed class ImportService
                     {
                         item.AuthorName = info.AuthorName;
                         item.AuthorId = info.AuthorId;
+                        item.AuthorProviderId = artworkId.ProviderId;
                         item.Title = info.Title;
                         item.Rating = info.Rating;
                         item.Tags = info.Tags;
@@ -297,7 +298,7 @@ public sealed class ImportService
     /// Scans all library roots for author folders, returning deduplicated authors
     /// sorted by name. Used by the manual-assign picker.
     /// </summary>
-    public async Task<List<(string Name, string Id)>> GetKnownAuthorsAsync(CancellationToken ct)
+    public async Task<List<(string Name, string Id, string ProviderId)>> GetKnownAuthorsAsync(CancellationToken ct)
     {
         if (_authorProviders.Count == 0) return [];
 
@@ -306,7 +307,7 @@ public sealed class ImportService
         return await Task.Run(() =>
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var result = new List<(string Name, string Id)>();
+            var result = new List<(string Name, string Id, string ProviderId)>();
             var subfolder = config.ImportSubfolder.Trim();
 
             var allRoots = config.FolderPaths
@@ -341,7 +342,7 @@ public sealed class ImportService
                                         ct.ThrowIfCancellationRequested();
                                         var parsed = authorProvider.TryParseFolderName(Path.GetFileName(dir));
                                         if (parsed is not null && seen.Add($"{parsed.Key.ProviderId}\u001F{parsed.Key.Id}"))
-                                            result.Add((parsed.FolderDisplayName, parsed.Key.Id));
+                                            result.Add((parsed.FolderDisplayName, parsed.Key.Id, parsed.Key.ProviderId));
                                     }
                                 }
                                 catch (OperationCanceledException) { throw; }
@@ -491,10 +492,12 @@ public sealed class ImportService
             var roots = GetRootsForCardType(item.CardType, config);
             if (roots.Count == 0) continue;
 
-            var scope = item.ArtworkId is not null ? GetProviderScope(item.ArtworkId.ProviderId) : (Folder: "", UsesRatingFolders: true);
+            var providerId = item.ArtworkId?.ProviderId ?? item.AuthorProviderId;
+            var scope = providerId is not null ? GetProviderScope(providerId) : (Folder: "", UsesRatingFolders: true);
             var ratingFolder = scope.UsesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
             var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
             string? targetFolder = null;
+            var useUnrecognizedSubfolder = item.ArtworkId is null && item.AuthorId is not null;
 
             if (item.AuthorId is not null)
             {
@@ -509,14 +512,68 @@ public sealed class ImportService
                     }
                 }
 
+                if (targetFolder is null && item.ArtworkId is null)
+                {
+                    string? matchedProvider = null;
+                    foreach (var root in roots)
+                    {
+                        foreach (var providerScope in _importProviders.Select(p => GetProviderScope(p.ProviderId)))
+                        {
+                            var rf = providerScope.UsesRatingFolders ? ratingFolder : "";
+
+                            var exactKey = BuildScopeKey(root, providerScope.Folder, gameVersionFolder, rf);
+                            if (folderIndex.TryGetValue(exactKey, out var exactFolders)
+                                && exactFolders.TryGetValue(item.AuthorId, out var existing))
+                            {
+                                targetFolder = existing;
+                                break;
+                            }
+
+                            foreach (var gv in GetGameVersionFolderNames(config))
+                            {
+                                if (gv == gameVersionFolder) continue;
+                                var altKey = BuildScopeKey(root, providerScope.Folder, gv, rf);
+                                if (folderIndex.TryGetValue(altKey, out var altFolders)
+                                    && altFolders.ContainsKey(item.AuthorId))
+                                {
+                                    matchedProvider = providerScope.Folder;
+                                    break;
+                                }
+                            }
+                            if (matchedProvider is not null) break;
+                        }
+                        if (targetFolder is not null || matchedProvider is not null) break;
+                    }
+
+                    if (targetFolder is null && matchedProvider is not null && item.AuthorName is not null)
+                    {
+                        var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
+                        targetFolder = BuildTargetBase(roots[0], subfolder, matchedProvider, gameVersionFolder, ratingFolder, safeName);
+                    }
+                }
+
                 if (targetFolder is null && item.AuthorName is not null)
                 {
-                    var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
-                    targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
+                    if (providerId is not null)
+                    {
+                        var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
+                        targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
+                    }
+                    else
+                    {
+                        targetFolder = BuildTargetBase(
+                            roots[0],
+                            subfolder,
+                            config.UnknownFolderName,
+                            gameVersionFolder,
+                            "",
+                            SanitizeFolderName(item.AuthorId));
+                        useUnrecognizedSubfolder = false;
+                    }
                 }
             }
 
-            targetFolder ??= BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, config.UnknownFolderName, null);
+            targetFolder ??= BuildTargetBase(roots[0], subfolder, config.UnknownFolderName, gameVersionFolder, "", null);
 
             if (item.ArtworkId is not null)
             {
@@ -555,7 +612,7 @@ public sealed class ImportService
                 }
             }
 
-            if (item.ArtworkId is null && item.AuthorId is not null)
+            if (useUnrecognizedSubfolder)
                 targetFolder = Path.Combine(targetFolder, UnrecognizedFolderName);
 
             item.DestinationPath = Path.Combine(targetFolder, item.FileName);

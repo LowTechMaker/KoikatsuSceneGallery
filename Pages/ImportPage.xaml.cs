@@ -226,24 +226,28 @@ public sealed partial class ImportPage : Page
         if (_pickTarget is not null)
         {
             _pickTarget.ManualAuthorId = author.Id;
+            _pickTarget.ManualAuthorProviderId = author.ProviderId;
             await ViewModel.AssignAuthorCommand.ExecuteAsync(_pickTarget);
             _pickTarget = null;
         }
         else if (_pickTargetUnknownGroup is not null)
         {
             _pickTargetUnknownGroup.ManualAuthorId = author.Id;
+            _pickTargetUnknownGroup.ManualAuthorProviderId = author.ProviderId;
             await ViewModel.AssignAuthorToUnknownGroupCommand.ExecuteAsync(_pickTargetUnknownGroup);
             _pickTargetUnknownGroup = null;
         }
         else if (_pickBatchUnknownAuthor)
         {
             ViewModel.BatchManualAuthorId = author.Id;
+            ViewModel.BatchManualAuthorProviderId = author.ProviderId;
             await ViewModel.AssignBatchAuthorIdToUnknownCommand.ExecuteAsync(null);
             _pickBatchUnknownAuthor = false;
         }
         else if (_pickBatchFetchFailedAuthor)
         {
             ViewModel.BatchFetchFailedAuthorId = author.Id;
+            ViewModel.BatchFetchFailedAuthorProviderId = author.ProviderId;
             await ViewModel.AssignBatchAuthorIdToFetchFailedCommand.ExecuteAsync(null);
             _pickBatchFetchFailedAuthor = false;
         }
@@ -426,6 +430,24 @@ public sealed partial class ImportPage : Page
         };
         await dialog.ShowAsync();
     }
+
+    private void SetBatchRatingFetchFailed_AllAges(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForFetchFailedCommand.Execute(ContentRating.AllAges);
+
+    private void SetBatchRatingFetchFailed_R18(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForFetchFailedCommand.Execute(ContentRating.R18);
+
+    private void SetBatchRatingFetchFailed_R18G(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForFetchFailedCommand.Execute(ContentRating.R18G);
+
+    private void SetBatchRatingUnknown_AllAges(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForUnknownCommand.Execute(ContentRating.AllAges);
+
+    private void SetBatchRatingUnknown_R18(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForUnknownCommand.Execute(ContentRating.R18);
+
+    private void SetBatchRatingUnknown_R18G(object sender, RoutedEventArgs e) =>
+        ViewModel.SetBatchRatingForUnknownCommand.Execute(ContentRating.R18G);
 
     private void RemoveUnknownGroup_Click(object sender, RoutedEventArgs e)
     {

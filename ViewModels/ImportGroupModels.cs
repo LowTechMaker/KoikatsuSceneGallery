@@ -5,9 +5,10 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
-public sealed record SelectableAuthor(string Name, string Id)
+public sealed record SelectableAuthor(string Name, string Id, string? ProviderId)
 {
     public string DisplayText => $"{Name} ({Id})";
+    public string Key => $"{ProviderId ?? ""}\u001F{Id}";
 }
 
 public partial class ImportRatingGroup : ObservableObject
@@ -38,14 +39,16 @@ public partial class ImportAuthorGroup : ObservableObject
 
     public string AuthorName { get; }
     public string AuthorId { get; }
+    public string? ProviderId { get; }
     public ObservableCollection<ImportArtworkGroup> Artworks { get; } = [];
 
     public string HeaderText => $"{AuthorName} ({AuthorId})";
 
-    public ImportAuthorGroup(string authorName, string authorId)
+    public ImportAuthorGroup(string authorName, string authorId, string? providerId)
     {
         AuthorName = authorName;
         AuthorId = authorId;
+        ProviderId = providerId;
     }
 }
 
@@ -73,6 +76,8 @@ public partial class ImportArtworkGroup : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanAssignAuthor))]
     public partial string ManualAuthorId { get; set; } = "";
+
+    public string? ManualAuthorProviderId { get; set; }
 
     public bool CanAssignAuthor => !string.IsNullOrWhiteSpace(ManualAuthorId);
 
@@ -111,6 +116,8 @@ public partial class ImportUnknownGroup : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanAssignAuthor))]
     public partial string ManualAuthorId { get; set; } = "";
+
+    public string? ManualAuthorProviderId { get; set; }
 
     public bool CanAssignAuthor => !string.IsNullOrWhiteSpace(ManualAuthorId);
 

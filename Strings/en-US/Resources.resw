@@ -126,29 +126,14 @@
   <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
     <value>Game:</value>
   </data>
-  <data name="Gallery_EnvironmentFilterLabel.Text" xml:space="preserve">
-    <value>Environment:</value>
-  </data>
-  <data name="Gallery_TimelineFilterLabel.Text" xml:space="preserve">
-    <value>Timeline:</value>
-  </data>
   <data name="Gallery_FilterAll.Content" xml:space="preserve">
     <value>All</value>
-  </data>
-  <data name="Gallery_EnvNonMadevil.Content" xml:space="preserve">
-    <value>Non-Madevil</value>
   </data>
   <data name="Gallery_EnvUnknown.Content" xml:space="preserve">
     <value>Unknown</value>
   </data>
-  <data name="Gallery_TimelineOnly.Content" xml:space="preserve">
-    <value>Timeline only</value>
-  </data>
-  <data name="Gallery_TimelineExclude.Content" xml:space="preserve">
-    <value>No Timeline</value>
-  </data>
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
-    <value>Analyzing plugins…</value>
+    <value>Analyzing…</value>
   </data>
   <!-- ScreenshotGalleryPage -->
   <data name="Nav_Screenshots.Content" xml:space="preserve">
@@ -782,6 +767,9 @@
   </data>
   <data name="Import_RatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Rating</value>
+  </data>
+  <data name="Import_BatchRatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Set rating for all selected groups</value>
   </data>
   <data name="Import_ResolveSelectedArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Resolve selected artwork</value>

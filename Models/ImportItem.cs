@@ -47,6 +47,9 @@ public partial class ImportItem : ObservableObject
     public partial string? AuthorId { get; set; }
 
     [ObservableProperty]
+    public partial string? AuthorProviderId { get; set; }
+
+    [ObservableProperty]
     public partial string? Title { get; set; }
 
     [ObservableProperty]

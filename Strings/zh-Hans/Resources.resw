@@ -126,29 +126,14 @@
   <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
     <value>游戏：</value>
   </data>
-  <data name="Gallery_EnvironmentFilterLabel.Text" xml:space="preserve">
-    <value>环境：</value>
-  </data>
-  <data name="Gallery_TimelineFilterLabel.Text" xml:space="preserve">
-    <value>Timeline：</value>
-  </data>
   <data name="Gallery_FilterAll.Content" xml:space="preserve">
     <value>全部</value>
-  </data>
-  <data name="Gallery_EnvNonMadevil.Content" xml:space="preserve">
-    <value>非 Madevil</value>
   </data>
   <data name="Gallery_EnvUnknown.Content" xml:space="preserve">
     <value>未知</value>
   </data>
-  <data name="Gallery_TimelineOnly.Content" xml:space="preserve">
-    <value>仅 Timeline</value>
-  </data>
-  <data name="Gallery_TimelineExclude.Content" xml:space="preserve">
-    <value>排除 Timeline</value>
-  </data>
   <data name="Gallery_AnalyzingLabel.Text" xml:space="preserve">
-    <value>分析插件中…</value>
+    <value>分析中…</value>
   </data>
   <!-- ScreenshotGalleryPage -->
   <data name="Nav_Screenshots.Content" xml:space="preserve">
@@ -782,6 +767,9 @@
   </data>
   <data name="Import_RatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>分级</value>
+  </data>
+  <data name="Import_BatchRatingTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>为所有已选群组设定分级</value>
   </data>
   <data name="Import_ResolveSelectedArtwork.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>解析所选作品</value>

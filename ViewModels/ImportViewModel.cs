@@ -25,6 +25,7 @@ public partial class ImportViewModel : ObservableObject
         ContentRating Rating,
         string? AuthorName,
         string? AuthorId,
+        string? AuthorProviderId,
         string? Title,
         IReadOnlyList<ArtworkTag>? Tags,
         ImportItemStatus Status,
@@ -137,6 +138,8 @@ public partial class ImportViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AssignBatchAuthorIdToUnknownCommand))]
     public partial string? BatchManualAuthorId { get; set; }
 
+    public string? BatchManualAuthorProviderId { get; set; }
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AssignBatchArtworkIdToUnknownCommand))]
     public partial string? BatchManualArtworkId { get; set; }
@@ -144,6 +147,8 @@ public partial class ImportViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AssignBatchAuthorIdToFetchFailedCommand))]
     public partial string? BatchFetchFailedAuthorId { get; set; }
+
+    public string? BatchFetchFailedAuthorProviderId { get; set; }
 
     // Summary counts
     [ObservableProperty] public partial int R18GCount { get; set; }
@@ -290,6 +295,26 @@ public partial class ImportViewModel : ObservableObject
         UpdateSelectedFetchFailedCount();
     }
 
+    [RelayCommand]
+    private void SetBatchRatingForFetchFailed(ContentRating rating)
+    {
+        foreach (var group in FetchFailedGroups.Where(g => g.IsSelected))
+            foreach (var item in group.Files)
+                item.Rating = rating;
+
+        UpdateCounts();
+    }
+
+    [RelayCommand]
+    private void SetBatchRatingForUnknown(ContentRating rating)
+    {
+        foreach (var group in UnknownGroups.Where(g => g.IsSelected))
+            foreach (var item in group.Files)
+                item.Rating = rating;
+
+        UpdateCounts();
+    }
+
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
@@ -325,6 +350,8 @@ public partial class ImportViewModel : ObservableObject
             BatchManualAuthorId = null;
             BatchManualArtworkId = null;
             BatchFetchFailedAuthorId = null;
+            BatchManualAuthorProviderId = null;
+            BatchFetchFailedAuthorProviderId = null;
             _manualBaselines.Clear();
             _currentAnalysisPaths.Clear();
             _currentRejectedAnalysisCount = 0;
@@ -384,12 +411,15 @@ public partial class ImportViewModel : ObservableObject
         }
 
         // Find or create the author group
-        var authorGroup = ratingGroup.Authors.FirstOrDefault(a => a.AuthorId == item.AuthorId);
+        var providerId = item.ArtworkId?.ProviderId ?? item.AuthorProviderId;
+        var authorGroup = ratingGroup.Authors.FirstOrDefault(a =>
+            a.AuthorId == item.AuthorId
+            && string.Equals(a.ProviderId, providerId, StringComparison.OrdinalIgnoreCase));
         if (authorGroup is null)
         {
-            authorGroup = new ImportAuthorGroup(item.AuthorName!, item.AuthorId!);
+            authorGroup = new ImportAuthorGroup(item.AuthorName!, item.AuthorId!, providerId);
             ratingGroup.Authors.Add(authorGroup);
-            AddBatchAuthorIfLoaded(authorGroup.AuthorName, authorGroup.AuthorId);
+            AddBatchAuthorIfLoaded(authorGroup.AuthorName, authorGroup.AuthorId, authorGroup.ProviderId);
         }
 
         // Find or create the artwork group
@@ -439,14 +469,14 @@ public partial class ImportViewModel : ObservableObject
                 // Batch authors first (from current import)
                 foreach (var ratingGroup in MatchedGroups)
                     foreach (var authorGroup in ratingGroup.Authors)
-                        if (seen.Add(authorGroup.AuthorId))
-                            BatchAuthors.Add(new SelectableAuthor(authorGroup.AuthorName, authorGroup.AuthorId));
+                        if (seen.Add(AuthorKey(authorGroup.ProviderId, authorGroup.AuthorId)))
+                            BatchAuthors.Add(new SelectableAuthor(authorGroup.AuthorName, authorGroup.AuthorId, authorGroup.ProviderId));
 
                 // Library authors
-                foreach (var (name, id) in known)
+                foreach (var (name, id, providerId) in known)
                 {
-                    if (seen.Add(id))
-                        LibraryAuthors.Add(new SelectableAuthor(name, id));
+                    if (seen.Add(AuthorKey(providerId, id)))
+                        LibraryAuthors.Add(new SelectableAuthor(name, id, providerId));
                 }
             });
         }
@@ -454,14 +484,32 @@ public partial class ImportViewModel : ObservableObject
     }
 
     public string? ResolveAuthorName(string authorId)
+        => ResolveAuthor(authorId).Name;
+
+    private (string Name, string? ProviderId) ResolveAuthor(string authorId, string? preferredProviderId = null)
     {
         var id = authorId.Trim();
-        foreach (var a in BatchAuthors)
-            if (a.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) return a.Name;
-        foreach (var a in LibraryAuthors)
-            if (a.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) return a.Name;
-        return null;
+        var matches = BatchAuthors
+            .Concat(LibraryAuthors)
+            .Where(a => a.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(preferredProviderId))
+        {
+            var preferred = matches.FirstOrDefault(a =>
+                string.Equals(a.ProviderId, preferredProviderId, StringComparison.OrdinalIgnoreCase));
+            if (preferred is not null)
+                return (preferred.Name, preferred.ProviderId);
+        }
+
+        if (matches.Count == 1)
+            return (matches[0].Name, matches[0].ProviderId);
+
+        return (matches.FirstOrDefault()?.Name ?? id, null);
     }
+
+    private static string AuthorKey(string? providerId, string authorId)
+        => $"{providerId ?? ""}\u001F{authorId}";
 
     public async Task<ReverseImageSearchResult?> SearchSauceNaoForFetchFailedGroupAsync(
         ImportArtworkGroup group,
@@ -541,6 +589,7 @@ public partial class ImportViewModel : ObservableObject
 
             item.AuthorName = result.AuthorName;
             item.AuthorId = result.AuthorId;
+            item.AuthorProviderId = result.ArtworkId?.ProviderId;
             item.Title = result.Title;
             item.Rating = rating;
             item.Tags = [];
@@ -554,7 +603,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var item in files)
             PlaceItemInTree(item);
 
-        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId);
+        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId, result.ArtworkId?.ProviderId);
 
         await ReResolveDestinationsAsync();
         UpdateCounts();
@@ -581,6 +630,7 @@ public partial class ImportViewModel : ObservableObject
 
             item.AuthorName = result.AuthorName;
             item.AuthorId = result.AuthorId;
+            item.AuthorProviderId = result.ArtworkId?.ProviderId;
             item.Title = result.Title;
             item.Rating = rating;
             item.Tags = [];
@@ -594,20 +644,21 @@ public partial class ImportViewModel : ObservableObject
         foreach (var item in files)
             PlaceItemInTree(item);
 
-        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId);
+        AddBatchAuthorIfLoaded(result.AuthorName, result.AuthorId, result.ArtworkId?.ProviderId);
 
         await ReResolveDestinationsAsync();
         UpdateCounts();
     }
 
-    private void AddBatchAuthorIfLoaded(string authorName, string authorId)
+    private void AddBatchAuthorIfLoaded(string authorName, string authorId, string? providerId)
     {
         if (!_authorsLoaded) return;
-        if (BatchAuthors.Any(a => a.Id.Equals(authorId, StringComparison.OrdinalIgnoreCase))) return;
-        var libraryMatch = LibraryAuthors.FirstOrDefault(a => a.Id.Equals(authorId, StringComparison.OrdinalIgnoreCase));
+        var key = AuthorKey(providerId, authorId);
+        if (BatchAuthors.Any(a => a.Key.Equals(key, StringComparison.OrdinalIgnoreCase))) return;
+        var libraryMatch = LibraryAuthors.FirstOrDefault(a => a.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
         if (libraryMatch is not null)
             LibraryAuthors.Remove(libraryMatch);
-        BatchAuthors.Add(new SelectableAuthor(authorName, authorId));
+        BatchAuthors.Add(new SelectableAuthor(authorName, authorId, providerId));
     }
 
     private void MoveToUnknown(ImportItem item)
@@ -659,13 +710,14 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.Unknown, files);
 
         var id = group.ManualAuthorId.Trim();
-        var name = ResolveAuthorName(id) ?? id;
+        var author = ResolveAuthor(id, group.ManualAuthorProviderId);
 
         foreach (var item in files)
         {
             item.ManualAuthorId = id;
-            item.AuthorName = name;
+            item.AuthorName = author.Name;
             item.AuthorId = id;
+            item.AuthorProviderId = author.ProviderId;
         }
 
         UnknownGroups.Remove(group);
@@ -693,6 +745,7 @@ public partial class ImportViewModel : ObservableObject
             item.ArtworkId = artworkId;
             item.AuthorName = null;
             item.AuthorId = null;
+            item.AuthorProviderId = null;
             item.Title = null;
             item.Tags = null;
             item.ErrorMessage = null;
@@ -707,6 +760,7 @@ public partial class ImportViewModel : ObservableObject
             {
                 item.AuthorName = info.AuthorName;
                 item.AuthorId = info.AuthorId;
+                item.AuthorProviderId = artworkId.ProviderId;
                 item.Title = info.Title;
                 item.Rating = info.Rating;
                 item.Tags = info.Tags;
@@ -732,13 +786,14 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.Unknown, files);
 
         var id = BatchManualAuthorId.Trim();
-        var name = ResolveAuthorName(id) ?? id;
+        var author = ResolveAuthor(id, BatchManualAuthorProviderId);
 
         foreach (var item in files)
         {
             item.ManualAuthorId = id;
-            item.AuthorName = name;
+            item.AuthorName = author.Name;
             item.AuthorId = id;
+            item.AuthorProviderId = author.ProviderId;
         }
 
         foreach (var group in groups)
@@ -748,6 +803,7 @@ public partial class ImportViewModel : ObservableObject
             PlaceItemInTree(item);
 
         BatchManualAuthorId = null;
+        BatchManualAuthorProviderId = null;
 
         await ReResolveDestinationsAsync();
         UpdateCounts();
@@ -776,6 +832,7 @@ public partial class ImportViewModel : ObservableObject
             item.ArtworkId = artworkId;
             item.AuthorName = null;
             item.AuthorId = null;
+            item.AuthorProviderId = null;
             item.Title = null;
             item.Tags = null;
             item.ErrorMessage = null;
@@ -790,6 +847,7 @@ public partial class ImportViewModel : ObservableObject
             {
                 item.AuthorName = info.AuthorName;
                 item.AuthorId = info.AuthorId;
+                item.AuthorProviderId = artworkId.ProviderId;
                 item.Title = info.Title;
                 item.Rating = info.Rating;
                 item.Tags = info.Tags;
@@ -909,12 +967,13 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.FetchFailed, files);
 
         var authorId = group.ManualAuthorId.Trim();
-        var authorName = ResolveAuthorName(authorId) ?? authorId;
+        var author = ResolveAuthor(authorId, group.ManualAuthorProviderId);
 
         foreach (var item in files)
         {
-            item.AuthorName = authorName;
+            item.AuthorName = author.Name;
             item.AuthorId = authorId;
+            item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
         }
 
         FetchFailedGroups.Remove(group);
@@ -943,13 +1002,14 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.FetchFailed, files);
 
         var authorId = BatchFetchFailedAuthorId.Trim();
-        var authorName = ResolveAuthorName(authorId) ?? authorId;
+        var author = ResolveAuthor(authorId, BatchFetchFailedAuthorProviderId);
 
         foreach (var item in files)
         {
             item.ManualAuthorId = authorId;
-            item.AuthorName = authorName;
+            item.AuthorName = author.Name;
             item.AuthorId = authorId;
+            item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
         }
 
         foreach (var group in groups)
@@ -959,6 +1019,7 @@ public partial class ImportViewModel : ObservableObject
             PlaceItemInTree(item);
 
         BatchFetchFailedAuthorId = null;
+        BatchFetchFailedAuthorProviderId = null;
         UpdateSelectedFetchFailedCount();
 
         await ReResolveDestinationsAsync();
@@ -1203,6 +1264,7 @@ public partial class ImportViewModel : ObservableObject
             item.Rating,
             item.AuthorName,
             item.AuthorId,
+            item.AuthorProviderId,
             item.Title,
             item.Tags,
             item.Status,
@@ -1217,6 +1279,7 @@ public partial class ImportViewModel : ObservableObject
         state.Item.Rating = state.Rating;
         state.Item.AuthorName = state.AuthorName;
         state.Item.AuthorId = state.AuthorId;
+        state.Item.AuthorProviderId = state.AuthorProviderId;
         state.Item.Title = state.Title;
         state.Item.Tags = state.Tags;
         state.Item.Status = state.Status;
