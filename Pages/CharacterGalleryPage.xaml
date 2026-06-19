@@ -64,6 +64,7 @@
                 <AutoSuggestBox
                     x:Name="SearchBox"
                     x:Uid="Gallery_SearchBox"
+                    AutomationProperties.AutomationId="CharacterSearchBox"
                     QueryIcon="Find"
                     TextChanged="SearchBox_TextChanged" />
                 <TextBlock
@@ -75,6 +76,7 @@
             <Button
                 x:Name="RandomButton"
                 x:Uid="Gallery_RandomButton"
+                AutomationProperties.AutomationId="CharacterRandomButton"
                 Grid.Column="1"
                 Width="40"
                 Height="32"
@@ -86,6 +88,7 @@
 
             <ComboBox
                 x:Name="SortComboBox"
+                AutomationProperties.AutomationId="CharacterSortComboBox"
                 Grid.Column="2"
                 Width="160"
                 Height="32"
@@ -101,6 +104,7 @@
             <ToggleButton
                 x:Name="SortDirectionButton"
                 x:Uid="Gallery_SortDirection"
+                AutomationProperties.AutomationId="CharacterSortDirectionButton"
                 Grid.Column="3"
                 Width="40"
                 Height="32"
@@ -162,6 +166,7 @@
                 Style="{StaticResource CaptionTextBlockStyle}" />
             <ComboBox
                 x:Name="SourceFilterComboBox"
+                AutomationProperties.AutomationId="CharacterSourceFilterComboBox"
                 Width="180"
                 Height="32"
                 SelectedIndex="0"
@@ -196,6 +201,7 @@
 
         <GridView
             x:Name="GalleryGrid"
+            AutomationProperties.AutomationId="CharacterGalleryGrid"
             Grid.Row="3"
             CanDragItems="True"
             ContainerContentChanging="GalleryGrid_ContainerContentChanging"
@@ -230,7 +236,7 @@
                         Padding="4"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
-                        CornerRadius="8"
+                        CornerRadius="{StaticResource OverlayCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1">
@@ -242,7 +248,7 @@
                         <Grid>
                             <!--  Stack shadow (peeks from bottom-right when card has versions)  -->
                             <Border
-                                CornerRadius="4"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
@@ -252,7 +258,7 @@
                             <Border
                                 x:Name="ThumbBorder"
                                 Margin="0,0,3,3"
-                                CornerRadius="4"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                 <Image
                                     Stretch="Uniform"
@@ -266,7 +272,7 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Top"
                                 Background="{ThemeResource SystemAccentColor}"
-                                CornerRadius="8"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Visibility="{x:Bind HasVersions, Mode=OneWay}">
                                 <TextBlock
                                     FontSize="11"

@@ -903,4 +903,65 @@
   <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
     <value>Videos</value>
   </data>
+  <!-- SettingsCard resources -->
+  <data name="SC_ShowFileNames.Header" xml:space="preserve">
+    <value>File names on thumbnails</value>
+  </data>
+  <data name="SC_ShowFileNames.Description" xml:space="preserve">
+    <value>Show or hide file names below gallery thumbnails</value>
+  </data>
+  <data name="SC_ScrollToTop.Header" xml:space="preserve">
+    <value>Scroll to top when sorting changes</value>
+  </data>
+  <data name="SC_ScrollToTop.Description" xml:space="preserve">
+    <value>Automatically scroll the gallery to the top after changing sort order</value>
+  </data>
+  <data name="SC_AuthorLiveTiles.Header" xml:space="preserve">
+    <value>Author live tiles</value>
+  </data>
+  <data name="SC_AuthorLiveTiles.Description" xml:space="preserve">
+    <value>Show animated preview tiles on the authors page</value>
+  </data>
+  <data name="SC_Navigation.Header" xml:space="preserve">
+    <value>Sidebar pages</value>
+  </data>
+  <data name="SC_Navigation.Description" xml:space="preserve">
+    <value>Choose which pages appear in the navigation sidebar</value>
+  </data>
+  <data name="SC_Language.Header" xml:space="preserve">
+    <value>App language</value>
+  </data>
+  <data name="SC_Language.Description" xml:space="preserve">
+    <value>Changing the language requires restarting the app</value>
+  </data>
+  <data name="SC_CacheFolder.Header" xml:space="preserve">
+    <value>Cache location</value>
+  </data>
+  <data name="SC_CacheFolder.Description" xml:space="preserve">
+    <value>Where cached thumbnail files are stored</value>
+  </data>
+  <data name="SC_CacheActions.Header" xml:space="preserve">
+    <value>Manage cache</value>
+  </data>
+  <data name="SC_CacheActions.Description" xml:space="preserve">
+    <value>Change, reset, or clear the thumbnail cache folder</value>
+  </data>
+  <data name="SC_CacheBuffer.Header" xml:space="preserve">
+    <value>Render buffer</value>
+  </data>
+  <data name="SC_CacheBuffer.Description" xml:space="preserve">
+    <value>Off-screen render buffer as a multiple of the visible area. Higher values keep more thumbnails ready for smooth scrolling</value>
+  </data>
+  <data name="SC_SizeSelector.Header" xml:space="preserve">
+    <value>Thumbnail size buttons</value>
+  </data>
+  <data name="SC_SizeSelector.Description" xml:space="preserve">
+    <value>Show small/medium/large size toggle buttons in the gallery toolbar</value>
+  </data>
+  <data name="SC_VisualSimilarity.Header" xml:space="preserve">
+    <value>Visual similarity detection</value>
+  </data>
+  <data name="SC_VisualSimilarity.Description" xml:space="preserve">
+    <value>Detect and group visually similar images in the gallery</value>
+  </data>
 </root>

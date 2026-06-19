@@ -32,6 +32,7 @@
 
         <NavigationView
             x:Name="NavView"
+            AutomationProperties.AutomationId="NavView"
             Grid.Row="1"
             IsBackButtonVisible="Collapsed"
             IsPaneToggleButtonVisible="False"
@@ -41,6 +42,7 @@
                 <NavigationViewItem
                     x:Name="GalleryNavItem"
                     x:Uid="Nav_Gallery"
+                    AutomationProperties.AutomationId="GalleryNavItem"
                     IsSelected="True"
                     Tag="gallery">
                     <NavigationViewItem.Icon>
@@ -50,6 +52,7 @@
                 <NavigationViewItem
                     x:Name="CharactersNavItem"
                     x:Uid="Nav_Characters"
+                    AutomationProperties.AutomationId="CharactersNavItem"
                     Tag="characters">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77B;" />
@@ -58,6 +61,7 @@
                 <NavigationViewItem
                     x:Name="CoordinatesNavItem"
                     x:Uid="Nav_Coordinates"
+                    AutomationProperties.AutomationId="CoordinatesNavItem"
                     Tag="coordinates">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE78A;" />
@@ -66,6 +70,7 @@
                 <NavigationViewItem
                     x:Name="ScreenshotsNavItem"
                     x:Uid="Nav_Screenshots"
+                    AutomationProperties.AutomationId="ScreenshotsNavItem"
                     Tag="screenshots">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE722;" />
@@ -74,6 +79,7 @@
                 <NavigationViewItem
                     x:Name="VideosNavItem"
                     x:Uid="Nav_Videos"
+                    AutomationProperties.AutomationId="VideosNavItem"
                     Tag="videos">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE714;" />
@@ -83,6 +89,7 @@
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"
                     x:Uid="Nav_Authors"
+                    AutomationProperties.AutomationId="AuthorsNavItem"
                     Tag="authors"
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
@@ -95,6 +102,7 @@
                 <NavigationViewItem
                     x:Name="ImportNavItem"
                     x:Uid="Nav_Import"
+                    AutomationProperties.AutomationId="ImportNavItem"
                     Tag="import"
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
@@ -102,7 +110,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
-            <Frame x:Name="NavFrame" />
+            <Frame x:Name="NavFrame" AutomationProperties.AutomationId="NavFrame" />
         </NavigationView>
     </Grid>
 </Window>

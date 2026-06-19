@@ -53,6 +53,7 @@
                 <Button
                     x:Name="PrevButton"
                     x:Uid="Detail_PrevButton"
+                    AutomationProperties.AutomationId="CoordDetailPrevButton"
                     Click="PrevButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76B;" />
@@ -61,6 +62,7 @@
                 <Button
                     x:Name="RandomButton"
                     x:Uid="Detail_RandomButton"
+                    AutomationProperties.AutomationId="CoordDetailRandomButton"
                     Click="RandomButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE8B1;" />
@@ -69,6 +71,7 @@
                 <Button
                     x:Name="NextButton"
                     x:Uid="Detail_NextButton"
+                    AutomationProperties.AutomationId="CoordDetailNextButton"
                     Click="NextButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76C;" />
@@ -88,6 +91,7 @@
                 ZoomMode="Enabled">
                 <Image
                     x:Name="PreviewImage"
+                    AutomationProperties.AutomationId="CoordDetailPreviewImage"
                     CanDrag="True"
                     DragStarting="PreviewImage_DragStarting"
                     Stretch="Uniform" />
@@ -99,7 +103,7 @@
                 VerticalScrollBarVisibility="Auto">
                 <StackPanel
                     Padding="16"
-                    CornerRadius="8"
+                    CornerRadius="{StaticResource OverlayCornerRadius}"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"

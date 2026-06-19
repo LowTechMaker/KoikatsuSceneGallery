@@ -12,7 +12,7 @@
         x:Name="RootGrid"
         Width="280"
         Height="160"
-        CornerRadius="8"
+        CornerRadius="{StaticResource OverlayCornerRadius}"
         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
         BorderThickness="1">
@@ -28,7 +28,7 @@
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                     <GradientStop Color="Transparent" Offset="0.25" />
-                    <GradientStop Color="#CC000000" Offset="1.0" />
+                    <GradientStop x:Name="ScrimEndStop" Color="#CC000000" Offset="1.0" />
                 </LinearGradientBrush>
             </Grid.Background>
         </Grid>
@@ -54,29 +54,29 @@
                 <TextBlock
                     x:Name="LiveName"
                     MaxLines="1"
-                    Foreground="White"
+                    Foreground="{ThemeResource LiveTileOverlayForegroundBrush}"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     TextTrimming="CharacterEllipsis" />
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE8B9;" />
+                        <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE8B9;" />
                         <TextBlock
                             x:Name="LiveSceneCount"
-                            Foreground="#CCFFFFFF"
+                            Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE77B;" />
+                        <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE77B;" />
                         <TextBlock
                             x:Name="LiveCharacterCount"
-                            Foreground="#CCFFFFFF"
+                            Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <FontIcon FontSize="12" Foreground="#CCFFFFFF" Glyph="&#xE78A;" />
+                        <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE78A;" />
                         <TextBlock
                             x:Name="LiveCoordinateCount"
-                            Foreground="#CCFFFFFF"
+                            Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
                 </StackPanel>

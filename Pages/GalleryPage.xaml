@@ -6,13 +6,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:converters="using:KoikatsuSceneGallery.Converters"
     xmlns:models="using:KoikatsuSceneGallery.Models"
     mc:Ignorable="d">
-
-    <Page.Resources>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
-    </Page.Resources>
 
     <Page.KeyboardAccelerators>
         <KeyboardAccelerator Key="Home" Invoked="ScrollToTop_Invoked" />
@@ -34,6 +29,11 @@
             <TextBlock
                 x:Uid="Gallery_Title"
                 Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="{x:Bind ViewModel.CardsView.Count, Mode=OneWay}" />
             <StackPanel
                 Orientation="Horizontal"
                 VerticalAlignment="Center"
@@ -70,6 +70,7 @@
                 <AutoSuggestBox
                     x:Name="SearchBox"
                     x:Uid="Gallery_SearchBox"
+                    AutomationProperties.AutomationId="GallerySearchBox"
                     QueryIcon="Find"
                     TextChanged="SearchBox_TextChanged" />
                 <TextBlock
@@ -81,6 +82,7 @@
             <Button
                 x:Name="RandomButton"
                 x:Uid="Gallery_RandomButton"
+                AutomationProperties.AutomationId="GalleryRandomButton"
                 Grid.Column="1"
                 Width="40"
                 Height="32"
@@ -90,8 +92,21 @@
                 <FontIcon FontSize="14" Glyph="&#xE8B1;" />
             </Button>
 
+            <ToggleButton
+                x:Uid="Gallery_ShowR18Button"
+                AutomationProperties.AutomationId="GalleryShowR18Button"
+                Grid.Column="2"
+                Width="64"
+                Height="32"
+                Padding="0"
+                VerticalAlignment="Top"
+                Content="R-18"
+                IsChecked="{x:Bind ViewModel.ShowR18Content, Mode=TwoWay}"
+                Visibility="{x:Bind ViewModel.ShowR18FilterButton, Mode=OneWay}" />
+
             <ComboBox
                 x:Name="SortComboBox"
+                AutomationProperties.AutomationId="GallerySortComboBox"
                 Grid.Column="3"
                 Width="160"
                 Height="32"
@@ -107,6 +122,7 @@
             <ToggleButton
                 x:Name="SortDirectionButton"
                 x:Uid="Gallery_SortDirection"
+                AutomationProperties.AutomationId="GallerySortDirectionButton"
                 Grid.Column="4"
                 Width="40"
                 Height="32"
@@ -119,7 +135,6 @@
                     Glyph="&#xE74A;" />
             </ToggleButton>
 
-            <!--  Thumbnail size: small / medium / large (one stays selected)  -->
             <StackPanel
                 x:Name="SizeButtonsPanel"
                 Grid.Column="5"
@@ -154,25 +169,17 @@
                     Click="SizeButton_Click"
                     Tag="2" />
             </StackPanel>
-
-            <ToggleButton
-                x:Uid="Gallery_ShowR18Button"
-                Grid.Column="2"
-                Width="64"
-                Height="32"
-                Padding="0"
-                VerticalAlignment="Top"
-                Content="R-18"
-                IsChecked="{x:Bind ViewModel.ShowR18Content, Mode=TwoWay}"
-                Visibility="{x:Bind ViewModel.ShowR18FilterButton, Mode=OneWay}" />
         </Grid>
 
-        <StackPanel
+        <ScrollViewer
             Grid.Row="2"
+            HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Disabled"
+            Visibility="{x:Bind ViewModel.ShowMetadataFilters, Mode=OneWay}">
+        <StackPanel
             Orientation="Horizontal"
             VerticalAlignment="Center"
-            Spacing="8"
-            Visibility="{x:Bind ViewModel.ShowMetadataFilters, Mode=OneWay}">
+            Spacing="8">
             <TextBlock
                 x:Uid="Gallery_GameFilterLabel"
                 VerticalAlignment="Center"
@@ -180,6 +187,7 @@
                 Style="{StaticResource CaptionTextBlockStyle}" />
             <ComboBox
                 x:Name="GameFilterComboBox"
+                AutomationProperties.AutomationId="GalleryGameFilterComboBox"
                 Width="170"
                 Height="32"
                 SelectedIndex="0"
@@ -197,6 +205,7 @@
                 Style="{StaticResource CaptionTextBlockStyle}" />
             <ComboBox
                 x:Name="EnvironmentFilterComboBox"
+                AutomationProperties.AutomationId="GalleryEnvironmentFilterComboBox"
                 Width="150"
                 Height="32"
                 SelectedIndex="0"
@@ -214,6 +223,7 @@
                 Style="{StaticResource CaptionTextBlockStyle}" />
             <ComboBox
                 x:Name="TimelineFilterComboBox"
+                AutomationProperties.AutomationId="GalleryTimelineFilterComboBox"
                 Width="150"
                 Height="32"
                 SelectedIndex="0"
@@ -243,9 +253,11 @@
                     Text="{x:Bind ViewModel.PendingMetadataCount, Mode=OneWay}" />
             </StackPanel>
         </StackPanel>
+        </ScrollViewer>
 
         <GridView
             x:Name="GalleryGrid"
+            AutomationProperties.AutomationId="GalleryGrid"
             Grid.Row="3"
             CanDragItems="True"
             ContainerContentChanging="GalleryGrid_ContainerContentChanging"
@@ -282,7 +294,7 @@
                         Padding="4"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
-                        CornerRadius="8"
+                        CornerRadius="{StaticResource OverlayCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1">
@@ -293,7 +305,7 @@
 
                         <Border
                             x:Name="ThumbBorder"
-                            CornerRadius="4"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <Image
                                 Stretch="Uniform"

@@ -52,6 +52,7 @@
                 Spacing="8">
                 <Button
                     x:Uid="Authors_RefreshAll"
+                    AutomationProperties.AutomationId="AuthorsRefreshAllButton"
                     IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
                     Command="{x:Bind ViewModel.RefreshAllCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -71,12 +72,14 @@
             <AutoSuggestBox
                 x:Name="AuthorSearchBox"
                 x:Uid="Authors_SearchBox"
+                AutomationProperties.AutomationId="AuthorSearchBox"
                 Height="32"
                 QueryIcon="Find"
                 TextChanged="AuthorSearchBox_TextChanged" />
 
             <ComboBox
                 x:Name="SortComboBox"
+                AutomationProperties.AutomationId="AuthorSortComboBox"
                 Grid.Column="1"
                 Width="160"
                 Height="32"
@@ -96,6 +99,7 @@
 
             <Pivot
                 x:Name="AuthorsPivot"
+                AutomationProperties.AutomationId="AuthorsPivot"
                 ItemsSource="{x:Bind ViewModel.ProviderTabs, Mode=OneWay}"
                 SelectionChanged="AuthorsPivot_SelectionChanged">
                 <Pivot.HeaderTemplate>

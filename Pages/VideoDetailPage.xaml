@@ -54,6 +54,7 @@
                 <Button
                     x:Name="RotateLeftButton"
                     x:Uid="Detail_RotateLeft"
+                    AutomationProperties.AutomationId="VideoRotateLeftButton"
                     Click="RotateLeftButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE80D;" />
@@ -62,6 +63,7 @@
                 <Button
                     x:Name="RotateRightButton"
                     x:Uid="Detail_RotateRight"
+                    AutomationProperties.AutomationId="VideoRotateRightButton"
                     Click="RotateRightButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE7AD;" />
@@ -72,6 +74,7 @@
                 <Button
                     x:Name="PrevButton"
                     x:Uid="Detail_PrevButton"
+                    AutomationProperties.AutomationId="VideoPrevButton"
                     Click="PrevButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76B;" />
@@ -80,6 +83,7 @@
                 <Button
                     x:Name="RandomButton"
                     x:Uid="Detail_RandomButton"
+                    AutomationProperties.AutomationId="VideoRandomDetailButton"
                     Click="RandomButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE8B1;" />
@@ -88,6 +92,7 @@
                 <Button
                     x:Name="NextButton"
                     x:Uid="Detail_NextButton"
+                    AutomationProperties.AutomationId="VideoNextButton"
                     Click="NextButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76C;" />
@@ -103,6 +108,7 @@
 
             <MediaPlayerElement
                 x:Name="VideoPlayer"
+                AutomationProperties.AutomationId="VideoPlayer"
                 RenderTransformOrigin="0.5,0.5"
                 AreTransportControlsEnabled="True"
                 Stretch="Uniform">
@@ -114,7 +120,7 @@
             <StackPanel
                 Grid.Column="1"
                 Padding="16"
-                CornerRadius="8"
+                CornerRadius="{StaticResource OverlayCornerRadius}"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"

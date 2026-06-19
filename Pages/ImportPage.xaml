@@ -54,6 +54,7 @@
                 Style="{StaticResource TitleTextBlockStyle}" />
             <Button
                 x:Name="CookieSetupButton"
+                AutomationProperties.AutomationId="ImportCookieSetupButton"
                 Grid.Column="2"
                 VerticalAlignment="Center"
                 Click="CookieSetup_Click"
@@ -162,7 +163,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                            <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
                                                     Background="{ThemeResource ControlFillColorDefaultBrush}">
                                                 <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
                                             </Border>
@@ -264,7 +265,7 @@
                                                                TextTrimming="CharacterEllipsis"
                                                                MaxLines="1" />
 
-                                                    <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
+                                                    <Border Grid.Column="2" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2"
                                                             VerticalAlignment="Center"
                                                             Background="{ThemeResource ControlFillColorDefaultBrush}">
                                                         <TextBlock FontSize="11" Text="{x:Bind FileCount}" />
@@ -326,7 +327,7 @@
                                                             </Grid.ColumnDefinitions>
 
                                                             <Border Width="144" Height="108"
-                                                                    CornerRadius="6"
+                                                                    CornerRadius="{StaticResource ControlCornerRadius}"
                                                                     Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                                     BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                                                                     BorderThickness="1">
@@ -340,7 +341,7 @@
 
                                                             <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
                                                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                    <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                                                    <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
                                                                             Background="{ThemeResource ControlFillColorDefaultBrush}">
                                                                         <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
                                                                     </Border>
@@ -453,7 +454,7 @@
                                                                                         </Grid.ColumnDefinitions>
 
                                                                                         <!-- Card type badge -->
-                                                                                        <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                                                                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
                                                                                                 Background="{ThemeResource ControlFillColorDefaultBrush}">
                                                                                             <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
                                                                                         </Border>
@@ -471,11 +472,11 @@
                                                                                         </StackPanel>
 
                                                                                         <!-- R-18 badge -->
-                                                                                        <Border Grid.Column="2" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
-                                                                                                Background="#D84315"
+                                                                                        <Border Grid.Column="2" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
+                                                                                                Background="{ThemeResource RatingR18BadgeBrush}"
                                                                                                 Visibility="{x:Bind IsR18OrAbove, Mode=OneWay}">
                                                                                             <TextBlock Text="{x:Bind RatingText, Mode=OneWay}"
-                                                                                                       Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                                                                                                       Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
                                                                                         </Border>
 
                                                                                         <!-- Status -->
@@ -692,7 +693,7 @@
                                                         </Grid.ColumnDefinitions>
 
                                                         <Border Width="144" Height="108"
-                                                                CornerRadius="6"
+                                                                CornerRadius="{StaticResource ControlCornerRadius}"
                                                                 Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                                                                 BorderThickness="1">
@@ -706,7 +707,7 @@
 
                                                         <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                                                <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
                                                                         Background="{ThemeResource ControlFillColorDefaultBrush}">
                                                                     <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
                                                                 </Border>
@@ -815,8 +816,8 @@
                 Margin="8,0,0,0">
 
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="#C62828" CornerRadius="4" Padding="6,2">
-                        <TextBlock Text="R-18G" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                    <Border Background="{ThemeResource RatingR18GBadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
+                        <TextBlock Text="R-18G" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
                     </Border>
                     <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}"
                                VerticalAlignment="Center"
@@ -825,8 +826,8 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="#D84315" CornerRadius="4" Padding="6,2">
-                        <TextBlock Text="R-18" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                    <Border Background="{ThemeResource RatingR18BadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
+                        <TextBlock Text="R-18" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
                     </Border>
                     <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}"
                                VerticalAlignment="Center"
@@ -835,8 +836,8 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="#2E7D32" CornerRadius="4" Padding="6,2">
-                        <TextBlock x:Uid="Import_AllAges" Foreground="White" FontSize="11" FontWeight="SemiBold" />
+                    <Border Background="{ThemeResource RatingAllAgesBadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
+                        <TextBlock x:Uid="Import_AllAges" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
                     </Border>
                     <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}"
                                VerticalAlignment="Center"

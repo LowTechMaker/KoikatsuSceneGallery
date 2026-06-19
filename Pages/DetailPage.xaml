@@ -54,6 +54,7 @@
                 <Button
                     x:Name="PrevButton"
                     x:Uid="Detail_PrevButton"
+                    AutomationProperties.AutomationId="DetailPrevButton"
                     Click="PrevButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76B;" />
@@ -62,6 +63,7 @@
                 <Button
                     x:Name="RandomButton"
                     x:Uid="Detail_RandomButton"
+                    AutomationProperties.AutomationId="DetailRandomButton"
                     Click="RandomButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE8B1;" />
@@ -70,6 +72,7 @@
                 <Button
                     x:Name="NextButton"
                     x:Uid="Detail_NextButton"
+                    AutomationProperties.AutomationId="DetailNextButton"
                     Click="NextButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76C;" />
@@ -89,6 +92,7 @@
                 ZoomMode="Enabled">
                 <Image
                     x:Name="PreviewImage"
+                    AutomationProperties.AutomationId="DetailPreviewImage"
                     CanDrag="True"
                     DragStarting="PreviewImage_DragStarting"
                     Stretch="Uniform" />
@@ -97,7 +101,7 @@
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel
                 Padding="16"
-                CornerRadius="8"
+                CornerRadius="{StaticResource OverlayCornerRadius}"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
@@ -239,7 +243,7 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Border
-                                        CornerRadius="4"
+                                        CornerRadius="{StaticResource ControlCornerRadius}"
                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                         <Image Stretch="Uniform">
                                             <Image.Source>

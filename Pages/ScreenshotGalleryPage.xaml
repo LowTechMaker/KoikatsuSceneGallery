@@ -63,6 +63,7 @@
                 <AutoSuggestBox
                     x:Name="SearchBox"
                     x:Uid="Gallery_SearchBox"
+                    AutomationProperties.AutomationId="ScreenshotSearchBox"
                     QueryIcon="Find"
                     TextChanged="SearchBox_TextChanged" />
                 <TextBlock
@@ -74,6 +75,7 @@
             <Button
                 x:Name="RandomButton"
                 x:Uid="Gallery_RandomButton"
+                AutomationProperties.AutomationId="ScreenshotRandomButton"
                 Grid.Column="1"
                 Width="40"
                 Height="32"
@@ -85,6 +87,7 @@
 
             <ComboBox
                 x:Name="SortComboBox"
+                AutomationProperties.AutomationId="ScreenshotSortComboBox"
                 Grid.Column="2"
                 Width="160"
                 Height="32"
@@ -100,6 +103,7 @@
             <ToggleButton
                 x:Name="SortDirectionButton"
                 x:Uid="Gallery_SortDirection"
+                AutomationProperties.AutomationId="ScreenshotSortDirectionButton"
                 Grid.Column="3"
                 Width="40"
                 Height="32"
@@ -151,6 +155,7 @@
 
         <GridView
             x:Name="GalleryGrid"
+            AutomationProperties.AutomationId="ScreenshotGalleryGrid"
             Grid.Row="2"
             CanDragItems="True"
             ContainerContentChanging="GalleryGrid_ContainerContentChanging"
@@ -185,7 +190,7 @@
                         Padding="4"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
-                        CornerRadius="8"
+                        CornerRadius="{StaticResource OverlayCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1">
@@ -195,7 +200,7 @@
                         </Grid.RowDefinitions>
 
                         <Border
-                            CornerRadius="4"
+                            CornerRadius="{StaticResource ControlCornerRadius}"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <Image
                                 Stretch="Uniform"

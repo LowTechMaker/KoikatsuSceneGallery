@@ -903,4 +903,65 @@
   <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
     <value>影片</value>
   </data>
+  <!-- SettingsCard resources -->
+  <data name="SC_ShowFileNames.Header" xml:space="preserve">
+    <value>在縮圖上顯示檔名</value>
+  </data>
+  <data name="SC_ShowFileNames.Description" xml:space="preserve">
+    <value>在圖庫縮圖下方顯示或隱藏檔名</value>
+  </data>
+  <data name="SC_ScrollToTop.Header" xml:space="preserve">
+    <value>排序變更時捲動至頂端</value>
+  </data>
+  <data name="SC_ScrollToTop.Description" xml:space="preserve">
+    <value>變更排序方式後自動將圖庫捲動至頂端</value>
+  </data>
+  <data name="SC_AuthorLiveTiles.Header" xml:space="preserve">
+    <value>作者動態磚</value>
+  </data>
+  <data name="SC_AuthorLiveTiles.Description" xml:space="preserve">
+    <value>在作者頁面顯示動態預覽磚</value>
+  </data>
+  <data name="SC_Navigation.Header" xml:space="preserve">
+    <value>側邊欄頁面</value>
+  </data>
+  <data name="SC_Navigation.Description" xml:space="preserve">
+    <value>選擇要在導覽側邊欄顯示的頁面</value>
+  </data>
+  <data name="SC_Language.Header" xml:space="preserve">
+    <value>應用程式語言</value>
+  </data>
+  <data name="SC_Language.Description" xml:space="preserve">
+    <value>變更語言需要重新啟動應用程式</value>
+  </data>
+  <data name="SC_CacheFolder.Header" xml:space="preserve">
+    <value>快取位置</value>
+  </data>
+  <data name="SC_CacheFolder.Description" xml:space="preserve">
+    <value>快取縮圖檔案的儲存位置</value>
+  </data>
+  <data name="SC_CacheActions.Header" xml:space="preserve">
+    <value>管理快取</value>
+  </data>
+  <data name="SC_CacheActions.Description" xml:space="preserve">
+    <value>變更、重設或清除縮圖快取資料夾</value>
+  </data>
+  <data name="SC_CacheBuffer.Header" xml:space="preserve">
+    <value>渲染緩衝</value>
+  </data>
+  <data name="SC_CacheBuffer.Description" xml:space="preserve">
+    <value>畫面外渲染緩衝，以可見範圍的倍數計算。數值越大，捲動越流暢</value>
+  </data>
+  <data name="SC_SizeSelector.Header" xml:space="preserve">
+    <value>縮圖大小按鈕</value>
+  </data>
+  <data name="SC_SizeSelector.Description" xml:space="preserve">
+    <value>在圖庫工具列顯示小/中/大尺寸切換按鈕</value>
+  </data>
+  <data name="SC_VisualSimilarity.Header" xml:space="preserve">
+    <value>視覺相似度偵測</value>
+  </data>
+  <data name="SC_VisualSimilarity.Description" xml:space="preserve">
+    <value>偵測並群組圖庫中外觀相似的圖片</value>
+  </data>
 </root>

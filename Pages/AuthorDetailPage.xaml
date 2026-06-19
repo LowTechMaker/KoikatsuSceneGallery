@@ -87,6 +87,7 @@
                 Spacing="8">
                 <Button
                     x:Uid="AuthorDetail_OpenProfile"
+                    AutomationProperties.AutomationId="AuthorOpenProfileButton"
                     Click="OpenProfile_Click">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <FontIcon FontSize="14" Glyph="&#xE774;" />
@@ -95,12 +96,14 @@
                 </Button>
                 <Button
                     x:Uid="AuthorDetail_Shuffle"
+                    AutomationProperties.AutomationId="AuthorShuffleButton"
                     Click="Shuffle_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE8B1;" />
                 </Button>
                 <Button
                     x:Uid="AuthorDetail_Refresh"
+                    AutomationProperties.AutomationId="AuthorRefreshButton"
                     Click="Refresh_Click"
                     Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE72C;" />
@@ -109,7 +112,7 @@
         </Grid>
 
         <!-- Tabs: Scenes / Characters / Coordinates -->
-        <Pivot x:Name="TabPivot" Grid.Row="1">
+        <Pivot x:Name="TabPivot" AutomationProperties.AutomationId="AuthorTabPivot" Grid.Row="1">
 
             <!-- Scenes Tab -->
             <PivotItem>
@@ -124,6 +127,7 @@
                 </PivotItem.Header>
                 <GridView
                     x:Name="ScenesGrid"
+                    AutomationProperties.AutomationId="AuthorScenesGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
                     DragItemsStarting="ScenesGrid_DragItemsStarting"
@@ -156,7 +160,7 @@
                                 Padding="4"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                CornerRadius="8"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
@@ -166,7 +170,7 @@
                                 </Grid.RowDefinitions>
 
                                 <Border
-                                    CornerRadius="4"
+                                    CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                     <Image
                                         Stretch="Uniform"
@@ -199,6 +203,7 @@
                 </PivotItem.Header>
                 <GridView
                     x:Name="CharactersGrid"
+                    AutomationProperties.AutomationId="AuthorCharactersGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
                     DragItemsStarting="CharactersGrid_DragItemsStarting"
@@ -231,7 +236,7 @@
                                 Padding="4"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                CornerRadius="8"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
@@ -241,7 +246,7 @@
                                 </Grid.RowDefinitions>
 
                                 <Border
-                                    CornerRadius="4"
+                                    CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                     <Image
                                         Stretch="Uniform"
@@ -274,6 +279,7 @@
                 </PivotItem.Header>
                 <GridView
                     x:Name="CoordinatesGrid"
+                    AutomationProperties.AutomationId="AuthorCoordinatesGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
                     DragItemsStarting="CoordinatesGrid_DragItemsStarting"
@@ -306,7 +312,7 @@
                                 Padding="4"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                CornerRadius="8"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
@@ -316,7 +322,7 @@
                                 </Grid.RowDefinitions>
 
                                 <Border
-                                    CornerRadius="4"
+                                    CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                     <Image
                                         Stretch="Uniform"
@@ -357,6 +363,7 @@
                         VerticalAlignment="Center" />
                     <ListView
                         x:Name="PostsList"
+                        AutomationProperties.AutomationId="AuthorPostsList"
                         Margin="0,8,0,0"
                         IsItemClickEnabled="True"
                         ItemClick="PostsList_ItemClick"
