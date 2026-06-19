@@ -60,14 +60,14 @@
   </resheader>
   <!-- MainWindow -->
   <data name="Nav_Gallery.Content" xml:space="preserve">
-    <value>Gallery</value>
+    <value>Scenes</value>
   </data>
   <data name="Nav_Characters.Content" xml:space="preserve">
     <value>Characters</value>
   </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
-    <value>Gallery</value>
+    <value>Scenes</value>
   </data>
   <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search by path or filename...</value>
@@ -433,7 +433,7 @@
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
     <value>Resolution</value>
   </data>
-  <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
+  <data name="Settings_SceneResolutionDesc.Text" xml:space="preserve">
     <value>Only show scene cards matching specific resolutions. Disable to show all cards.</value>
   </data>
   <data name="Settings_ResolutionToggle.OnContent" xml:space="preserve">
@@ -877,7 +877,7 @@
     <value>Choose which pages to show in the sidebar.</value>
   </data>
   <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
-    <value>Gallery</value>
+    <value>Scenes</value>
   </data>
   <data name="Settings_ShowCharactersNav.Content" xml:space="preserve">
     <value>Characters</value>

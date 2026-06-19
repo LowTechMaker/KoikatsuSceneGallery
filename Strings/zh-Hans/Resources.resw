@@ -60,14 +60,14 @@
   </resheader>
   <!-- MainWindow -->
   <data name="Nav_Gallery.Content" xml:space="preserve">
-    <value>图库</value>
+    <value>场景卡</value>
   </data>
   <data name="Nav_Characters.Content" xml:space="preserve">
     <value>角色卡</value>
   </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
-    <value>图库</value>
+    <value>场景卡</value>
   </data>
   <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
     <value>按路径或文件名搜索…</value>
@@ -196,10 +196,10 @@
     <value>当同一帖子的卡片数量严格大于此值时，在作者文件夹下建立以帖子名称命名的子文件夹。0 = 始终建立；-1 = 从不建立。</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
-    <value>服装卡分辨率</value>
+    <value>服装卡</value>
   </data>
   <data name="Settings_CoordResolutionDesc.Text" xml:space="preserve">
-    <value>仅显示符合特定分辨率的服装卡片。禁用则显示全部卡片。</value>
+    <value>仅显示符合特定分辨率的服装卡。禁用则显示全部卡片。</value>
   </data>
   <data name="Settings_CoordResolutionToggle.OnContent" xml:space="preserve">
     <value>已启用 — 按分辨率筛选</value>
@@ -326,7 +326,7 @@
     <value>强迫症选项</value>
   </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
-    <value>场景卡片</value>
+    <value>场景卡</value>
   </data>
   <data name="Settings_FoldersDesc.Text" xml:space="preserve">
     <value>添加包含 Koikatsu 场景卡片 .png 文件的文件夹。子文件夹会自动扫描。</value>
@@ -431,10 +431,10 @@
     <value>扫描中…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
-    <value>分辨率</value>
+    <value>场景卡</value>
   </data>
-  <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
-    <value>仅显示符合特定分辨率的场景卡片。禁用则显示全部卡片。</value>
+  <data name="Settings_SceneResolutionDesc.Text" xml:space="preserve">
+    <value>仅显示符合特定分辨率的场景卡。禁用则显示全部卡片。</value>
   </data>
   <data name="Settings_ResolutionToggle.OnContent" xml:space="preserve">
     <value>已启用 — 按分辨率筛选</value>
@@ -452,10 +452,10 @@
     <value>移除分辨率</value>
   </data>
   <data name="Settings_CharaResolutionHeader.Text" xml:space="preserve">
-    <value>角色卡分辨率</value>
+    <value>角色卡</value>
   </data>
   <data name="Settings_CharaResolutionDesc.Text" xml:space="preserve">
-    <value>仅显示符合特定分辨率的角色卡片。禁用则显示全部卡片。</value>
+    <value>仅显示符合特定分辨率的角色卡。禁用则显示全部卡片。</value>
   </data>
   <data name="Settings_CharaResolutionToggle.OnContent" xml:space="preserve">
     <value>已启用 — 按分辨率筛选</value>
@@ -877,7 +877,7 @@
     <value>选择要在侧边栏显示的页面。</value>
   </data>
   <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
-    <value>图库</value>
+    <value>场景卡</value>
   </data>
   <data name="Settings_ShowCharactersNav.Content" xml:space="preserve">
     <value>角色卡</value>

@@ -60,14 +60,14 @@
   </resheader>
   <!-- MainWindow -->
   <data name="Nav_Gallery.Content" xml:space="preserve">
-    <value>圖庫</value>
+    <value>場景卡</value>
   </data>
   <data name="Nav_Characters.Content" xml:space="preserve">
     <value>角色卡</value>
   </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
-    <value>圖庫</value>
+    <value>場景卡</value>
   </data>
   <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
     <value>依路徑或檔名搜尋…</value>
@@ -196,10 +196,10 @@
     <value>當同一貼文的卡片數量嚴格大於此值時，在作者資料夾下建立以貼文名稱命名的子資料夾。0 = 永遠建立；-1 = 永不建立。</value>
   </data>
   <data name="Settings_CoordResolutionHeader.Text" xml:space="preserve">
-    <value>服裝卡解析度</value>
+    <value>服裝卡</value>
   </data>
   <data name="Settings_CoordResolutionDesc.Text" xml:space="preserve">
-    <value>僅顯示符合特定解析度的服裝卡片。停用則顯示全部卡片。</value>
+    <value>僅顯示符合特定解析度的服裝卡。停用則顯示全部卡片。</value>
   </data>
   <data name="Settings_CoordResolutionToggle.OnContent" xml:space="preserve">
     <value>已啟用 — 依解析度篩選</value>
@@ -258,7 +258,7 @@
     <value>檔案大小</value>
   </data>
   <data name="Detail_Resolution.Text" xml:space="preserve">
-    <value>解析度</value>
+    <value>場景卡</value>
   </data>
   <data name="Detail_DateModified.Text" xml:space="preserve">
     <value>修改日期</value>
@@ -329,7 +329,7 @@
     <value>場景卡片</value>
   </data>
   <data name="Settings_FoldersDesc.Text" xml:space="preserve">
-    <value>新增包含 Koikatsu 場景卡片 .png 檔案的資料夾。子資料夾會自動掃描。</value>
+    <value>新增包含 Koikatsu 場景卡 .png 檔案的資料夾。子資料夾會自動掃描。</value>
   </data>
   <data name="Settings_AddFolder.Text" xml:space="preserve">
     <value>新增資料夾</value>
@@ -431,10 +431,10 @@
     <value>掃描中…</value>
   </data>
   <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
-    <value>解析度</value>
+    <value>場景卡</value>
   </data>
-  <data name="Settings_ResolutionDesc.Text" xml:space="preserve">
-    <value>僅顯示符合特定解析度的場景卡片。停用則顯示全部卡片。</value>
+  <data name="Settings_SceneResolutionDesc.Text" xml:space="preserve">
+    <value>僅顯示符合特定解析度的場景卡。停用則顯示全部卡片。</value>
   </data>
   <data name="Settings_ResolutionToggle.OnContent" xml:space="preserve">
     <value>已啟用 — 依解析度篩選</value>
@@ -452,10 +452,10 @@
     <value>移除解析度</value>
   </data>
   <data name="Settings_CharaResolutionHeader.Text" xml:space="preserve">
-    <value>角色卡解析度</value>
+    <value>角色卡</value>
   </data>
   <data name="Settings_CharaResolutionDesc.Text" xml:space="preserve">
-    <value>僅顯示符合特定解析度的角色卡片。停用則顯示全部卡片。</value>
+    <value>僅顯示符合特定解析度的角色卡。停用則顯示全部卡片。</value>
   </data>
   <data name="Settings_CharaResolutionToggle.OnContent" xml:space="preserve">
     <value>已啟用 — 依解析度篩選</value>
@@ -877,7 +877,7 @@
     <value>選擇要在側邊欄顯示的頁面。</value>
   </data>
   <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
-    <value>圖庫</value>
+    <value>場景卡</value>
   </data>
   <data name="Settings_ShowCharactersNav.Content" xml:space="preserve">
     <value>角色卡</value>

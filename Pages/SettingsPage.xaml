@@ -383,12 +383,12 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Uid="Settings_ResolutionHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <TextBlock x:Uid="Settings_SceneResolutionHeader" VerticalAlignment="Center" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                     <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=TwoWay}" OnContent="" OffContent="" MinWidth="0" Margin="0,-4,0,-4" />
                                 </Grid>
                             </Expander.Header>
                             <StackPanel Spacing="12">
-                                <TextBlock x:Uid="Settings_ResolutionDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Uid="Settings_SceneResolutionDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" MaxWidth="240" />
