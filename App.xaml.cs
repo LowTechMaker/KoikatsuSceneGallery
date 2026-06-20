@@ -1,7 +1,11 @@
+using System.Diagnostics;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace KoikatsuSceneGallery;
 
@@ -108,9 +112,11 @@ public partial class App : Application
             }
         });
 
+        var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+
         AuthorInfoService = new AuthorInfoService(
             PluginService.AuthorProviders,
-            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+            dispatcherQueue);
 
         SettingsViewModel = new SettingsViewModel(SettingsService);
         SettingsViewModel.Load(config ?? new SettingsService.ConfigData());
@@ -144,7 +150,7 @@ public partial class App : Application
             ImportViewModel = new ImportViewModel(
                 ImportService,
                 SettingsService,
-                Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                dispatcherQueue);
 
             if (PluginService.AuthorProviders.Count > 0)
             {
@@ -157,21 +163,22 @@ public partial class App : Application
 
         AuthorsViewModel = new AuthorsViewModel(
             AuthorInfoService,
-            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+            dispatcherQueue);
 
         _mainWindow = new MainWindow();
         _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
 
-        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
         _ = EnsureAuthorSourcesLoadedAsync();
     }
 
+    private static readonly ResourceLoader ResLoader = new();
+
     private static Task<string?> ShowInputDialogAsync(
-        Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue,
+        DispatcherQueue dispatcherQueue,
         string title,
         string message,
         string? placeholder,
@@ -191,42 +198,43 @@ public partial class App : Application
                     return;
                 }
 
-                var textBox = new Microsoft.UI.Xaml.Controls.TextBox
+                var textBox = new TextBox
                 {
                     PlaceholderText = placeholder ?? "",
                     MinWidth = 360,
                 };
 
-                var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                var dialog = new ContentDialog
                 {
                     XamlRoot = xamlRoot,
                     Title = title,
-                    Content = new Microsoft.UI.Xaml.Controls.StackPanel
+                    Content = new StackPanel
                     {
                         Spacing = 12,
                         Children =
                         {
-                            new Microsoft.UI.Xaml.Controls.TextBlock
+                            new TextBlock
                             {
                                 Text = message,
-                                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                                TextWrapping = TextWrapping.Wrap,
                             },
                             textBox,
                         },
                     },
-                    PrimaryButtonText = "OK",
-                    CloseButtonText = "Cancel",
-                    DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+                    PrimaryButtonText = ResLoader.GetString("Common_OK"),
+                    CloseButtonText = ResLoader.GetString("Common_Cancel"),
+                    DefaultButton = ContentDialogButton.Primary,
                 };
 
                 var result = await dialog.ShowAsync();
-                var value = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary
+                var value = result == ContentDialogResult.Primary
                     ? textBox.Text?.Trim()
                     : null;
                 tcs.TrySetResult(string.IsNullOrWhiteSpace(value) ? null : value);
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"ShowInputDialogAsync failed: {ex.Message}");
                 tcs.TrySetResult(null);
             }
             finally

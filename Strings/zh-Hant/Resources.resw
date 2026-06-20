@@ -306,6 +306,12 @@
   <data name="Common_No" xml:space="preserve">
     <value>無</value>
   </data>
+  <data name="Common_OK" xml:space="preserve">
+    <value>確定</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
   <!-- SettingsPage -->
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>設定</value>
