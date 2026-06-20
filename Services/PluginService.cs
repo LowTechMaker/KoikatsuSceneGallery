@@ -36,6 +36,8 @@ public sealed class PluginService
     private readonly HashSet<string> _loadedPluginNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IPluginSettingsProvider> _settingsProviders = new(StringComparer.OrdinalIgnoreCase);
 
+    public static Func<string, string, string?, CancellationToken, Task<string?>>? InputRequestHandler { get; set; }
+
     public event Action? PluginsChanged;
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
@@ -303,5 +305,9 @@ public sealed class PluginService
         public string StorageDirectory { get; } = storageDirectory;
 
         public void Log(string message) => PluginService.Log(pluginName, message);
+
+        public Task<string?> RequestInputAsync(string title, string message, string? placeholder, CancellationToken ct)
+            => InputRequestHandler?.Invoke(title, message, placeholder, ct)
+               ?? Task.FromResult<string?>(null);
     }
 }

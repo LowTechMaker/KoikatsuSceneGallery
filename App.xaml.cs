@@ -163,7 +163,83 @@ public partial class App : Application
         _mainWindow.Closed += (_, _) => PluginService.Shutdown();
         _mainWindow.Activate();
 
+        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
+            ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
+
         _ = EnsureAuthorSourcesLoadedAsync();
+    }
+
+    private static Task<string?> ShowInputDialogAsync(
+        Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue,
+        string title,
+        string message,
+        string? placeholder,
+        CancellationToken ct)
+    {
+        var tcs = new TaskCompletionSource<string?>();
+        var reg = ct.Register(() => tcs.TrySetResult(null));
+
+        if (!dispatcherQueue.TryEnqueue(async () =>
+        {
+            try
+            {
+                var xamlRoot = _mainWindow?.Content?.XamlRoot;
+                if (xamlRoot is null)
+                {
+                    tcs.TrySetResult(null);
+                    return;
+                }
+
+                var textBox = new Microsoft.UI.Xaml.Controls.TextBox
+                {
+                    PlaceholderText = placeholder ?? "",
+                    MinWidth = 360,
+                };
+
+                var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                {
+                    XamlRoot = xamlRoot,
+                    Title = title,
+                    Content = new Microsoft.UI.Xaml.Controls.StackPanel
+                    {
+                        Spacing = 12,
+                        Children =
+                        {
+                            new Microsoft.UI.Xaml.Controls.TextBlock
+                            {
+                                Text = message,
+                                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                            },
+                            textBox,
+                        },
+                    },
+                    PrimaryButtonText = "OK",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+                };
+
+                var result = await dialog.ShowAsync();
+                var value = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary
+                    ? textBox.Text?.Trim()
+                    : null;
+                tcs.TrySetResult(string.IsNullOrWhiteSpace(value) ? null : value);
+            }
+            catch
+            {
+                tcs.TrySetResult(null);
+            }
+            finally
+            {
+                await reg.DisposeAsync();
+            }
+        }))
+        {
+            reg.Dispose();
+            tcs.TrySetResult(null);
+        }
+
+        return tcs.Task;
     }
 
     private static void OnAnyFolderPathsChanged()

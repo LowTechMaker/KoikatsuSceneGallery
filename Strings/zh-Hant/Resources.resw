@@ -430,7 +430,7 @@
   <data name="Settings_ScanProgress.Text" xml:space="preserve">
     <value>掃描中…</value>
   </data>
-  <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
+  <data name="Settings_SceneResolutionHeader.Text" xml:space="preserve">
     <value>場景卡</value>
   </data>
   <data name="Settings_SceneResolutionDesc.Text" xml:space="preserve">

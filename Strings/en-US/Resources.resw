@@ -430,7 +430,7 @@
   <data name="Settings_ScanProgress.Text" xml:space="preserve">
     <value>Scanning…</value>
   </data>
-  <data name="Settings_ResolutionHeader.Text" xml:space="preserve">
+  <data name="Settings_SceneResolutionHeader.Text" xml:space="preserve">
     <value>Resolution</value>
   </data>
   <data name="Settings_SceneResolutionDesc.Text" xml:space="preserve">
