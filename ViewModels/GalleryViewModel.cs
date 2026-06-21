@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Collections;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -15,6 +16,11 @@ public enum SortOption
     DateModified,
     FileSize,
     Shuffle
+}
+
+public static class ShuffleConstants
+{
+    public const int PoolSize = 20;
 }
 
 public enum GameFilterOption
@@ -48,8 +54,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
 
-    private int _shuffleCount;
-    private readonly HashSet<object> _shuffleSet = new();
+    private int _shuffleDisplayCount;
+    private readonly List<object> _shuffleQueue = [];
+    private readonly Dictionary<object, int> _shuffleOrderMap = [];
+    private readonly HashSet<object> _shuffleUsedCards = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -155,21 +163,28 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     partial void OnSearchTextChanged(string value)
     {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
     }
 
     partial void OnShowR18ContentChanged(bool value)
     {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
     }
 
     partial void OnGameFilterChanged(GameFilterOption value)
     {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
     }
 
     partial void OnSelectedSortChanged(SortOption value)
     {
+        if (value == SortOption.Shuffle)
+            BuildShuffleQueue();
+        else
+            ClearShuffleState();
         ApplySort();
         ApplyFilter();
     }
@@ -463,6 +478,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         {
             _resolutionFilterEnabled = enabled;
             _allowedResolutions = resolutions;
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
             ApplyFilter();
         });
     }
@@ -472,21 +488,31 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
     }
 
-    public void SetShuffleCount(int count)
+    public void SetShuffleDisplayCount(int count)
     {
-        if (_shuffleCount == count) return;
-        _shuffleCount = count;
+        if (_shuffleDisplayCount == count) return;
+        _shuffleDisplayCount = count;
         if (IsShuffleMode) ApplyFilter();
     }
 
-    public void Reshuffle() => ApplyFilter();
+    public void Reshuffle()
+    {
+        AdvanceShuffleQueue();
+        ApplySort();
+        ApplyFilter();
+    }
 
     private void ApplySort()
     {
         using (CardsView.DeferRefresh())
         {
             CardsView.SortDescriptions.Clear();
-            if (SelectedSort == SortOption.Shuffle) return;
+            if (SelectedSort == SortOption.Shuffle)
+            {
+                CardsView.SortDescriptions.Add(
+                    new SortDescription(SortDirection.Ascending, new ShuffleQueueComparer(_shuffleOrderMap)));
+                return;
+            }
             var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
             string propertyName = SelectedSort switch
             {
@@ -500,6 +526,111 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         }
     }
 
+    private bool BaseFilterPasses(SceneCard card)
+    {
+        if (!ShowR18Content && card.IsR18Content) return false;
+
+        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0);
+        foreach (var kw in keywords)
+            if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+        if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
+            && !_allowedResolutions.Contains(card.Resolution))
+            return false;
+
+        if (GameFilter != GameFilterOption.All)
+        {
+            if (!card.MetadataLoaded) return false;
+            var targetGame = GameFilter switch
+            {
+                GameFilterOption.Koikatsu => GameVersion.Koikatsu,
+                GameFilterOption.KoikatsuSunshine => GameVersion.KoikatsuSunshine,
+                _ => GameVersion.Unknown
+            };
+            if (card.Game != targetGame) return false;
+        }
+
+        return true;
+    }
+
+    private void BuildShuffleQueue()
+    {
+        var candidates = new List<SceneCard>();
+        foreach (var card in Cards)
+            if (BaseFilterPasses(card))
+                candidates.Add(card);
+
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int poolSize = Math.Min(ShuffleConstants.PoolSize, candidates.Count);
+        _shuffleQueue.Clear();
+        _shuffleUsedCards.Clear();
+        _shuffleOrderMap.Clear();
+
+        for (int i = 0; i < poolSize; i++)
+        {
+            _shuffleQueue.Add(candidates[i]);
+            _shuffleOrderMap[candidates[i]] = i;
+            _shuffleUsedCards.Add(candidates[i]);
+        }
+    }
+
+    private void AdvanceShuffleQueue()
+    {
+        int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
+        if (displayCount <= 0 || _shuffleQueue.Count == 0) return;
+
+        var tail = _shuffleQueue.Skip(displayCount).ToList();
+
+        var candidates = new List<SceneCard>();
+        foreach (var card in Cards)
+            if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
+                candidates.Add(card);
+
+        if (candidates.Count == 0)
+        {
+            _shuffleUsedCards.Clear();
+            foreach (var item in tail)
+                _shuffleUsedCards.Add(item);
+            foreach (var card in Cards)
+                if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
+                    candidates.Add(card);
+        }
+
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int needed = ShuffleConstants.PoolSize - tail.Count;
+        int take = Math.Min(needed, candidates.Count);
+
+        _shuffleQueue.Clear();
+        _shuffleOrderMap.Clear();
+        _shuffleQueue.AddRange(tail);
+        for (int i = 0; i < take; i++)
+        {
+            _shuffleQueue.Add(candidates[i]);
+            _shuffleUsedCards.Add(candidates[i]);
+        }
+
+        for (int i = 0; i < _shuffleQueue.Count; i++)
+            _shuffleOrderMap[_shuffleQueue[i]] = i;
+    }
+
+    private void ClearShuffleState()
+    {
+        _shuffleQueue.Clear();
+        _shuffleOrderMap.Clear();
+        _shuffleUsedCards.Clear();
+    }
+
     public SceneCard? GetRandomCard()
     {
         if (CardsView.Count == 0) return null;
@@ -508,68 +639,28 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     private void ApplyFilter()
     {
-        var keywords = SearchText
-            .Split(',')
-            .Select(k => k.Trim())
-            .Where(k => k.Length > 0)
-            .ToArray();
-        var hasSearch = keywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
-        var gameFilter = GameFilter;
-        var showR18Content = ShowR18Content;
-        var hasMetadataFilter = gameFilter != GameFilterOption.All;
         var isShuffleMode = IsShuffleMode;
 
-        Func<SceneCard, bool> baseFilter = card =>
+        if (isShuffleMode)
         {
-            if (!showR18Content && card.IsR18Content)
-                return false;
+            int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
+            var displaySet = new HashSet<object>();
+            for (int i = 0; i < displayCount; i++)
+                displaySet.Add(_shuffleQueue[i]);
 
-            if (hasSearch)
-            {
-                foreach (var kw in keywords)
-                {
-                    if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
-                        return false;
-                }
-            }
-
-            if (filterRes && !_allowedResolutions.Contains(card.Resolution))
-                return false;
-
-            if (gameFilter != GameFilterOption.All)
-            {
-                if (!card.MetadataLoaded) return false;
-                var targetGame = gameFilter switch
-                {
-                    GameFilterOption.Koikatsu => GameVersion.Koikatsu,
-                    GameFilterOption.KoikatsuSunshine => GameVersion.KoikatsuSunshine,
-                    _ => GameVersion.Unknown
-                };
-                if (card.Game != targetGame) return false;
-            }
-
-            return true;
-        };
-
-        if (isShuffleMode && _shuffleCount > 0)
-        {
-            var candidates = new List<SceneCard>();
-            foreach (var card in Cards)
-                if (baseFilter(card))
-                    candidates.Add(card);
-
-            _shuffleSet.Clear();
-            int n = Math.Min(_shuffleCount, candidates.Count);
-            for (int i = 0; i < n; i++)
-            {
-                int j = Random.Shared.Next(i, candidates.Count);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-                _shuffleSet.Add(candidates[i]);
-            }
+            CardsView.Filter = item => displaySet.Contains(item);
+            CardsView.RefreshFilter();
+            OnPropertyChanged(nameof(IsEmpty));
+            return;
         }
 
-        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter && !isShuffleMode)
+        var showR18Content = ShowR18Content;
+        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0).ToArray();
+        var hasSearch = keywords.Length > 0;
+        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+        var hasMetadataFilter = GameFilter != GameFilterOption.All;
+
+        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter)
         {
             CardsView.Filter = null!;
         }
@@ -578,9 +669,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item =>
             {
                 if (item is not SceneCard card) return false;
-                if (!baseFilter(card)) return false;
-                if (isShuffleMode && _shuffleSet.Count > 0 && !_shuffleSet.Contains(card)) return false;
-                return true;
+                return BaseFilterPasses(card);
             };
         }
         CardsView.RefreshFilter();

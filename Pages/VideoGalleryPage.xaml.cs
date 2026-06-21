@@ -99,7 +99,7 @@ public sealed partial class VideoGalleryPage : Page
             return;
         _appliedColumns = columns;
         _appliedAvailable = available;
-        ViewModel.SetShuffleCount(columns * 2);
+        ViewModel.SetShuffleDisplayCount(columns * 2);
 
         double cellW = (available / columns) - 0.5;
         double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;

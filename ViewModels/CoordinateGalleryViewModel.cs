@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.WinUI.Collections;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -31,8 +32,10 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
 
     public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
 
-    private int _shuffleCount;
-    private readonly HashSet<object> _shuffleSet = new();
+    private int _shuffleDisplayCount;
+    private readonly List<object> _shuffleQueue = [];
+    private readonly Dictionary<object, int> _shuffleOrderMap = [];
+    private readonly HashSet<object> _shuffleUsedCards = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -92,8 +95,21 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
         App.SettingsViewModel.CoordinateResolutionFilterChanged += OnCoordinateResolutionFilterChanged;
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
-    partial void OnSelectedSortChanged(SortOption value) { ApplySort(); ApplyFilter(); }
+    partial void OnSearchTextChanged(string value)
+    {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
+    }
+
+    partial void OnSelectedSortChanged(SortOption value)
+    {
+        if (value == SortOption.Shuffle)
+            BuildShuffleQueue();
+        else
+            ClearShuffleState();
+        ApplySort();
+        ApplyFilter();
+    }
     partial void OnSortAscendingChanged(bool value) => ApplySort();
 
     [RelayCommand]
@@ -322,6 +338,7 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
         {
             _resolutionFilterEnabled = enabled;
             _allowedResolutions = resolutions;
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
             ApplyFilter();
         });
     }
@@ -331,20 +348,31 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
         _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
     }
 
-    public void SetShuffleCount(int count)
+    public void SetShuffleDisplayCount(int count)
     {
-        _shuffleCount = count;
+        if (_shuffleDisplayCount == count) return;
+        _shuffleDisplayCount = count;
         if (IsShuffleMode) ApplyFilter();
     }
 
-    public void Reshuffle() => ApplyFilter();
+    public void Reshuffle()
+    {
+        AdvanceShuffleQueue();
+        ApplySort();
+        ApplyFilter();
+    }
 
     private void ApplySort()
     {
         using (CardsView.DeferRefresh())
         {
             CardsView.SortDescriptions.Clear();
-            if (SelectedSort == SortOption.Shuffle) return;
+            if (SelectedSort == SortOption.Shuffle)
+            {
+                CardsView.SortDescriptions.Add(
+                    new SortDescription(SortDirection.Ascending, new ShuffleQueueComparer(_shuffleOrderMap)));
+                return;
+            }
             var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
             string propertyName = SelectedSort switch
             {
@@ -364,60 +392,134 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
         return CardsView[Random.Shared.Next(CardsView.Count)] as CoordinateCard;
     }
 
-    private void ApplyFilter()
+    private bool BaseFilterPasses(CoordinateCard card)
     {
-        var keywords = SearchText
-            .Split(',')
-            .Select(k => k.Trim())
-            .Where(k => k.Length > 0)
-            .ToArray();
-        var hasSearch = keywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
-        var isShuffleMode = IsShuffleMode;
-
-        Func<CoordinateCard, bool> baseFilter = card =>
+        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0);
+        foreach (var kw in keywords)
         {
-            if (hasSearch)
-            {
-                foreach (var kw in keywords)
-                {
-                    bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
-                    bool inName = card.MetadataLoaded
-                        && card.CoordinateName.Contains(kw, StringComparison.OrdinalIgnoreCase);
-                    if (!inPath && !inName) return false;
-                }
-            }
-
-            if (filterRes && !_allowedResolutions.Contains(card.Resolution))
-                return false;
-
-            return true;
-        };
-
-        if (isShuffleMode && _shuffleCount > 0)
-        {
-            var candidates = new List<CoordinateCard>();
-            foreach (var card in Cards)
-                if (baseFilter(card))
-                    candidates.Add(card);
-
-            _shuffleSet.Clear();
-            int n = Math.Min(_shuffleCount, candidates.Count);
-            for (int i = 0; i < n; i++)
-            {
-                int j = Random.Shared.Next(i, candidates.Count);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-                _shuffleSet.Add(candidates[i]);
-            }
+            bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
+            bool inName = card.MetadataLoaded
+                && card.CoordinateName.Contains(kw, StringComparison.OrdinalIgnoreCase);
+            if (!inPath && !inName) return false;
         }
 
-        CardsView.Filter = item =>
+        if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
+            && !_allowedResolutions.Contains(card.Resolution))
+            return false;
+
+        return true;
+    }
+
+    private void BuildShuffleQueue()
+    {
+        var candidates = new List<CoordinateCard>();
+        foreach (var card in Cards)
+            if (BaseFilterPasses(card))
+                candidates.Add(card);
+
+        for (int i = candidates.Count - 1; i > 0; i--)
         {
-            if (item is not CoordinateCard card) return false;
-            if (!baseFilter(card)) return false;
-            if (isShuffleMode && _shuffleSet.Count > 0 && !_shuffleSet.Contains(card)) return false;
-            return true;
-        };
+            int j = Random.Shared.Next(i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int poolSize = Math.Min(ShuffleConstants.PoolSize, candidates.Count);
+        _shuffleQueue.Clear();
+        _shuffleUsedCards.Clear();
+        _shuffleOrderMap.Clear();
+
+        for (int i = 0; i < poolSize; i++)
+        {
+            _shuffleQueue.Add(candidates[i]);
+            _shuffleOrderMap[candidates[i]] = i;
+            _shuffleUsedCards.Add(candidates[i]);
+        }
+    }
+
+    private void AdvanceShuffleQueue()
+    {
+        int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
+        if (displayCount <= 0 || _shuffleQueue.Count == 0) return;
+
+        var tail = _shuffleQueue.Skip(displayCount).ToList();
+
+        var candidates = new List<CoordinateCard>();
+        foreach (var card in Cards)
+            if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
+                candidates.Add(card);
+
+        if (candidates.Count == 0)
+        {
+            _shuffleUsedCards.Clear();
+            foreach (var item in tail)
+                _shuffleUsedCards.Add(item);
+            foreach (var card in Cards)
+                if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
+                    candidates.Add(card);
+        }
+
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        int needed = ShuffleConstants.PoolSize - tail.Count;
+        int take = Math.Min(needed, candidates.Count);
+
+        _shuffleQueue.Clear();
+        _shuffleOrderMap.Clear();
+        _shuffleQueue.AddRange(tail);
+        for (int i = 0; i < take; i++)
+        {
+            _shuffleQueue.Add(candidates[i]);
+            _shuffleUsedCards.Add(candidates[i]);
+        }
+
+        for (int i = 0; i < _shuffleQueue.Count; i++)
+            _shuffleOrderMap[_shuffleQueue[i]] = i;
+    }
+
+    private void ClearShuffleState()
+    {
+        _shuffleQueue.Clear();
+        _shuffleOrderMap.Clear();
+        _shuffleUsedCards.Clear();
+    }
+
+    private void ApplyFilter()
+    {
+        var isShuffleMode = IsShuffleMode;
+
+        if (isShuffleMode)
+        {
+            int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
+            var displaySet = new HashSet<object>();
+            for (int i = 0; i < displayCount; i++)
+                displaySet.Add(_shuffleQueue[i]);
+
+            CardsView.Filter = item => displaySet.Contains(item);
+            CardsView.RefreshFilter();
+            OnPropertyChanged(nameof(IsEmpty));
+            return;
+        }
+
+        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0).ToArray();
+        var hasSearch = keywords.Length > 0;
+        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+
+        if (!hasSearch && !filterRes)
+        {
+            CardsView.Filter = null!;
+        }
+        else
+        {
+            CardsView.Filter = item =>
+            {
+                if (item is not CoordinateCard card) return false;
+                return BaseFilterPasses(card);
+            };
+        }
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
     }
