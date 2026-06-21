@@ -44,7 +44,8 @@
                     x:Uid="Nav_Gallery"
                     AutomationProperties.AutomationId="GalleryNavItem"
                     IsSelected="True"
-                    Tag="gallery">
+                    Tag="gallery"
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8B9;" />
                     </NavigationViewItem.Icon>
@@ -53,7 +54,8 @@
                     x:Name="CharactersNavItem"
                     x:Uid="Nav_Characters"
                     AutomationProperties.AutomationId="CharactersNavItem"
-                    Tag="characters">
+                    Tag="characters"
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE77B;" />
                     </NavigationViewItem.Icon>
@@ -62,7 +64,8 @@
                     x:Name="CoordinatesNavItem"
                     x:Uid="Nav_Coordinates"
                     AutomationProperties.AutomationId="CoordinatesNavItem"
-                    Tag="coordinates">
+                    Tag="coordinates"
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE78A;" />
                     </NavigationViewItem.Icon>
@@ -71,7 +74,8 @@
                     x:Name="ScreenshotsNavItem"
                     x:Uid="Nav_Screenshots"
                     AutomationProperties.AutomationId="ScreenshotsNavItem"
-                    Tag="screenshots">
+                    Tag="screenshots"
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE722;" />
                     </NavigationViewItem.Icon>
@@ -80,7 +84,8 @@
                     x:Name="VideosNavItem"
                     x:Uid="Nav_Videos"
                     AutomationProperties.AutomationId="VideosNavItem"
-                    Tag="videos">
+                    Tag="videos"
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE714;" />
                     </NavigationViewItem.Icon>
@@ -91,6 +96,7 @@
                     x:Uid="Nav_Authors"
                     AutomationProperties.AutomationId="AuthorsNavItem"
                     Tag="authors"
+                    ToolTipService.ToolTip="{x:Null}"
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE716;" />
@@ -104,6 +110,7 @@
                     x:Uid="Nav_Import"
                     AutomationProperties.AutomationId="ImportNavItem"
                     Tag="import"
+                    ToolTipService.ToolTip="{x:Null}"
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE896;" />
