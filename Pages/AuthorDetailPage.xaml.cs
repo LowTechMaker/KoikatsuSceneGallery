@@ -12,7 +12,8 @@ public sealed partial class AuthorDetailPage : Page
 {
     public AuthorDetailViewModel ViewModel { get; } = new();
 
-    private const double ImageRatio = 135.0 / 240.0;
+    private const double SceneImageRatio = 135.0 / 240.0;
+    private const double CharaImageRatio = 352.0 / 252.0;
     private const double CardMargin = 4;
     private const double CardInset = 4 + 1;
     private const double CellOverheadW = CardMargin * 2;
@@ -53,9 +54,9 @@ public sealed partial class AuthorDetailPage : Page
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            ApplyLayout(ScenesGrid);
-            ApplyLayout(CharactersGrid);
-            ApplyLayout(CoordinatesGrid);
+            ApplyLayout(ScenesGrid, SceneImageRatio);
+            ApplyLayout(CharactersGrid, CharaImageRatio);
+            ApplyLayout(CoordinatesGrid, CharaImageRatio);
         });
     }
 
@@ -73,10 +74,10 @@ public sealed partial class AuthorDetailPage : Page
     private void Grid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (sender is GridView grid)
-            ApplyLayout(grid);
+            ApplyLayout(grid, grid == ScenesGrid ? SceneImageRatio : CharaImageRatio);
     }
 
-    private static void ApplyLayout(GridView grid)
+    private static void ApplyLayout(GridView grid, double imageRatio)
     {
         if (grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
             return;
@@ -84,7 +85,7 @@ public sealed partial class AuthorDetailPage : Page
         double available = panel.ActualWidth;
         int columns = Math.Max(1, (int)Math.Floor(available / (DesiredWidth + CellOverheadW)));
         double cellW = (available / columns) - 0.5;
-        double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;
+        double imageH = Math.Max(0, cellW - ContentInsetW) * imageRatio;
         double cellH = imageH + FilenameReserve + (CardMargin + CardInset) * 2;
 
         panel.ItemWidth = cellW;
