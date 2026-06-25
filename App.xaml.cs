@@ -36,7 +36,6 @@ public partial class App : Application
     public static ImportService? ImportService { get; private set; }
     public static ImportViewModel? ImportViewModel { get; private set; }
     public static AuthorPostService? AuthorPostService { get; private set; }
-
     private static Task? _authorSourcesWarmupTask;
 
     public App()

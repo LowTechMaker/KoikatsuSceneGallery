@@ -123,8 +123,8 @@
                 </Image>
             </ScrollViewer>
 
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel
-                Grid.Column="1"
                 Padding="16"
                 CornerRadius="{StaticResource OverlayCornerRadius}"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -173,7 +173,9 @@
                         Style="{StaticResource CaptionTextBlockStyle}" />
                     <TextBlock Text="{x:Bind ViewModel.Card.DateModified, Mode=OneWay}" />
                 </StackPanel>
+
             </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Page>
