@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
 
@@ -32,6 +33,7 @@ public sealed partial class ScreenshotGalleryPage : Page
     private bool _wheelHooked;
     private int _appliedColumns = -1;
     private double _appliedAvailable = -1;
+    private ScrollViewer? _scrollViewer;
 
     public ScreenshotGalleryPage()
     {
@@ -39,6 +41,8 @@ public sealed partial class ScreenshotGalleryPage : Page
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        ViewModel.ViewRefreshed += () =>
+            DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         _sizeIndex = NearestPresetIndex(App.SettingsViewModel.ThumbnailWidth);
         _thumbnailWidth = SizePresets[_sizeIndex];
         Loaded += OnLoaded;
@@ -71,6 +75,16 @@ public sealed partial class ScreenshotGalleryPage : Page
         {
             GalleryGrid.SizeChanged += GalleryGrid_SizeChanged;
             _wheelHooked = true;
+        }
+        if (_scrollViewer is null)
+        {
+            _scrollViewer = FindDescendant<ScrollViewer>(GalleryGrid);
+            if (_scrollViewer is not null)
+                _scrollViewer.ViewChanged += (_, ev) =>
+                {
+                    if (!ev.IsIntermediate)
+                        RequestVisibleThumbnails();
+                };
         }
         DispatcherQueue.TryEnqueue(() =>
         {
@@ -294,5 +308,31 @@ public sealed partial class ScreenshotGalleryPage : Page
         if (ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[^1]);
         args.Handled = true;
+    }
+
+    private void RequestVisibleThumbnails()
+    {
+        if (GalleryGrid.ItemsPanelRoot is not ItemsWrapGrid panel) return;
+        int first = panel.FirstVisibleIndex;
+        int last = panel.LastVisibleIndex;
+        if (first < 0) return;
+        for (int i = first; i <= last && i < ViewModel.CardsView.Count; i++)
+        {
+            if (ViewModel.CardsView[i] is MediaCard card)
+                ViewModel.RequestThumbnail(card);
+        }
+    }
+
+    private static T? FindDescendant<T>(DependencyObject parent) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match) return match;
+            var result = FindDescendant<T>(child);
+            if (result is not null) return result;
+        }
+        return null;
     }
 }

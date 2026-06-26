@@ -60,6 +60,7 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
 
     public event Action<string>? CardRemovedNotification;
     public event Action? CardsReloaded;
+    public event Action? ViewRefreshed;
 
     public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, bool isVideo)
     {
@@ -138,8 +139,6 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
                             added.Add(card);
                         }
                     }
-                    foreach (var card in added)
-                        RequestThumbnail(card);
                     processed.Set();
                 });
                 processed.Wait(TimeSpan.FromSeconds(10));
@@ -373,6 +372,7 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item => displaySet.Contains(item);
             CardsView.RefreshFilter();
             OnPropertyChanged(nameof(IsEmpty));
+            ViewRefreshed?.Invoke();
             return;
         }
 
@@ -393,6 +393,7 @@ public partial class MediaGalleryViewModel : ObservableObject, IDisposable
         }
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
+        ViewRefreshed?.Invoke();
     }
 
     private async void OnCardAdded(MediaCard card)

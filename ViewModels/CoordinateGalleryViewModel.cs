@@ -75,6 +75,7 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
     public event Action? CardsReloaded;
+    public event Action? ViewRefreshed;
 
     public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService)
     {
@@ -153,12 +154,6 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
                             added.Add(card);
                         }
                     }
-                    // Request thumbnails for every loaded card, not just ones the
-                    // GridView happens to realize (ContainerContentChanging
-                    // doesn't reliably re-fire when sort/filter shifts items
-                    // among realized containers). Gated + disk-cached.
-                    foreach (var card in added)
-                        RequestThumbnail(card);
                     processed.Set();
                 });
                 processed.Wait(TimeSpan.FromSeconds(10));
@@ -501,6 +496,7 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item => displaySet.Contains(item);
             CardsView.RefreshFilter();
             OnPropertyChanged(nameof(IsEmpty));
+            ViewRefreshed?.Invoke();
             return;
         }
 
@@ -522,6 +518,7 @@ public partial class CoordinateGalleryViewModel : ObservableObject, IDisposable
         }
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
+        ViewRefreshed?.Invoke();
     }
 
     private async void OnCardAdded(CoordinateCard card)

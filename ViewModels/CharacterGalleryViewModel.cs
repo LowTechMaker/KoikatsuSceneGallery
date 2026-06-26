@@ -182,12 +182,6 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
                             added.Add(card);
                         }
                     }
-                    // Request thumbnails for every loaded card, not just ones the
-                    // GridView happens to realize (ContainerContentChanging
-                    // doesn't reliably re-fire when sort/filter shifts items
-                    // among realized containers). Gated + disk-cached.
-                    foreach (var card in added)
-                        RequestThumbnail(card);
                     processed.Set();
                 });
                 processed.Wait(TimeSpan.FromSeconds(10));
@@ -290,6 +284,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
 
     public event Action<string>? VersionIndexChanged;
     public event Action? CardsReloaded;
+    public event Action? ViewRefreshed;
 
     private void UpdateVersionIndex(CharacterCard card)
     {
@@ -630,6 +625,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item => displaySet.Contains(item);
             CardsView.RefreshFilter();
             OnPropertyChanged(nameof(IsEmpty));
+            ViewRefreshed?.Invoke();
             return;
         }
 
@@ -656,6 +652,7 @@ public partial class CharacterGalleryViewModel : ObservableObject, IDisposable
         }
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
+        ViewRefreshed?.Invoke();
     }
 
     private async void OnCardAdded(CharacterCard card)
