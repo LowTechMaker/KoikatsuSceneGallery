@@ -17,4 +17,17 @@ internal static class VisualTreeSearch
         }
         return null;
     }
+
+    public static T? FindDescendantByName<T>(DependencyObject parent, string name) where T : FrameworkElement
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match && match.Name == name) return match;
+            var result = FindDescendantByName<T>(child, name);
+            if (result is not null) return result;
+        }
+        return null;
+    }
 }

@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -7,8 +8,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -44,12 +43,9 @@ public sealed partial class DetailPage : Page
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var view = App.GalleryViewModel.CardsView;
-            var index = view.IndexOf(ViewModel.Card);
-            if (index >= 0 && index < view.Count - 1 && view[index + 1] is SceneCard next)
+            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.GalleryViewModel.CardsView, ViewModel.Card);
+            if (next != null)
                 ShowCard(next);
-            else if (index > 0 && view[index - 1] is SceneCard prev)
-                ShowCard(prev);
             else if (Frame.CanGoBack)
                 Frame.GoBack();
         });
@@ -74,31 +70,15 @@ public sealed partial class DetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = GetNavigationState();
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.GalleryViewModel.CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
-    private (bool hasPrev, bool hasNext) GetNavigationState()
-    {
-        var view = App.GalleryViewModel.CardsView;
-        if (ViewModel.Card == null || view.Count == 0)
-            return (false, false);
-
-        var index = view.IndexOf(ViewModel.Card);
-        if (index < 0) return (false, false);
-        return (index > 0, index < view.Count - 1);
-    }
-
     private void Navigate(int direction)
     {
-        var view = App.GalleryViewModel.CardsView;
-        if (ViewModel.Card == null) return;
-
-        var index = view.IndexOf(ViewModel.Card);
-        var newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < view.Count && view[newIndex] is SceneCard card)
-            ShowCard(card);
+        var next = DetailNavigationHelper.Navigate(App.GalleryViewModel.CardsView, ViewModel.Card, direction);
+        if (next != null) ShowCard(next);
     }
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
@@ -107,19 +87,8 @@ public sealed partial class DetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var view = App.GalleryViewModel.CardsView;
-        if (view.Count == 0) return;
-
-        var currentIndex = ViewModel.Card != null ? view.IndexOf(ViewModel.Card) : -1;
-        var newIndex = Random.Shared.Next(view.Count);
-        if (view.Count > 1)
-        {
-            while (newIndex == currentIndex)
-                newIndex = Random.Shared.Next(view.Count);
-        }
-
-        if (view[newIndex] is SceneCard card)
-            ShowCard(card);
+        var card = DetailNavigationHelper.RandomCard(App.GalleryViewModel.CardsView, ViewModel.Card);
+        if (card != null) ShowCard(card);
     }
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -150,7 +119,7 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.PixivUrl is { } url)
         {
-            CopyText(url);
+            DetailNavigationHelper.CopyText(url);
             e.Handled = true;
         }
     }
@@ -159,7 +128,7 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.BepisDbUrl is { } url)
         {
-            CopyText(url);
+            DetailNavigationHelper.CopyText(url);
             e.Handled = true;
         }
     }
@@ -168,7 +137,7 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.Card is { } card)
         {
-            CopyText(card.FilePath);
+            DetailNavigationHelper.CopyText(card.FilePath);
             e.Handled = true;
         }
     }
@@ -177,16 +146,9 @@ public sealed partial class DetailPage : Page
     {
         if (ViewModel.Card is { } card && Path.GetDirectoryName(card.FilePath) is { } folder)
         {
-            CopyText(folder);
+            DetailNavigationHelper.CopyText(folder);
             e.Handled = true;
         }
-    }
-
-    private static void CopyText(string text)
-    {
-        var package = new DataPackage();
-        package.SetText(text);
-        Clipboard.SetContent(package);
     }
 
     private void Author_Click(object sender, RoutedEventArgs e)
@@ -201,21 +163,6 @@ public sealed partial class DetailPage : Page
             ShowCard(card);
     }
 
-    private async void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-    {
-        if (ViewModel.Card is { } card)
-        {
-            var deferral = e.GetDeferral();
-            try
-            {
-                var file = await StorageFile.GetFileFromPathAsync(card.FilePath);
-                e.Data.SetStorageItems([file]);
-                e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            }
-            finally
-            {
-                deferral.Complete();
-            }
-        }
-    }
+    private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
+        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
 }

@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using SceneGallery.PluginSdk;
 
@@ -52,7 +53,7 @@ public sealed class AuthorPostService
     }
 
     private ICardImportProvider? FindProvider(string providerId)
-        => _importProviders.FirstOrDefault(p => p.ProviderId == providerId);
+        => _importProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
 
     private IFolderAuthorProvider? FindAuthorProvider(string providerId)
         => _authorProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
@@ -255,26 +256,9 @@ public sealed class AuthorPostService
     private static (string Folder, bool UsesRatingFolders) GetProviderScope(ICardImportProvider provider)
     {
         if (provider is IImportDestinationProvider destinationProvider)
-            return (SanitizeRelativePath(destinationProvider.DestinationFolderName), destinationProvider.UsesRatingFolders);
+            return (PathSanitizer.SanitizeRelativePath(destinationProvider.DestinationFolderName), destinationProvider.UsesRatingFolders);
 
-        return (SanitizeRelativePath(provider.Name), true);
+        return (PathSanitizer.SanitizeRelativePath(provider.Name), true);
     }
 
-    private static string SanitizeRelativePath(string relativePath)
-    {
-        var parts = relativePath
-            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)
-            .Select(SanitizeFolderName)
-            .Where(p => p.Length > 0)
-            .ToArray();
-
-        return parts.Length == 0 ? "" : Path.Combine(parts);
-    }
-
-    private static string SanitizeFolderName(string name)
-    {
-        foreach (var c in Path.GetInvalidFileNameChars())
-            name = name.Replace(c, '_');
-        return name.Trim();
-    }
 }

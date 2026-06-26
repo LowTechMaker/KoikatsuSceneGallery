@@ -82,22 +82,26 @@ public sealed partial class PostDetailPage : Page
             RenderDescription();
     }
 
-    private async void LocalImagesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+    private void LocalImagesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
     {
-        var files = new List<StorageFile>();
-        foreach (var item in e.Items)
+        var paths = e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath).ToList();
+        if (paths.Count == 0) return;
+        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
         {
-            if (item is LocalImagePreview preview)
+            var deferral = request.GetDeferral();
+            try
             {
-                try { files.Add(await StorageFile.GetFileFromPathAsync(preview.FilePath)); }
-                catch { }
+                var files = new List<IStorageItem>();
+                foreach (var path in paths)
+                {
+                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
+                    catch { }
+                }
+                request.SetData(files);
             }
-        }
-        if (files.Count > 0)
-        {
-            e.Data.SetStorageItems(files);
-            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        }
+            finally { deferral.Complete(); }
+        });
     }
 
     private void RenderDescription()

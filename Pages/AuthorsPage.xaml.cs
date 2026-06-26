@@ -1,8 +1,8 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -84,27 +84,11 @@ public sealed partial class AuthorsPage : Page
                 return;
 
             if (AuthorsPivot.ContainerFromItem(tab) is DependencyObject container
-                && FindDescendantByName<ListView>(container, "GroupListView") is { } listView)
+                && VisualTreeSearch.FindDescendantByName<ListView>(container, "GroupListView") is { } listView)
             {
                 listView.ScrollIntoView(group, ScrollIntoViewAlignment.Leading);
             }
         });
     }
 
-    private static T? FindDescendantByName<T>(DependencyObject root, string name)
-        where T : FrameworkElement
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T element && element.Name == name)
-                return element;
-
-            if (FindDescendantByName<T>(child, name) is { } descendant)
-                return descendant;
-        }
-
-        return null;
-    }
 }

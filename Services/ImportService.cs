@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Dispatching;
 using SceneGallery.PluginSdk;
@@ -11,7 +12,6 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 public sealed class ImportService
 {
-    private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
     private const string UnrecognizedFolderName = "!unrecognized";
 
     private static string GetRatingFolder(ContentRating rating, SettingsService.ConfigData config) => rating switch
@@ -32,9 +32,9 @@ public sealed class ImportService
     {
         var provider = FindProvider(providerId);
         if (provider is IImportDestinationProvider dest)
-            return (SanitizeRelativePath(dest.DestinationFolderName), dest.UsesRatingFolders);
+            return (PathSanitizer.SanitizeRelativePath(dest.DestinationFolderName), dest.UsesRatingFolders);
         var name = provider?.Name ?? providerId;
-        return (SanitizeRelativePath(name), true);
+        return (PathSanitizer.SanitizeRelativePath(name), true);
     }
 
     private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
@@ -44,14 +44,14 @@ public sealed class ImportService
         [config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, ""];
 
     private static string FormatAuthorFolder(SettingsService.ConfigData config, string authorName, string authorId) =>
-        SanitizeFolderName(config.AuthorFolderFormat
+        PathSanitizer.SanitizeFolderName(config.AuthorFolderFormat
             .Replace("{name}", authorName)
             .Replace("{id}", authorId));
 
     private static string FormatArtworkFolder(SettingsService.ConfigData config, string? title, string artworkId) =>
         string.IsNullOrEmpty(title)
             ? $"({artworkId})"
-            : SanitizeFolderName(config.ArtworkFolderFormat
+            : PathSanitizer.SanitizeFolderName(config.ArtworkFolderFormat
                 .Replace("{title}", title)
                 .Replace("{id}", artworkId));
 
@@ -567,7 +567,7 @@ public sealed class ImportService
                             config.UnknownFolderName,
                             gameVersionFolder,
                             "",
-                            SanitizeFolderName(item.AuthorId));
+                            PathSanitizer.SanitizeFolderName(item.AuthorId));
                         useUnrecognizedSubfolder = false;
                     }
                 }
@@ -737,24 +737,6 @@ public sealed class ImportService
         string gameVersionFolder,
         string ratingFolder)
         => string.Join('\u001F', root, providerFolder, gameVersionFolder, ratingFolder);
-
-    private static string SanitizeFolderName(string name)
-    {
-        foreach (var c in InvalidFileNameChars)
-            name = name.Replace(c, '_');
-        return name.Trim();
-    }
-
-    private static string SanitizeRelativePath(string relativePath)
-    {
-        var parts = relativePath
-            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)
-            .Select(SanitizeFolderName)
-            .Where(p => p.Length > 0)
-            .ToArray();
-
-        return parts.Length == 0 ? "" : Path.Combine(parts);
-    }
 
     private static bool FilesAreIdentical(string pathA, string pathB)
     {

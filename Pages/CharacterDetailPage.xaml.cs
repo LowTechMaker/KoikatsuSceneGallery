@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -7,7 +8,6 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
-using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -79,15 +79,11 @@ public sealed partial class CharacterDetailPage : Page
         _ = LoadMetadataAsync(card);
     }
 
-    /// <summary>
-    /// Parses the opened card's embedded metadata off the UI thread and applies
-    /// it, unless the user has already navigated to a different card.
-    /// </summary>
     private async Task LoadMetadataAsync(CharacterCard card)
     {
         ViewModel.MetadataLoaded = false;
         var meta = await Task.Run(() => CharacterCardParser.TryParse(card.FilePath));
-        if (!ReferenceEquals(ViewModel.Card, card)) return; // navigated away while parsing
+        if (!ReferenceEquals(ViewModel.Card, card)) return;
 
         meta ??= new CharacterMetadata(null, null, null, -1, GameVersion.Unknown, false);
         ViewModel.FullName = string.IsNullOrWhiteSpace(meta.FullName)
@@ -146,31 +142,15 @@ public sealed partial class CharacterDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = GetNavigationState();
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
-    private (bool hasPrev, bool hasNext) GetNavigationState()
-    {
-        var view = App.CharacterGalleryViewModel.CardsView;
-        if (ViewModel.Card == null || view.Count == 0)
-            return (false, false);
-
-        var index = view.IndexOf(ViewModel.Card);
-        if (index < 0) return (false, false);
-        return (index > 0, index < view.Count - 1);
-    }
-
     private void Navigate(int direction)
     {
-        var view = App.CharacterGalleryViewModel.CardsView;
-        if (ViewModel.Card == null) return;
-
-        var index = view.IndexOf(ViewModel.Card);
-        var newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < view.Count && view[newIndex] is CharacterCard card)
-            ShowCard(card);
+        var next = DetailNavigationHelper.Navigate(App.CharacterGalleryViewModel.CardsView, ViewModel.Card, direction);
+        if (next != null) ShowCard(next);
     }
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
@@ -179,19 +159,8 @@ public sealed partial class CharacterDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var view = App.CharacterGalleryViewModel.CardsView;
-        if (view.Count == 0) return;
-
-        var currentIndex = ViewModel.Card != null ? view.IndexOf(ViewModel.Card) : -1;
-        var newIndex = Random.Shared.Next(view.Count);
-        if (view.Count > 1)
-        {
-            while (newIndex == currentIndex)
-                newIndex = Random.Shared.Next(view.Count);
-        }
-
-        if (view[newIndex] is CharacterCard card)
-            ShowCard(card);
+        var card = DetailNavigationHelper.RandomCard(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
+        if (card != null) ShowCard(card);
     }
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -218,21 +187,6 @@ public sealed partial class CharacterDetailPage : Page
             await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
     }
 
-    private async void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-    {
-        if (ViewModel.Card is { } card)
-        {
-            var deferral = e.GetDeferral();
-            try
-            {
-                var file = await StorageFile.GetFileFromPathAsync(card.FilePath);
-                e.Data.SetStorageItems([file]);
-                e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            }
-            finally
-            {
-                deferral.Complete();
-            }
-        }
-    }
+    private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
+        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
 }

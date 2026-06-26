@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Dispatching;
 using SceneGallery.PluginSdk;
@@ -401,7 +402,7 @@ public sealed class AuthorInfoService
         if (provider is not IImportDestinationProvider destinationProvider)
             return false;
 
-        var providerFolder = SanitizeRelativePath(destinationProvider.DestinationFolderName);
+        var providerFolder = PathSanitizer.SanitizeRelativePath(destinationProvider.DestinationFolderName);
         if (string.IsNullOrEmpty(providerFolder))
             return false;
 
@@ -458,28 +459,11 @@ public sealed class AuthorInfoService
         => path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
 
-    private static string SanitizeRelativePath(string relativePath)
-    {
-        var parts = SplitPath(relativePath)
-            .Select(SanitizeFolderName)
-            .Where(p => p.Length > 0)
-            .ToArray();
-
-        return parts.Length == 0 ? "" : Path.Combine(parts);
-    }
-
-    private static string SanitizeFolderName(string name)
-    {
-        foreach (var c in Path.GetInvalidFileNameChars())
-            name = name.Replace(c, '_');
-        return name.Trim();
-    }
-
     private static string GetDisplayName(IFolderAuthorProvider provider)
     {
         if (provider is IImportDestinationProvider destinationProvider)
         {
-            var providerFolder = SanitizeRelativePath(destinationProvider.DestinationFolderName);
+            var providerFolder = PathSanitizer.SanitizeRelativePath(destinationProvider.DestinationFolderName);
             if (!string.IsNullOrEmpty(providerFolder))
                 return Path.GetFileName(providerFolder);
         }

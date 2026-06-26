@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
@@ -17,44 +17,18 @@ public sealed partial class GalleryPage : Page
     public GalleryViewModel ViewModel { get; }
 
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
-
-    // Thumbnail size picker, three fixed steps (small / medium / large). The
-    // chosen size is a desired card width — we pick the column count that fits
-    // and size the ItemsWrapGrid cells so a whole number of columns fills the row
-    // exactly (no right-edge whitespace, image keeps the 240:135 ratio). Columns
-    // reflow with the window. Card stretches to fill its cell; the cell overhead
-    // is a known constant (card Margin, container Margin/Padding = 0), so no live
-    // measurement is needed. See ctrl-zippy-plum.
-    private const double ImageRatio = 135.0 / 240.0;
-    private const double CardMargin = 4;        // gap between a card and its cell edge (XAML CardRoot Margin)
-    private const double CardInset = 4 + 1;     // CardRoot Padding + BorderThickness, per side
-    private const double CellOverheadW = CardMargin * 2;                 // extra cell width beyond the card
-    private const double ContentInsetW = (CardMargin + CardInset) * 2;   // cell width lost before the image
-    private const double FilenameReserve = 30;  // approximate filename row height when shown
-
-    // The three fixed sizes: small → medium → large (card width px).
-    private static readonly double[] SizePresets = [170, 240, 360];
-    private const int MediumIndex = 1;     // default / fallback when the selector is off
-
-    private int _sizeIndex = MediumIndex;  // current preset
-    private double _thumbnailWidth = 240;  // effective desired width = preset clamped to the min-columns cap
-    private DispatcherTimer? _saveTimer;
-    private bool _wheelHooked;
-    private int _appliedColumns = -1;        // last column count pushed to the panel
-    private double _appliedAvailable = -1;    // panel width at that time
-    private ScrollViewer? _scrollViewer;
+    private readonly GalleryLayoutEngine _layout;
 
     public GalleryPage()
     {
         ViewModel = App.GalleryViewModel;
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
+        _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount);
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
-        _sizeIndex = NearestPresetIndex(App.SettingsViewModel.ThumbnailWidth);
-        _thumbnailWidth = SizePresets[_sizeIndex];
-        Loaded += OnLoaded;
+        Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
         App.SettingsViewModel.SceneFolderPathsChanged += OnSceneFolderPathsChanged;
     }
 
@@ -66,169 +40,12 @@ public sealed partial class GalleryPage : Page
         });
     }
 
-    private static int NearestPresetIndex(double width)
-    {
-        int best = 0;
-        double bestDiff = double.MaxValue;
-        for (int i = 0; i < SizePresets.Length; i++)
-        {
-            double diff = Math.Abs(SizePresets[i] - width);
-            if (diff < bestDiff)
-            {
-                bestDiff = diff;
-                best = i;
-            }
-        }
-        return best;
-    }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        if (!_wheelHooked)
-        {
-            GalleryGrid.SizeChanged += GalleryGrid_SizeChanged;
-            _wheelHooked = true;
-        }
-        if (_scrollViewer is null)
-        {
-            _scrollViewer = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid);
-            if (_scrollViewer is not null)
-                _scrollViewer.ViewChanged += (_, ev) =>
-                {
-                    if (!ev.IsIntermediate)
-                        RequestVisibleThumbnails();
-                };
-        }
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            ApplyCacheLength();
-            RefreshSizeSelector();
-        });
-    }
-
-    /// <summary>
-    /// Pushes the user's off-screen render buffer (advanced setting) onto the
-    /// wrap panel. Called on load and on every navigation back, so changes made
-    /// in Settings take effect when returning to the gallery.
-    /// </summary>
-    private void ApplyCacheLength()
-    {
-        if (GalleryGrid.ItemsPanelRoot is ItemsWrapGrid panel)
-            panel.CacheLength = App.SettingsViewModel.CacheLength;
-    }
-
-    private void GalleryGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        // Re-clamp the current preset to the new min-columns cap (a narrowing
-        // window lowers it; widening restores it) and refit. The persisted value
-        // is the preset itself, so resizing never needs a save.
-        ApplyDesiredWidth();
-    }
-
-    /// <summary>
-    /// Picks the column count for the current desired width and sizes the
-    /// ItemsWrapGrid cells so those columns fill the row exactly. One property
-    /// pair set — the panel reflows its realized cards in a single pass, no
-    /// per-card work and no live measurement.
-    /// </summary>
-    private void ApplyLayout()
-    {
-        if (GalleryGrid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
-            return;
-
-        double available = panel.ActualWidth;
-        int columns = Math.Max(1, (int)Math.Floor(available / (_thumbnailWidth + CellOverheadW)));
-
-        // Within a column band the cell size doesn't change, so most wheel ticks
-        // need no panel update — skipping them avoids relayout churn that made
-        // thumbnails reload and "lag behind" the zoom.
-        if (columns == _appliedColumns && available == _appliedAvailable)
-            return;
-        _appliedColumns = columns;
-        _appliedAvailable = available;
-        ViewModel.SetShuffleDisplayCount(columns * 2);
-
-        double cellW = (available / columns) - 0.5;
-        double imageH = Math.Max(0, cellW - ContentInsetW) * ImageRatio;
-        double filename = App.SettingsViewModel.ShowFileNames ? FilenameReserve : 0;
-        double cellH = imageH + filename + (CardMargin + CardInset) * 2;
-
-        panel.ItemWidth = cellW;
-        panel.ItemHeight = cellH;
-    }
-
-    private void SizeButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not ToggleButton { Tag: string tag } || !int.TryParse(tag, out int idx))
-            return;
-
-        _sizeIndex = Math.Clamp(idx, 0, SizePresets.Length - 1);
-        ApplyDesiredWidth();
-        ScheduleSave();
-        UpdateSizeButtons();
-    }
-
-    /// <summary>
-    /// Reflects the active size on the three toggle buttons (and re-checks the
-    /// active one so it can't be toggled off by clicking it again).
-    /// </summary>
-    private void UpdateSizeButtons()
-    {
-        SizeSmallButton.IsChecked = _sizeIndex == 0;
-        SizeMediumButton.IsChecked = _sizeIndex == 1;
-        SizeLargeButton.IsChecked = _sizeIndex == 2;
-    }
-
-    /// <summary>
-    /// Sets the desired width from the current preset (or the medium default when
-    /// the size selector is disabled), then refits the cells.
-    /// </summary>
-    private void ApplyDesiredWidth()
-    {
-        int idx = App.SettingsViewModel.SizeSelectorEnabled ? _sizeIndex : MediumIndex;
-        _thumbnailWidth = SizePresets[idx];
-        ApplyLayout();
-    }
-
-    /// <summary>
-    /// Shows or hides the size buttons per the "size selector" setting (an OCD /
-    /// fine-tuning toggle) and re-applies the resulting size. Called on load and
-    /// on every navigation back, so toggling it in Settings takes effect when
-    /// returning to the gallery.
-    /// </summary>
-    private void RefreshSizeSelector()
-    {
-        SizeButtonsPanel.Visibility = App.SettingsViewModel.SizeSelectorEnabled
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        UpdateSizeButtons();
-        ApplyDesiredWidth();
-    }
-
-    private void ScheduleSave()
-    {
-        if (_saveTimer is null)
-        {
-            _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-            _saveTimer.Tick += async (_, _) =>
-            {
-                _saveTimer!.Stop();
-                // Persist the chosen preset (not the clamped width) so reload
-                // restores the same size step regardless of window width.
-                await App.SettingsViewModel.SaveThumbnailWidthAsync(SizePresets[_sizeIndex]);
-            };
-        }
-        _saveTimer.Stop();
-        _saveTimer.Start();
-    }
-
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        // Pick up Settings changes made while we were away (cache buffer + the
-        // size-selector toggle).
-        ApplyCacheLength();
-        RefreshSizeSelector();
+        _layout.ApplyCacheLength();
+        _layout.RefreshSizeSelector(SizeButtonsPanel);
+        _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
         if (ViewModel.Cards.Count == 0)
             await ViewModel.LoadCardsCommand.ExecuteAsync(null);
     }
@@ -238,10 +55,7 @@ public sealed partial class GalleryPage : Page
         if (e.PropertyName == nameof(GalleryViewModel.ShowFileNames))
         {
             UpdateFileNameVisibility();
-            // The filename reserve is part of the cell height but the column
-            // count is unchanged — invalidate the skip cache so the refit runs.
-            _appliedColumns = -1;
-            ApplyLayout();
+            _layout.InvalidateAndRefit();
         }
     }
 
@@ -274,23 +88,22 @@ public sealed partial class GalleryPage : Page
                 ViewModel.ReleaseThumbnail(recycled);
             return;
         }
-
         args.RegisterUpdateCallback(GalleryGrid_Phase1);
-
-        if (_appliedColumns < 0)
-        {
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                ApplyCacheLength();
-                ApplyLayout();
-            });
-        }
+        _layout.EnsureLayoutOnFirstContent();
     }
 
     private void GalleryGrid_Phase1(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
         if (args.Item is SceneCard card)
             ViewModel.RequestThumbnail(card);
+    }
+
+    private void SizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton { Tag: string tag } || !int.TryParse(tag, out int idx))
+            return;
+        _layout.HandleSizeButtonClick(idx);
+        _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -329,34 +142,32 @@ public sealed partial class GalleryPage : Page
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 
-    private async void GalleryGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+    private void GalleryGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
     {
-        var files = new List<StorageFile>();
-        foreach (var item in e.Items)
+        var paths = e.Items.OfType<SceneCard>().Select(c => c.FilePath).ToList();
+        if (paths.Count == 0) return;
+        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
         {
-            if (item is SceneCard card)
+            var deferral = request.GetDeferral();
+            try
             {
-                try
+                var files = new List<IStorageItem>();
+                foreach (var path in paths)
                 {
-                    var file = await StorageFile.GetFileFromPathAsync(card.FilePath);
-                    files.Add(file);
+                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
+                    catch { }
                 }
-                catch (Exception) { }
+                request.SetData(files);
             }
-        }
-        if (files.Count > 0)
-        {
-            e.Data.SetStorageItems(files);
-            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        }
+            finally { deferral.Complete(); }
+        });
     }
 
     private void GalleryGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is SceneCard card)
-        {
             Frame.Navigate(typeof(DetailPage), card);
-        }
     }
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
@@ -397,5 +208,4 @@ public sealed partial class GalleryPage : Page
                 ViewModel.RequestThumbnail(card);
         }
     }
-
 }

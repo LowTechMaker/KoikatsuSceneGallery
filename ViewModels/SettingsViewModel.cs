@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Windows.Storage.Pickers;
@@ -700,7 +701,7 @@ public partial class SettingsViewModel : ObservableObject
             };
             await _settingsService.SaveConfigAsync(config);
         }
-        catch (Exception) { }
+        catch (Exception ex) { CrashLog.Write("SaveConfig", ex); }
         finally
         {
             _saveLock.Release();

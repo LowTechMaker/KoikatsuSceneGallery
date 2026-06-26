@@ -20,6 +20,7 @@ public sealed class SceneCardCacheService : IDisposable
     private readonly Lock _saveLock = new();
     private Timer? _saveTimer;
     private bool _dirty;
+    private readonly Lock _loadLock = new();
     private volatile bool _loaded;
 
     public SceneCardCacheService()
@@ -30,18 +31,22 @@ public sealed class SceneCardCacheService : IDisposable
     private void EnsureLoaded()
     {
         if (_loaded) return;
-        _loaded = true;
-        try
+        lock (_loadLock)
         {
-            if (!File.Exists(_cachePath)) return;
-            using var stream = File.OpenRead(_cachePath);
-            var data = JsonSerializer.Deserialize<Dictionary<string, CachedCardEntry>>(stream);
-            if (data is null) return;
-            foreach (var (key, value) in data)
-                _cache[key] = value;
-        }
-        catch (Exception)
-        {
+            if (_loaded) return;
+            try
+            {
+                if (!File.Exists(_cachePath)) return;
+                using var stream = File.OpenRead(_cachePath);
+                var data = JsonSerializer.Deserialize<Dictionary<string, CachedCardEntry>>(stream);
+                if (data is null) return;
+                foreach (var (key, value) in data)
+                    _cache[key] = value;
+            }
+            catch (Exception)
+            {
+            }
+            _loaded = true;
         }
     }
 

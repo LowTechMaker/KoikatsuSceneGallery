@@ -179,39 +179,35 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
-    private async void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => await SetDragFiles<SceneCard>(e);
+    private void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => SetDragFiles(e, e.Items.OfType<SceneCard>().Select(c => c.FilePath));
 
-    private async void CharactersGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => await SetDragFiles<CharacterCard>(e);
+    private void CharactersGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => SetDragFiles(e, e.Items.OfType<CharacterCard>().Select(c => c.FilePath));
 
-    private async void CoordinatesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => await SetDragFiles<CoordinateCard>(e);
+    private void CoordinatesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => SetDragFiles(e, e.Items.OfType<CoordinateCard>().Select(c => c.FilePath));
 
-    private static async Task SetDragFiles<T>(DragItemsStartingEventArgs e) where T : class
+    private static void SetDragFiles(DragItemsStartingEventArgs e, IEnumerable<string> filePaths)
     {
-        var files = new List<StorageFile>();
-        foreach (var item in e.Items)
+        var paths = filePaths.ToList();
+        if (paths.Count == 0) return;
+        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
         {
-            if (item is T card)
+            var deferral = request.GetDeferral();
+            try
             {
-                var path = card switch
+                var files = new List<IStorageItem>();
+                foreach (var path in paths)
                 {
-                    SceneCard s => s.FilePath,
-                    CharacterCard c => c.FilePath,
-                    CoordinateCard co => co.FilePath,
-                    _ => null,
-                };
-                if (path is null) continue;
-                try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                catch { }
+                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
+                    catch { }
+                }
+                request.SetData(files);
             }
-        }
-        if (files.Count > 0)
-        {
-            e.Data.SetStorageItems(files);
-            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        }
+            finally { deferral.Complete(); }
+        });
     }
 
     private static bool TryGetNavigationParameter(object? parameter, out AuthorDetailNavigationParameter navigationParameter)

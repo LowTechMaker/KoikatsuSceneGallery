@@ -34,8 +34,10 @@ public class SettingsService
 
     public async Task SaveConfigAsync(ConfigData config)
     {
-        await using var stream = File.Create(_configPath);
-        await JsonSerializer.SerializeAsync(stream, config, JsonOptions);
+        var tempPath = _configPath + ".tmp";
+        await using (var stream = File.Create(tempPath))
+            await JsonSerializer.SerializeAsync(stream, config, JsonOptions);
+        File.Move(tempPath, _configPath, overwrite: true);
     }
 
     public async Task<List<string>> LoadFolderPathsAsync()

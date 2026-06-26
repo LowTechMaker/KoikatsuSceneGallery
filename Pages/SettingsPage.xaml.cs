@@ -56,10 +56,10 @@ public sealed partial class SettingsPage : Page
     public SettingsPage()
     {
         ViewModel = App.SettingsViewModel;
+        InitializeComponent();
         RefreshPluginItems();
         App.PluginService.PluginsChanged += OnPluginsChanged;
         Unloaded += (_, _) => App.PluginService.PluginsChanged -= OnPluginsChanged;
-        InitializeComponent();
     }
 
     private void OnPluginsChanged()
@@ -89,6 +89,7 @@ public sealed partial class SettingsPage : Page
                 p.AvailableDownloadUrl,
                 p.Changelog));
         }
+        Bindings.Update();
     }
 
     private async void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)

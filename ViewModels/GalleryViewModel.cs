@@ -1,27 +1,12 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.WinUI.Collections;
-using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
-
-public enum SortOption
-{
-    Name,
-    DateModified,
-    FileSize,
-    Shuffle
-}
-
-public static class ShuffleConstants
-{
-    public const int PoolSize = 20;
-}
 
 public enum GameFilterOption
 {
@@ -31,43 +16,15 @@ public enum GameFilterOption
     Unknown
 }
 
-public partial class GalleryViewModel : ObservableObject, IDisposable
+public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 {
     private readonly SceneCardService _sceneCardService;
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly SceneMetadataService _metadataService;
     private readonly SceneCardCacheService _cardCacheService;
-    private readonly DispatcherQueue _dispatcherQueue;
 
-    public ObservableCollection<SceneCard> Cards { get; } = [];
-    public AdvancedCollectionView CardsView { get; }
-
-    [ObservableProperty]
-    public partial string SearchText { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsShuffleMode))]
-    public partial SortOption SelectedSort { get; set; } = SortOption.Name;
-
-    [ObservableProperty]
-    public partial bool SortAscending { get; set; } = true;
-
-    public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
-
-    private int _shuffleDisplayCount;
-    private readonly List<object> _shuffleQueue = [];
-    private readonly Dictionary<object, int> _shuffleOrderMap = [];
-    private readonly HashSet<object> _shuffleUsedCards = [];
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsEmpty))]
-    public partial bool IsLoading { get; set; }
-
-    public bool IsEmpty => !IsLoading && CardsView.Count == 0;
-
-    [ObservableProperty]
-    public partial bool ShowFileNames { get; set; } = true;
+    public ObservableCollection<SceneCard> Cards { get; }
 
     [ObservableProperty]
     public partial bool ShowR18Content { get; set; } = true;
@@ -77,12 +34,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         .Any(p => p.UsesRatingFolders);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGeneratingThumbnails))]
-    public partial int PendingThumbnailCount { get; set; }
-
-    public bool IsGeneratingThumbnails => PendingThumbnailCount > 0;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParsingMetadata))]
     [NotifyPropertyChangedFor(nameof(IsNotParsingMetadata))]
     public partial int PendingMetadataCount { get; set; }
@@ -90,7 +41,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     public bool IsParsingMetadata => PendingMetadataCount > 0;
     public bool IsNotParsingMetadata => PendingMetadataCount == 0;
 
-    /// <summary>Whether the plugin-metadata filters are shown (mirrors the setting; off by default).</summary>
     [ObservableProperty]
     public partial bool ShowMetadataFilters { get; set; }
 
@@ -104,34 +54,24 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     private HashSet<string> _allowedResolutions = [];
     private HashSet<string> _r18FolderNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SceneCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
-    private CancellationTokenSource? _thumbnailCts;
-    private readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
-    private readonly HashSet<string> _thumbnailRequested = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string> _thumbnailPathCache = new(StringComparer.OrdinalIgnoreCase);
 
     private CancellationTokenSource? _metadataCts;
-    // Metadata parsing is I/O-bound (reading file bytes), not CPU-bound like
-    // thumbnail generation, so it uses a small fixed concurrency instead of
-    // scaling with the core count. This keeps the first full scan gentle on
-    // spinning disks (avoids seek thrashing from many concurrent reads) while
-    // being more than enough throughput on an SSD, where the per-file work is tiny.
     private const int MetadataParseConcurrency = 4;
     private readonly SemaphoreSlim _metadataGate = new(MetadataParseConcurrency);
     private DispatcherQueueTimer? _metadataRefreshTimer;
     private bool _pluginAnalysisEnabled;
 
+    public event Action<string>? CardRemovedNotification;
+
     public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService)
+        : base(new ObservableCollection<SceneCard>())
     {
+        Cards = (ObservableCollection<SceneCard>)_cardsSource;
         _sceneCardService = sceneCardService;
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
         _cardCacheService = cardCacheService;
-        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-
-        CardsView = new AdvancedCollectionView(Cards, true);
-        Cards.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
-        ApplySort();
 
         _sceneCardService.CardAdded += OnCardAdded;
         _sceneCardService.CardRemoved += OnCardRemoved;
@@ -140,6 +80,9 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
         App.SettingsViewModel.PluginAnalysisEnabledChanged += OnPluginAnalysisEnabledChanged;
     }
+
+    protected override bool CardPassesFilter(object card) =>
+        card is SceneCard sc && BaseFilterPasses(sc);
 
     private void OnPluginAnalysisEnabledChanged(bool enabled)
     {
@@ -153,20 +96,12 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             }
             else
             {
-                // Stop any in-flight scan and clear metadata filters so the
-                // gallery isn't left filtered by tags the user just turned off.
                 _metadataCts?.Cancel();
                 _metadataRefreshTimer?.Stop();
                 PendingMetadataCount = 0;
                 GameFilter = GameFilterOption.All;
             }
         });
-    }
-
-    partial void OnSearchTextChanged(string value)
-    {
-        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
-        ApplyFilter();
     }
 
     partial void OnShowR18ContentChanged(bool value)
@@ -181,30 +116,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         ApplyFilter();
     }
 
-    partial void OnSelectedSortChanged(SortOption value)
-    {
-        if (value == SortOption.Shuffle)
-            BuildShuffleQueue();
-        else
-            ClearShuffleState();
-        ApplySort();
-        ApplyFilter();
-    }
-
-    partial void OnSortAscendingChanged(bool value)
-    {
-        ApplySort();
-    }
-
     [RelayCommand]
     private async Task LoadCardsAsync()
     {
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _thumbnailCts = new CancellationTokenSource();
-        _thumbnailRequested.Clear();
-        _thumbnailPathCache.Clear();
-        PendingThumbnailCount = 0;
+        ResetThumbnailState();
 
         IsLoading = true;
         try
@@ -224,10 +139,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             Cards.Clear();
             _cardIndex.Clear();
 
-            // Phase 1: instant load from persisted card cache
             var cached = await Task.Run(() => _cardCacheService.LoadAll());
-            // Filter to cards whose parent folder is still in the configured paths,
-            // so cards from removed folders don't flash on screen before the diff.
             var configuredRoots = paths.Select(p => p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 .ToArray();
             var relevantCached = cached.Where(kv =>
@@ -269,16 +181,14 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                     }
                 }
                 ApplyFilter();
-                ViewRefreshed?.Invoke();
+                RaiseViewRefreshed();
             }
 
-            // Phase 2: background filesystem diff
             var scanned = await _sceneCardService.ScanFoldersAsync(paths);
             var scannedIndex = new Dictionary<string, SceneCard>(scanned.Count, StringComparer.OrdinalIgnoreCase);
             foreach (var card in scanned)
                 scannedIndex.TryAdd(card.FilePath, card);
 
-            // Detect removed and modified cards
             var toRemove = new List<string>();
             var toUpdate = new List<SceneCard>();
             foreach (var (filePath, existing) in _cardIndex)
@@ -294,7 +204,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 }
             }
 
-            // Detect added cards
             var toAdd = new List<SceneCard>();
             foreach (var (filePath, fresh) in scannedIndex)
             {
@@ -326,7 +235,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 }
             }
 
-            // Persist the reconciled state
             var newCache = new Dictionary<string, CachedCardEntry>(_cardIndex.Count, StringComparer.OrdinalIgnoreCase);
             foreach (var (filePath, card) in _cardIndex)
             {
@@ -344,20 +252,12 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         finally
         {
             IsLoading = false;
-            CardsReloaded?.Invoke();
+            RaiseCardsReloaded();
         }
     }
 
-    /// <summary>
-    /// Manually parses metadata for cards not yet recorded in the cache.
-    /// Cards already classified (cache hits) are left untouched.
-    /// </summary>
     public void ScanMissingMetadata() => StartMetadataScan();
 
-    /// <summary>
-    /// Manually re-parses every loaded card from scratch, discarding any cached
-    /// classification first (e.g. to pick up changed rules or fix bad data).
-    /// </summary>
     public void RescanAllMetadata()
     {
         foreach (var card in Cards)
@@ -368,13 +268,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         StartMetadataScan();
     }
 
-    /// <summary>
-    /// Parses plugin metadata for every card that doesn't have it yet. Cache
-    /// hits are applied immediately; misses are parsed on background threads
-    /// with bounded concurrency (same gating as thumbnails). While a metadata
-    /// filter is active the view is refreshed on a throttled timer so newly
-    /// classified cards fold in without an O(n²) refresh storm.
-    /// </summary>
     private void StartMetadataScan()
     {
         _metadataCts?.Cancel();
@@ -470,12 +363,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Requests a thumbnail for a single card on demand (called as cards scroll
-    /// into view). Cached thumbnails resolve almost instantly; uncached ones are
-    /// generated with limited concurrency so the UI stays responsive even for a
-    /// very large library.
-    /// </summary>
     public void RequestThumbnail(SceneCard card)
     {
         if (card.HasThumbnail) return;
@@ -485,7 +372,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Fast-path: resolve from disk cache without queuing async work
         var diskCached = _thumbnailCacheService.TryGetCachedPath(card);
         if (diskCached is not null)
         {
@@ -501,11 +387,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         _ = Task.Run(() => GenerateOneAsync(card, token));
     }
 
-    // Eviction-on-recycle was removed: clearing ThumbnailPath when a container
-    // recycled raced with re-prepare during scroll/relayout and left visible
-    // cards blank or stale. Thumbnails now stay loaded once generated. Memory is
-    // bounded in practice by how many cards are ever scrolled into view, and each
-    // is a small 300px-wide decoded image (DecodePixelWidth).
     public void ReleaseThumbnail(SceneCard card)
     {
     }
@@ -539,15 +420,10 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         catch (Exception) { }
         finally
         {
-            // Skip the decrement for a superseded load; that load reset the
-            // counter to 0, so decrementing here would drive it negative.
             _dispatcherQueue.TryEnqueue(() =>
             {
                 if (cancellationToken.IsCancellationRequested) return;
                 PendingThumbnailCount--;
-                // If generation produced nothing (null result or error), drop the
-                // requested-mark so a later request can retry instead of leaving
-                // the card permanently blank.
                 if (!card.HasThumbnail)
                     _thumbnailRequested.Remove(card.FilePath);
             });
@@ -565,55 +441,17 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         });
     }
 
-    private void OnShowFileNamesSettingChanged(bool value)
+    public SceneCard? GetRandomCard()
     {
-        _dispatcherQueue.TryEnqueue(() => ShowFileNames = value);
-    }
-
-    public void SetShuffleDisplayCount(int count)
-    {
-        if (_shuffleDisplayCount == count) return;
-        _shuffleDisplayCount = count;
-        if (IsShuffleMode) ApplyFilter();
-    }
-
-    public void Reshuffle()
-    {
-        AdvanceShuffleQueue();
-        ApplySort();
-        ApplyFilter();
-    }
-
-    private void ApplySort()
-    {
-        using (CardsView.DeferRefresh())
-        {
-            CardsView.SortDescriptions.Clear();
-            if (SelectedSort == SortOption.Shuffle)
-            {
-                CardsView.SortDescriptions.Add(
-                    new SortDescription(SortDirection.Ascending, new ShuffleQueueComparer(_shuffleOrderMap)));
-                return;
-            }
-            var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
-            string propertyName = SelectedSort switch
-            {
-                SortOption.Name => nameof(SceneCard.FileName),
-                SortOption.DateModified => nameof(SceneCard.DateModified),
-                SortOption.FileSize => nameof(SceneCard.FileSize),
-                _ => nameof(SceneCard.FileName)
-            };
-
-            CardsView.SortDescriptions.Add(new SortDescription(propertyName, direction));
-        }
+        if (CardsView.Count == 0) return null;
+        return CardsView[Random.Shared.Next(CardsView.Count)] as SceneCard;
     }
 
     private bool BaseFilterPasses(SceneCard card)
     {
         if (!ShowR18Content && card.IsR18Content) return false;
 
-        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0);
-        foreach (var kw in keywords)
+        foreach (var kw in _searchKeywords)
             if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
                 return false;
 
@@ -636,110 +474,12 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    private void BuildShuffleQueue()
+    protected override void ApplyFilter()
     {
-        var candidates = new List<SceneCard>();
-        foreach (var card in Cards)
-            if (BaseFilterPasses(card))
-                candidates.Add(card);
-
-        for (int i = candidates.Count - 1; i > 0; i--)
-        {
-            int j = Random.Shared.Next(i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-        }
-
-        int poolSize = Math.Min(ShuffleConstants.PoolSize, candidates.Count);
-        _shuffleQueue.Clear();
-        _shuffleUsedCards.Clear();
-        _shuffleOrderMap.Clear();
-
-        for (int i = 0; i < poolSize; i++)
-        {
-            _shuffleQueue.Add(candidates[i]);
-            _shuffleOrderMap[candidates[i]] = i;
-            _shuffleUsedCards.Add(candidates[i]);
-        }
-    }
-
-    private void AdvanceShuffleQueue()
-    {
-        int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
-        if (displayCount <= 0 || _shuffleQueue.Count == 0) return;
-
-        var tail = _shuffleQueue.Skip(displayCount).ToList();
-
-        var candidates = new List<SceneCard>();
-        foreach (var card in Cards)
-            if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
-                candidates.Add(card);
-
-        if (candidates.Count == 0)
-        {
-            _shuffleUsedCards.Clear();
-            foreach (var item in tail)
-                _shuffleUsedCards.Add(item);
-            foreach (var card in Cards)
-                if (BaseFilterPasses(card) && !_shuffleUsedCards.Contains(card))
-                    candidates.Add(card);
-        }
-
-        for (int i = candidates.Count - 1; i > 0; i--)
-        {
-            int j = Random.Shared.Next(i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-        }
-
-        int needed = ShuffleConstants.PoolSize - tail.Count;
-        int take = Math.Min(needed, candidates.Count);
-
-        _shuffleQueue.Clear();
-        _shuffleOrderMap.Clear();
-        _shuffleQueue.AddRange(tail);
-        for (int i = 0; i < take; i++)
-        {
-            _shuffleQueue.Add(candidates[i]);
-            _shuffleUsedCards.Add(candidates[i]);
-        }
-
-        for (int i = 0; i < _shuffleQueue.Count; i++)
-            _shuffleOrderMap[_shuffleQueue[i]] = i;
-    }
-
-    private void ClearShuffleState()
-    {
-        _shuffleQueue.Clear();
-        _shuffleOrderMap.Clear();
-        _shuffleUsedCards.Clear();
-    }
-
-    public SceneCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as SceneCard;
-    }
-
-    private void ApplyFilter()
-    {
-        var isShuffleMode = IsShuffleMode;
-
-        if (isShuffleMode)
-        {
-            int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
-            var displaySet = new HashSet<object>();
-            for (int i = 0; i < displayCount; i++)
-                displaySet.Add(_shuffleQueue[i]);
-
-            CardsView.Filter = item => displaySet.Contains(item);
-            CardsView.RefreshFilter();
-            OnPropertyChanged(nameof(IsEmpty));
-            ViewRefreshed?.Invoke();
-            return;
-        }
+        if (TryApplyShuffleFilter()) return;
 
         var showR18Content = ShowR18Content;
-        var keywords = SearchText.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0).ToArray();
-        var hasSearch = keywords.Length > 0;
+        var hasSearch = _searchKeywords.Length > 0;
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
         var hasMetadataFilter = GameFilter != GameFilterOption.All;
 
@@ -755,9 +495,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 return BaseFilterPasses(card);
             };
         }
-        CardsView.RefreshFilter();
-        OnPropertyChanged(nameof(IsEmpty));
-        ViewRefreshed?.Invoke();
+        RefreshFilterAndNotify();
     }
 
     private void OnCardAdded(SceneCard card)
@@ -771,7 +509,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             card.IsR18Content = IsR18Path(card.FilePath);
             Cards.Add(card);
             QueueMetadata(card);
-            ViewRefreshed?.Invoke();
+            RaiseViewRefreshed();
         });
     }
 
@@ -795,10 +533,6 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         PendingMetadataCount++;
         _ = Task.Run(() => ParseMetadataAsync(card, token), token);
     }
-
-    public event Action<string>? CardRemovedNotification;
-    public event Action? CardsReloaded;
-    public event Action? ViewRefreshed;
 
     private void OnCardRemoved(string path)
     {

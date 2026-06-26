@@ -10,7 +10,7 @@ namespace KoikatsuSceneGallery.Services;
 public class ThumbnailCacheService
 {
     private const int ThumbnailWidth = 300;
-    private string _cacheFolder;
+    private volatile string _cacheFolder;
 
     public string CacheFolder => _cacheFolder;
 
@@ -34,8 +34,9 @@ public class ThumbnailCacheService
 
     public string? TryGetCachedPath(string filePath, DateTime dateModified)
     {
+        var folder = _cacheFolder;
         var cacheKey = ComputeCacheKey(filePath, dateModified);
-        var cachePath = Path.Combine(_cacheFolder, $"{cacheKey}.jpg");
+        var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
         return File.Exists(cachePath) ? cachePath : null;
     }
 
@@ -46,8 +47,9 @@ public class ThumbnailCacheService
     {
         try
         {
+            var folder = _cacheFolder;
             var cacheKey = ComputeCacheKey(filePath, dateModified);
-            var cachePath = Path.Combine(_cacheFolder, $"{cacheKey}.jpg");
+            var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
             if (File.Exists(cachePath))
                 return cachePath;
@@ -75,7 +77,7 @@ public class ThumbnailCacheService
                 ExifOrientationMode.RespectExifOrientation,
                 ColorManagementMode.DoNotColorManage);
 
-            var cacheFile = await StorageFolder.GetFolderFromPathAsync(_cacheFolder);
+            var cacheFile = await StorageFolder.GetFolderFromPathAsync(folder);
             var outputFile = await cacheFile.CreateFileAsync(
                 $"{cacheKey}.jpg",
                 CreationCollisionOption.ReplaceExisting);
@@ -104,8 +106,9 @@ public class ThumbnailCacheService
     {
         try
         {
+            var folder = _cacheFolder;
             var cacheKey = ComputeCacheKey(filePath, dateModified);
-            var cachePath = Path.Combine(_cacheFolder, $"{cacheKey}.jpg");
+            var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
             if (File.Exists(cachePath))
                 return cachePath;
@@ -134,7 +137,7 @@ public class ThumbnailCacheService
                 ExifOrientationMode.RespectExifOrientation,
                 ColorManagementMode.DoNotColorManage);
 
-            var cacheFile = await StorageFolder.GetFolderFromPathAsync(_cacheFolder);
+            var cacheFile = await StorageFolder.GetFolderFromPathAsync(folder);
             var outputFile = await cacheFile.CreateFileAsync(
                 $"{cacheKey}.jpg",
                 CreationCollisionOption.ReplaceExisting);
@@ -161,10 +164,11 @@ public class ThumbnailCacheService
 
     public async Task ClearCacheAsync()
     {
+        var folder = _cacheFolder;
         await Task.Run(() =>
         {
-            if (!Directory.Exists(_cacheFolder)) return;
-            foreach (var file in Directory.EnumerateFiles(_cacheFolder, "*.jpg"))
+            if (!Directory.Exists(folder)) return;
+            foreach (var file in Directory.EnumerateFiles(folder, "*.jpg"))
             {
                 try { File.Delete(file); } catch (Exception) { }
             }

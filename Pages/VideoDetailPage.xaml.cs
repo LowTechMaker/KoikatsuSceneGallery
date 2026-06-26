@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -54,12 +55,9 @@ public sealed partial class VideoDetailPage : Page
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var view = App.VideoGalleryViewModel.CardsView;
-            var index = view.IndexOf(ViewModel.Card);
-            if (index >= 0 && index < view.Count - 1 && view[index + 1] is MediaCard next)
+            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.VideoGalleryViewModel.CardsView, ViewModel.Card);
+            if (next != null)
                 ShowCard(next);
-            else if (index > 0 && view[index - 1] is MediaCard prev)
-                ShowCard(prev);
             else if (Frame.CanGoBack)
                 Frame.GoBack();
         });
@@ -92,31 +90,15 @@ public sealed partial class VideoDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = GetNavigationState();
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.VideoGalleryViewModel.CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
-    private (bool hasPrev, bool hasNext) GetNavigationState()
-    {
-        var view = App.VideoGalleryViewModel.CardsView;
-        if (ViewModel.Card == null || view.Count == 0)
-            return (false, false);
-
-        var index = view.IndexOf(ViewModel.Card);
-        if (index < 0) return (false, false);
-        return (index > 0, index < view.Count - 1);
-    }
-
     private void Navigate(int direction)
     {
-        var view = App.VideoGalleryViewModel.CardsView;
-        if (ViewModel.Card == null) return;
-
-        var index = view.IndexOf(ViewModel.Card);
-        var newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < view.Count && view[newIndex] is MediaCard card)
-            ShowCard(card);
+        var next = DetailNavigationHelper.Navigate(App.VideoGalleryViewModel.CardsView, ViewModel.Card, direction);
+        if (next != null) ShowCard(next);
     }
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
@@ -125,19 +107,8 @@ public sealed partial class VideoDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var view = App.VideoGalleryViewModel.CardsView;
-        if (view.Count == 0) return;
-
-        var currentIndex = ViewModel.Card != null ? view.IndexOf(ViewModel.Card) : -1;
-        var newIndex = Random.Shared.Next(view.Count);
-        if (view.Count > 1)
-        {
-            while (newIndex == currentIndex)
-                newIndex = Random.Shared.Next(view.Count);
-        }
-
-        if (view[newIndex] is MediaCard card)
-            ShowCard(card);
+        var card = DetailNavigationHelper.RandomCard(App.VideoGalleryViewModel.CardsView, ViewModel.Card);
+        if (card != null) ShowCard(card);
     }
 
     private void RotateLeftButton_Click(object sender, RoutedEventArgs e) => Rotate(-90);
