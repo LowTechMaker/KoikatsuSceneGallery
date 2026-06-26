@@ -1,11 +1,11 @@
 using System.ComponentModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
 
@@ -82,7 +82,7 @@ public sealed partial class CoordinateGalleryPage : Page
         }
         if (_scrollViewer is null)
         {
-            _scrollViewer = FindDescendant<ScrollViewer>(GalleryGrid);
+            _scrollViewer = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid);
             if (_scrollViewer is not null)
                 _scrollViewer.ViewChanged += (_, ev) =>
                 {
@@ -343,16 +343,4 @@ public sealed partial class CoordinateGalleryPage : Page
         }
     }
 
-    private static T? FindDescendant<T>(DependencyObject parent) where T : DependencyObject
-    {
-        int count = VisualTreeHelper.GetChildrenCount(parent);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T match) return match;
-            var result = FindDescendant<T>(child);
-            if (result is not null) return result;
-        }
-        return null;
-    }
 }
