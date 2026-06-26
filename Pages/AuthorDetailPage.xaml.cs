@@ -40,6 +40,12 @@ public sealed partial class AuthorDetailPage : Page
         {
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
+            foreach (var card in ViewModel.Scenes)
+                App.GalleryViewModel.RequestThumbnail(card);
+            foreach (var card in ViewModel.Characters)
+                App.CharacterGalleryViewModel.RequestThumbnail(card);
+            foreach (var card in ViewModel.Coordinates)
+                App.CoordinateGalleryViewModel.RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts && App.AuthorPostService is { } postService)
             {

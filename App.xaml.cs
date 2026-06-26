@@ -19,6 +19,7 @@ public partial class App : Application
     public static CharacterCardService CharacterCardService { get; } = new();
     public static CoordinateCardService CoordinateCardService { get; } = new();
     public static ThumbnailCacheService ThumbnailCacheService { get; private set; } = null!;
+    public static SceneCardCacheService SceneCardCacheService { get; } = new();
     public static SceneMetadataService SceneMetadataService { get; } = new();
     public static CharacterMetadataService CharacterMetadataService { get; } = new();
     public static CoordinateMetadataService CoordinateMetadataService { get; } = new();
@@ -119,7 +120,7 @@ public partial class App : Application
 
         SettingsViewModel = new SettingsViewModel(SettingsService);
         SettingsViewModel.Load(config ?? new SettingsService.ConfigData());
-        GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService);
+        GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService, SceneCardCacheService);
         CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
         CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
         ScreenshotGalleryViewModel = new MediaGalleryViewModel(ScreenshotCardService, SettingsService, ThumbnailCacheService, isVideo: false);

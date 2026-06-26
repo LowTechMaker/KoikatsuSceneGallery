@@ -37,6 +37,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly SceneMetadataService _metadataService;
+    private readonly SceneCardCacheService _cardCacheService;
     private readonly DispatcherQueue _dispatcherQueue;
 
     public ObservableCollection<SceneCard> Cards { get; } = [];
@@ -119,12 +120,13 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
     private DispatcherQueueTimer? _metadataRefreshTimer;
     private bool _pluginAnalysisEnabled;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService)
+    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService)
     {
         _sceneCardService = sceneCardService;
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
+        _cardCacheService = cardCacheService;
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
 
         CardsView = new AdvancedCollectionView(Cards, true);
@@ -222,40 +224,117 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             Cards.Clear();
             _cardIndex.Clear();
 
-            await _sceneCardService.ScanFoldersAsync(paths, batch =>
+            // Phase 1: instant load from persisted card cache
+            var cached = await Task.Run(() => _cardCacheService.LoadAll());
+            // Filter to cards whose parent folder is still in the configured paths,
+            // so cards from removed folders don't flash on screen before the diff.
+            var configuredRoots = paths.Select(p => p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                .ToArray();
+            var relevantCached = cached.Where(kv =>
+                configuredRoots.Any(root => kv.Value.FilePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+                .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+            if (relevantCached.Count > 0)
             {
-                var processed = new ManualResetEventSlim(false);
-                // Low priority so the parallel scan's tight batch burst can't
-                // starve user input/rendering during the initial load.
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                var staleThumbnails = await Task.Run(() =>
                 {
-                    var added = new List<SceneCard>(batch.Count);
-                    using (CardsView.DeferRefresh())
+                    var stale = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var (path, entry) in relevantCached)
                     {
-                        foreach (var card in batch)
-                        {
-                            // Skip files already loaded (overlapping configured
-                            // folders, or a reload racing the first load) so the
-                            // same file can't appear twice in the grid.
-                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                            card.IsR18Content = IsR18Path(card.FilePath);
-                            Cards.Add(card);
-                            added.Add(card);
-                        }
+                        if (entry.ThumbnailPath is not null && !File.Exists(entry.ThumbnailPath))
+                            stale.Add(path);
                     }
-                    // Request thumbnails for every loaded card, not just ones the
-                    // GridView happens to realize. ContainerContentChanging
-                    // doesn't reliably re-fire when sort/filter shifts items
-                    // among already-realized containers, which left those cards
-                    // permanently blank. Generation is gated + disk-cached, and
-                    // the BitmapImage only materializes when a container binds it.
-                    foreach (var card in added)
-                        RequestThumbnail(card);
-                    processed.Set();
+                    return stale;
                 });
-                processed.Wait(TimeSpan.FromSeconds(10));
-                processed.Dispose();
-            });
+
+                using (CardsView.DeferRefresh())
+                {
+                    foreach (var (filePath, entry) in relevantCached)
+                    {
+                        var card = new SceneCard
+                        {
+                            FilePath = entry.FilePath,
+                            FileSize = entry.FileSize,
+                            DateModified = new DateTime(entry.DateModifiedTicks),
+                            Width = entry.Width,
+                            Height = entry.Height,
+                        };
+                        if (entry.ThumbnailPath is not null && !staleThumbnails.Contains(filePath))
+                        {
+                            card.ThumbnailPath = entry.ThumbnailPath;
+                            _thumbnailPathCache[filePath] = entry.ThumbnailPath;
+                        }
+                        card.IsR18Content = IsR18Path(card.FilePath);
+                        if (_cardIndex.TryAdd(card.FilePath, card))
+                            Cards.Add(card);
+                    }
+                }
+                ApplyFilter();
+                ViewRefreshed?.Invoke();
+            }
+
+            // Phase 2: background filesystem diff
+            var scanned = await _sceneCardService.ScanFoldersAsync(paths);
+            var scannedIndex = new Dictionary<string, SceneCard>(scanned.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var card in scanned)
+                scannedIndex.TryAdd(card.FilePath, card);
+
+            // Detect removed and modified cards
+            var toRemove = new List<string>();
+            var toUpdate = new List<SceneCard>();
+            foreach (var (filePath, existing) in _cardIndex)
+            {
+                if (!scannedIndex.TryGetValue(filePath, out var fresh))
+                {
+                    toRemove.Add(filePath);
+                }
+                else if (existing.DateModified.Ticks != fresh.DateModified.Ticks)
+                {
+                    toRemove.Add(filePath);
+                    toUpdate.Add(fresh);
+                }
+            }
+
+            // Detect added cards
+            var toAdd = new List<SceneCard>();
+            foreach (var (filePath, fresh) in scannedIndex)
+            {
+                if (!_cardIndex.ContainsKey(filePath))
+                    toAdd.Add(fresh);
+            }
+
+            if (toRemove.Count > 0 || toAdd.Count > 0 || toUpdate.Count > 0)
+            {
+                using (CardsView.DeferRefresh())
+                {
+                    foreach (var path in toRemove)
+                    {
+                        if (_cardIndex.Remove(path, out var old))
+                            Cards.Remove(old);
+                    }
+                    foreach (var card in toUpdate)
+                    {
+                        card.IsR18Content = IsR18Path(card.FilePath);
+                        if (_cardIndex.TryAdd(card.FilePath, card))
+                            Cards.Add(card);
+                    }
+                    foreach (var card in toAdd)
+                    {
+                        card.IsR18Content = IsR18Path(card.FilePath);
+                        if (_cardIndex.TryAdd(card.FilePath, card))
+                            Cards.Add(card);
+                    }
+                }
+            }
+
+            // Persist the reconciled state
+            var newCache = new Dictionary<string, CachedCardEntry>(_cardIndex.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var (filePath, card) in _cardIndex)
+            {
+                newCache[filePath] = new CachedCardEntry(
+                    card.FilePath, card.FileSize, card.DateModified.Ticks,
+                    card.Width, card.Height, card.ThumbnailPath);
+            }
+            await Task.Run(() => _cardCacheService.UpdateAll(newCache));
 
             ApplyFilter();
             _sceneCardService.StartWatching(paths);
@@ -442,11 +521,14 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
                 if (card.HasThumbnail) return;
                 var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card).ConfigureAwait(false);
                 if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
+                {
+                    _cardCacheService.SetThumbnailPath(card.FilePath, thumbnailPath);
                     _dispatcherQueue.TryEnqueue(() =>
                     {
                         _thumbnailPathCache[card.FilePath] = thumbnailPath;
                         card.ThumbnailPath = thumbnailPath;
                     });
+                }
             }
             finally
             {
@@ -651,6 +733,7 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
             CardsView.Filter = item => displaySet.Contains(item);
             CardsView.RefreshFilter();
             OnPropertyChanged(nameof(IsEmpty));
+            ViewRefreshed?.Invoke();
             return;
         }
 
@@ -674,17 +757,21 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
         }
         CardsView.RefreshFilter();
         OnPropertyChanged(nameof(IsEmpty));
+        ViewRefreshed?.Invoke();
     }
 
     private void OnCardAdded(SceneCard card)
     {
+        _cardCacheService.Add(new CachedCardEntry(
+            card.FilePath, card.FileSize, card.DateModified.Ticks,
+            card.Width, card.Height, null));
         _dispatcherQueue.TryEnqueue(() =>
         {
-            // Guard against re-adding a file that's already present.
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;
             card.IsR18Content = IsR18Path(card.FilePath);
             Cards.Add(card);
             QueueMetadata(card);
+            ViewRefreshed?.Invoke();
         });
     }
 
@@ -711,9 +798,11 @@ public partial class GalleryViewModel : ObservableObject, IDisposable
 
     public event Action<string>? CardRemovedNotification;
     public event Action? CardsReloaded;
+    public event Action? ViewRefreshed;
 
     private void OnCardRemoved(string path)
     {
+        _cardCacheService.Remove(path);
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (_cardIndex.Remove(path, out var existing))
