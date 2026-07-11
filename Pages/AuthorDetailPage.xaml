@@ -7,6 +7,7 @@
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:KoikatsuSceneGallery.Models"
+    xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
 
     <Grid Padding="24,16,24,0" RowSpacing="16">
@@ -365,46 +366,82 @@
                         x:Name="PostsList"
                         AutomationProperties.AutomationId="AuthorPostsList"
                         Margin="0,8,0,0"
-                        IsItemClickEnabled="True"
-                        ItemClick="PostsList_ItemClick"
-                        ItemsSource="{x:Bind ViewModel.Posts}"
+                        IsItemClickEnabled="False"
+                        ItemsSource="{x:Bind ViewModel.PostGroups}"
                         SelectionMode="None">
                         <ListView.ItemContainerTransitions>
                             <TransitionCollection />
                         </ListView.ItemContainerTransitions>
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="MinHeight" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="models:AuthorPost">
-                                <Grid Padding="12,8" ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <DataTemplate x:DataType="viewModels:PostImageGroupViewModel">
+                                <StackPanel Spacing="8" Padding="0,8,0,0"
+                                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                            BorderThickness="0,0,0,1">
+                                    <HyperlinkButton
+                                        AutomationProperties.Name="{x:Bind Post.DisplayTitle, Mode=OneWay}"
+                                        Click="PostTitle_Click"
+                                        Tag="{x:Bind Post}"
+                                        Padding="0">
                                         <TextBlock
-                                            Text="{x:Bind DisplayTitle, Mode=OneWay}"
+                                            Text="{x:Bind Post.DisplayTitle, Mode=OneWay}"
+                                            Style="{StaticResource BodyStrongTextBlockStyle}"
                                             TextTrimming="CharacterEllipsis"
                                             MaxLines="1" />
-                                        <TextBlock
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{x:Bind ArtworkId.Id}" />
-                                    </StackPanel>
-
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CaptionTextBlockStyle}"
-                                        Text="{x:Bind local:AuthorDetailPage.FormatFileCount(LocalFileCount)}" />
-
-                                    <FontIcon
-                                        Grid.Column="2"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="&#xE76C;" />
-                                </Grid>
+                                    </HyperlinkButton>
+                                    <GridView
+                                        ItemsSource="{x:Bind Images}"
+                                        CanDragItems="True"
+                                        DragItemsStarting="PostImages_DragItemsStarting"
+                                        IsItemClickEnabled="True"
+                                        ItemClick="PostImage_ItemClick"
+                                        SelectionMode="None"
+                                        SizeChanged="PostImagesGrid_SizeChanged"
+                                        Padding="0,0,0,8">
+                                        <GridView.ItemContainerTransitions>
+                                            <TransitionCollection />
+                                        </GridView.ItemContainerTransitions>
+                                        <GridView.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <ItemsWrapGrid Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </GridView.ItemsPanel>
+                                        <GridView.ItemContainerStyle>
+                                            <Style TargetType="GridViewItem">
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Margin" Value="0" />
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="MinWidth" Value="0" />
+                                                <Setter Property="MinHeight" Value="0" />
+                                            </Style>
+                                        </GridView.ItemContainerStyle>
+                                        <GridView.ItemTemplate>
+                                            <DataTemplate x:DataType="viewModels:LocalImagePreview">
+                                                <Grid
+                                                    Margin="4"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    ToolTipService.ToolTip="{x:Bind FileName}">
+                                                    <Border
+                                                        CornerRadius="{StaticResource ControlCornerRadius}"
+                                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                                        <Image
+                                                            Stretch="Uniform"
+                                                            Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ImageUri)}" />
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </GridView.ItemTemplate>
+                                    </GridView>
+                                </StackPanel>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>

@@ -32,24 +32,16 @@ public sealed class AuthorPostService
         _settingsService = settingsService;
     }
 
-    private ArtworkId? TryParseFilenameAll(string fileName)
+    private ArtworkId? TryParseFilename(string fileName, string providerId)
     {
-        foreach (var provider in _importProviders)
-        {
-            var id = provider.TryParseFilename(fileName);
-            if (id is not null) return id;
-        }
-        return null;
+        var provider = FindProvider(providerId);
+        return provider?.TryParseFilename(fileName);
     }
 
-    private ArtworkId? TryParseArtworkFolderNameAll(string folderName)
+    private ArtworkId? TryParseArtworkFolderName(string folderName, string providerId)
     {
-        foreach (var provider in _importProviders)
-        {
-            var id = provider.TryParseArtworkFolderName(folderName);
-            if (id is not null) return id;
-        }
-        return null;
+        var provider = FindProvider(providerId);
+        return provider?.TryParseArtworkFolderName(folderName);
     }
 
     private ICardImportProvider? FindProvider(string providerId)
@@ -115,7 +107,7 @@ public sealed class AuthorPostService
                                     var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
                                     if (parsed is null || parsed.Key != authorKey) continue;
 
-                                    ScanAuthorDirectory(authorDir, posts, ct);
+                                    ScanAuthorDirectory(authorDir, authorKey.ProviderId, posts, ct);
                                 }
                             }
                             catch (OperationCanceledException) { throw; }
@@ -130,13 +122,14 @@ public sealed class AuthorPostService
             {
                 var artworkId = new ArtworkId(post.ProviderId, id);
                 var provider = FindProvider(post.ProviderId);
+                var distinctPaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 result.Add(new AuthorPost
                 {
                     ArtworkId = artworkId,
                     ArtworkUrl = provider?.GetArtworkUrl(artworkId) ?? "",
                     Title = post.Title,
-                    LocalFileCount = post.FilePaths.Count,
-                    LocalFilePaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                    LocalFileCount = distinctPaths.Count,
+                    LocalFilePaths = distinctPaths,
                 });
             }
 
@@ -160,6 +153,7 @@ public sealed class AuthorPostService
 
     private void ScanAuthorDirectory(
         string authorDir,
+        string providerId,
         Dictionary<string, PostAccumulator> posts,
         CancellationToken ct)
     {
@@ -168,7 +162,7 @@ public sealed class AuthorPostService
             foreach (var file in Directory.EnumerateFiles(authorDir, "*.png"))
             {
                 ct.ThrowIfCancellationRequested();
-                var artworkId = TryParseFilenameAll(Path.GetFileName(file));
+                var artworkId = TryParseFilename(Path.GetFileName(file), providerId);
                 if (artworkId is not null)
                     AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file);
             }
@@ -182,7 +176,7 @@ public sealed class AuthorPostService
             {
                 ct.ThrowIfCancellationRequested();
                 var folderName = Path.GetFileName(subDir);
-                var artworkId = TryParseArtworkFolderNameAll(folderName);
+                var artworkId = TryParseArtworkFolderName(folderName, providerId);
 
                 var localFiles = new List<string>();
                 string? titleFromFolder = artworkId is not null
@@ -197,7 +191,7 @@ public sealed class AuthorPostService
                         localFiles.Add(file);
                         if (artworkId is null)
                         {
-                            var fromFile = TryParseFilenameAll(Path.GetFileName(file));
+                            var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
                             if (fromFile is not null)
                                 AddOrUpdate(posts, fromFile.ProviderId, fromFile.Id, null, file);
                         }

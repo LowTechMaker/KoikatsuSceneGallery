@@ -40,34 +40,14 @@
             SelectionChanged="NavView_SelectionChanged">
             <NavigationView.MenuItems>
                 <NavigationViewItem
-                    x:Name="GalleryNavItem"
-                    x:Uid="Nav_Gallery"
-                    AutomationProperties.AutomationId="GalleryNavItem"
+                    x:Name="LibraryNavItem"
+                    x:Uid="Nav_Library"
+                    AutomationProperties.AutomationId="LibraryNavItem"
                     IsSelected="True"
-                    Tag="gallery"
+                    Tag="library"
                     ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8B9;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem
-                    x:Name="CharactersNavItem"
-                    x:Uid="Nav_Characters"
-                    AutomationProperties.AutomationId="CharactersNavItem"
-                    Tag="characters"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE77B;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem
-                    x:Name="CoordinatesNavItem"
-                    x:Uid="Nav_Coordinates"
-                    AutomationProperties.AutomationId="CoordinatesNavItem"
-                    Tag="coordinates"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE78A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem
@@ -117,7 +97,39 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
-            <Frame x:Name="NavFrame" AutomationProperties.AutomationId="NavFrame" />
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <SelectorBar
+                    x:Name="LibrarySelectorBar"
+                    AutomationProperties.AutomationId="LibrarySelectorBar"
+                    Margin="20,8,20,0"
+                    HorizontalAlignment="Left"
+                    SelectionChanged="LibrarySelectorBar_SelectionChanged">
+                    <SelectorBarItem
+                        x:Name="ScenesSelectorItem"
+                        x:Uid="Library_Scenes"
+                        AutomationProperties.AutomationId="LibraryScenesSelectorItem"
+                        IsSelected="True" />
+                    <SelectorBarItem
+                        x:Name="CharactersSelectorItem"
+                        x:Uid="Library_Characters"
+                        AutomationProperties.AutomationId="LibraryCharactersSelectorItem" />
+                    <SelectorBarItem
+                        x:Name="CoordinatesSelectorItem"
+                        x:Uid="Library_Coordinates"
+                        AutomationProperties.AutomationId="LibraryCoordinatesSelectorItem" />
+                </SelectorBar>
+
+                <Frame
+                    x:Name="NavFrame"
+                    AutomationProperties.AutomationId="NavFrame"
+                    Grid.Row="1"
+                    Navigated="NavFrame_Navigated" />
+            </Grid>
         </NavigationView>
     </Grid>
 </Window>

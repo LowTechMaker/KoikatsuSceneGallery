@@ -3,6 +3,7 @@ using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
 
@@ -14,12 +15,15 @@ public sealed partial class AuthorDetailPage : Page
 
     private const double SceneImageRatio = 135.0 / 240.0;
     private const double CharaImageRatio = 352.0 / 252.0;
+    private const double PostImageRatio = 3.0 / 4.0;
     private const double CardMargin = 4;
     private const double CardInset = 4 + 1;
     private const double CellOverheadW = CardMargin * 2;
     private const double ContentInsetW = (CardMargin + CardInset) * 2;
     private const double FilenameReserve = 30;
     private const double DesiredWidth = 240;
+    private const double PostDesiredWidth = 160;
+    private const double PostItemSpacing = 8;
     private const int ScenesTabIndex = 0;
     private const int CharactersTabIndex = 1;
     private const int CoordinatesTabIndex = 2;
@@ -98,7 +102,29 @@ public sealed partial class AuthorDetailPage : Page
         panel.ItemHeight = cellH;
     }
 
+    private static void ApplyPostImageLayout(GridView grid)
+    {
+        if (grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
+            return;
+
+        double available = panel.ActualWidth;
+        int columns = Math.Max(1, (int)Math.Floor(available / (PostDesiredWidth + PostItemSpacing)));
+        double cellW = (available / columns) - PostItemSpacing;
+        double cellH = cellW * PostImageRatio;
+
+        panel.ItemWidth = cellW;
+        panel.ItemHeight = cellH;
+    }
+
+    private void PostImagesGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is GridView grid)
+            ApplyPostImageLayout(grid);
+    }
+
     public static string FormatCount(int count) => $"({count})";
+
+    public static BitmapImage CreateThumbnail(Uri uri) => new() { DecodePixelWidth = 160, UriSource = uri };
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
@@ -170,14 +196,32 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
-    private void PostsList_ItemClick(object sender, ItemClickEventArgs e)
+    private void PostTitle_Click(object sender, RoutedEventArgs e)
     {
-        if (e.ClickedItem is AuthorPost post)
+        if (sender is FrameworkElement { Tag: AuthorPost post })
         {
             SetRestoreSelectedTabOnBack(PostsTabIndex);
             Frame.Navigate(typeof(PostDetailPage), post);
         }
     }
+
+    private void PostImage_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not LocalImagePreview preview) return;
+
+        var path = preview.FilePath;
+        var scene = App.GalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), scene); return; }
+
+        var character = App.CharacterGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), character); return; }
+
+        var coordinate = App.CoordinateGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
+    }
+
+    private void PostImages_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => SetDragFiles(e, e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath));
 
     private void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
         => SetDragFiles(e, e.Items.OfType<SceneCard>().Select(c => c.FilePath));

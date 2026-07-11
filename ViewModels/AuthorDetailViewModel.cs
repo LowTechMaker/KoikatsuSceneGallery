@@ -6,6 +6,19 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
+public sealed class PostImageGroupViewModel
+{
+    public AuthorPost Post { get; }
+    public ObservableCollection<LocalImagePreview> Images { get; } = [];
+
+    public PostImageGroupViewModel(AuthorPost post)
+    {
+        Post = post;
+        foreach (var path in post.LocalFilePaths.Where(File.Exists))
+            Images.Add(new LocalImagePreview(new Uri(path.Replace("#", "%23")), Path.GetFileName(path), path));
+    }
+}
+
 public partial class AuthorDetailViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -15,6 +28,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public ObservableCollection<CharacterCard> Characters { get; } = [];
     public ObservableCollection<CoordinateCard> Coordinates { get; } = [];
     public ObservableCollection<AuthorPost> Posts { get; } = [];
+    public ObservableCollection<PostImageGroupViewModel> PostGroups { get; } = [];
 
     [ObservableProperty]
     public partial int SceneCount { get; set; }
@@ -74,11 +88,19 @@ public partial class AuthorDetailViewModel : ObservableObject
         try
         {
             var posts = await postService.ScanAuthorPostsAsync(Author.Key, ct);
+            var groups = await Task.Run(
+                () => posts.Select(p => new PostImageGroupViewModel(p)).ToList(), ct);
+
             Posts.Clear();
-            foreach (var post in posts)
-                Posts.Add(post);
+            PostGroups.Clear();
+            for (int i = 0; i < posts.Count; i++)
+            {
+                Posts.Add(posts[i]);
+                PostGroups.Add(groups[i]);
+            }
             PostCount = Posts.Count;
         }
+        catch (OperationCanceledException) { }
         finally
         {
             IsLoadingPosts = false;
