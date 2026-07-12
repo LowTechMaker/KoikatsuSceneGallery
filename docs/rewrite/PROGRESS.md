@@ -83,3 +83,33 @@ No new out-of-scope findings were added. The existing static `CrashLog` remains 
 ## Risks
 
 Expected cancellation paths are now logged as well as swallowed, preserving control flow at the cost of additional diagnostic entries during rapid navigation. Task 5 will refine cancellation ownership and propagation without changing the Task 3 observability contract.
+
+## Task 4 — Split the import flow
+
+## Result: Completed
+
+## Commands run
+
+`rtk test dotnet test --no-restore` passed all 56 tests at the stage start. After import characterization and cancellation tests were added, the final run passed all 76 tests.
+
+`rtk proxy dotnet build KoikatsuSceneGallery.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --no-restore` completed with 0 warnings and 0 errors.
+
+`rtk proxy dotnet publish KoikatsuSceneGallery.csproj -c Release -r win-x64 --self-contained --no-restore -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None -p:PublishDir=publish\smoke\` completed successfully. An earlier attempt failed because a previous smoke process (PID 48892) still locked the publish DLLs; the process was stopped and the identical publish command then passed.
+
+The user manually exercised the unpackaged publish with compatible production plugins copied into the temporary publish folder: the window and Import page loaded, the BepisDB/WebView2 cookie setup dialog opened and closed normally, navigation returned to a 14,500-card Gallery with thumbnails intact, and no new crash-log entry appeared.
+
+`rtk git diff --check` completed with no whitespace errors.
+
+## Tests: 76 total / 76 passed / 0 failed / 0 skipped
+
+## Changes
+
+Added Core `ImportDestinationPolicy` and `ImportDuplicateDetector` characterization coverage for destination naming, artwork threshold behavior, duplicate filenames, file conflicts, card-type routing, synthetic-card equality, and cancellation. Extracted bounded file moves/duplicate deletion/collision handling into `ImportFileExecutor` with a maximum concurrency of four. Library filename/folder indexing now runs off the UI thread and observes cancellation. Extracted manual-assignment snapshots and undo state from `ImportViewModel` into `ImportManualAssignmentHistory`. `ImportService` decreased from 770 to 694 lines and `ImportViewModel` from 1,347 to 1,279 lines without schema or plugin-contract changes.
+
+## Notes / out-of-scope findings
+
+No new out-of-scope findings were added. Production plugin DLLs were copied only to ignored `publish\smoke\Plugins` for runtime validation and are not part of the commit.
+
+## Risks
+
+Independent file moves can now finish in a different order because they run with bounded parallelism; per-item status and duplicate/collision semantics remain unchanged. Cancellation is checked during library scans, file comparison, moves, and empty-directory cleanup; already-completed moves are not rolled back, matching the prior non-transactional behavior.
