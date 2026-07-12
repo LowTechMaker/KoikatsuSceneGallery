@@ -22,6 +22,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly CharacterMetadataService _metadataService;
+    private readonly SettingsViewModel _settingsViewModel;
 
     public ObservableCollection<CharacterCard> Cards { get; }
 
@@ -50,7 +51,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     public event Action<string>? VersionIndexChanged;
 
-    public CharacterGalleryViewModel(CharacterCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CharacterMetadataService metadataService)
+    public CharacterGalleryViewModel(CharacterCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CharacterMetadataService metadataService, SettingsViewModel settingsViewModel)
         : base(new ObservableCollection<CharacterCard>())
     {
         Cards = (ObservableCollection<CharacterCard>)_cardsSource;
@@ -58,12 +59,13 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
+        _settingsViewModel = settingsViewModel;
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
 
-        App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.CharacterResolutionFilterChanged += OnCharacterResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
+        _settingsViewModel.CharacterResolutionFilterChanged += OnCharacterResolutionFilterChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -468,8 +470,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _metadataRefreshTimer?.Stop();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
-        App.SettingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
+        _settingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
         GC.SuppressFinalize(this);
     }
 }

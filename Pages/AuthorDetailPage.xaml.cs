@@ -11,7 +11,11 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class AuthorDetailPage : Page
 {
-    public AuthorDetailViewModel ViewModel { get; } = new();
+    public AuthorDetailViewModel ViewModel { get; } = new(
+        App.Services.GetService<AuthorPostService>(),
+        App.Services.GetRequiredService<GalleryViewModel>(),
+        App.Services.GetRequiredService<CharacterGalleryViewModel>(),
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>());
 
     private const double SceneImageRatio = 135.0 / 240.0;
     private const double CharaImageRatio = 352.0 / 252.0;
@@ -45,13 +49,13 @@ public sealed partial class AuthorDetailPage : Page
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
             foreach (var card in ViewModel.Scenes)
-                App.GalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<GalleryViewModel>().RequestThumbnail(card);
             foreach (var card in ViewModel.Characters)
-                App.CharacterGalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(card);
             foreach (var card in ViewModel.Coordinates)
-                App.CoordinateGalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<CoordinateGalleryViewModel>().RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
-            if (ViewModel.CanLoadPosts && App.AuthorPostService is { } postService)
+            if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _postsCts = new CancellationTokenSource();
                 _ = ViewModel.LoadPostsAsync(postService, _postsCts.Token);
@@ -166,7 +170,7 @@ public sealed partial class AuthorDetailPage : Page
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Author is { } author)
-            await App.AuthorInfoService.RefreshAuthorAsync(author.Key);
+            await App.Services.GetRequiredService<AuthorInfoService>().RefreshAuthorAsync(author.Key);
     }
 
     private void ScenesGrid_ItemClick(object sender, ItemClickEventArgs e)
@@ -210,13 +214,13 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is not LocalImagePreview preview) return;
 
         var path = preview.FilePath;
-        var scene = App.GalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), scene); return; }
 
-        var character = App.CharacterGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), character); return; }
 
-        var coordinate = App.CoordinateGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
     }
 

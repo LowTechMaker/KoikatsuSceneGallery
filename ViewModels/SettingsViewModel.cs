@@ -12,6 +12,9 @@ namespace KoikatsuSceneGallery.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
+    private readonly Func<MainWindow?> _getMainWindow;
+    private readonly Func<GalleryViewModel?> _getGalleryViewModel;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     public ObservableCollection<string> FolderPaths { get; } = [];
@@ -140,9 +143,16 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? VideoFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
 
-    public SettingsViewModel(SettingsService settingsService)
+    public SettingsViewModel(
+        SettingsService settingsService,
+        ThumbnailCacheService thumbnailCacheService,
+        Func<MainWindow?> getMainWindow,
+        Func<GalleryViewModel?> getGalleryViewModel)
     {
         _settingsService = settingsService;
+        _thumbnailCacheService = thumbnailCacheService;
+        _getMainWindow = getMainWindow;
+        _getGalleryViewModel = getGalleryViewModel;
         FolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoFolders));
@@ -421,6 +431,10 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(CacheFolderDisplay));
     }
 
+    private nint GetWindowHandle()
+        => WindowNative.GetWindowHandle(
+            _getMainWindow() ?? throw new InvalidOperationException("The main window is not available."));
+
     [RelayCommand]
     private async Task AddFolderAsync()
     {
@@ -428,7 +442,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -453,7 +467,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -478,7 +492,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -503,7 +517,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -528,7 +542,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -553,14 +567,14 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
         if (folder != null)
         {
             CacheFolderPath = folder.Path;
-            App.ThumbnailCacheService.SetCacheFolder(folder.Path);
+            _thumbnailCacheService.SetCacheFolder(folder.Path);
             OnPropertyChanged(nameof(CacheFolderDisplay));
             await SaveConfigAsync();
         }
@@ -570,7 +584,7 @@ public partial class SettingsViewModel : ObservableObject
     private async Task ResetCacheFolderAsync()
     {
         CacheFolderPath = string.Empty;
-        App.ThumbnailCacheService.SetCacheFolder(string.Empty);
+        _thumbnailCacheService.SetCacheFolder(string.Empty);
         OnPropertyChanged(nameof(CacheFolderDisplay));
         await SaveConfigAsync();
     }
@@ -578,14 +592,14 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        await App.ThumbnailCacheService.ClearCacheAsync();
+        await _thumbnailCacheService.ClearCacheAsync();
     }
 
     [RelayCommand]
-    private void ScanMissingMetadata() => App.GalleryViewModel.ScanMissingMetadata();
+    private void ScanMissingMetadata() => _getGalleryViewModel()?.ScanMissingMetadata();
 
     [RelayCommand]
-    private void RescanMetadata() => App.GalleryViewModel.RescanAllMetadata();
+    private void RescanMetadata() => _getGalleryViewModel()?.RescanAllMetadata();
 
     [RelayCommand]
     private async Task AddResolution(string input)

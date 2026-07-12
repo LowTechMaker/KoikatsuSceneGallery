@@ -20,6 +20,7 @@ internal sealed class GalleryLayoutEngine
     private readonly GridView _grid;
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly Action<int> _setShuffleDisplayCount;
+    private readonly SettingsViewModel _settingsViewModel;
 
     private int _sizeIndex = MediumIndex;
     private double _thumbnailWidth = 240;
@@ -34,13 +35,15 @@ internal sealed class GalleryLayoutEngine
         double imageRatio,
         GridView grid,
         DispatcherQueue dispatcherQueue,
-        Action<int> setShuffleDisplayCount)
+        Action<int> setShuffleDisplayCount,
+        SettingsViewModel settingsViewModel)
     {
         _imageRatio = imageRatio;
         _grid = grid;
         _dispatcherQueue = dispatcherQueue;
         _setShuffleDisplayCount = setShuffleDisplayCount;
-        _sizeIndex = NearestPresetIndex(App.SettingsViewModel.ThumbnailWidth);
+        _settingsViewModel = settingsViewModel;
+        _sizeIndex = NearestPresetIndex(_settingsViewModel.ThumbnailWidth);
         _thumbnailWidth = SizePresets[_sizeIndex];
     }
 
@@ -90,7 +93,7 @@ internal sealed class GalleryLayoutEngine
     public void ApplyCacheLength()
     {
         if (_grid.ItemsPanelRoot is ItemsWrapGrid panel)
-            panel.CacheLength = App.SettingsViewModel.CacheLength;
+            panel.CacheLength = _settingsViewModel.CacheLength;
     }
 
     public void ApplyLayout()
@@ -109,7 +112,7 @@ internal sealed class GalleryLayoutEngine
 
         double cellW = (available / columns) - 0.5;
         double imageH = Math.Max(0, cellW - ContentInsetW) * _imageRatio;
-        double filename = App.SettingsViewModel.ShowFileNames ? FilenameReserve : 0;
+        double filename = _settingsViewModel.ShowFileNames ? FilenameReserve : 0;
         double cellH = imageH + filename + (CardMargin + CardInset) * 2;
 
         panel.ItemWidth = cellW;
@@ -150,7 +153,7 @@ internal sealed class GalleryLayoutEngine
 
     public void ApplyDesiredWidth()
     {
-        int idx = App.SettingsViewModel.SizeSelectorEnabled ? _sizeIndex : MediumIndex;
+        int idx = _settingsViewModel.SizeSelectorEnabled ? _sizeIndex : MediumIndex;
         _thumbnailWidth = SizePresets[idx];
         ApplyLayout();
     }
@@ -159,7 +162,7 @@ internal sealed class GalleryLayoutEngine
     {
         if (sizeButtonsPanel != null)
         {
-            sizeButtonsPanel.Visibility = App.SettingsViewModel.SizeSelectorEnabled
+            sizeButtonsPanel.Visibility = _settingsViewModel.SizeSelectorEnabled
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -174,7 +177,7 @@ internal sealed class GalleryLayoutEngine
             _saveTimer.Tick += async (_, _) =>
             {
                 _saveTimer!.Stop();
-                await App.SettingsViewModel.SaveThumbnailWidthAsync(SizePresets[_sizeIndex]);
+                await _settingsViewModel.SaveThumbnailWidthAsync(SizePresets[_sizeIndex]);
             };
         }
         _saveTimer.Stop();

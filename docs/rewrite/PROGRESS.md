@@ -25,3 +25,31 @@ The ignored local Avalonia tree had generated sources that polluted the root SDK
 ## Risks
 
 The dedicated Ubuntu CI job has not run locally. PluginSdk public API, JSON schema, MessagePack schema, cache naming, and user data paths were not changed.
+
+## Task 2 — Remove the App static Service Locator
+
+## Result: Blocked
+
+## Commands run
+
+`rtk test dotnet test --no-restore` passed all 56 tests.
+
+`rtk proxy dotnet build KoikatsuSceneGallery.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --no-restore` completed with 0 warnings and 0 errors.
+
+Static searches returned zero `App.` references in `ViewModels/`, `Services/`, and `Helpers/`; `App.xaml.cs` exposes only the single `AppServiceRegistry Services` static entry.
+
+`rtk proxy where.exe winapp` returned exit code 1, and `BuildAndRun.ps1` is absent.
+
+## Tests: 56 total / 56 passed / 0 failed / 0 skipped
+
+## Changes
+
+Replaced public static service/ViewModel properties with a single registry entry, added constructor injection throughout ViewModels and services, preserved keyed screenshot/video instances and optional import/post lifetimes, and moved author-source orchestration to `AuthorSourceCoordinator`.
+
+## Notes / out-of-scope findings
+
+The required packaged runtime smoke test cannot run until the WinUI prerequisite tool is installed. No direct executable launch or package-identity workaround was attempted.
+
+## Risks
+
+Compilation and unit tests pass, but the new composition path has not been launched. Task 3 must not start until the current build launches through `winapp` and loads a Gallery successfully.

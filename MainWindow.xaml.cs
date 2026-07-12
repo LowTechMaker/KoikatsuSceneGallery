@@ -5,6 +5,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using KoikatsuSceneGallery.Pages;
+using KoikatsuSceneGallery.Services;
+using KoikatsuSceneGallery.ViewModels;
 
 namespace KoikatsuSceneGallery;
 
@@ -21,18 +23,18 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
-        if (App.AuthorInfoService.IsAvailable)
+        if (App.Services.GetRequiredService<AuthorInfoService>().IsAvailable)
             AuthorsNavItem.Visibility = Visibility.Visible;
 
-        if (App.ImportViewModel is not null)
+        if (App.Services.GetService<ImportViewModel>() is { } importViewModel)
         {
             ImportNavItem.Visibility = Visibility.Visible;
-            App.ImportViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
+            importViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
             UpdateImportNavBadge();
         }
 
         ApplyNavVisibility();
-        App.SettingsViewModel.NavItemVisibilityChanged += OnNavItemVisibilityChanged;
+        App.Services.GetRequiredService<SettingsViewModel>().NavItemVisibilityChanged += OnNavItemVisibilityChanged;
 
         NavigateToSelectedLibraryPage();
     }
@@ -50,7 +52,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateImportNavBadge()
     {
-        if (App.ImportViewModel is not { } viewModel)
+        if (App.Services.GetService<ImportViewModel>() is not { } viewModel)
             return;
 
         if (viewModel.IsImporting)
@@ -100,7 +102,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyNavVisibility()
     {
-        var vm = App.SettingsViewModel;
+        var vm = App.Services.GetRequiredService<SettingsViewModel>();
         SetNavItemVisibility("gallery", vm.ShowGalleryNav);
         SetNavItemVisibility("characters", vm.ShowCharactersNav);
         SetNavItemVisibility("coordinates", vm.ShowCoordinatesNav);
@@ -261,10 +263,10 @@ public sealed partial class MainWindow : Window
                 case "videos":
                     NavFrame.Navigate(typeof(VideoGalleryPage));
                     break;
-                case "authors" when App.AuthorInfoService.IsAvailable:
+                case "authors" when App.Services.GetRequiredService<AuthorInfoService>().IsAvailable:
                     NavFrame.Navigate(typeof(AuthorsPage));
                     break;
-                case "import" when App.ImportViewModel is not null:
+                case "import" when App.Services.GetService<ImportViewModel>() is not null:
                     NavFrame.Navigate(typeof(ImportPage));
                     break;
             }

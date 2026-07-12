@@ -21,15 +21,15 @@ public sealed partial class GalleryPage : Page
 
     public GalleryPage()
     {
-        ViewModel = App.GalleryViewModel;
+        ViewModel = App.Services.GetRequiredService<GalleryViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
-        _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount);
+        _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount, App.Services.GetRequiredService<SettingsViewModel>());
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
-        App.SettingsViewModel.SceneFolderPathsChanged += OnSceneFolderPathsChanged;
+        App.Services.GetRequiredService<SettingsViewModel>().SceneFolderPathsChanged += OnSceneFolderPathsChanged;
     }
 
     private void OnSceneFolderPathsChanged()
@@ -138,7 +138,7 @@ public sealed partial class GalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.Services.GetRequiredService<SettingsViewModel>().ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 

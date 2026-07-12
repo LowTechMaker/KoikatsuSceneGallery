@@ -8,3 +8,7 @@
 - A `dotnet test --no-restore` attempt initially returned success without discovering tests because the generated xUnit template relies on restored test SDK props to mark the project as a test project. Task 1 now sets `IsTestProject` explicitly; no no-op test command is counted as verification.
 - With `IsTestProject` explicit, no-restore validation correctly failed with `NETSDK1004` for the missing Core/Tests `project.assets.json`. A later authorized restore completed, and the real test run passed 56/56.
 - After adding the required root solution, an unqualified `dotnet build -p:RuntimeIdentifier=win-x64` selects the solution and fails with `NETSDK1134` because solution-level RID builds are unsupported. CI and final app verification therefore specify `KoikatsuSceneGallery.csproj` while retaining the same configuration, platform, and runtime identifier.
+
+## Task 2 out-of-scope findings
+
+- `winapp` is not installed or discoverable on `PATH`, and the repository has no `BuildAndRun.ps1`. Task 2 cannot perform the required packaged-app launch/gallery smoke test. The WinUI workflow forbids launching the generated executable directly or installing prerequisites automatically; run `/winui-setup` before resuming.

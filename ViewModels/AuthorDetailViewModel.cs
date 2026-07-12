@@ -21,6 +21,23 @@ public sealed class PostImageGroupViewModel
 
 public partial class AuthorDetailViewModel : ObservableObject
 {
+    private readonly AuthorPostService? _authorPostService;
+    private readonly GalleryViewModel _galleryViewModel;
+    private readonly CharacterGalleryViewModel _characterGalleryViewModel;
+    private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
+
+    public AuthorDetailViewModel(
+        AuthorPostService? authorPostService,
+        GalleryViewModel galleryViewModel,
+        CharacterGalleryViewModel characterGalleryViewModel,
+        CoordinateGalleryViewModel coordinateGalleryViewModel)
+    {
+        _authorPostService = authorPostService;
+        _galleryViewModel = galleryViewModel;
+        _characterGalleryViewModel = characterGalleryViewModel;
+        _coordinateGalleryViewModel = coordinateGalleryViewModel;
+    }
+
     [ObservableProperty]
     public partial AuthorDisplay? Author { get; set; }
 
@@ -46,7 +63,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public partial bool IsLoadingPosts { get; set; }
 
     public bool CanLoadPosts => Author is { } author
-                                && App.AuthorPostService?.CanScanPosts(author.Key) == true;
+                                && _authorPostService?.CanScanPosts(author.Key) == true;
 
     public void Load(AuthorSummary summary)
     {
@@ -54,7 +71,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         var key = summary.Display.Key;
 
         Scenes.Clear();
-        foreach (var card in App.GalleryViewModel.Cards)
+        foreach (var card in _galleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Scenes.Add(card);
@@ -62,7 +79,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         SceneCount = Scenes.Count;
 
         Characters.Clear();
-        foreach (var card in App.CharacterGalleryViewModel.Cards)
+        foreach (var card in _characterGalleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Characters.Add(card);
@@ -70,7 +87,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         CharacterCount = Characters.Count;
 
         Coordinates.Clear();
-        foreach (var card in App.CoordinateGalleryViewModel.Cards)
+        foreach (var card in _coordinateGalleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Coordinates.Add(card);

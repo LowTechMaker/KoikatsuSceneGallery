@@ -20,15 +20,15 @@ public sealed partial class VideoGalleryPage : Page
 
     public VideoGalleryPage()
     {
-        ViewModel = App.VideoGalleryViewModel;
+        ViewModel = App.Services.GetRequiredService<MediaGalleryViewModel>("videos");
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
-        _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount);
+        _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount, App.Services.GetRequiredService<SettingsViewModel>());
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
-        App.SettingsViewModel.VideoFolderPathsChanged += OnFolderPathsChanged;
+        App.Services.GetRequiredService<SettingsViewModel>().VideoFolderPathsChanged += OnFolderPathsChanged;
     }
 
     private void OnFolderPathsChanged()
@@ -124,7 +124,7 @@ public sealed partial class VideoGalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.Services.GetRequiredService<SettingsViewModel>().ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 

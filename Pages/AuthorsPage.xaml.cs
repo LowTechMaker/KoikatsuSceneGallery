@@ -13,7 +13,7 @@ public sealed partial class AuthorsPage : Page
 
     public AuthorsPage()
     {
-        ViewModel = App.AuthorsViewModel;
+        ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
     }
@@ -21,7 +21,7 @@ public sealed partial class AuthorsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.RefreshAuthorSources();
+        App.Services.GetRequiredService<AuthorSourceCoordinator>().Refresh();
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

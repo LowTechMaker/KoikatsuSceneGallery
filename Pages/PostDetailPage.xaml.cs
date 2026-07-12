@@ -31,7 +31,7 @@ public sealed partial class PostDetailPage : Page
         {
             ViewModel.Load(post);
             RenderDescription();
-            if (!post.IsDetailLoaded && App.AuthorPostService is { } postService)
+            if (!post.IsDetailLoaded && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _cts = new CancellationTokenSource();
                 _ = ViewModel.LoadDetailAsync(postService, _cts.Token);
@@ -54,13 +54,13 @@ public sealed partial class PostDetailPage : Page
         if (e.ClickedItem is not LocalImagePreview preview) return;
 
         var path = preview.FilePath;
-        var scene = App.GalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (scene is not null) { Frame.Navigate(typeof(DetailPage), scene); return; }
 
-        var character = App.CharacterGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (character is not null) { Frame.Navigate(typeof(CharacterDetailPage), character); return; }
 
-        var coordinate = App.CoordinateGalleryViewModel.Cards.FirstOrDefault(c => c.FilePath == path);
+        var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
         if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
     }
 
@@ -72,7 +72,7 @@ public sealed partial class PostDetailPage : Page
 
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (App.AuthorPostService is { } postService)
+        if (App.Services.GetService<AuthorPostService>() is { } postService)
             await ViewModel.SaveToCacheAsync(postService, _cts?.Token ?? CancellationToken.None);
     }
 

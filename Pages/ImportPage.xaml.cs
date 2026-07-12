@@ -22,9 +22,9 @@ public sealed partial class ImportPage : Page
 
     public ImportPage()
     {
-        ViewModel = App.ImportViewModel!;
+        ViewModel = App.Services.GetService<ImportViewModel>()!;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        _cookieSetupProviders = App.PluginService.CookieSetupProviders;
+        _cookieSetupProviders = App.Services.GetRequiredService<PluginService>().CookieSetupProviders;
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
 

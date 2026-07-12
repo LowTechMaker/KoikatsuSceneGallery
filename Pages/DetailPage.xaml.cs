@@ -13,7 +13,9 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class DetailPage : Page
 {
-    public DetailViewModel ViewModel { get; } = new();
+    public DetailViewModel ViewModel { get; } = new(
+        App.Services.GetRequiredService<AuthorInfoService>(),
+        App.Services.GetRequiredService<GalleryViewModel>());
 
     public DetailPage()
     {
@@ -23,8 +25,8 @@ public sealed partial class DetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.GalleryViewModel.CardRemovedNotification += OnCardRemoved;
-        App.GalleryViewModel.CardsReloaded += OnCardsReloaded;
+        App.Services.GetRequiredService<GalleryViewModel>().CardRemovedNotification += OnCardRemoved;
+        App.Services.GetRequiredService<GalleryViewModel>().CardsReloaded += OnCardsReloaded;
         if (e.Parameter is SceneCard card)
             ShowCard(card);
     }
@@ -32,8 +34,8 @@ public sealed partial class DetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.GalleryViewModel.CardRemovedNotification -= OnCardRemoved;
-        App.GalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        App.Services.GetRequiredService<GalleryViewModel>().CardRemovedNotification -= OnCardRemoved;
+        App.Services.GetRequiredService<GalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnCardRemoved(string path)
@@ -43,7 +45,7 @@ public sealed partial class DetailPage : Page
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.GalleryViewModel.CardsView, ViewModel.Card);
+            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
             if (next != null)
                 ShowCard(next);
             else if (Frame.CanGoBack)
@@ -70,14 +72,14 @@ public sealed partial class DetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.GalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.GalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -87,7 +89,7 @@ public sealed partial class DetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.GalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 

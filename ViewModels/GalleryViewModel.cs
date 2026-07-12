@@ -23,13 +23,15 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly SceneMetadataService _metadataService;
     private readonly SceneCardCacheService _cardCacheService;
+    private readonly SettingsViewModel _settingsViewModel;
+    private readonly PluginService _pluginService;
 
     public ObservableCollection<SceneCard> Cards { get; }
 
     [ObservableProperty]
     public partial bool ShowR18Content { get; set; } = true;
 
-    public bool ShowR18FilterButton => App.PluginService.ImportProviders
+    public bool ShowR18FilterButton => _pluginService.ImportProviders
         .OfType<IImportDestinationProvider>()
         .Any(p => p.UsesRatingFolders);
 
@@ -63,7 +65,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService)
+    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService)
         : base(new ObservableCollection<SceneCard>())
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
@@ -72,13 +74,15 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
         _cardCacheService = cardCacheService;
+        _settingsViewModel = settingsViewModel;
+        _pluginService = pluginService;
 
         _sceneCardService.CardAdded += OnCardAdded;
         _sceneCardService.CardRemoved += OnCardRemoved;
 
-        App.SettingsViewModel.ResolutionFilterChanged += OnResolutionFilterChanged;
-        App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.PluginAnalysisEnabledChanged += OnPluginAnalysisEnabledChanged;
+        _settingsViewModel.ResolutionFilterChanged += OnResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
+        _settingsViewModel.PluginAnalysisEnabledChanged += OnPluginAnalysisEnabledChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -572,9 +576,9 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _metadataRefreshTimer?.Stop();
         _sceneCardService.CardAdded -= OnCardAdded;
         _sceneCardService.CardRemoved -= OnCardRemoved;
-        App.SettingsViewModel.ResolutionFilterChanged -= OnResolutionFilterChanged;
-        App.SettingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.PluginAnalysisEnabledChanged -= OnPluginAnalysisEnabledChanged;
+        _settingsViewModel.ResolutionFilterChanged -= OnResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
+        _settingsViewModel.PluginAnalysisEnabledChanged -= OnPluginAnalysisEnabledChanged;
         GC.SuppressFinalize(this);
     }
 }

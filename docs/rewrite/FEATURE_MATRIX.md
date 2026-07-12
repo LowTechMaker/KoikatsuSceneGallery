@@ -19,3 +19,14 @@
 | Windows app compatibility | WinUI app build | Release x64 app-project build | Verified: 0 warnings, 0 errors |
 
 The status column is updated after implementation and local verification. The Ubuntu job itself remains pending until CI runs.
+
+## Task 2
+
+| Capability | Implementation | Verification | Status |
+| --- | --- | --- | --- |
+| Single composition entry | `AppServiceRegistry` exposed only as `App.Services` | `App.xaml.cs` public-static scan | Verified |
+| ViewModel constructor injection | Settings, gallery, media, import, author, and detail dependencies injected | Zero `App.` references under `ViewModels/` | Verified |
+| Service isolation | Author-source orchestration moved to `AuthorSourceCoordinator` | Zero `App.` references under `Services/` | Verified |
+| XAML code-behind resolution | Pages, MainWindow, and controls resolve through the single registry entry | Release x64 compilation | Verified |
+| Delayed optional services | Import and author-post services are registered only when providers exist | Preserved composition order and nullable lookups | Build verified; runtime pending |
+| App launch and gallery load | Current build launched with package identity | `winapp` unavailable | Blocked |

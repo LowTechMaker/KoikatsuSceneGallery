@@ -24,3 +24,11 @@ Models that inherit `ObservableObject`, contain `BitmapImage`, represent UI stat
 ## Test strategy
 
 Synthetic PNGs reproduce only the byte layout consumed by the current code. Synthetic character-card MessagePack blocks use the existing field names and offsets. Tests intentionally preserve edge behavior such as `PngHelper` not validating the PNG signature, case-sensitive filename patterns, permissive negative resolution values, marker substring matching, exception-to-null parser behavior, and platform-specific invalid filename characters.
+
+# Task 2 decisions
+
+The app uses a small hand-written `AppServiceRegistry` instead of adding a DI package. It supports the one required UI-boundary resolution entry plus keyed screenshot/video instances, while construction and lifetime order remain explicit in `App.OnLaunched`.
+
+ViewModels and services receive dependencies through constructors. The Settings ViewModel receives window and gallery access as delayed delegates because the window and gallery are created after settings are loaded; this preserves the existing initialization order without post-construction mutable properties. Author library attachment, refresh, and warmup moved from static `App` methods into `AuthorSourceCoordinator`.
+
+Pages, MainWindow, and controls may resolve through `App.Services`, matching the XAML code-behind exception in Task 2. No ViewModel, service, or helper references `App`.

@@ -39,6 +39,7 @@ public partial class ImportViewModel : ObservableObject
         IReadOnlyList<ManualItemState> Items);
 
     private readonly ImportService _importService;
+    private readonly PluginService _pluginService;
     private readonly DispatcherQueue _dispatcher;
     private readonly HashSet<CancellationTokenSource> _analysisCts = [];
     private CancellationTokenSource? _importCts;
@@ -177,10 +178,11 @@ public partial class ImportViewModel : ObservableObject
     private CancellationTokenSource? _resolveCts;
     private Task _settingsLoaded;
 
-    public ImportViewModel(ImportService importService, SettingsService settingsService, DispatcherQueue dispatcher)
+    public ImportViewModel(ImportService importService, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher)
     {
         _importService = importService;
         _settingsService = settingsService;
+        _pluginService = pluginService;
         _dispatcher = dispatcher;
 
         _settingsLoaded = LoadSettingsAsync();
@@ -563,9 +565,9 @@ public partial class ImportViewModel : ObservableObject
             };
     }
 
-    private static string? GetReverseImageSearchApiKey()
+    private string? GetReverseImageSearchApiKey()
     {
-        if (App.PluginService.ReverseImageSearchProvider is not IPluginSettingsProvider settingsProvider)
+        if (_pluginService.ReverseImageSearchProvider is not IPluginSettingsProvider settingsProvider)
             return null;
 
         return settingsProvider.GetSettingValue("sauceNaoApiKey")?.Trim();

@@ -25,7 +25,7 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.CoordinateGalleryViewModel.CardsReloaded += OnCardsReloaded;
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CoordinateCard card)
             ShowCard(card);
     }
@@ -33,7 +33,7 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.CoordinateGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnCardsReloaded()
@@ -69,14 +69,14 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -86,7 +86,7 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 

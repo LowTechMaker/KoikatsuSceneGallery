@@ -12,6 +12,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly bool _isVideo;
+    private readonly SettingsViewModel _settingsViewModel;
 
     public ObservableCollection<MediaCard> Cards { get; }
 
@@ -19,13 +20,14 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, bool isVideo)
+    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SettingsViewModel settingsViewModel, bool isVideo)
         : base(new ObservableCollection<MediaCard>())
     {
         Cards = (ObservableCollection<MediaCard>)_cardsSource;
         _cardService = cardService;
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
+        _settingsViewModel = settingsViewModel;
         _isVideo = isVideo;
 
         if (!_isVideo)
@@ -37,7 +39,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
 
-        App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
+        _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -221,7 +223,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         _thumbnailCts?.Dispose();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
-        App.SettingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
+        _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
         GC.SuppressFinalize(this);
     }
 }

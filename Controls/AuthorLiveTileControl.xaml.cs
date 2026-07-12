@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Numerics;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
+using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -74,7 +75,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
         SubscribeAuthorChanges();
 
         _imageCache.Clear();
-        var liveTilesEnabled = App.SettingsViewModel?.AuthorLiveTilesEnabled == true;
+        var liveTilesEnabled = App.Services.GetRequiredService<SettingsViewModel>()?.AuthorLiveTilesEnabled == true;
         _thumbnailPaths = summary.ThumbnailPaths;
         var useLiveTile = liveTilesEnabled && _thumbnailPaths.Count > 0;
 
@@ -188,7 +189,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ResetVisuals();
-        if (_thumbnailPaths.Count > 1 && App.SettingsViewModel?.AuthorLiveTilesEnabled == true)
+        if (_thumbnailPaths.Count > 1 && App.Services.GetRequiredService<SettingsViewModel>()?.AuthorLiveTilesEnabled == true)
             StartCycling();
     }
 

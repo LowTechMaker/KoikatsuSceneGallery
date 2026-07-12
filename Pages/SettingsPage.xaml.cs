@@ -47,7 +47,7 @@ public sealed partial class SettingsPage : Page
 
     public SettingsViewModel ViewModel { get; }
 
-    public GalleryViewModel GalleryViewModel => App.GalleryViewModel;
+    public GalleryViewModel GalleryViewModel => App.Services.GetRequiredService<GalleryViewModel>();
 
     public ObservableCollection<PluginListItem> PluginItems { get; } = [];
 
@@ -55,11 +55,11 @@ public sealed partial class SettingsPage : Page
 
     public SettingsPage()
     {
-        ViewModel = App.SettingsViewModel;
+        ViewModel = App.Services.GetRequiredService<SettingsViewModel>();
         InitializeComponent();
         RefreshPluginItems();
-        App.PluginService.PluginsChanged += OnPluginsChanged;
-        Unloaded += (_, _) => App.PluginService.PluginsChanged -= OnPluginsChanged;
+        App.Services.GetRequiredService<PluginService>().PluginsChanged += OnPluginsChanged;
+        Unloaded += (_, _) => App.Services.GetRequiredService<PluginService>().PluginsChanged -= OnPluginsChanged;
     }
 
     private void OnPluginsChanged()
@@ -74,7 +74,7 @@ public sealed partial class SettingsPage : Page
     {
         var updateFmt = ResLoader.GetString("Plugins_UpdateAvailable");
         PluginItems.Clear();
-        foreach (var p in App.PluginService.Plugins)
+        foreach (var p in App.Services.GetRequiredService<PluginService>().Plugins)
         {
             PluginItems.Add(new PluginListItem(
                 p.Name,
@@ -109,7 +109,7 @@ public sealed partial class SettingsPage : Page
     private async Task ShowPluginSettingsDialogAsync(PluginListItem item)
     {
         var panel = new StackPanel { Spacing = 16, MinWidth = 420, MaxWidth = 720 };
-        var settingsProvider = App.PluginService.GetSettingsProvider(item.Name);
+        var settingsProvider = App.Services.GetRequiredService<PluginService>().GetSettingsProvider(item.Name);
         var editors = new Dictionary<string, FrameworkElement>();
         InfoBar? validationBar = null;
 

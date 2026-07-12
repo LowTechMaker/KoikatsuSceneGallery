@@ -13,6 +13,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly CoordinateMetadataService _metadataService;
+    private readonly SettingsViewModel _settingsViewModel;
 
     public ObservableCollection<CoordinateCard> Cards { get; }
 
@@ -34,7 +35,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly SemaphoreSlim _metadataGate = new(MetadataParseConcurrency);
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
-    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService)
+    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel)
         : base(new ObservableCollection<CoordinateCard>())
     {
         Cards = (ObservableCollection<CoordinateCard>)_cardsSource;
@@ -42,12 +43,13 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
+        _settingsViewModel = settingsViewModel;
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
 
-        App.SettingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.CoordinateResolutionFilterChanged += OnCoordinateResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
+        _settingsViewModel.CoordinateResolutionFilterChanged += OnCoordinateResolutionFilterChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -356,8 +358,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _metadataRefreshTimer?.Stop();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
-        App.SettingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
-        App.SettingsViewModel.CoordinateResolutionFilterChanged -= OnCoordinateResolutionFilterChanged;
+        _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
+        _settingsViewModel.CoordinateResolutionFilterChanged -= OnCoordinateResolutionFilterChanged;
         GC.SuppressFinalize(this);
     }
 }

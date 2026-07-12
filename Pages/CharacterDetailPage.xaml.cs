@@ -25,8 +25,8 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.CharacterGalleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
-        App.CharacterGalleryViewModel.CardsReloaded += OnCardsReloaded;
+        App.Services.GetRequiredService<CharacterGalleryViewModel>().VersionIndexChanged += OnVersionIndexChanged;
+        App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
             ShowCard(card);
     }
@@ -34,8 +34,8 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.CharacterGalleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
-        App.CharacterGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        App.Services.GetRequiredService<CharacterGalleryViewModel>().VersionIndexChanged -= OnVersionIndexChanged;
+        App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnVersionIndexChanged(string characterName)
@@ -45,7 +45,7 @@ public sealed partial class CharacterDetailPage : Page
             if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
             if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
 
-            var versions = App.CharacterGalleryViewModel.GetVersions(characterName);
+            var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(characterName);
             if (versions != null && versions.Contains(ViewModel.Card))
             {
                 LoadVersions(ViewModel.Card, characterName);
@@ -112,7 +112,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void LoadVersions(CharacterCard card, string fullName)
     {
-        var versions = App.CharacterGalleryViewModel.GetVersions(fullName);
+        var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(fullName);
         if (versions != null && versions.Count > 1)
         {
             ViewModel.Versions = new System.Collections.ObjectModel.ObservableCollection<CharacterCard>(versions);
@@ -120,7 +120,7 @@ public sealed partial class CharacterDetailPage : Page
             ViewModel.TotalVersions = versions.Count;
             ViewModel.VersionIndex = versions.IndexOf(card) + 1;
             foreach (var v in versions)
-                App.CharacterGalleryViewModel.RequestThumbnail(v);
+                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(v);
         }
         else
         {
@@ -142,14 +142,14 @@ public sealed partial class CharacterDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.CharacterGalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -159,7 +159,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 

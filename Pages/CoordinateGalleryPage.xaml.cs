@@ -20,15 +20,15 @@ public sealed partial class CoordinateGalleryPage : Page
 
     public CoordinateGalleryPage()
     {
-        ViewModel = App.CoordinateGalleryViewModel;
+        ViewModel = App.Services.GetRequiredService<CoordinateGalleryViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
-        _layout = new GalleryLayoutEngine(352.0 / 252.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount);
+        _layout = new GalleryLayoutEngine(352.0 / 252.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount, App.Services.GetRequiredService<SettingsViewModel>());
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
-        App.SettingsViewModel.CoordinateFolderPathsChanged += OnCoordinateFolderPathsChanged;
+        App.Services.GetRequiredService<SettingsViewModel>().CoordinateFolderPathsChanged += OnCoordinateFolderPathsChanged;
     }
 
     private void OnCoordinateFolderPathsChanged()
@@ -128,7 +128,7 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.Services.GetRequiredService<SettingsViewModel>().ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 
