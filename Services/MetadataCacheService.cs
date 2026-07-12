@@ -11,6 +11,7 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     where TMetadata : class
 {
     private readonly string _cachePath;
+    private readonly IAppLogger _logger;
     private readonly ConcurrentDictionary<string, TMetadata> _cache = new();
     private readonly JsonSerializerOptions? _jsonOptions;
 
@@ -21,8 +22,9 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     private readonly Lock _loadLock = new();
     private volatile bool _loaded;
 
-    protected MetadataCacheService(string cacheFileName, JsonSerializerOptions? jsonOptions = null)
+    protected MetadataCacheService(IAppLogger logger, string cacheFileName, JsonSerializerOptions? jsonOptions = null)
     {
+        _logger = logger;
         _cachePath = Path.Combine(AppPaths.LocalFolder, cacheFileName);
         _jsonOptions = jsonOptions;
     }
@@ -45,8 +47,9 @@ public abstract class MetadataCacheService<TCard, TMetadata>
                 foreach (var (key, value) in data)
                     _cache[key] = value;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError("MetadataCache.Load", ex, _cachePath);
             }
         }
     }
@@ -103,8 +106,9 @@ public abstract class MetadataCacheService<TCard, TMetadata>
                 JsonSerializer.Serialize(stream, snapshot, _jsonOptions);
             File.Move(tempPath, _cachePath, overwrite: true);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError("MetadataCache.Flush", ex, _cachePath);
         }
     }
 

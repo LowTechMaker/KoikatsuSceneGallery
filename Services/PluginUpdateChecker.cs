@@ -5,6 +5,9 @@ namespace KoikatsuSceneGallery.Services;
 
 internal sealed class PluginUpdateChecker
 {
+    private readonly IAppLogger _logger;
+
+    public PluginUpdateChecker(IAppLogger logger) => _logger = logger;
     private static readonly HttpClient Http = new()
     {
         Timeout = TimeSpan.FromSeconds(10),
@@ -35,7 +38,7 @@ internal sealed class PluginUpdateChecker
             .ToDictionary(p => p.Name, p => p.Info!);
     }
 
-    private static async Task<(string Name, PluginUpdateInfo? Info)> CheckOneAsync(
+    private async Task<(string Name, PluginUpdateInfo? Info)> CheckOneAsync(
         LoadedPluginInfo plugin,
         IReadOnlyList<IPluginUpdateProvider> updateProviders,
         CancellationToken ct)
@@ -69,7 +72,7 @@ internal sealed class PluginUpdateChecker
                 return (plugin.Name, info);
             }
         }
-        catch { }
+        catch (Exception ex) { _logger.LogError("PluginUpdate.Check", ex, plugin.UpdateUrl); }
         return (plugin.Name, null);
     }
 

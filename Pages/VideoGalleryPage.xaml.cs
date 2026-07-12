@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -33,20 +34,22 @@ public sealed partial class VideoGalleryPage : Page
 
     private void OnFolderPathsChanged()
     {
-        DispatcherQueue.TryEnqueue(async () =>
-        {
-            await ViewModel.LoadCardsCommand.ExecuteAsync(null);
-        });
+        DispatcherQueue.TryEnqueue(() =>
+            ViewModel.LoadCardsCommand.ExecuteAsync(null)
+                .Observe(App.Services.GetRequiredService<IAppLogger>(), "VideoGallery.ReloadFolders"));
     }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        _layout.ApplyCacheLength();
-        _layout.RefreshSizeSelector(SizeButtonsPanel);
-        _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
-        if (ViewModel.Cards.Count == 0)
-            await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "VideoGallery.Navigate", async () =>
+        {
+            _layout.ApplyCacheLength();
+            _layout.RefreshSizeSelector(SizeButtonsPanel);
+            _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
+            if (ViewModel.Cards.Count == 0)
+                await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+        });
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -142,7 +145,11 @@ public sealed partial class VideoGalleryPage : Page
                 foreach (var path in paths)
                 {
                     try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("VideoGallery.PrepareDragFile", ex, path);
+                    }
                 }
                 request.SetData(files);
             }

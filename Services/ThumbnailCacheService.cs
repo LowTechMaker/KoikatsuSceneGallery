@@ -11,14 +11,16 @@ public class ThumbnailCacheService
 {
     private const int ThumbnailWidth = 300;
     private volatile string _cacheFolder;
+    private readonly IAppLogger _logger;
 
     public string CacheFolder => _cacheFolder;
 
     public static string DefaultCacheFolder =>
         Path.Combine(AppPaths.LocalFolder, "gallery_temp");
 
-    public ThumbnailCacheService(string? cacheFolder = null)
+    public ThumbnailCacheService(IAppLogger logger, string? cacheFolder = null)
     {
+        _logger = logger;
         _cacheFolder = string.IsNullOrWhiteSpace(cacheFolder) ? DefaultCacheFolder : cacheFolder;
         Directory.CreateDirectory(_cacheFolder);
     }
@@ -96,8 +98,9 @@ public class ThumbnailCacheService
             await encoder.FlushAsync();
             return cachePath;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError("Thumbnail.GenerateImage", ex, filePath);
             return null;
         }
     }
@@ -156,8 +159,9 @@ public class ThumbnailCacheService
             await encoder.FlushAsync();
             return cachePath;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError("Thumbnail.GenerateVideo", ex, filePath);
             return null;
         }
     }
@@ -170,7 +174,8 @@ public class ThumbnailCacheService
             if (!Directory.Exists(folder)) return;
             foreach (var file in Directory.EnumerateFiles(folder, "*.jpg"))
             {
-                try { File.Delete(file); } catch (Exception) { }
+                try { File.Delete(file); }
+                catch (Exception ex) { _logger.LogError("Thumbnail.Delete", ex, file); }
             }
         });
     }

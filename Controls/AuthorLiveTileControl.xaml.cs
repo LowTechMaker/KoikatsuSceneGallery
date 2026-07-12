@@ -302,8 +302,10 @@ public sealed partial class AuthorLiveTileControl : UserControl
             visualA.Opacity = 1;
             visualB.Opacity = 0;
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
+            App.Services.GetRequiredService<IAppLogger>()
+                .LogError("AuthorLiveTile.StartAnimation", ex);
         }
     }
 

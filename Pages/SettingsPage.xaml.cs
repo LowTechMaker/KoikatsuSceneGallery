@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -92,19 +93,22 @@ public sealed partial class SettingsPage : Page
         Bindings.Update();
     }
 
-    private async void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
-    {
+    private void OpenPluginsFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.OpenPluginsFolder", async () =>
+        {
         // The folder may not exist yet on a build that shipped without plugins;
         // create it so the button always lands the user somewhere useful.
-        Directory.CreateDirectory(PluginService.PluginsDirectory);
-        await Launcher.LaunchFolderPathAsync(PluginService.PluginsDirectory);
-    }
+        var pluginService = App.Services.GetRequiredService<PluginService>();
+        Directory.CreateDirectory(pluginService.PluginsDirectory);
+        await Launcher.LaunchFolderPathAsync(pluginService.PluginsDirectory);
+        });
 
-    private async void PluginItem_Click(object sender, RoutedEventArgs e)
-    {
+    private void PluginItem_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.OpenPlugin", async () =>
+        {
         if (sender is Button { CommandParameter: PluginListItem item })
             await ShowPluginSettingsDialogAsync(item);
-    }
+        });
 
     private async Task ShowPluginSettingsDialogAsync(PluginListItem item)
     {
@@ -313,33 +317,33 @@ public sealed partial class SettingsPage : Page
         };
     }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        await ViewModel.LoadAsync();
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.Navigate", ViewModel.LoadAsync);
     }
 
-    private async void RemoveFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string path)
-            await ViewModel.RemoveFolderCommand.ExecuteAsync(path);
-    }
+    private void RemoveFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveFolder", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string path)
+                await ViewModel.RemoveFolderCommand.ExecuteAsync(path);
+        });
 
-    private async void RemoveCharacterFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string path)
-            await ViewModel.RemoveCharacterFolderCommand.ExecuteAsync(path);
-    }
+    private void RemoveCharacterFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCharacterFolder", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string path)
+                await ViewModel.RemoveCharacterFolderCommand.ExecuteAsync(path);
+        });
 
-    private async void AddResolution_Click(object sender, RoutedEventArgs e)
-    {
-        await TryAddResolution();
-    }
+    private void AddResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddResolution", TryAddResolution);
 
-    private async void ResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void ResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter)
-            await TryAddResolution();
+            UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddResolution", TryAddResolution);
     }
 
     private async Task TryAddResolution()
@@ -352,21 +356,20 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private async void RemoveResolution_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string resolution)
-            await ViewModel.RemoveResolutionCommand.ExecuteAsync(resolution);
-    }
+    private void RemoveResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveResolution", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string resolution)
+                await ViewModel.RemoveResolutionCommand.ExecuteAsync(resolution);
+        });
 
-    private async void AddCharacterResolution_Click(object sender, RoutedEventArgs e)
-    {
-        await TryAddCharacterResolution();
-    }
+    private void AddCharacterResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddCharacterResolution", TryAddCharacterResolution);
 
-    private async void CharacterResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void CharacterResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter)
-            await TryAddCharacterResolution();
+            UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddCharacterResolution", TryAddCharacterResolution);
     }
 
     private async Task TryAddCharacterResolution()
@@ -379,33 +382,34 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private async void RemoveCoordinateFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string path)
-            await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
-    }
+    private void RemoveCoordinateFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCoordinateFolder", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string path)
+                await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
+        });
 
-    private async void RemoveScreenshotFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string path)
-            await ViewModel.RemoveScreenshotFolderCommand.ExecuteAsync(path);
-    }
+    private void RemoveScreenshotFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveScreenshotFolder", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string path)
+                await ViewModel.RemoveScreenshotFolderCommand.ExecuteAsync(path);
+        });
 
-    private async void RemoveVideoFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string path)
-            await ViewModel.RemoveVideoFolderCommand.ExecuteAsync(path);
-    }
+    private void RemoveVideoFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveVideoFolder", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string path)
+                await ViewModel.RemoveVideoFolderCommand.ExecuteAsync(path);
+        });
 
-    private async void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)
-    {
-        await TryAddCoordinateResolution();
-    }
+    private void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddCoordinateResolution", TryAddCoordinateResolution);
 
-    private async void CoordinateResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void CoordinateResolutionInput_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter)
-            await TryAddCoordinateResolution();
+            UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddCoordinateResolution", TryAddCoordinateResolution);
     }
 
     private async Task TryAddCoordinateResolution()
@@ -418,22 +422,23 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private async void RemoveCoordinateResolution_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string resolution)
-            await ViewModel.RemoveCoordinateResolutionCommand.ExecuteAsync(resolution);
-    }
+    private void RemoveCoordinateResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCoordinateResolution", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string resolution)
+                await ViewModel.RemoveCoordinateResolutionCommand.ExecuteAsync(resolution);
+        });
 
-    private async void RemoveCharacterResolution_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.CommandParameter is string resolution)
-            await ViewModel.RemoveCharacterResolutionCommand.ExecuteAsync(resolution);
-    }
+    private void RemoveCharacterResolution_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCharacterResolution", async () =>
+        {
+            if (sender is Button button && button.CommandParameter is string resolution)
+                await ViewModel.RemoveCharacterResolutionCommand.ExecuteAsync(resolution);
+        });
 
-    private async void ClearCache_Click(object sender, RoutedEventArgs e)
-    {
-        await ViewModel.ClearCacheCommand.ExecuteAsync(null);
-    }
+    private void ClearCache_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.ClearCache", async () =>
+            await ViewModel.ClearCacheCommand.ExecuteAsync(null));
 
     private void RestartApp_Click(object sender, RoutedEventArgs e)
     {

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -23,6 +24,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly CharacterMetadataService _metadataService;
     private readonly SettingsViewModel _settingsViewModel;
+    private readonly IAppLogger _logger;
 
     public ObservableCollection<CharacterCard> Cards { get; }
 
@@ -51,7 +53,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     public event Action<string>? VersionIndexChanged;
 
-    public CharacterGalleryViewModel(CharacterCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CharacterMetadataService metadataService, SettingsViewModel settingsViewModel)
+    public CharacterGalleryViewModel(CharacterCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CharacterMetadataService metadataService, SettingsViewModel settingsViewModel, IAppLogger logger)
         : base(new ObservableCollection<CharacterCard>())
     {
         Cards = (ObservableCollection<CharacterCard>)_cardsSource;
@@ -60,6 +62,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
+        _logger = logger;
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
@@ -155,7 +158,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         PendingMetadataCount = pending.Count;
         StartMetadataRefreshTimer();
         foreach (var card in pending)
-            _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+            Task.Run(() => ParseMetadataAsync(card, token), token)
+                .Observe(_logger, "CharacterGallery.ParseMetadata");
     }
 
     private async Task ParseMetadataAsync(CharacterCard card, CancellationToken cancellationToken)
@@ -179,8 +183,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
                 _metadataGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("CharacterGallery.ParseMetadataCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("CharacterGallery.ParseMetadata", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -300,7 +304,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
         PendingThumbnailCount++;
-        _ = Task.Run(() => GenerateOneAsync(card, token));
+        Task.Run(() => GenerateOneAsync(card, token))
+            .Observe(_logger, "CharacterGallery.GenerateThumbnail");
     }
 
     public void ReleaseThumbnail(CharacterCard card)
@@ -329,8 +334,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
                 _thumbnailGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("CharacterGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("CharacterGallery.GenerateThumbnail", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -419,7 +424,10 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         RefreshFilterAndNotify();
     }
 
-    private async void OnCardAdded(CharacterCard card)
+    private void OnCardAdded(CharacterCard card)
+        => OnCardAddedAsync(card).Observe(_logger, "CharacterGallery.AddCard");
+
+    private async Task OnCardAddedAsync(CharacterCard card)
     {
         var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card.FilePath, card.DateModified);
         _dispatcherQueue.TryEnqueue(() =>
@@ -446,7 +454,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _metadataCts ??= new CancellationTokenSource();
         var token = _metadataCts.Token;
         PendingMetadataCount++;
-        _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+        Task.Run(() => ParseMetadataAsync(card, token), token)
+            .Observe(_logger, "CharacterGallery.ParseAddedCardMetadata");
     }
 
     private void OnCardRemoved(string path)

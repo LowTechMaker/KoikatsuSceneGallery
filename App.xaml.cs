@@ -13,22 +13,28 @@ public partial class App : Application
 {
     public static AppServiceRegistry Services { get; } = new();
 
+    private readonly IAppLogger _logger = new CrashLogLogger();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
     private readonly CharacterCardService _characterCardService = new();
     private readonly CoordinateCardService _coordinateCardService = new();
-    private readonly SceneCardCacheService _sceneCardCacheService = new();
-    private readonly SceneMetadataService _sceneMetadataService = new();
-    private readonly CharacterMetadataService _characterMetadataService = new();
-    private readonly CoordinateMetadataService _coordinateMetadataService = new();
+    private readonly SceneCardCacheService _sceneCardCacheService;
+    private readonly SceneMetadataService _sceneMetadataService;
+    private readonly CharacterMetadataService _characterMetadataService;
+    private readonly CoordinateMetadataService _coordinateMetadataService;
     private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"], isVideo: false);
     private readonly MediaCardService _videoCardService = new([".mp4", ".avi", ".webm", ".mov", ".mkv", ".gif"], isVideo: true);
-    private readonly PluginService _pluginService = new();
+    private readonly PluginService _pluginService;
     private ThumbnailCacheService _thumbnailCacheService = null!;
     private MainWindow? _mainWindow;
 
     public App()
     {
+        _sceneCardCacheService = new SceneCardCacheService(_logger);
+        _sceneMetadataService = new SceneMetadataService(_logger);
+        _characterMetadataService = new CharacterMetadataService(_logger);
+        _coordinateMetadataService = new CoordinateMetadataService(_logger);
+        _pluginService = new PluginService(_logger);
         InitializeComponent();
 
         // No debugger is attached in a packaged-zip test build, so route every
@@ -37,19 +43,22 @@ public partial class App : Application
         // (e.g. decoding one corrupt scene) doesn't take down the whole window.
         UnhandledException += (_, e) =>
         {
-            CrashLog.Write("UI", e.Exception);
+            _logger.LogError("UI", e.Exception);
             e.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            CrashLog.Write("Domain", e.ExceptionObject as Exception);
+            _logger.LogError("Domain", e.ExceptionObject as Exception ?? new InvalidOperationException("Unknown unhandled exception"));
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            CrashLog.Write("Task", e.Exception);
+            _logger.LogError("Task", e.Exception);
             e.SetObserved();
         };
     }
 
-    protected override async void OnLaunched(LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+        => UiEventGuard.Run(_logger, "App.OnLaunched", () => OnLaunchedAsync(args));
+
+    private async Task OnLaunchedAsync(LaunchActivatedEventArgs args)
     {
         SettingsService.ConfigData? config = null;
         try
@@ -61,14 +70,14 @@ public partial class App : Application
             if (!string.IsNullOrEmpty(config.Language))
                 Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = config.Language;
 
-            _thumbnailCacheService = new ThumbnailCacheService(config.CacheFolderPath);
+            _thumbnailCacheService = new ThumbnailCacheService(_logger, config.CacheFolderPath);
         }
         catch (Exception ex)
         {
             // A bad config or cache path must not stop the window from opening,
             // otherwise the app can become permanently unlaunchable.
-            CrashLog.Write("OnLaunched", ex);
-            _thumbnailCacheService ??= new ThumbnailCacheService(null);
+            _logger.LogError("OnLaunched", ex);
+            _thumbnailCacheService ??= new ThumbnailCacheService(_logger, null);
         }
 
         try
@@ -79,14 +88,14 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            CrashLog.Write("Plugins", ex);
+            _logger.LogError("Plugins", ex);
         }
 
-        _ = Task.Run(async () =>
+        Task.Run(async () =>
         {
             try
             {
-                var updates = await new PluginUpdateChecker()
+                var updates = await new PluginUpdateChecker(_logger)
                     .CheckUpdatesAsync(
                         _pluginService.Plugins,
                         _pluginService.UpdateProviders,
@@ -96,22 +105,24 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                CrashLog.Write("PluginUpdateCheck", ex);
+                _logger.LogError("PluginUpdateCheck", ex);
             }
-        });
+        }).Observe(_logger, "PluginUpdate.BackgroundCheck");
 
         var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
 
         var authorInfoService = new AuthorInfoService(
             _pluginService.AuthorProviders,
-            dispatcherQueue);
+            dispatcherQueue,
+            _logger);
 
         GalleryViewModel? galleryViewModel = null;
         var settingsViewModel = new SettingsViewModel(
             _settingsService,
             _thumbnailCacheService,
             () => _mainWindow,
-            () => galleryViewModel);
+            () => galleryViewModel,
+            _logger);
         settingsViewModel.Load(config ?? new SettingsService.ConfigData());
         galleryViewModel = new GalleryViewModel(
             _sceneCardService,
@@ -120,30 +131,35 @@ public partial class App : Application
             _sceneMetadataService,
             _sceneCardCacheService,
             settingsViewModel,
-            _pluginService);
+            _pluginService,
+            _logger);
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
             _settingsService,
             _thumbnailCacheService,
             _characterMetadataService,
-            settingsViewModel);
+            settingsViewModel,
+            _logger);
         var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
             _coordinateCardService,
             _settingsService,
             _thumbnailCacheService,
             _coordinateMetadataService,
-            settingsViewModel);
+            settingsViewModel,
+            _logger);
         var screenshotGalleryViewModel = new MediaGalleryViewModel(
             _screenshotCardService,
             _settingsService,
             _thumbnailCacheService,
             settingsViewModel,
+            _logger,
             isVideo: false);
         var videoGalleryViewModel = new MediaGalleryViewModel(
             _videoCardService,
             _settingsService,
             _thumbnailCacheService,
             settingsViewModel,
+            _logger,
             isVideo: true);
 
         ImportService? importService = null;
@@ -155,19 +171,22 @@ public partial class App : Application
                 _pluginService.ImportProviders,
                 _pluginService.AuthorProviders,
                 _pluginService.ReverseImageSearchProvider,
-                _settingsService);
+                _settingsService,
+                _logger);
             importViewModel = new ImportViewModel(
                 importService,
                 _settingsService,
                 _pluginService,
-                dispatcherQueue);
+                dispatcherQueue,
+                _logger);
 
             if (_pluginService.AuthorProviders.Count > 0)
             {
                 authorPostService = new AuthorPostService(
                     _pluginService.ImportProviders,
                     _pluginService.AuthorProviders,
-                    _settingsService);
+                    _settingsService,
+                    _logger);
             }
         }
 
@@ -206,7 +225,7 @@ public partial class App : Application
         PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
-        _ = authorSourceCoordinator.EnsureLoadedAsync();
+        authorSourceCoordinator.EnsureLoadedAsync().Observe(_logger, "AuthorSource.InitialLoad");
     }
 
     private void RegisterServices(
@@ -223,6 +242,7 @@ public partial class App : Application
         ImportViewModel? importViewModel,
         AuthorPostService? authorPostService)
     {
+        Services.Add(_logger);
         Services.Add(_settingsService);
         Services.Add(_sceneCardService);
         Services.Add(_characterCardService);

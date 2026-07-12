@@ -21,15 +21,18 @@ public sealed class AuthorPostService
     private readonly IReadOnlyList<ICardImportProvider> _importProviders;
     private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
 
     public AuthorPostService(
         IReadOnlyList<ICardImportProvider> importProviders,
         IReadOnlyList<IFolderAuthorProvider> authorProviders,
-        SettingsService settingsService)
+        SettingsService settingsService,
+        IAppLogger logger)
     {
         _importProviders = importProviders;
         _authorProviders = authorProviders;
         _settingsService = settingsService;
+        _logger = logger;
     }
 
     private ArtworkId? TryParseFilename(string fileName, string providerId)
@@ -111,7 +114,7 @@ public sealed class AuthorPostService
                                 }
                             }
                             catch (OperationCanceledException) { throw; }
-                            catch { }
+                            catch (Exception ex) { _logger.LogError("AuthorPosts.ScanRatingDirectory", ex, ratingDir); }
                         }
                     }
                 }
@@ -168,7 +171,7 @@ public sealed class AuthorPostService
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch { }
+        catch (Exception ex) { _logger.LogError("AuthorPosts.ScanAuthorFiles", ex, authorDir); }
 
         try
         {
@@ -198,14 +201,14 @@ public sealed class AuthorPostService
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch { }
+                catch (Exception ex) { _logger.LogError("AuthorPosts.ScanArtworkFiles", ex, subDir); }
 
                 if (artworkId is not null)
                     AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, titleFromFolder, localFiles);
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch { }
+        catch (Exception ex) { _logger.LogError("AuthorPosts.ScanAuthorDirectories", ex, authorDir); }
     }
 
     private static void AddOrUpdate(

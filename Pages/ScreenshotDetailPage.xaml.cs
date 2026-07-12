@@ -1,5 +1,6 @@
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -121,5 +122,6 @@ public sealed partial class ScreenshotDetailPage : Page
     }
 
     private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
+        => DetailNavigationHelper.HandleDragStartingAsync(ViewModel.Card, e)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "ScreenshotDetail.PrepareDrag");
 }

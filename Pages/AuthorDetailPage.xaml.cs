@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -15,7 +16,8 @@ public sealed partial class AuthorDetailPage : Page
         App.Services.GetService<AuthorPostService>(),
         App.Services.GetRequiredService<GalleryViewModel>(),
         App.Services.GetRequiredService<CharacterGalleryViewModel>(),
-        App.Services.GetRequiredService<CoordinateGalleryViewModel>());
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>(),
+        App.Services.GetRequiredService<IAppLogger>());
 
     private const double SceneImageRatio = 135.0 / 240.0;
     private const double CharaImageRatio = 352.0 / 252.0;
@@ -58,7 +60,8 @@ public sealed partial class AuthorDetailPage : Page
             if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _postsCts = new CancellationTokenSource();
-                _ = ViewModel.LoadPostsAsync(postService, _postsCts.Token);
+                ViewModel.LoadPostsAsync(postService, _postsCts.Token)
+                    .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
             }
         }
 
@@ -134,11 +137,12 @@ public sealed partial class AuthorDetailPage : Page
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
-    private async void OpenProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Author is { } author)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
-    }
+    private void OpenProfile_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
+        {
+            if (ViewModel.Author is { } author)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
+        });
 
     private void Shuffle_Click(object sender, RoutedEventArgs e)
     {
@@ -167,11 +171,12 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Author is { } author)
-            await App.Services.GetRequiredService<AuthorInfoService>().RefreshAuthorAsync(author.Key);
-    }
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.Refresh", async () =>
+        {
+            if (ViewModel.Author is { } author)
+                await App.Services.GetRequiredService<AuthorInfoService>().RefreshAuthorAsync(author.Key);
+        });
 
     private void ScenesGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
@@ -250,7 +255,11 @@ public sealed partial class AuthorDetailPage : Page
                 foreach (var path in paths)
                 {
                     try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("AuthorDetail.PrepareDragFile", ex, path);
+                    }
                 }
                 request.SetData(files);
             }

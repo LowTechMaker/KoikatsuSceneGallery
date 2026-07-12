@@ -14,7 +14,8 @@ public sealed record TagDisplay(string Display);
 
 public sealed partial class PostDetailPage : Page
 {
-    public PostDetailViewModel ViewModel { get; } = new();
+    public PostDetailViewModel ViewModel { get; } = new(
+        App.Services.GetRequiredService<IAppLogger>());
 
     private CancellationTokenSource? _cts;
 
@@ -34,7 +35,8 @@ public sealed partial class PostDetailPage : Page
             if (!post.IsDetailLoaded && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _cts = new CancellationTokenSource();
-                _ = ViewModel.LoadDetailAsync(postService, _cts.Token);
+                ViewModel.LoadDetailAsync(postService, _cts.Token)
+                    .Observe(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.Load");
             }
         }
     }
@@ -64,17 +66,19 @@ public sealed partial class PostDetailPage : Page
         if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
     }
 
-    private async void OpenInBrowser_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Post is { } post)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(post.ArtworkUrl));
-    }
+    private void OpenInBrowser_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.OpenBrowser", async () =>
+        {
+            if (ViewModel.Post is { } post)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(post.ArtworkUrl));
+        });
 
-    private async void Save_Click(object sender, RoutedEventArgs e)
-    {
-        if (App.Services.GetService<AuthorPostService>() is { } postService)
-            await ViewModel.SaveToCacheAsync(postService, _cts?.Token ?? CancellationToken.None);
-    }
+    private void Save_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.Save", async () =>
+        {
+            if (App.Services.GetService<AuthorPostService>() is { } postService)
+                await ViewModel.SaveToCacheAsync(postService, _cts?.Token ?? CancellationToken.None);
+        });
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -96,7 +100,11 @@ public sealed partial class PostDetailPage : Page
                 foreach (var path in paths)
                 {
                     try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("PostDetail.PrepareDragFile", ex, path);
+                    }
                 }
                 request.SetData(files);
             }

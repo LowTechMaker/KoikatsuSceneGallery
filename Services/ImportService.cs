@@ -59,17 +59,20 @@ public sealed class ImportService
     private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly IReverseImageSearchProvider? _reverseImageSearchProvider;
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
         IReadOnlyList<IFolderAuthorProvider> authorProviders,
         IReverseImageSearchProvider? reverseImageSearchProvider,
-        SettingsService settingsService)
+        SettingsService settingsService,
+        IAppLogger logger)
     {
         _importProviders = importProviders;
         _authorProviders = authorProviders;
         _reverseImageSearchProvider = reverseImageSearchProvider;
         _settingsService = settingsService;
+        _logger = logger;
     }
 
     private ArtworkId? TryParseFilenameAll(string fileName)
@@ -141,8 +144,9 @@ public sealed class ImportService
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Import.FetchArtwork", ex, artworkId.Id);
             return null;
         }
     }
@@ -163,8 +167,9 @@ public sealed class ImportService
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Import.FetchAuthor", ex, authorKey.Id);
             return null;
         }
     }
@@ -186,8 +191,9 @@ public sealed class ImportService
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Import.ReverseImageSearch", ex, imagePath);
             return null;
         }
     }
@@ -253,8 +259,9 @@ public sealed class ImportService
             {
                 throw;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError("Import.FetchArtworkMetadata", ex, artworkId?.Id);
                 info = null;
             }
 
@@ -266,7 +273,7 @@ public sealed class ImportService
                     {
                         item.AuthorName = info.AuthorName;
                         item.AuthorId = info.AuthorId;
-                        item.AuthorProviderId = artworkId.ProviderId;
+                        item.AuthorProviderId = artworkId!.ProviderId;
                         item.Title = info.Title;
                         item.Rating = info.Rating;
                         item.Tags = info.Tags;
@@ -346,7 +353,7 @@ public sealed class ImportService
                                     }
                                 }
                                 catch (OperationCanceledException) { throw; }
-                                catch { }
+                                catch (Exception ex) { _logger.LogError("Import.ScanAuthorDirectory", ex, ratingDir); }
                             }
                         }
                     }
@@ -452,7 +459,7 @@ public sealed class ImportService
                     if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
                         Directory.Delete(dir);
                 }
-                catch { }
+                catch (Exception ex) { _logger.LogError("Import.DeleteEmptySourceDirectory", ex, dir); }
             }
         }, CancellationToken.None).ConfigureAwait(false);
     }
@@ -653,7 +660,7 @@ public sealed class ImportService
                 foreach (var file in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
                     set.Add(Path.GetFileName(file));
             }
-            catch { }
+            catch (Exception ex) { _logger.LogError("Import.ScanExistingFilenames", ex, root); }
         }
 
         return set;
@@ -708,7 +715,7 @@ public sealed class ImportService
                                         authorFolders.TryAdd(parsed.Key.Id, dir);
                                 }
                             }
-                            catch { }
+                            catch (Exception ex) { _logger.LogError("Import.BuildFolderIndex", ex, ratingDir); }
                         }
 
                         index[BuildScopeKey(root, providerScope.Folder, gameVersionFolder, ratingFolder)] = authorFolders;

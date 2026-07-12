@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -14,6 +15,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly CoordinateMetadataService _metadataService;
     private readonly SettingsViewModel _settingsViewModel;
+    private readonly IAppLogger _logger;
 
     public ObservableCollection<CoordinateCard> Cards { get; }
 
@@ -35,7 +37,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly SemaphoreSlim _metadataGate = new(MetadataParseConcurrency);
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
-    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel)
+    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, IAppLogger logger)
         : base(new ObservableCollection<CoordinateCard>())
     {
         Cards = (ObservableCollection<CoordinateCard>)_cardsSource;
@@ -44,6 +46,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
+        _logger = logger;
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
@@ -129,7 +132,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         PendingMetadataCount = pending.Count;
         StartMetadataRefreshTimer();
         foreach (var card in pending)
-            _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+            Task.Run(() => ParseMetadataAsync(card, token), token)
+                .Observe(_logger, "CoordinateGallery.ParseMetadata");
     }
 
     private async Task ParseMetadataAsync(CoordinateCard card, CancellationToken cancellationToken)
@@ -149,8 +153,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
                 _metadataGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("CoordinateGallery.ParseMetadataCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("CoordinateGallery.ParseMetadata", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -212,7 +216,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
         PendingThumbnailCount++;
-        _ = Task.Run(() => GenerateOneAsync(card, token));
+        Task.Run(() => GenerateOneAsync(card, token))
+            .Observe(_logger, "CoordinateGallery.GenerateThumbnail");
     }
 
     public void ReleaseThumbnail(CoordinateCard card)
@@ -241,8 +246,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
                 _thumbnailGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("CoordinateGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("CoordinateGallery.GenerateThumbnail", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -311,7 +316,10 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         RefreshFilterAndNotify();
     }
 
-    private async void OnCardAdded(CoordinateCard card)
+    private void OnCardAdded(CoordinateCard card)
+        => OnCardAddedAsync(card).Observe(_logger, "CoordinateGallery.AddCard");
+
+    private async Task OnCardAddedAsync(CoordinateCard card)
     {
         var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card.FilePath, card.DateModified);
         _dispatcherQueue.TryEnqueue(() =>
@@ -337,7 +345,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _metadataCts ??= new CancellationTokenSource();
         var token = _metadataCts.Token;
         PendingMetadataCount++;
-        _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+        Task.Run(() => ParseMetadataAsync(card, token), token)
+            .Observe(_logger, "CoordinateGallery.ParseAddedCardMetadata");
     }
 
     private void OnCardRemoved(string path)

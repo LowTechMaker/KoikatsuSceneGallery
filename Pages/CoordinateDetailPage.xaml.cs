@@ -51,7 +51,9 @@ public sealed partial class CoordinateDetailPage : Page
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        _ = LoadMetadataAsync(card);
+        LoadMetadataAsync(card).Observe(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "CoordinateDetail.LoadMetadata");
     }
 
     private async Task LoadMetadataAsync(CoordinateCard card)
@@ -102,18 +104,21 @@ public sealed partial class CoordinateDetailPage : Page
         args.Handled = true;
     }
 
-    private async void PixivButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.PixivUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void PixivButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.OpenPixiv", async () =>
+        {
+            if (ViewModel.PixivUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
-    private async void BepisDbButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.BepisDbUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void BepisDbButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.OpenBepisDb", async () =>
+        {
+            if (ViewModel.BepisDbUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
     private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
+        => DetailNavigationHelper.HandleDragStartingAsync(ViewModel.Card, e)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.PrepareDrag");
 }

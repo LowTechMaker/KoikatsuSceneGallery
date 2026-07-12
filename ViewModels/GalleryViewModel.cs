@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -25,6 +26,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly SceneCardCacheService _cardCacheService;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly PluginService _pluginService;
+    private readonly IAppLogger _logger;
 
     public ObservableCollection<SceneCard> Cards { get; }
 
@@ -65,7 +67,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService)
+    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, IAppLogger logger)
         : base(new ObservableCollection<SceneCard>())
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
@@ -76,6 +78,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _cardCacheService = cardCacheService;
         _settingsViewModel = settingsViewModel;
         _pluginService = pluginService;
+        _logger = logger;
 
         _sceneCardService.CardAdded += OnCardAdded;
         _sceneCardService.CardRemoved += OnCardRemoved;
@@ -299,7 +302,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         PendingMetadataCount = pending.Count;
         StartMetadataRefreshTimer();
         foreach (var card in pending)
-            _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+            Task.Run(() => ParseMetadataAsync(card, token), token)
+                .Observe(_logger, "Gallery.ParseMetadata");
     }
 
     private async Task ParseMetadataAsync(SceneCard card, CancellationToken cancellationToken)
@@ -319,8 +323,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 _metadataGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Gallery.ParseMetadataCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("Gallery.ParseMetadata", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -388,7 +392,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
         PendingThumbnailCount++;
-        _ = Task.Run(() => GenerateOneAsync(card, token));
+        Task.Run(() => GenerateOneAsync(card, token))
+            .Observe(_logger, "Gallery.GenerateThumbnail");
     }
 
     public void ReleaseThumbnail(SceneCard card)
@@ -420,8 +425,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 _thumbnailGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Gallery.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("Gallery.GenerateThumbnail", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -535,7 +540,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _metadataCts ??= new CancellationTokenSource();
         var token = _metadataCts.Token;
         PendingMetadataCount++;
-        _ = Task.Run(() => ParseMetadataAsync(card, token), token);
+        Task.Run(() => ParseMetadataAsync(card, token), token)
+            .Observe(_logger, "Gallery.ParseAddedCardMetadata");
     }
 
     private void OnCardRemoved(string path)

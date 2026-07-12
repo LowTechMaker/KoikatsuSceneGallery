@@ -15,6 +15,7 @@ public sealed class SceneCardCacheService : IDisposable
 {
     private const string CacheFileName = "scene_cards.json";
     private readonly string _cachePath;
+    private readonly IAppLogger _logger;
     private readonly ConcurrentDictionary<string, CachedCardEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Lock _saveLock = new();
@@ -23,8 +24,9 @@ public sealed class SceneCardCacheService : IDisposable
     private readonly Lock _loadLock = new();
     private volatile bool _loaded;
 
-    public SceneCardCacheService()
+    public SceneCardCacheService(IAppLogger logger)
     {
+        _logger = logger;
         _cachePath = Path.Combine(AppPaths.LocalFolder, CacheFileName);
     }
 
@@ -43,8 +45,9 @@ public sealed class SceneCardCacheService : IDisposable
                 foreach (var (key, value) in data)
                     _cache[key] = value;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError("SceneCardCache.Load", ex, _cachePath);
             }
             _loaded = true;
         }
@@ -111,8 +114,9 @@ public sealed class SceneCardCacheService : IDisposable
                 JsonSerializer.Serialize(stream, snapshot);
             File.Move(tempPath, _cachePath, overwrite: true);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError("SceneCardCache.Flush", ex, _cachePath);
         }
     }
 

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -13,6 +14,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly bool _isVideo;
     private readonly SettingsViewModel _settingsViewModel;
+    private readonly IAppLogger _logger;
 
     public ObservableCollection<MediaCard> Cards { get; }
 
@@ -20,7 +22,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SettingsViewModel settingsViewModel, bool isVideo)
+    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SettingsViewModel settingsViewModel, IAppLogger logger, bool isVideo)
         : base(new ObservableCollection<MediaCard>())
     {
         Cards = (ObservableCollection<MediaCard>)_cardsSource;
@@ -28,6 +30,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _settingsViewModel = settingsViewModel;
+        _logger = logger;
         _isVideo = isVideo;
 
         if (!_isVideo)
@@ -110,7 +113,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
         PendingThumbnailCount++;
-        _ = Task.Run(() => GenerateOneAsync(card, token));
+        Task.Run(() => GenerateOneAsync(card, token))
+            .Observe(_logger, "MediaGallery.GenerateThumbnail");
     }
 
     public void ReleaseThumbnail(MediaCard card)
@@ -143,8 +147,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
                 _thumbnailGate.Release();
             }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception) { }
+        catch (OperationCanceledException ex) { _logger.LogError("MediaGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { _logger.LogError("MediaGallery.GenerateThumbnail", ex, card.FilePath); }
         finally
         {
             _dispatcherQueue.TryEnqueue(() =>
@@ -192,7 +196,10 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         RefreshFilterAndNotify();
     }
 
-    private async void OnCardAdded(MediaCard card)
+    private void OnCardAdded(MediaCard card)
+        => OnCardAddedAsync(card).Observe(_logger, "MediaGallery.AddCard");
+
+    private async Task OnCardAddedAsync(MediaCard card)
     {
         var thumbnailPath = _isVideo
             ? await _thumbnailCacheService.EnsureVideoThumbnailAsync(card.FilePath, card.DateModified)

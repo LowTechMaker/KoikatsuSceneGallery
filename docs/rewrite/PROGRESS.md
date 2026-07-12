@@ -57,3 +57,29 @@ The smoke publish initially attempted restore and failed because the sandbox can
 ## Risks
 
 The composition path has now been exercised through the unpackaged shipping form and loaded an existing Gallery successfully. The repeat post-diagnostic UI inspection was unavailable due tool-credit exhaustion, but the diagnostic changes were fully reverted and the resulting source passed the acceptance test/build commands before republishing.
+
+## Task 3 — Error handling and async hygiene
+
+## Result: Completed
+
+## Commands run
+
+`rtk test dotnet test --no-restore` passed all 56 tests at the stage start and again after the final changes.
+
+`rtk proxy dotnet build KoikatsuSceneGallery.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --no-restore` completed with 0 warnings and 0 errors.
+
+Static searches for empty catch blocks, `async void`, and discarded `Task.Run`/async method calls each returned zero results. `rtk git diff --check` also completed with no whitespace errors.
+
+## Tests: 56 total / 56 passed / 0 failed / 0 skipped
+
+## Changes
+
+Added the injected `IAppLogger`/`CrashLogLogger` abstraction and registered it at the composition root. Empty catches now log operation and path/provider context while retaining their original control flow. Added `TaskExtensions.Observe` for fire-and-forget work and `UiEventGuard` for XAML/override async handlers; non-event `async void` card handlers and drag helpers now return `Task` and are explicitly observed.
+
+## Notes / out-of-scope findings
+
+No new out-of-scope findings were added. The existing static `CrashLog` remains only as the private storage backend used by `CrashLogLogger`; application services, ViewModels, Pages, and Controls depend on `IAppLogger`.
+
+## Risks
+
+Expected cancellation paths are now logged as well as swallowed, preserving control flow at the cost of additional diagnostic entries during rapid navigation. Task 5 will refine cancellation ownership and propagation without changing the Task 3 observability contract.

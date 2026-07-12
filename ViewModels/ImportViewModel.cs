@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -175,15 +176,17 @@ public partial class ImportViewModel : ObservableObject
 
     private DispatcherTimer? _warningTimer;
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
     private CancellationTokenSource? _resolveCts;
     private Task _settingsLoaded;
 
-    public ImportViewModel(ImportService importService, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher)
+    public ImportViewModel(ImportService importService, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher, IAppLogger logger)
     {
         _importService = importService;
         _settingsService = settingsService;
         _pluginService = pluginService;
         _dispatcher = dispatcher;
+        _logger = logger;
 
         _settingsLoaded = LoadSettingsAsync();
 
@@ -455,7 +458,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.LoadAvailableAuthors");
         }
     }
 
@@ -482,7 +485,7 @@ public partial class ImportViewModel : ObservableObject
                 }
             });
         }
-        catch { }
+        catch (Exception ex) { _logger.LogError("Import.LoadAvailableAuthors", ex); }
     }
 
     public string? ResolveAuthorName(string authorId)
@@ -673,7 +676,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.ReloadAvailableAuthors");
         }
     }
 
@@ -699,7 +702,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded && UnknownGroups.Count > 0)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.ReloadAvailableAuthors");
         }
     }
 
@@ -924,7 +927,7 @@ public partial class ImportViewModel : ObservableObject
             if (rejected > 0)
                 ShowRejectedFiles(rejected);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.AnalysisCanceled", ex); }
         finally
         {
             EndAnalysisOperation(cts, newPaths, rejected);
@@ -947,7 +950,7 @@ public partial class ImportViewModel : ObservableObject
             await _importService.ImportAsync(Items, _dispatcher, _importCts.Token);
             completed = true;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.OperationCanceled", ex); }
         finally
         {
             IsImporting = false;
@@ -1056,7 +1059,7 @@ public partial class ImportViewModel : ObservableObject
             if (!_authorsLoaded && UnknownGroups.Count > 0)
             {
                 _authorsLoaded = true;
-                _ = LoadAvailableAuthorsAsync();
+                LoadAvailableAuthorsAsync().Observe(_logger, "Import.RefreshAvailableAuthors");
             }
         }
 
@@ -1102,7 +1105,7 @@ public partial class ImportViewModel : ObservableObject
     partial void OnArtworkSubfolderThresholdChanged(double value)
     {
         if (HasItems)
-            _ = DebouncedReResolveAsync();
+            DebouncedReResolveAsync().Observe(_logger, "Import.DebouncedResolve");
     }
 
     partial void OnUseVisualSimilarityChanged(bool value)
@@ -1110,7 +1113,7 @@ public partial class ImportViewModel : ObservableObject
         RegroupUnknowns();
 
         if (HasItems)
-            _ = DebouncedReResolveAsync();
+            DebouncedReResolveAsync().Observe(_logger, "Import.DebouncedResolve");
     }
 
     private List<List<ImportItem>> GroupUnknownItems(IReadOnlyList<ImportItem> items) =>
@@ -1146,7 +1149,7 @@ public partial class ImportViewModel : ObservableObject
             await Task.Delay(150, cts.Token);
             await ReResolveDestinationsAsync(cts.Token);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.DebouncedResolveCanceled", ex); }
     }
 
     private Task ReResolveDestinationsAsync(CancellationToken ct = default) =>

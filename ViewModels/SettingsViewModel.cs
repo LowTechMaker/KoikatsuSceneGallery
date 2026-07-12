@@ -12,6 +12,7 @@ namespace KoikatsuSceneGallery.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly Func<MainWindow?> _getMainWindow;
     private readonly Func<GalleryViewModel?> _getGalleryViewModel;
@@ -147,12 +148,14 @@ public partial class SettingsViewModel : ObservableObject
         SettingsService settingsService,
         ThumbnailCacheService thumbnailCacheService,
         Func<MainWindow?> getMainWindow,
-        Func<GalleryViewModel?> getGalleryViewModel)
+        Func<GalleryViewModel?> getGalleryViewModel,
+        IAppLogger logger)
     {
         _settingsService = settingsService;
         _thumbnailCacheService = thumbnailCacheService;
         _getMainWindow = getMainWindow;
         _getGalleryViewModel = getGalleryViewModel;
+        _logger = logger;
         FolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoFolders));
@@ -190,7 +193,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
     }
 
@@ -199,7 +202,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
     }
 
@@ -208,7 +211,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
@@ -217,7 +220,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowFileNamesChanged?.Invoke(value);
     }
 
@@ -226,21 +229,21 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnCacheLengthChanged(double value)
     {
         if (_isLoading)
             return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnSizeSelectorEnabledChanged(bool value)
     {
         if (_isLoading)
             return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnPluginAnalysisEnabledChanged(bool value)
@@ -250,7 +253,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         PluginAnalysisEnabledChanged?.Invoke(value);
     }
 
@@ -259,7 +262,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowRestartHint = true;
     }
 
@@ -268,7 +271,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnArtworkSubfolderThresholdChanged(double value)
@@ -276,47 +279,47 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnAuthorFolderFormatChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnArtworkFolderFormatChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnUnknownFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnKoikatsuFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnKoikatsuSunshineFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnGFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnR18FolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnR18GFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
     partial void OnShowGalleryNavChanged(bool value) => OnNavVisibilityChanged("gallery", value);
     partial void OnShowCharactersNavChanged(bool value) => OnNavVisibilityChanged("characters", value);
@@ -327,14 +330,14 @@ public partial class SettingsViewModel : ObservableObject
     private void OnNavVisibilityChanged(string tag, bool value)
     {
         if (_isLoading) return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         NavItemVisibilityChanged?.Invoke(tag, value);
     }
 
     partial void OnAuthorLiveTilesEnabledChanged(bool value)
     {
         if (_isLoading) return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnSauceNaoApiKeyChanged(string value)
@@ -342,7 +345,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     public async Task LoadAsync()
@@ -715,7 +718,7 @@ public partial class SettingsViewModel : ObservableObject
             };
             await _settingsService.SaveConfigAsync(config);
         }
-        catch (Exception ex) { CrashLog.Write("SaveConfig", ex); }
+        catch (Exception ex) { _logger.LogError("Settings.SaveConfig", ex); }
         finally
         {
             _saveLock.Release();

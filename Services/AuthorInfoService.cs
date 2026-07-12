@@ -41,6 +41,7 @@ public sealed class AuthorInfoService
 {
     private readonly IReadOnlyList<IFolderAuthorProvider> _providers;
     private readonly DispatcherQueue _dispatcher;
+    private readonly IAppLogger _logger;
 
     // Folder-chain resolution memoized per directory; cleared when the
     // configured roots change (which also reloads the galleries).
@@ -64,7 +65,7 @@ public sealed class AuthorInfoService
     /// <summary>Fired (on the UI thread) whenever author assignments or counts change.</summary>
     public event Action? AuthorsChanged;
 
-    public AuthorInfoService(IReadOnlyList<IFolderAuthorProvider> providers, DispatcherQueue dispatcher)
+    public AuthorInfoService(IReadOnlyList<IFolderAuthorProvider> providers, DispatcherQueue dispatcher, IAppLogger logger)
     {
         _providers = providers
             .GroupBy(p => p.ProviderId, StringComparer.OrdinalIgnoreCase)
@@ -74,6 +75,7 @@ public sealed class AuthorInfoService
             .Select(p => new AuthorProviderInfo(p.ProviderId, GetDisplayName(p)))
             .ToList();
         _dispatcher = dispatcher;
+        _logger = logger;
     }
 
     public bool IsAvailable => _providers.Count > 0;
@@ -347,7 +349,7 @@ public sealed class AuthorInfoService
         // Fire-and-forget: cache hits complete synchronously inside the
         // plugin; misses queue behind its rate limiter. Either way the result
         // lands back on the UI thread as plain property updates.
-        _ = FetchAsync(parsed.Key);
+        FetchAsync(parsed.Key).Observe(_logger, "Author.Fetch");
         return display;
     }
 
@@ -365,7 +367,7 @@ public sealed class AuthorInfoService
         catch (Exception ex)
         {
             // A failed fetch just leaves the folder-derived name in place.
-            Helpers.CrashLog.Write("AuthorFetch", ex);
+            _logger.LogError("Author.Fetch", ex, key.Id);
         }
     }
 

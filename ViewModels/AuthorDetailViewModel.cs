@@ -25,17 +25,20 @@ public partial class AuthorDetailViewModel : ObservableObject
     private readonly GalleryViewModel _galleryViewModel;
     private readonly CharacterGalleryViewModel _characterGalleryViewModel;
     private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
+    private readonly IAppLogger _logger;
 
     public AuthorDetailViewModel(
         AuthorPostService? authorPostService,
         GalleryViewModel galleryViewModel,
         CharacterGalleryViewModel characterGalleryViewModel,
-        CoordinateGalleryViewModel coordinateGalleryViewModel)
+        CoordinateGalleryViewModel coordinateGalleryViewModel,
+        IAppLogger logger)
     {
         _authorPostService = authorPostService;
         _galleryViewModel = galleryViewModel;
         _characterGalleryViewModel = characterGalleryViewModel;
         _coordinateGalleryViewModel = coordinateGalleryViewModel;
+        _logger = logger;
     }
 
     [ObservableProperty]
@@ -117,7 +120,7 @@ public partial class AuthorDetailViewModel : ObservableObject
             }
             PostCount = Posts.Count;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("AuthorDetail.LoadPostsCanceled", ex, Author?.Key.Id); }
         finally
         {
             IsLoadingPosts = false;

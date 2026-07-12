@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KoikatsuSceneGallery.Helpers;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -12,7 +13,8 @@ internal static class CookieSetupDialogService
         XamlRoot xamlRoot,
         DispatcherQueue dispatcherQueue,
         ICookieSetupProvider provider,
-        string closeButtonText)
+        string closeButtonText,
+        IAppLogger logger)
     {
         var webView = new WebView2 { MinWidth = 800, MinHeight = 600 };
         var completed = false;
@@ -75,8 +77,9 @@ internal static class CookieSetupDialogService
                     dialog.Hide();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogError("CookieSetup.TryComplete", ex, provider.Name);
             }
             finally
             {
@@ -90,20 +93,22 @@ internal static class CookieSetupDialogService
             completionPollingCts = new CancellationTokenSource();
             var token = completionPollingCts.Token;
 
-            _ = Task.Run(async () =>
+            Task.Run(async () =>
             {
                 try
                 {
                     while (!token.IsCancellationRequested && !completed)
                     {
                         await Task.Delay(500, token).ConfigureAwait(false);
-                        _ = dispatcherQueue.TryEnqueue(async () => await TryCompleteAsync());
+                        _ = dispatcherQueue.TryEnqueue(
+                            () => TryCompleteAsync().Observe(logger, "CookieSetup.CompleteFromPolling"));
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
+                    logger.LogError("CookieSetup.PollingCanceled", ex, provider.Name);
                 }
-            }, token);
+            }, token).Observe(logger, "CookieSetup.Polling");
         }
 
         dialog.Loaded += async (_, _) =>
@@ -122,6 +127,7 @@ internal static class CookieSetupDialogService
             }
             catch (Exception ex)
             {
+                logger.LogError("CookieSetup.InitializeWebView", ex, provider.Name);
                 webView.Visibility = Visibility.Collapsed;
                 dialog.Content = new TextBlock
                 {
