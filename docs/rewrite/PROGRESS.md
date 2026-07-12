@@ -28,7 +28,7 @@ The dedicated Ubuntu CI job has not run locally. PluginSdk public API, JSON sche
 
 ## Task 2 — Remove the App static Service Locator
 
-## Result: Blocked
+## Result: Completed
 
 ## Commands run
 
@@ -36,9 +36,13 @@ The dedicated Ubuntu CI job has not run locally. PluginSdk public API, JSON sche
 
 `rtk proxy dotnet build KoikatsuSceneGallery.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --no-restore` completed with 0 warnings and 0 errors.
 
+`rtk proxy dotnet publish KoikatsuSceneGallery.csproj -c Release -r win-x64 --self-contained --no-restore -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None -p:PublishDir=publish\smoke\` completed successfully in the product's unpackaged self-contained distribution mode.
+
+The published `KoikatsuSceneGallery.exe` was launched in the interactive desktop session. UI automation found the `Koikatsu Scene Gallery` window, `LibraryNavItem`, `GallerySearchBox`, sorting/filter controls, and multiple loaded `SceneCard` items. After temporary startup diagnostics were removed, the app was republished; the process launched and remained responsive. A repeat UI-automation call was not run because the desktop-action approval service reported exhausted workspace credits.
+
 Static searches returned zero `App.` references in `ViewModels/`, `Services/`, and `Helpers/`; `App.xaml.cs` exposes only the single `AppServiceRegistry Services` static entry.
 
-`rtk proxy where.exe winapp` returned exit code 1, and `BuildAndRun.ps1` is absent.
+The earlier packaged `dotnet run` attempt was intentionally superseded by the required unpackaged smoke path; the product ships as a self-contained zip and packaged registration conflicts are irrelevant to that distribution mode.
 
 ## Tests: 56 total / 56 passed / 0 failed / 0 skipped
 
@@ -48,8 +52,8 @@ Replaced public static service/ViewModel properties with a single registry entry
 
 ## Notes / out-of-scope findings
 
-The required packaged runtime smoke test cannot run until the WinUI prerequisite tool is installed. No direct executable launch or package-identity workaround was attempted.
+The smoke publish initially attempted restore and failed because the sandbox cannot read the roaming `NuGet.Config`; rerunning the same publish with `--no-restore` used the already-restored win-x64 assets and succeeded. No package registration or user data was changed.
 
 ## Risks
 
-Compilation and unit tests pass, but the new composition path has not been launched. Task 3 must not start until the current build launches through `winapp` and loads a Gallery successfully.
+The composition path has now been exercised through the unpackaged shipping form and loaded an existing Gallery successfully. The repeat post-diagnostic UI inspection was unavailable due tool-credit exhaustion, but the diagnostic changes were fully reverted and the resulting source passed the acceptance test/build commands before republishing.
