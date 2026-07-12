@@ -34,7 +34,9 @@ public partial class App : Application
         _sceneMetadataService = new SceneMetadataService(_logger);
         _characterMetadataService = new CharacterMetadataService(_logger);
         _coordinateMetadataService = new CoordinateMetadataService(_logger);
-        _pluginService = new PluginService(_logger);
+        _pluginService = new PluginService(
+            _logger,
+            Path.Combine(AppPaths.LocalFolder, "Plugins"));
         InitializeComponent();
 
         // No debugger is attached in a packaged-zip test build, so route every

@@ -30,6 +30,8 @@ public sealed record LoadedPluginInfo(
 public sealed class PluginService
 {
     private readonly IAppLogger _logger;
+    private readonly string _pluginStorageDirectory;
+    private readonly string _pluginLogPath;
     private readonly List<LoadedPluginInfo> _plugins = [];
     private readonly object _pluginLock = new();
     private readonly List<IPlugin> _instances = [];
@@ -41,10 +43,17 @@ public sealed class PluginService
 
     public event Action? PluginsChanged;
 
-    public PluginService(IAppLogger logger)
+    public PluginService(
+        IAppLogger logger,
+        string pluginStorageDirectory,
+        string? pluginsDirectory = null)
     {
         _logger = logger;
-        PluginsDirectory = ResolvePluginsDirectory();
+        PluginsDirectory = pluginsDirectory ?? ResolvePluginsDirectory();
+        _pluginStorageDirectory = pluginStorageDirectory;
+        _pluginLogPath = Path.Combine(
+            Path.GetDirectoryName(pluginStorageDirectory) ?? pluginStorageDirectory,
+            "plugins.log");
     }
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
@@ -201,7 +210,7 @@ public sealed class PluginService
             var plugin = (IPlugin)Activator.CreateInstance(type)!;
             name = plugin.Name;
 
-            var storageDir = Path.Combine(AppPaths.LocalFolder, "Plugins", Sanitize(plugin.Name));
+            var storageDir = Path.Combine(_pluginStorageDirectory, Sanitize(plugin.Name));
             Directory.CreateDirectory(storageDir);
             plugin.Initialize(new PluginHost(this, plugin.Name, storageDir));
 
@@ -301,7 +310,7 @@ public sealed class PluginService
         {
             var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{pluginName}] {message}{Environment.NewLine}";
             lock (LogGate)
-                File.AppendAllText(Path.Combine(AppPaths.LocalFolder, "plugins.log"), line);
+                File.AppendAllText(_pluginLogPath, line);
         }
         catch (Exception ex)
         {

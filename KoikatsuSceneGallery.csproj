@@ -18,7 +18,7 @@
       project's directory (the repo root). Keep their sources out of this
       project's default globs or they would be compiled twice.
     -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.PluginSmokeTests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

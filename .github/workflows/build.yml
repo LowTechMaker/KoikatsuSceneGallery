@@ -44,3 +44,54 @@ jobs:
 
       - name: Test
         run: dotnet test KoikatsuSceneGallery.Tests/KoikatsuSceneGallery.Tests.csproj -c ${{ matrix.configuration }}
+
+  plugin-smoke-tests:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v6
+        with:
+          path: KoikatsuSceneGallery
+
+      - name: Checkout Pixiv Authors plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/pixiv-data-plugin
+          path: PixivAuthorsPlugin
+
+      - name: Checkout BepisDB plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/BepisDbPlugin
+          path: BepisDbPlugin
+
+      - name: Checkout Fanbox plugin
+        uses: actions/checkout@v6
+        with:
+          repository: lowtechmaker/FanboxWebView2Plugin
+          path: FanboxWebView2Plugin
+
+      - name: Checkout GitHub release update plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/GitHubReleaseUpdatePlugin
+          path: GitHubReleaseUpdatePlugin
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Restore smoke test and plugins
+        shell: pwsh
+        run: |
+          dotnet restore KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj -r win-x64 -p:Platform=x64
+          dotnet restore PixivAuthorsPlugin/SceneGallery.Plugin.PixivAuthors.csproj -r win-x64 -p:Platform=x64
+          dotnet restore BepisDbPlugin/SceneGallery.Plugin.BepisDb.csproj -r win-x64 -p:Platform=x64
+          dotnet restore FanboxWebView2Plugin/SceneGallery.Plugin.FanboxWebView2.csproj -r win-x64 -p:Platform=x64
+          dotnet restore GitHubReleaseUpdatePlugin/SceneGallery.Plugin.GitHubReleaseUpdates.csproj -r win-x64 -p:Platform=x64
+
+      - name: Smoke test published plugins
+        run: dotnet test KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj --no-restore -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64

@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KoikatsuSceneGallery.Core",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KoikatsuSceneGallery.Tests", "KoikatsuSceneGallery.Tests\KoikatsuSceneGallery.Tests.csproj", "{E780604B-B016-4A34-A553-60E3CF7B2000}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KoikatsuSceneGallery.PluginSmokeTests", "KoikatsuSceneGallery.PluginSmokeTests\KoikatsuSceneGallery.PluginSmokeTests.csproj", "{BD8D30D6-1648-46D6-983E-B83E59472B0A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,16 @@ Global
 		{E780604B-B016-4A34-A553-60E3CF7B2000}.Release|x64.Build.0 = Release|Any CPU
 		{E780604B-B016-4A34-A553-60E3CF7B2000}.Release|x86.ActiveCfg = Release|Any CPU
 		{E780604B-B016-4A34-A553-60E3CF7B2000}.Release|x86.Build.0 = Release|Any CPU
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Debug|Any CPU.Build.0 = Debug|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Debug|x64.ActiveCfg = Debug|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Debug|x64.Build.0 = Debug|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Debug|x86.ActiveCfg = Debug|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Release|Any CPU.ActiveCfg = Release|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Release|Any CPU.Build.0 = Release|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Release|x64.ActiveCfg = Release|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Release|x64.Build.0 = Release|x64
+		{BD8D30D6-1648-46D6-983E-B83E59472B0A}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
