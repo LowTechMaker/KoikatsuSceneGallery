@@ -10,9 +10,6 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     private readonly HashSet<string> _pendingChanges = [];
     private readonly object _lock = new();
 
-    private static readonly ParallelOptions ScanOptions =
-        new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
-
     public event Action<TCard>? CardAdded;
     public event Action<string>? CardRemoved;
 
@@ -27,30 +24,40 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     protected abstract IEnumerable<FileInfo> EnumerateCardFiles(string folder);
     protected abstract void ConfigureWatcher(FileSystemWatcher watcher);
 
-    public Task<List<TCard>> ScanFoldersAsync(IEnumerable<string> folderPaths)
+    public Task<List<TCard>> ScanFoldersAsync(
+        IEnumerable<string> folderPaths,
+        CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
             var cards = new ConcurrentBag<TCard>();
+            var options = CreateScanOptions(cancellationToken);
             foreach (var folder in folderPaths)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!Directory.Exists(folder)) continue;
 
-                Parallel.ForEach(EnumerateCardFiles(folder), ScanOptions, file =>
+                Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var card = TryCreateCard(file);
                     if (card != null)
                         cards.Add(card);
                 });
             }
             return cards.ToList();
-        });
+        }, cancellationToken);
     }
 
-    public Task ScanFoldersAsync(IEnumerable<string> folderPaths, Action<List<TCard>> onBatch, int batchSize = 200)
+    public Task ScanFoldersAsync(
+        IEnumerable<string> folderPaths,
+        Action<List<TCard>> onBatch,
+        CancellationToken cancellationToken = default,
+        int batchSize = 200)
     {
         return Task.Run(() =>
         {
+            var options = CreateScanOptions(cancellationToken);
             var batchLock = new object();
             var batch = new List<TCard>(batchSize);
 
@@ -72,9 +79,11 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
             foreach (var folder in folderPaths)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!Directory.Exists(folder)) continue;
-                Parallel.ForEach(EnumerateCardFiles(folder), ScanOptions, file =>
+                Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var card = TryCreateCard(file);
                     if (card != null)
                         Accumulate(card);
@@ -82,9 +91,19 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             }
 
             if (batch.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
                 onBatch(batch);
-        });
+            }
+        }, cancellationToken);
     }
+
+    private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)
+        => new()
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+        };
 
     private TCard? TryCreateCard(string filePath) =>
         TryCreateCard(new FileInfo(filePath));

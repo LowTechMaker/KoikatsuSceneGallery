@@ -16,6 +16,7 @@ public sealed partial class CoordinateDetailPage : Page
     public CoordinateDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
+    private CancellationTokenSource? _metadataCts;
 
     public CoordinateDetailPage()
     {
@@ -33,6 +34,9 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = null;
         App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
@@ -46,20 +50,30 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void ShowCard(CoordinateCard card)
     {
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = new CancellationTokenSource();
         ViewModel.Card = card;
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        LoadMetadataAsync(card).Observe(
+        LoadMetadataAsync(card, _metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
             "CoordinateDetail.LoadMetadata");
     }
 
-    private async Task LoadMetadataAsync(CoordinateCard card)
+    private async Task LoadMetadataAsync(CoordinateCard card, CancellationToken cancellationToken)
     {
         ViewModel.MetadataLoaded = false;
-        var meta = await Task.Run(() => CoordinateCardParser.TryParse(card.FilePath));
+        var meta = await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var parsed = CoordinateCardParser.TryParse(card.FilePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return parsed;
+        }, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!ReferenceEquals(ViewModel.Card, card)) return;
 
         meta ??= new CoordinateMetadata(null);

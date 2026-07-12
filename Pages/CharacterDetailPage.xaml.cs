@@ -16,6 +16,7 @@ public sealed partial class CharacterDetailPage : Page
     public CharacterDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
+    private CancellationTokenSource? _metadataCts;
 
     public CharacterDetailPage()
     {
@@ -25,8 +26,10 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.Services.GetRequiredService<CharacterGalleryViewModel>().VersionIndexChanged += OnVersionIndexChanged;
-        App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsReloaded += OnCardsReloaded;
+        var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        galleryViewModel.ActivateThumbnailRequests();
+        galleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
+        galleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
             ShowCard(card);
     }
@@ -34,8 +37,13 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.Services.GetRequiredService<CharacterGalleryViewModel>().VersionIndexChanged -= OnVersionIndexChanged;
-        App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
+        var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        galleryViewModel.CancelPendingWork();
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = null;
+        galleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
+        galleryViewModel.CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnVersionIndexChanged(string characterName)
@@ -71,20 +79,30 @@ public sealed partial class CharacterDetailPage : Page
 
     private void ShowCard(CharacterCard card)
     {
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = new CancellationTokenSource();
         ViewModel.Card = card;
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        LoadMetadataAsync(card).Observe(
+        LoadMetadataAsync(card, _metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
             "CharacterDetail.LoadMetadata");
     }
 
-    private async Task LoadMetadataAsync(CharacterCard card)
+    private async Task LoadMetadataAsync(CharacterCard card, CancellationToken cancellationToken)
     {
         ViewModel.MetadataLoaded = false;
-        var meta = await Task.Run(() => CharacterCardParser.TryParse(card.FilePath));
+        var meta = await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var parsed = CharacterCardParser.TryParse(card.FilePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return parsed;
+        }, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!ReferenceEquals(ViewModel.Card, card)) return;
 
         meta ??= new CharacterMetadata(null, null, null, -1, GameVersion.Unknown, false);

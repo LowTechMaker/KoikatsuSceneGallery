@@ -113,3 +113,37 @@ No new out-of-scope findings were added. Production plugin DLLs were copied only
 ## Risks
 
 Independent file moves can now finish in a different order because they run with bounded parallelism; per-item status and duplicate/collision semantics remain unchanged. Cancellation is checked during library scans, file comparison, moves, and empty-directory cleanup; already-completed moves are not rolled back, matching the prior non-transactional behavior.
+
+## Task 5 — Gallery/scan cancellation and bounded concurrency
+
+## Result: Completed
+
+## Commands run
+
+The stage-start `rtk test dotnet test --no-restore` passed all 76 tests. After the Task 5 cancellation/concurrency coverage was added, the final run passed all 79 tests.
+
+`rtk proxy dotnet build KoikatsuSceneGallery.csproj -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 --no-restore` completed with 0 warnings and 0 errors after the final changes.
+
+`rtk proxy dotnet publish KoikatsuSceneGallery.csproj -c Release -r win-x64 --self-contained --no-restore -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None -p:PublishDir=publish\smoke\` completed successfully in the required unpackaged distribution mode.
+
+The published `KoikatsuSceneGallery.exe` loaded the existing 14,500-card Scene Gallery and displayed thumbnails. UI automation rapidly switched six times across Scene, Character, and Coordinate galleries; each page remained responsive and loaded its cards. After leaving the active Gallery pipeline for Settings, two five-second process samples confirmed the process remained responsive and CPU fell from approximately one fully used core during active metadata parsing to 14.06% of one core. The smoke process was then closed normally.
+
+`rtk git diff --check` completed with no whitespace errors.
+
+## Tests: 79 total / 79 passed / 0 failed / 0 skipped
+
+## Changes
+
+Added cancellation tokens to card scanning, thumbnail generation/cache clearing, and metadata parsing APIs and threaded them through all Gallery call sites. Gallery pages now activate work on navigation, cancel load/thumbnail/metadata pipelines on departure, and defer folder-change reloads received while inactive. Main Scene cache hydration yields the UI thread in 200-card batches, while the other galleries retain bounded dispatcher batches with cancellation-safe backpressure.
+
+Added the Core `BoundedAsyncPipeline` and used it for metadata work with a maximum concurrency of four, replacing one-`Task.Run`-per-card fan-out. Thumbnail work remains viewport driven behind a CPU-based semaphore, live file-watcher additions use the same bounded thumbnail path, and scan parallelism is bounded to the processor count. Detail metadata loads now cancel when the selected card or page changes.
+
+Added three Core tests proving configured concurrency is respected, cancellation prevents new work from starting, and non-cancellation processor exceptions propagate.
+
+## Notes / out-of-scope findings
+
+No new out-of-scope findings were added. Existing user-owned changes to `AGENTS.md`, `docs/REFACTOR_PLAN_BACKUP.md`, and the untracked text file were preserved and excluded from the Task 5 commit.
+
+## Risks
+
+Windows imaging APIs do not accept `CancellationToken`, so in-flight WinRT decode/encode calls are cooperatively cancelled at every available await boundary rather than interrupted inside the native operation. Already completed thumbnails and metadata cache entries remain valid. Active metadata parsing can intentionally consume CPU while its Gallery is visible; the runtime smoke verified that usage falls after navigation cancellation.

@@ -48,7 +48,6 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     private CancellationTokenSource? _metadataCts;
     private const int MetadataParseConcurrency = 4;
-    private readonly SemaphoreSlim _metadataGate = new(MetadataParseConcurrency);
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
     public event Action<string>? VersionIndexChanged;
@@ -83,12 +82,15 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     [RelayCommand]
     private async Task LoadCardsAsync()
     {
+        var cancellationToken = BeginLoad();
+        _metadataCts?.Cancel();
         ResetThumbnailState();
 
         IsLoading = true;
         try
         {
             var config = await _settingsService.LoadConfigAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             ShowFileNames = config.ShowFileNames;
             _resolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             _allowedResolutions = [.. config.CharacterAllowedResolutions];
@@ -100,9 +102,16 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
             await _cardService.ScanFoldersAsync(paths, batch =>
             {
-                var processed = new ManualResetEventSlim(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                var processed = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
                 _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        processed.TrySetResult();
+                        return;
+                    }
                     using (CardsView.DeferRefresh())
                     {
                         foreach (var card in batch)
@@ -111,19 +120,24 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
                             Cards.Add(card);
                         }
                     }
-                    processed.Set();
+                    processed.TrySetResult();
                 });
-                processed.Wait(TimeSpan.FromSeconds(10));
-                processed.Dispose();
-            });
+                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
+                    .GetAwaiter().GetResult();
+            }, cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("CharacterGallery.LoadCanceled", ex);
+        }
         finally
         {
-            IsLoading = false;
+            if (_loadCts?.Token == cancellationToken)
+                IsLoading = false;
             RaiseCardsReloaded();
         }
     }
@@ -157,31 +171,26 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
         PendingMetadataCount = pending.Count;
         StartMetadataRefreshTimer();
-        foreach (var card in pending)
-            Task.Run(() => ParseMetadataAsync(card, token), token)
-                .Observe(_logger, "CharacterGallery.ParseMetadata");
+        BoundedAsyncPipeline.ForEachAsync(
+                pending,
+                MetadataParseConcurrency,
+                (card, cancellationToken) => new ValueTask(ParseMetadataAsync(card, cancellationToken)),
+                token)
+            .Observe(_logger, "CharacterGallery.ParseMetadata");
     }
 
     private async Task ParseMetadataAsync(CharacterCard card, CancellationToken cancellationToken)
     {
         try
         {
-            await _metadataGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var meta = _metadataService.ParseAndCache(card);
-                if (!cancellationToken.IsCancellationRequested)
-                    _dispatcherQueue.TryEnqueue(() =>
-                    {
-                        ApplyMetadata(card, meta);
-                        UpdateVersionIndex(card);
-                    });
-            }
-            finally
-            {
-                _metadataGate.Release();
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            var meta = _metadataService.ParseAndCache(card, cancellationToken);
+            if (!cancellationToken.IsCancellationRequested)
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    ApplyMetadata(card, meta);
+                    UpdateVersionIndex(card);
+                });
         }
         catch (OperationCanceledException ex) { _logger.LogError("CharacterGallery.ParseMetadataCanceled", ex, card.FilePath); }
         catch (Exception ex) { _logger.LogError("CharacterGallery.ParseMetadata", ex, card.FilePath); }
@@ -300,11 +309,11 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             return;
         }
 
-        if (!_thumbnailRequested.Add(card.FilePath)) return;
-
         var token = _thumbnailCts?.Token ?? CancellationToken.None;
+        if (token.IsCancellationRequested || !_thumbnailRequested.Add(card.FilePath)) return;
+
         PendingThumbnailCount++;
-        Task.Run(() => GenerateOneAsync(card, token))
+        Task.Run(() => GenerateOneAsync(card, token), token)
             .Observe(_logger, "CharacterGallery.GenerateThumbnail");
     }
 
@@ -321,7 +330,9 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (card.HasThumbnail) return;
-                var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card.FilePath, card.DateModified).ConfigureAwait(false);
+                var thumbnailPath = await _thumbnailCacheService
+                    .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
+                    .ConfigureAwait(false);
                 if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
                     _dispatcherQueue.TryEnqueue(() =>
                     {
@@ -425,16 +436,12 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     }
 
     private void OnCardAdded(CharacterCard card)
-        => OnCardAddedAsync(card).Observe(_logger, "CharacterGallery.AddCard");
-
-    private async Task OnCardAddedAsync(CharacterCard card)
     {
-        var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(card.FilePath, card.DateModified);
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;
-            card.ThumbnailPath = thumbnailPath;
             Cards.Add(card);
+            RequestThumbnail(card);
             QueueMetadata(card);
         });
     }
@@ -453,8 +460,13 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
         _metadataCts ??= new CancellationTokenSource();
         var token = _metadataCts.Token;
+        if (token.IsCancellationRequested) return;
         PendingMetadataCount++;
-        Task.Run(() => ParseMetadataAsync(card, token), token)
+        BoundedAsyncPipeline.ForEachAsync(
+                [card],
+                MetadataParseConcurrency,
+                (item, cancellationToken) => new ValueTask(ParseMetadataAsync(item, cancellationToken)),
+                token)
             .Observe(_logger, "CharacterGallery.ParseAddedCardMetadata");
     }
 
@@ -472,6 +484,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     public void Dispose()
     {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
         _metadataCts?.Cancel();
@@ -482,5 +496,20 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
         _settingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
         GC.SuppressFinalize(this);
+    }
+
+    public override void Activate()
+    {
+        base.Activate();
+        if (Cards.Count > 0)
+            StartMetadataScan();
+    }
+
+    public override void CancelPendingWork()
+    {
+        base.CancelPendingWork();
+        _metadataCts?.Cancel();
+        _metadataRefreshTimer?.Stop();
+        PendingMetadataCount = 0;
     }
 }

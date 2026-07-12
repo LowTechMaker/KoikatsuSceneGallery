@@ -31,6 +31,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     private readonly HashSet<object> _shuffleUsedCards = [];
 
     protected CancellationTokenSource? _thumbnailCts;
+    protected CancellationTokenSource? _loadCts;
     protected readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
     protected readonly HashSet<string> _thumbnailRequested = new(StringComparer.OrdinalIgnoreCase);
     protected readonly Dictionary<string, string> _thumbnailPathCache = new(StringComparer.OrdinalIgnoreCase);
@@ -238,6 +239,36 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         _thumbnailRequested.Clear();
         _thumbnailPathCache.Clear();
         PendingThumbnailCount = 0;
+    }
+
+    protected CancellationToken BeginLoad()
+    {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        return _loadCts.Token;
+    }
+
+    public virtual void Activate()
+    {
+        ActivateThumbnailRequests();
+    }
+
+    public void ActivateThumbnailRequests()
+    {
+        if (_thumbnailCts is not null && !_thumbnailCts.IsCancellationRequested)
+            return;
+
+        _thumbnailCts?.Dispose();
+        _thumbnailCts = new CancellationTokenSource();
+        _thumbnailRequested.Clear();
+        PendingThumbnailCount = 0;
+    }
+
+    public virtual void CancelPendingWork()
+    {
+        _loadCts?.Cancel();
+        _thumbnailCts?.Cancel();
     }
 
     protected void OnShowFileNamesSettingChanged(bool value)

@@ -18,6 +18,8 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
     private readonly GalleryLayoutEngine _layout;
+    private bool _isActive;
+    private bool _reloadPending;
 
     public CoordinateGalleryPage()
     {
@@ -34,22 +36,46 @@ public sealed partial class CoordinateGalleryPage : Page
 
     private void OnCoordinateFolderPathsChanged()
     {
+        if (!_isActive)
+        {
+            _reloadPending = true;
+            return;
+        }
         DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!_isActive)
+            {
+                _reloadPending = true;
+                return;
+            }
             ViewModel.LoadCardsCommand.ExecuteAsync(null)
-                .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.ReloadFolders"));
+                .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.ReloadFolders");
+        });
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _isActive = true;
+        ViewModel.Activate();
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.Navigate", async () =>
         {
             _layout.ApplyCacheLength();
             _layout.RefreshSizeSelector(SizeButtonsPanel);
             _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
-            if (ViewModel.Cards.Count == 0)
+            if (ViewModel.Cards.Count == 0 || _reloadPending)
+            {
+                _reloadPending = false;
                 await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+            }
         });
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        _isActive = false;
+        ViewModel.CancelPendingWork();
+        base.OnNavigatedFrom(e);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
