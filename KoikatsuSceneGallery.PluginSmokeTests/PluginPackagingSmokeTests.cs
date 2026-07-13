@@ -56,7 +56,7 @@ public sealed class PluginPackagingSmokeTests
             "GitHubReleaseUpdates",
             "GitHub Release Updates",
             "Checks plugin updates from GitHub Releases",
-            null,
+            "https://github.com/LowTechMaker/GitHubReleaseUpdatePlugin",
             [typeof(IPluginUpdateProvider)]),
     ];
 
