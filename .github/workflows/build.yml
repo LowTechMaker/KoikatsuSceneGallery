@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   core-tests:
     runs-on: ubuntu-latest
@@ -92,14 +96,67 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
 
-      - name: Restore smoke test and plugins
+      - name: Configure authenticated NuGet sources
+        shell: pwsh
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $configPath = Join-Path $env:RUNNER_TEMP "smoke-test.nuget.config"
+      
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+          </configuration>
+          '@ | Set-Content -Path $configPath -Encoding utf8
+      
+          dotnet nuget add source `
+            "https://api.nuget.org/v3/index.json" `
+            --name "nuget.org" `
+            --configfile $configPath
+      
+          dotnet nuget add source `
+            "https://nuget.pkg.github.com/LowTechMaker/index.json" `
+            --name "github" `
+            --username "${{ github.actor }}" `
+            --password "$env:GH_PACKAGES_TOKEN" `
+            --store-password-in-clear-text `
+            --configfile $configPath
+      
+          "SMOKE_NUGET_CONFIG=$configPath" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore projects
         shell: pwsh
         run: |
-          dotnet restore KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj -r win-x64 -p:Platform=x64
-          dotnet restore PixivAuthorsPlugin/SceneGallery.Plugin.PixivAuthors.csproj -r win-x64 -p:Platform=x64
-          dotnet restore BepisDbPlugin/SceneGallery.Plugin.BepisDb.csproj -r win-x64 -p:Platform=x64
-          dotnet restore FanboxWebView2Plugin/SceneGallery.Plugin.FanboxWebView2.csproj -r win-x64 -p:Platform=x64
-          dotnet restore GitHubReleaseUpdatePlugin/SceneGallery.Plugin.GitHubReleaseUpdates.csproj -r win-x64 -p:Platform=x64
+          dotnet restore `
+            KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            PixivAuthorsPlugin/SceneGallery.Plugin.PixivAuthors.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            BepisDbPlugin/SceneGallery.Plugin.BepisDb.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            FanboxWebView2Plugin/SceneGallery.Plugin.FanboxWebView2.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            GitHubReleaseUpdatePlugin/SceneGallery.Plugin.GitHubReleaseUpdates.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
 
       - name: Smoke test published plugins
         run: dotnet test KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj --no-restore -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64
