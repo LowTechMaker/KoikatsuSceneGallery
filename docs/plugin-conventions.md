@@ -35,3 +35,15 @@ Why: Clearing dirty before a write lost changes on I/O failure, while clearing i
 Rule: Plugin-owned secret settings must be encrypted at rest with Windows DPAPI `CurrentUser` scope and a versioned value prefix. Keep plaintext only in memory and across SDK capability calls. Legacy plaintext may remain readable but must be encrypted at the next existing save point. If decryption fails, treat the value as unset and log only the field name and failure category, never plaintext, ciphertext, or fragments of either.
 
 Why: The SDK `Secret` value type only selects a masked editor; it does not protect plugin settings on disk. Versioned DPAPI values allow smooth migration without changing the settings JSON schema, while safe failure handling covers another computer, another Windows user, and damaged data without leaking the secret into logs.
+
+## Plugin SDK package consumption
+
+Rule: `SceneGallery.PluginSdk` remains a contracts-only binary package with an exact SemVer reference. Plugin projects consume its compile asset with `ExcludeAssets="runtime"` and `PrivateAssets="all"`; the host application remains the only runtime source of `SceneGallery.PluginSdk.dll`. Keep `AssemblyVersion` fixed for the lifetime of one major package version while file and informational versions follow the package version.
+
+Why: A copied SDK DLL creates a second contract type identity inside the plugin load context, while a changing assembly version can prevent an otherwise compatible 1.x plugin from binding to the host contract.
+
+## Source-only plugin infrastructure
+
+Rule: Shared plugin implementation packages use `contentFiles/cs/any` with `buildAction="Compile"`, contain no runtime assembly, and declare every supplied type `internal`. Persistence infrastructure owns only debounce, generation, atomic-write, retry, and disposal mechanics; entry schemas, TTLs, key strategies, dictionary comparers, and logical mutations remain plugin-owned.
+
+Why: Plugins are released as one main DLL. Compiling internal common sources into each plugin preserves that deployment shape, avoids public duplicate type names across plugin assemblies, and prevents a generic cache abstraction from erasing provider-specific behavior such as Fanbox's three-key mutation.

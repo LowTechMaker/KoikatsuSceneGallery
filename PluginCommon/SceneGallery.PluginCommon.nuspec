@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>SceneGallery.PluginCommon</id>
+    <version>$packageVersion$</version>
+    <authors>LowTechMaker</authors>
+    <description>Internal source-only infrastructure shared by SceneGallery plugins.</description>
+    <tags>SceneGallery plugins source infrastructure</tags>
+    <repository type="git" url="https://github.com/LowTechMaker/KoikatsuSceneGallery" />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <readme>README.md</readme>
+    <contentFiles>
+      <files include="cs/any/SceneGallery.PluginCommon/*.cs"
+             buildAction="Compile"
+             copyToOutput="false"
+             flatten="false" />
+    </contentFiles>
+  </metadata>
+  <files>
+    <file src="AtomicFileWriter.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
+    <file src="DebouncedDiskPersistence.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
+    <file src="RateLimiter.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
+    <file src="../PluginPackages.README.md" target="README.md" />
+  </files>
+</package>

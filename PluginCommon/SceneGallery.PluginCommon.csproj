@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SceneGallery.PluginCommon</RootNamespace>
+    <PackageId>SceneGallery.PluginCommon</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>LowTechMaker</Authors>
+    <Description>Internal source-only infrastructure shared by SceneGallery plugins.</Description>
+    <PackageTags>SceneGallery;plugins;source;infrastructure</PackageTags>
+    <RepositoryUrl>https://github.com/LowTechMaker/KoikatsuSceneGallery</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NuspecFile>SceneGallery.PluginCommon.nuspec</NuspecFile>
+    <NuspecProperties>packageVersion=$(Version)</NuspecProperties>
+  </PropertyGroup>
+</Project>

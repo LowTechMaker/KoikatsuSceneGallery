@@ -14,11 +14,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!--
-      The PluginSdk and PixivAuthorsPlugin projects live in subfolders of this
-      project's directory (the repo root). Keep their sources out of this
-      project's default globs or they would be compiled twice.
+      Supporting projects live in subfolders of this project's directory (the
+      repo root). Keep their sources out of this project's default globs or
+      they would be compiled twice.
     -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);PluginSdk\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.PluginSmokeTests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;PluginSdk\**;PluginCommon\**;PluginCommon.Secrets\**;eng\PackageValidation\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.PluginSmokeTests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

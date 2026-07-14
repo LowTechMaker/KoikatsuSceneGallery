@@ -10,5 +10,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>SceneGallery.PluginSdk</RootNamespace>
+    <PackageId>SceneGallery.PluginSdk</PackageId>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Authors>LowTechMaker</Authors>
+    <Description>Binary contracts shared by SceneGallery and its plugins.</Description>
+    <PackageTags>SceneGallery;plugins;sdk;contracts</PackageTags>
+    <RepositoryUrl>https://github.com/LowTechMaker/KoikatsuSceneGallery</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\PluginPackages.README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 </Project>

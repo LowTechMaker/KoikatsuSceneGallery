@@ -1,0 +1,118 @@
+name: Publish plugin packages
+
+on:
+  push:
+    tags:
+      - "sdk-v*"
+      - "common-v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package family to publish"
+        required: true
+        type: choice
+        options:
+          - sdk
+          - common
+      version:
+        description: "SemVer package version"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Determine package and version
+        id: package
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $package = "${{ inputs.package }}"
+            $version = "${{ inputs.version }}"
+          }
+          else {
+            $tag = "${{ github.ref_name }}"
+            if ($tag.StartsWith("sdk-v", [StringComparison]::Ordinal)) {
+              $package = "sdk"
+              $version = $tag.Substring(5)
+            }
+            elseif ($tag.StartsWith("common-v", [StringComparison]::Ordinal)) {
+              $package = "common"
+              $version = $tag.Substring(8)
+            }
+            else {
+              throw "Unsupported package tag '$tag'."
+            }
+          }
+
+          $semver = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$'
+          if ($version -notmatch $semver) {
+            throw "Package version '$version' is not valid SemVer."
+          }
+          $fileVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
+
+          "package=$package" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "file_version=$fileVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Pack Plugin SDK
+        if: steps.package.outputs.package == 'sdk'
+        shell: pwsh
+        run: >-
+          dotnet pack PluginSdk/SceneGallery.PluginSdk.csproj
+          --configuration Release
+          --output artifacts/packages
+          --nologo
+          -p:Version=${{ steps.package.outputs.version }}
+          -p:FileVersion=${{ steps.package.outputs.file_version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
+          -p:TreatWarningsAsErrors=true
+
+      - name: Pack Plugin Common source packages
+        if: steps.package.outputs.package == 'common'
+        shell: pwsh
+        run: |
+          dotnet pack PluginCommon/SceneGallery.PluginCommon.csproj `
+            --configuration Release `
+            --output artifacts/packages `
+            --nologo `
+            -p:Version=${{ steps.package.outputs.version }} `
+            -p:IncludeSourceRevisionInInformationalVersion=false `
+            -p:TreatWarningsAsErrors=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          dotnet pack PluginCommon.Secrets/SceneGallery.PluginCommon.Secrets.csproj `
+            --configuration Release `
+            --output artifacts/packages `
+            --nologo `
+            -p:Version=${{ steps.package.outputs.version }} `
+            -p:IncludeSourceRevisionInInformationalVersion=false `
+            -p:TreatWarningsAsErrors=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Publish to GitHub Packages
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Get-ChildItem artifacts/packages/*.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName `
+              --source "https://nuget.pkg.github.com/LowTechMaker/index.json" `
+              --api-key $env:GITHUB_TOKEN `
+              --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
