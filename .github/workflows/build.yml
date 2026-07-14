@@ -59,24 +59,32 @@ jobs:
         with:
           repository: LowTechMaker/pixiv-data-plugin
           path: PixivAuthorsPlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
 
       - name: Checkout BepisDB plugin
         uses: actions/checkout@v6
         with:
           repository: LowTechMaker/BepisDbPlugin
           path: BepisDbPlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
 
       - name: Checkout Fanbox plugin
         uses: actions/checkout@v6
         with:
           repository: lowtechmaker/FanboxWebView2Plugin
           path: FanboxWebView2Plugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
 
       - name: Checkout GitHub release update plugin
         uses: actions/checkout@v6
         with:
           repository: LowTechMaker/GitHubReleaseUpdatePlugin
           path: GitHubReleaseUpdatePlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
