@@ -47,3 +47,9 @@ Why: A copied SDK DLL creates a second contract type identity inside the plugin 
 Rule: Shared plugin implementation packages use `contentFiles/cs/any` with `buildAction="Compile"`, contain no runtime assembly, and declare every supplied type `internal`. Persistence infrastructure owns only debounce, generation, atomic-write, retry, and disposal mechanics; entry schemas, TTLs, key strategies, dictionary comparers, and logical mutations remain plugin-owned.
 
 Why: Plugins are released as one main DLL. Compiling internal common sources into each plugin preserves that deployment shape, avoids public duplicate type names across plugin assemblies, and prevents a generic cache abstraction from erasing provider-specific behavior such as Fanbox's three-key mutation.
+
+## Plugin package source provenance
+
+Rule: Every plugin repository owns a `NuGet.config` that maps `SceneGallery.*` only to the `SceneGalleryGitHub` source. CI supplies that source's credentials through `NuGetPackageSourceCredentials_SceneGalleryGitHub` and `GITHUB_TOKEN`; credentials never enter a tracked file. Before a package exists remotely, local equivalence tests must explicitly use the application repository's `eng/PackageValidation/NuGet.config` and an isolated package cache against `artifacts/local-feed`. Do not add the local feed to the committed plugin configuration.
+
+Why: A local fallback in the committed source list can hide a missing or inaccessible GitHub package, while relying on a populated global package cache can make a package-only build appear standalone when it is not. The explicit local config keeps pre-publication validation possible without weakening the production source mapping.
