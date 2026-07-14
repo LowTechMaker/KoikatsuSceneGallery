@@ -59,3 +59,21 @@ Why: A local fallback in the committed source list can hide a missing or inacces
 Rule: Compare every plugin-local implementation before adopting a shared source-only package, then extract one primitive per gate. Keep provider policy in the plugin wrapper, reference the exact source package version with `PrivateAssets="all"`, and remove the local source only after a fresh isolated restore proves the package content file was compiled. Existing behavior tests keep their assertions; only namespace, construction, or injection plumbing may change.
 
 Why: Similar-looking copies can hide provider-specific semantics. One-primitive gates make an unexpected difference attributable and reversible, while isolated package restores prevent a sibling checkout, stale build output, or global package cache from falsely proving the extraction.
+
+## Narrow callback seams for dependency cycles
+
+Rule: Break a lower-layer-to-higher-layer dependency with the narrowest semantic callback rather than storing the higher-layer service. The callback contract must document what success means, who owns cancellation, and whether cancellation must propagate.
+
+Why: Fanbox challenge navigation needed to probe API usability, but giving Navigator an ApiClient reference would create a cycle. A documented `Func<CancellationToken, Task<bool>>` kept Navigator dependent only on Host while preserving the linked caller/challenge token semantics.
+
+## Evidence for runtime-only behavior moves
+
+Rule: When extracting behavior that cannot be deterministically exercised offline, preserve the critical block statement-for-statement and record a before/after source index in addition to the available regression tests. Explicitly identify which behavior remains manually verified; source comparison is evidence for a move, not a substitute for a feasible test seam.
+
+Why: WebView2 does not expose cancellation for an executing script. Comparing the moved `AsTask`/`WaitAsync`/abandoned-observer block proved the lifecycle fix stayed intact without pretending an offline parser suite exercised a real browser operation.
+
+## Shared disposal deadlines and deferred persistence
+
+Rule: The outer resource owner marks itself disposing before waiting, rejects new producers, and measures one monotonic disposal deadline. Nested owners receive only the remaining time and must not restart the timeout. Dispose execution resources before persistence; if producers outlive the deadline, force execution teardown and defer cache flush/disposal until the last producer finishes. Run dependency disposal outside the operation-count lock.
+
+Why: Independent plugin and WebView drains could otherwise wait ten seconds each, while disposing Fanbox cache before an end-to-end producer completed allowed a later cache mutation or user-input retry to touch disposed persistence.
