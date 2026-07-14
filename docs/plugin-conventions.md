@@ -53,3 +53,9 @@ Why: Plugins are released as one main DLL. Compiling internal common sources int
 Rule: Every plugin repository owns a `NuGet.config` that maps `SceneGallery.*` only to the `SceneGalleryGitHub` source. CI supplies that source's credentials through `NuGetPackageSourceCredentials_SceneGalleryGitHub` and `GITHUB_TOKEN`; credentials never enter a tracked file. Before a package exists remotely, local equivalence tests must explicitly use the application repository's `eng/PackageValidation/NuGet.config` and an isolated package cache against `artifacts/local-feed`. Do not add the local feed to the committed plugin configuration.
 
 Why: A local fallback in the committed source list can hide a missing or inaccessible GitHub package, while relying on a populated global package cache can make a package-only build appear standalone when it is not. The explicit local config keeps pre-publication validation possible without weakening the production source mapping.
+
+## Staged source-only extraction
+
+Rule: Compare every plugin-local implementation before adopting a shared source-only package, then extract one primitive per gate. Keep provider policy in the plugin wrapper, reference the exact source package version with `PrivateAssets="all"`, and remove the local source only after a fresh isolated restore proves the package content file was compiled. Existing behavior tests keep their assertions; only namespace, construction, or injection plumbing may change.
+
+Why: Similar-looking copies can hide provider-specific semantics. One-primitive gates make an unexpected difference attributable and reversible, while isolated package restores prevent a sibling checkout, stale build output, or global package cache from falsely proving the extraction.
