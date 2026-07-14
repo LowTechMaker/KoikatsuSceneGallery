@@ -29,6 +29,9 @@ public sealed record LoadedPluginInfo(
 /// </summary>
 public sealed class PluginService
 {
+    private readonly IAppLogger _logger;
+    private readonly string _pluginStorageDirectory;
+    private readonly string _pluginLogPath;
     private readonly List<LoadedPluginInfo> _plugins = [];
     private readonly object _pluginLock = new();
     private readonly List<IPlugin> _instances = [];
@@ -40,10 +43,23 @@ public sealed class PluginService
 
     public event Action? PluginsChanged;
 
-    /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
-    public static string PluginsDirectory { get; } = ResolvePluginsDirectory();
+    public PluginService(
+        IAppLogger logger,
+        string pluginStorageDirectory,
+        string? pluginsDirectory = null)
+    {
+        _logger = logger;
+        PluginsDirectory = pluginsDirectory ?? ResolvePluginsDirectory();
+        _pluginStorageDirectory = pluginStorageDirectory;
+        _pluginLogPath = Path.Combine(
+            Path.GetDirectoryName(pluginStorageDirectory) ?? pluginStorageDirectory,
+            "plugins.log");
+    }
 
-    private static string ResolvePluginsDirectory()
+    /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
+    public string PluginsDirectory { get; }
+
+    private string ResolvePluginsDirectory()
     {
         var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var primary = Path.Combine(baseDir, "Plugins");
@@ -62,7 +78,7 @@ public sealed class PluginService
         return primary;
     }
 
-    private static bool HasPluginAssemblies(string pluginsDir)
+    private bool HasPluginAssemblies(string pluginsDir)
     {
         try
         {
@@ -71,8 +87,9 @@ public sealed class PluginService
                        .Any(dir => Directory.EnumerateFiles(dir, "*.dll").Any())
                    || Directory.EnumerateFiles(pluginsDir, "*.dll").Any();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Plugins.Discover", ex, pluginsDir);
             return false;
         }
     }
@@ -193,9 +210,9 @@ public sealed class PluginService
             var plugin = (IPlugin)Activator.CreateInstance(type)!;
             name = plugin.Name;
 
-            var storageDir = Path.Combine(AppPaths.LocalFolder, "Plugins", Sanitize(plugin.Name));
+            var storageDir = Path.Combine(_pluginStorageDirectory, Sanitize(plugin.Name));
             Directory.CreateDirectory(storageDir);
-            plugin.Initialize(new PluginHost(plugin.Name, storageDir));
+            plugin.Initialize(new PluginHost(this, plugin.Name, storageDir));
 
             if (!_loadedPluginNames.Add(plugin.Name))
                 return;
@@ -281,30 +298,31 @@ public sealed class PluginService
         return name;
     }
 
-    private static void CrashLogPlugin(string pluginName, Exception ex)
-        => Helpers.CrashLog.Write($"Plugin:{pluginName}", ex);
+    private void CrashLogPlugin(string pluginName, Exception ex)
+        => _logger.LogError($"Plugin:{pluginName}", ex);
 
     private static readonly object LogGate = new();
 
-    private static void Log(string pluginName, string message)
+    private void Log(string pluginName, string message)
     {
         // Same best-effort contract as CrashLog: logging must never throw.
         try
         {
             var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{pluginName}] {message}{Environment.NewLine}";
             lock (LogGate)
-                File.AppendAllText(Path.Combine(AppPaths.LocalFolder, "plugins.log"), line);
+                File.AppendAllText(_pluginLogPath, line);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError("Plugin.Log", ex, pluginName);
         }
     }
 
-    private sealed class PluginHost(string pluginName, string storageDirectory) : IPluginHost
+    private sealed class PluginHost(PluginService owner, string pluginName, string storageDirectory) : IPluginHost
     {
         public string StorageDirectory { get; } = storageDirectory;
 
-        public void Log(string message) => PluginService.Log(pluginName, message);
+        public void Log(string message) => owner.Log(pluginName, message);
 
         public Task<string?> RequestInputAsync(string title, string message, string? placeholder, CancellationToken ct)
             => InputRequestHandler?.Invoke(title, message, placeholder, ct)

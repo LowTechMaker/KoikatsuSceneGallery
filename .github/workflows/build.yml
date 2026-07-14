@@ -6,7 +6,26 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Test Core
+        run: dotnet test KoikatsuSceneGallery.Tests/KoikatsuSceneGallery.Tests.csproj -c Release
+
   build:
     runs-on: windows-latest
 
@@ -25,4 +44,119 @@ jobs:
           dotnet-quality: "ga"
 
       - name: Build
-        run: dotnet build -c ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} -p:RuntimeIdentifier=win-${{ matrix.platform }}
+        run: dotnet build KoikatsuSceneGallery.csproj -c ${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} -p:RuntimeIdentifier=win-${{ matrix.platform }}
+
+      - name: Test
+        run: dotnet test KoikatsuSceneGallery.Tests/KoikatsuSceneGallery.Tests.csproj -c ${{ matrix.configuration }}
+
+  plugin-smoke-tests:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v6
+        with:
+          path: KoikatsuSceneGallery
+
+      - name: Checkout Pixiv Authors plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/pixiv-data-plugin
+          path: PixivAuthorsPlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout BepisDB plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/BepisDbPlugin
+          path: BepisDbPlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout Fanbox plugin
+        uses: actions/checkout@v6
+        with:
+          repository: lowtechmaker/FanboxWebView2Plugin
+          path: FanboxWebView2Plugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Checkout GitHub release update plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/GitHubReleaseUpdatePlugin
+          path: GitHubReleaseUpdatePlugin
+          token: ${{ secrets.PLUGINS_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Configure authenticated NuGet sources
+        shell: pwsh
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $configPath = Join-Path $env:RUNNER_TEMP "smoke-test.nuget.config"
+      
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+          </configuration>
+          '@ | Set-Content -Path $configPath -Encoding utf8
+      
+          dotnet nuget add source `
+            "https://api.nuget.org/v3/index.json" `
+            --name "nuget.org" `
+            --configfile $configPath
+      
+          dotnet nuget add source `
+            "https://nuget.pkg.github.com/LowTechMaker/index.json" `
+            --name "github" `
+            --username "${{ github.actor }}" `
+            --password "$env:GH_PACKAGES_TOKEN" `
+            --store-password-in-clear-text `
+            --configfile $configPath
+      
+          "SMOKE_NUGET_CONFIG=$configPath" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore projects
+        shell: pwsh
+        run: |
+          dotnet restore `
+            KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            PixivAuthorsPlugin/SceneGallery.Plugin.PixivAuthors.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            BepisDbPlugin/SceneGallery.Plugin.BepisDb.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            FanboxWebView2Plugin/SceneGallery.Plugin.FanboxWebView2.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+      
+          dotnet restore `
+            GitHubReleaseUpdatePlugin/SceneGallery.Plugin.GitHubReleaseUpdates.csproj `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --configfile "$env:SMOKE_NUGET_CONFIG"
+
+      - name: Smoke test published plugins
+        run: dotnet test KoikatsuSceneGallery/KoikatsuSceneGallery.PluginSmokeTests/KoikatsuSceneGallery.PluginSmokeTests.csproj --no-restore -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64

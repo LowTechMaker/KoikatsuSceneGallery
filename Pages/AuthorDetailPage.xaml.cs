@@ -1,8 +1,10 @@
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
 
@@ -10,16 +12,24 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class AuthorDetailPage : Page
 {
-    public AuthorDetailViewModel ViewModel { get; } = new();
+    public AuthorDetailViewModel ViewModel { get; } = new(
+        App.Services.GetService<AuthorPostService>(),
+        App.Services.GetRequiredService<GalleryViewModel>(),
+        App.Services.GetRequiredService<CharacterGalleryViewModel>(),
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>(),
+        App.Services.GetRequiredService<IAppLogger>());
 
     private const double SceneImageRatio = 135.0 / 240.0;
     private const double CharaImageRatio = 352.0 / 252.0;
+    private const double PostImageRatio = 3.0 / 4.0;
     private const double CardMargin = 4;
     private const double CardInset = 4 + 1;
     private const double CellOverheadW = CardMargin * 2;
     private const double ContentInsetW = (CardMargin + CardInset) * 2;
     private const double FilenameReserve = 30;
     private const double DesiredWidth = 240;
+    private const double PostDesiredWidth = 160;
+    private const double PostItemSpacing = 8;
     private const int ScenesTabIndex = 0;
     private const int CharactersTabIndex = 1;
     private const int CoordinatesTabIndex = 2;
@@ -41,16 +51,17 @@ public sealed partial class AuthorDetailPage : Page
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
             foreach (var card in ViewModel.Scenes)
-                App.GalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<GalleryViewModel>().RequestThumbnail(card);
             foreach (var card in ViewModel.Characters)
-                App.CharacterGalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(card);
             foreach (var card in ViewModel.Coordinates)
-                App.CoordinateGalleryViewModel.RequestThumbnail(card);
+                App.Services.GetRequiredService<CoordinateGalleryViewModel>().RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
-            if (ViewModel.CanLoadPosts && App.AuthorPostService is { } postService)
+            if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _postsCts = new CancellationTokenSource();
-                _ = ViewModel.LoadPostsAsync(postService, _postsCts.Token);
+                ViewModel.LoadPostsAsync(postService, _postsCts.Token)
+                    .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
             }
         }
 
@@ -98,17 +109,40 @@ public sealed partial class AuthorDetailPage : Page
         panel.ItemHeight = cellH;
     }
 
+    private static void ApplyPostImageLayout(GridView grid)
+    {
+        if (grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
+            return;
+
+        double available = panel.ActualWidth;
+        int columns = Math.Max(1, (int)Math.Floor(available / (PostDesiredWidth + PostItemSpacing)));
+        double cellW = (available / columns) - PostItemSpacing;
+        double cellH = cellW * PostImageRatio;
+
+        panel.ItemWidth = cellW;
+        panel.ItemHeight = cellH;
+    }
+
+    private void PostImagesGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is GridView grid)
+            ApplyPostImageLayout(grid);
+    }
+
     public static string FormatCount(int count) => $"({count})";
+
+    public static BitmapImage CreateThumbnail(Uri uri) => new() { DecodePixelWidth = 160, UriSource = uri };
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
-    private async void OpenProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Author is { } author)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
-    }
+    private void OpenProfile_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
+        {
+            if (ViewModel.Author is { } author)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
+        });
 
     private void Shuffle_Click(object sender, RoutedEventArgs e)
     {
@@ -137,11 +171,12 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Author is { } author)
-            await App.AuthorInfoService.RefreshAuthorAsync(author.Key);
-    }
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.Refresh", async () =>
+        {
+            if (ViewModel.Author is { } author)
+                await App.Services.GetRequiredService<AuthorInfoService>().RefreshAuthorAsync(author.Key);
+        });
 
     private void ScenesGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
@@ -170,14 +205,32 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
-    private void PostsList_ItemClick(object sender, ItemClickEventArgs e)
+    private void PostTitle_Click(object sender, RoutedEventArgs e)
     {
-        if (e.ClickedItem is AuthorPost post)
+        if (sender is FrameworkElement { Tag: AuthorPost post })
         {
             SetRestoreSelectedTabOnBack(PostsTabIndex);
             Frame.Navigate(typeof(PostDetailPage), post);
         }
     }
+
+    private void PostImage_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not LocalImagePreview preview) return;
+
+        var path = preview.FilePath;
+        var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
+        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), scene); return; }
+
+        var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
+        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), character); return; }
+
+        var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
+        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
+    }
+
+    private void PostImages_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => SetDragFiles(e, e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath));
 
     private void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
         => SetDragFiles(e, e.Items.OfType<SceneCard>().Select(c => c.FilePath));
@@ -202,7 +255,11 @@ public sealed partial class AuthorDetailPage : Page
                 foreach (var path in paths)
                 {
                     try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("AuthorDetail.PrepareDragFile", ex, path);
+                    }
                 }
                 request.SetData(files);
             }

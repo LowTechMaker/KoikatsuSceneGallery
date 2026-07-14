@@ -11,6 +11,10 @@ public sealed record LocalImagePreview(Uri ImageUri, string FileName, string Fil
 
 public partial class PostDetailViewModel : ObservableObject
 {
+    private readonly IAppLogger _logger;
+
+    public PostDetailViewModel(IAppLogger logger) => _logger = logger;
+
     public AuthorPost? Post { get; private set; }
 
     [ObservableProperty]
@@ -97,10 +101,10 @@ public partial class PostDetailViewModel : ObservableObject
                 ApplyInfo(info);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("PostDetail.LoadCanceled", ex, Post?.ArtworkId.Id); }
         catch (Exception ex)
         {
-            Helpers.CrashLog.Write("PostDetail", ex);
+            _logger.LogError("PostDetail.Load", ex, Post?.ArtworkId.Id);
         }
         finally
         {
@@ -122,10 +126,10 @@ public partial class PostDetailViewModel : ObservableObject
             if (info is not null)
                 ApplyInfo(info);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("PostDetail.SaveCanceled", ex, Post?.ArtworkId.Id); }
         catch (Exception ex)
         {
-            Helpers.CrashLog.Write("PostDetail.Save", ex);
+            _logger.LogError("PostDetail.Save", ex, Post?.ArtworkId.Id);
         }
         finally
         {

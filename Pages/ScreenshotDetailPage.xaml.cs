@@ -1,5 +1,6 @@
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -23,8 +24,8 @@ public sealed partial class ScreenshotDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.ScreenshotGalleryViewModel.CardRemovedNotification += OnCardRemoved;
-        App.ScreenshotGalleryViewModel.CardsReloaded += OnCardsReloaded;
+        App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardRemovedNotification += OnCardRemoved;
+        App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsReloaded += OnCardsReloaded;
         if (e.Parameter is MediaCard card)
             ShowCard(card);
     }
@@ -32,8 +33,8 @@ public sealed partial class ScreenshotDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.ScreenshotGalleryViewModel.CardRemovedNotification -= OnCardRemoved;
-        App.ScreenshotGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardRemovedNotification -= OnCardRemoved;
+        App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnCardRemoved(string path)
@@ -43,7 +44,7 @@ public sealed partial class ScreenshotDetailPage : Page
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.ScreenshotGalleryViewModel.CardsView, ViewModel.Card);
+            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card);
             if (next != null)
                 ShowCard(next);
             else if (Frame.CanGoBack)
@@ -72,14 +73,14 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.ScreenshotGalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.ScreenshotGalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -89,7 +90,7 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.ScreenshotGalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 
@@ -121,5 +122,6 @@ public sealed partial class ScreenshotDetailPage : Page
     }
 
     private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
+        => DetailNavigationHelper.HandleDragStartingAsync(ViewModel.Card, e)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "ScreenshotDetail.PrepareDrag");
 }

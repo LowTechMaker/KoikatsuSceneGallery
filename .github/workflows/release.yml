@@ -17,7 +17,34 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout application
+        uses: actions/checkout@v6
+        with:
+          path: KoikatsuSceneGallery
+
+      - name: Checkout Pixiv Authors plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/pixiv-data-plugin
+          path: PixivAuthorsPlugin
+
+      - name: Checkout BepisDB plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/BepisDbPlugin
+          path: BepisDbPlugin
+
+      - name: Checkout Fanbox plugin
+        uses: actions/checkout@v6
+        with:
+          repository: lowtechmaker/FanboxWebView2Plugin
+          path: FanboxWebView2Plugin
+
+      - name: Checkout GitHub release update plugin
+        uses: actions/checkout@v6
+        with:
+          repository: LowTechMaker/GitHubReleaseUpdatePlugin
+          path: GitHubReleaseUpdatePlugin
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -33,12 +60,13 @@ jobs:
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
       - name: Publish x64
-        run: dotnet publish -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64 -p:WindowsPackageType=None -p:DebugType=none
+        shell: pwsh
+        run: KoikatsuSceneGallery/scripts/Publish-WithPlugins.ps1 -Configuration Release -RuntimeIdentifier win-x64
 
       - name: Package zip
         shell: pwsh
         run: |
-          $publishDir = Get-ChildItem -Path "bin" -Filter "publish" -Recurse -Directory | Select-Object -First 1 -ExpandProperty FullName
+          $publishDir = "KoikatsuSceneGallery/artifacts/release/win-x64"
           Get-ChildItem "$publishDir" -Include "*.pdb" -Recurse | Remove-Item -Force -Confirm:$false
           Compress-Archive -Path "$publishDir\*" -DestinationPath "KoikatsuSceneGallery-${{ steps.version.outputs.tag }}-win-x64.zip"
 

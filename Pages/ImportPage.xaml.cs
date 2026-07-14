@@ -1,4 +1,5 @@
 using System.IO;
+using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.Windows.ApplicationModel.Resources;
 using KoikatsuSceneGallery.Models;
@@ -22,9 +23,9 @@ public sealed partial class ImportPage : Page
 
     public ImportPage()
     {
-        ViewModel = App.ImportViewModel!;
+        ViewModel = App.Services.GetService<ImportViewModel>()!;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        _cookieSetupProviders = App.PluginService.CookieSetupProviders;
+        _cookieSetupProviders = App.Services.GetRequiredService<PluginService>().CookieSetupProviders;
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
 
@@ -52,8 +53,9 @@ public sealed partial class ImportPage : Page
         }
     }
 
-    private async void Page_Drop(object sender, DragEventArgs e)
-    {
+    private void Page_Drop(object sender, DragEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Drop", async () =>
+        {
         if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
 
         var storageItems = await e.DataView.GetStorageItemsAsync();
@@ -76,20 +78,25 @@ public sealed partial class ImportPage : Page
                         foreach (var p in Directory.EnumerateFiles(folderPath, "*.png", SearchOption.AllDirectories))
                             paths.Add(p);
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("Import.EnumerateDroppedFolder", ex, folderPath);
+                    }
                 });
             }
         }
 
         if (paths.Count > 0 && await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
-    }
+        });
 
-    private async void AssignAuthor_Click(object sender, RoutedEventArgs e)
-    {
+    private void AssignAuthor_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.AssignAuthor", async () =>
+        {
         if (sender is Button { CommandParameter: ImportArtworkGroup group })
             await ViewModel.AssignAuthorCommand.ExecuteAsync(group);
-    }
+        });
 
     private ImportArtworkGroup? _pickTarget;
     private bool _pickBatchUnknownAuthor;
@@ -217,8 +224,9 @@ public sealed partial class ImportPage : Page
         _authorFlyout.ShowAt(anchor);
     }
 
-    private async void AuthorPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
+    private void AuthorPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SelectAuthor", async () =>
+        {
         if (sender is not ListView || e.AddedItems.Count == 0 || e.AddedItems[0] is not SelectableAuthor author) return;
 
         _authorFlyout?.Hide();
@@ -251,22 +259,25 @@ public sealed partial class ImportPage : Page
             await ViewModel.AssignBatchAuthorIdToFetchFailedCommand.ExecuteAsync(null);
             _pickBatchFetchFailedAuthor = false;
         }
-    }
+        });
 
-    private async void AssignAuthorToUnknownGroup_Click(object sender, RoutedEventArgs e)
-    {
+    private void AssignAuthorToUnknownGroup_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.AssignUnknownAuthor", async () =>
+        {
         if (sender is Button { CommandParameter: ImportUnknownGroup group })
             await ViewModel.AssignAuthorToUnknownGroupCommand.ExecuteAsync(group);
-    }
+        });
 
-    private async void AssignArtworkIdToUnknownGroup_Click(object sender, RoutedEventArgs e)
-    {
+    private void AssignArtworkIdToUnknownGroup_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.AssignUnknownArtwork", async () =>
+        {
         if (sender is Button { CommandParameter: ImportUnknownGroup group })
             await ViewModel.AssignArtworkIdToUnknownGroupCommand.ExecuteAsync(group);
-    }
+        });
 
-    private async void SearchSauceNaoForUnknown_Click(object sender, RoutedEventArgs e)
-    {
+    private void SearchSauceNaoForUnknown_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SearchUnknownImage", async () =>
+        {
         if (sender is not Button { CommandParameter: ImportUnknownGroup group } button)
             return;
 
@@ -300,10 +311,11 @@ public sealed partial class ImportPage : Page
             group.IsSauceNaoSearching = false;
             button.IsEnabled = true;
         }
-    }
+        });
 
-    private async void SearchSauceNaoForFetchFailed_Click(object sender, RoutedEventArgs e)
-    {
+    private void SearchSauceNaoForFetchFailed_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SearchFailedImage", async () =>
+        {
         if (sender is not Button { CommandParameter: ImportArtworkGroup group } button)
             return;
 
@@ -337,7 +349,7 @@ public sealed partial class ImportPage : Page
             group.IsSauceNaoSearching = false;
             button.IsEnabled = true;
         }
-    }
+        });
 
     private async Task<ContentRating?> ShowSauceNaoResultDialog(ReverseImageSearchResult result)
     {
@@ -461,14 +473,15 @@ public sealed partial class ImportPage : Page
             ViewModel.RemoveUnknownItemCommand.Execute(item);
     }
 
-    private async void CookieSetup_Click(object sender, RoutedEventArgs e)
-    {
+    private void CookieSetup_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.CookieSetup", async () =>
+        {
         var provider = _cookieSetupProviders.FirstOrDefault(p => p.NeedsCookieSetup)
             ?? _cookieSetupProviders.FirstOrDefault();
         if (provider is null) return;
 
         await ShowCookieSetupDialogAsync(provider);
-    }
+        });
 
     private async Task<bool> EnsureRequiredCookieSetupAsync(IReadOnlyList<string> filePaths)
     {
@@ -514,5 +527,6 @@ public sealed partial class ImportPage : Page
             XamlRoot,
             DispatcherQueue,
             provider,
-            ResLoader.GetString("Import_SauceNaoCloseButton"));
+            ResLoader.GetString("Import_SauceNaoCloseButton"),
+            App.Services.GetRequiredService<IAppLogger>());
 }

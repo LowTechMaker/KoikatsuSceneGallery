@@ -6,8 +6,41 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
+public sealed class PostImageGroupViewModel
+{
+    public AuthorPost Post { get; }
+    public ObservableCollection<LocalImagePreview> Images { get; } = [];
+
+    public PostImageGroupViewModel(AuthorPost post)
+    {
+        Post = post;
+        foreach (var path in post.LocalFilePaths.Where(File.Exists))
+            Images.Add(new LocalImagePreview(new Uri(path.Replace("#", "%23")), Path.GetFileName(path), path));
+    }
+}
+
 public partial class AuthorDetailViewModel : ObservableObject
 {
+    private readonly AuthorPostService? _authorPostService;
+    private readonly GalleryViewModel _galleryViewModel;
+    private readonly CharacterGalleryViewModel _characterGalleryViewModel;
+    private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
+    private readonly IAppLogger _logger;
+
+    public AuthorDetailViewModel(
+        AuthorPostService? authorPostService,
+        GalleryViewModel galleryViewModel,
+        CharacterGalleryViewModel characterGalleryViewModel,
+        CoordinateGalleryViewModel coordinateGalleryViewModel,
+        IAppLogger logger)
+    {
+        _authorPostService = authorPostService;
+        _galleryViewModel = galleryViewModel;
+        _characterGalleryViewModel = characterGalleryViewModel;
+        _coordinateGalleryViewModel = coordinateGalleryViewModel;
+        _logger = logger;
+    }
+
     [ObservableProperty]
     public partial AuthorDisplay? Author { get; set; }
 
@@ -15,6 +48,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public ObservableCollection<CharacterCard> Characters { get; } = [];
     public ObservableCollection<CoordinateCard> Coordinates { get; } = [];
     public ObservableCollection<AuthorPost> Posts { get; } = [];
+    public ObservableCollection<PostImageGroupViewModel> PostGroups { get; } = [];
 
     [ObservableProperty]
     public partial int SceneCount { get; set; }
@@ -32,7 +66,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public partial bool IsLoadingPosts { get; set; }
 
     public bool CanLoadPosts => Author is { } author
-                                && App.AuthorPostService?.CanScanPosts(author.Key) == true;
+                                && _authorPostService?.CanScanPosts(author.Key) == true;
 
     public void Load(AuthorSummary summary)
     {
@@ -40,7 +74,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         var key = summary.Display.Key;
 
         Scenes.Clear();
-        foreach (var card in App.GalleryViewModel.Cards)
+        foreach (var card in _galleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Scenes.Add(card);
@@ -48,7 +82,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         SceneCount = Scenes.Count;
 
         Characters.Clear();
-        foreach (var card in App.CharacterGalleryViewModel.Cards)
+        foreach (var card in _characterGalleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Characters.Add(card);
@@ -56,7 +90,7 @@ public partial class AuthorDetailViewModel : ObservableObject
         CharacterCount = Characters.Count;
 
         Coordinates.Clear();
-        foreach (var card in App.CoordinateGalleryViewModel.Cards)
+        foreach (var card in _coordinateGalleryViewModel.Cards)
         {
             if (card.Author?.Key == key)
                 Coordinates.Add(card);
@@ -74,11 +108,19 @@ public partial class AuthorDetailViewModel : ObservableObject
         try
         {
             var posts = await postService.ScanAuthorPostsAsync(Author.Key, ct);
+            var groups = await Task.Run(
+                () => posts.Select(p => new PostImageGroupViewModel(p)).ToList(), ct);
+
             Posts.Clear();
-            foreach (var post in posts)
-                Posts.Add(post);
+            PostGroups.Clear();
+            for (int i = 0; i < posts.Count; i++)
+            {
+                Posts.Add(posts[i]);
+                PostGroups.Add(groups[i]);
+            }
             PostCount = Posts.Count;
         }
+        catch (OperationCanceledException ex) { _logger.LogError("AuthorDetail.LoadPostsCanceled", ex, Author?.Key.Id); }
         finally
         {
             IsLoadingPosts = false;

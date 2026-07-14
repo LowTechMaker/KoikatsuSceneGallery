@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -17,36 +18,64 @@ public sealed partial class CharacterGalleryPage : Page
 
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
     private readonly GalleryLayoutEngine _layout;
+    private bool _isActive;
+    private bool _reloadPending;
 
     public CharacterGalleryPage()
     {
-        ViewModel = App.CharacterGalleryViewModel;
+        ViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
-        _layout = new GalleryLayoutEngine(352.0 / 252.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount);
+        _layout = new GalleryLayoutEngine(352.0 / 252.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount, App.Services.GetRequiredService<SettingsViewModel>());
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
-        App.SettingsViewModel.CharacterFolderPathsChanged += OnCharacterFolderPathsChanged;
+        App.Services.GetRequiredService<SettingsViewModel>().CharacterFolderPathsChanged += OnCharacterFolderPathsChanged;
     }
 
     private void OnCharacterFolderPathsChanged()
     {
-        DispatcherQueue.TryEnqueue(async () =>
+        if (!_isActive)
         {
-            await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+            _reloadPending = true;
+            return;
+        }
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!_isActive)
+            {
+                _reloadPending = true;
+                return;
+            }
+            ViewModel.LoadCardsCommand.ExecuteAsync(null)
+                .Observe(App.Services.GetRequiredService<IAppLogger>(), "CharacterGallery.ReloadFolders");
         });
     }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        _layout.ApplyCacheLength();
-        _layout.RefreshSizeSelector(SizeButtonsPanel);
-        _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
-        if (ViewModel.Cards.Count == 0)
-            await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+        _isActive = true;
+        ViewModel.Activate();
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CharacterGallery.Navigate", async () =>
+        {
+            _layout.ApplyCacheLength();
+            _layout.RefreshSizeSelector(SizeButtonsPanel);
+            _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
+            if (ViewModel.Cards.Count == 0 || _reloadPending)
+            {
+                _reloadPending = false;
+                await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+            }
+        });
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        _isActive = false;
+        ViewModel.CancelPendingWork();
+        base.OnNavigatedFrom(e);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -137,7 +166,7 @@ public sealed partial class CharacterGalleryPage : Page
 
     private void ScrollToTop()
     {
-        if (GalleryGrid is not null && App.SettingsViewModel.ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
+        if (GalleryGrid is not null && App.Services.GetRequiredService<SettingsViewModel>().ScrollToTopOnSort && ViewModel.CardsView.Count > 0)
             GalleryGrid.ScrollIntoView(ViewModel.CardsView[0]);
     }
 
@@ -155,7 +184,11 @@ public sealed partial class CharacterGalleryPage : Page
                 foreach (var path in paths)
                 {
                     try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        App.Services.GetRequiredService<IAppLogger>()
+                            .LogError("CharacterGallery.PrepareDragFile", ex, path);
+                    }
                 }
                 request.SetData(files);
             }

@@ -13,7 +13,7 @@ public sealed partial class AuthorsPage : Page
 
     public AuthorsPage()
     {
-        ViewModel = App.AuthorsViewModel;
+        ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
     }
@@ -21,7 +21,7 @@ public sealed partial class AuthorsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.RefreshAuthorSources();
+        App.Services.GetRequiredService<AuthorSourceCoordinator>().Refresh();
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -61,20 +61,22 @@ public sealed partial class AuthorsPage : Page
             OpenAuthorDetail(summary);
     }
 
-    private async void OpenProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: AuthorSummary summary })
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
-    }
+    private void OpenProfile_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.OpenProfile", async () =>
+        {
+            if (sender is FrameworkElement { Tag: AuthorSummary summary })
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+        });
 
     private void OpenAuthorDetail(AuthorSummary summary)
         => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
 
-    private async void RefreshOne_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: AuthorSummary summary })
-            await ViewModel.RefreshOneAsync(summary);
-    }
+    private void RefreshOne_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.RefreshOne", async () =>
+        {
+            if (sender is FrameworkElement { Tag: AuthorSummary summary })
+                await ViewModel.RefreshOneAsync(summary);
+        });
 
     private void JumpToGroup(AuthorGroupViewModel group)
     {

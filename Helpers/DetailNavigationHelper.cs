@@ -58,7 +58,7 @@ internal static class DetailNavigationHelper
         return null;
     }
 
-    public static async void HandleDragStarting(CardBase? card, DragStartingEventArgs e)
+    public static async Task HandleDragStartingAsync(CardBase? card, DragStartingEventArgs e)
     {
         if (card is null) return;
         var deferral = e.GetDeferral();

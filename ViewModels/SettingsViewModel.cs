@@ -12,6 +12,10 @@ namespace KoikatsuSceneGallery.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
+    private readonly Func<MainWindow?> _getMainWindow;
+    private readonly Func<GalleryViewModel?> _getGalleryViewModel;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
 
     public ObservableCollection<string> FolderPaths { get; } = [];
@@ -140,9 +144,18 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? VideoFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
 
-    public SettingsViewModel(SettingsService settingsService)
+    public SettingsViewModel(
+        SettingsService settingsService,
+        ThumbnailCacheService thumbnailCacheService,
+        Func<MainWindow?> getMainWindow,
+        Func<GalleryViewModel?> getGalleryViewModel,
+        IAppLogger logger)
     {
         _settingsService = settingsService;
+        _thumbnailCacheService = thumbnailCacheService;
+        _getMainWindow = getMainWindow;
+        _getGalleryViewModel = getGalleryViewModel;
+        _logger = logger;
         FolderPaths.CollectionChanged += (_, e) =>
         {
             OnPropertyChanged(nameof(HasNoFolders));
@@ -180,7 +193,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ResolutionFilterChanged?.Invoke(ResolutionFilterEnabled, [.. AllowedResolutions]);
     }
 
@@ -189,7 +202,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CharacterResolutionFilterChanged?.Invoke(CharacterResolutionFilterEnabled, [.. CharacterAllowedResolutions]);
     }
 
@@ -198,7 +211,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
@@ -207,7 +220,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowFileNamesChanged?.Invoke(value);
     }
 
@@ -216,21 +229,21 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnCacheLengthChanged(double value)
     {
         if (_isLoading)
             return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnSizeSelectorEnabledChanged(bool value)
     {
         if (_isLoading)
             return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnPluginAnalysisEnabledChanged(bool value)
@@ -240,7 +253,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         PluginAnalysisEnabledChanged?.Invoke(value);
     }
 
@@ -249,7 +262,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowRestartHint = true;
     }
 
@@ -258,7 +271,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnArtworkSubfolderThresholdChanged(double value)
@@ -266,47 +279,47 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnAuthorFolderFormatChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnArtworkFolderFormatChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnUnknownFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnKoikatsuFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnKoikatsuSunshineFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnGFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnR18FolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnR18GFolderNameChanged(string value)
     {
-        if (!_isLoading) _ = SaveConfigAsync();
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
     partial void OnShowGalleryNavChanged(bool value) => OnNavVisibilityChanged("gallery", value);
     partial void OnShowCharactersNavChanged(bool value) => OnNavVisibilityChanged("characters", value);
@@ -317,14 +330,14 @@ public partial class SettingsViewModel : ObservableObject
     private void OnNavVisibilityChanged(string tag, bool value)
     {
         if (_isLoading) return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         NavItemVisibilityChanged?.Invoke(tag, value);
     }
 
     partial void OnAuthorLiveTilesEnabledChanged(bool value)
     {
         if (_isLoading) return;
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnSauceNaoApiKeyChanged(string value)
@@ -332,7 +345,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
-        _ = SaveConfigAsync();
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     public async Task LoadAsync()
@@ -421,6 +434,10 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(CacheFolderDisplay));
     }
 
+    private nint GetWindowHandle()
+        => WindowNative.GetWindowHandle(
+            _getMainWindow() ?? throw new InvalidOperationException("The main window is not available."));
+
     [RelayCommand]
     private async Task AddFolderAsync()
     {
@@ -428,7 +445,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -453,7 +470,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -478,7 +495,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -503,7 +520,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -528,7 +545,7 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
@@ -553,14 +570,14 @@ public partial class SettingsViewModel : ObservableObject
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
-        var hwnd = WindowNative.GetWindowHandle(App.MainWindow);
+        var hwnd = GetWindowHandle();
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
         if (folder != null)
         {
             CacheFolderPath = folder.Path;
-            App.ThumbnailCacheService.SetCacheFolder(folder.Path);
+            _thumbnailCacheService.SetCacheFolder(folder.Path);
             OnPropertyChanged(nameof(CacheFolderDisplay));
             await SaveConfigAsync();
         }
@@ -570,7 +587,7 @@ public partial class SettingsViewModel : ObservableObject
     private async Task ResetCacheFolderAsync()
     {
         CacheFolderPath = string.Empty;
-        App.ThumbnailCacheService.SetCacheFolder(string.Empty);
+        _thumbnailCacheService.SetCacheFolder(string.Empty);
         OnPropertyChanged(nameof(CacheFolderDisplay));
         await SaveConfigAsync();
     }
@@ -578,14 +595,14 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        await App.ThumbnailCacheService.ClearCacheAsync();
+        await _thumbnailCacheService.ClearCacheAsync();
     }
 
     [RelayCommand]
-    private void ScanMissingMetadata() => App.GalleryViewModel.ScanMissingMetadata();
+    private void ScanMissingMetadata() => _getGalleryViewModel()?.ScanMissingMetadata();
 
     [RelayCommand]
-    private void RescanMetadata() => App.GalleryViewModel.RescanAllMetadata();
+    private void RescanMetadata() => _getGalleryViewModel()?.RescanAllMetadata();
 
     [RelayCommand]
     private async Task AddResolution(string input)
@@ -701,7 +718,7 @@ public partial class SettingsViewModel : ObservableObject
             };
             await _settingsService.SaveConfigAsync(config);
         }
-        catch (Exception ex) { CrashLog.Write("SaveConfig", ex); }
+        catch (Exception ex) { _logger.LogError("Settings.SaveConfig", ex); }
         finally
         {
             _saveLock.Release();

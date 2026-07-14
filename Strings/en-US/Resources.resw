@@ -59,11 +59,17 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- MainWindow -->
-  <data name="Nav_Gallery.Content" xml:space="preserve">
+  <data name="Nav_Library.Content" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="Library_Scenes.Text" xml:space="preserve">
     <value>Scenes</value>
   </data>
-  <data name="Nav_Characters.Content" xml:space="preserve">
+  <data name="Library_Characters.Text" xml:space="preserve">
     <value>Characters</value>
+  </data>
+  <data name="Library_Coordinates.Text" xml:space="preserve">
+    <value>Coordinates</value>
   </data>
   <!-- GalleryPage -->
   <data name="Gallery_Title.Text" xml:space="preserve">
@@ -156,9 +162,6 @@
     <value>No videos found. Add folders in Settings.</value>
   </data>
   <!-- CoordinateGalleryPage -->
-  <data name="Nav_Coordinates.Content" xml:space="preserve">
-    <value>Coordinates</value>
-  </data>
   <data name="Coordinate_Title.Text" xml:space="preserve">
     <value>Coordinates</value>
   </data>
@@ -880,7 +883,7 @@
     <value>Navigation</value>
   </data>
   <data name="Settings_NavigationDesc.Text" xml:space="preserve">
-    <value>Choose which pages to show in the sidebar.</value>
+    <value>Choose which library sections and sidebar pages to show.</value>
   </data>
   <data name="Settings_ShowGalleryNav.Content" xml:space="preserve">
     <value>Scenes</value>

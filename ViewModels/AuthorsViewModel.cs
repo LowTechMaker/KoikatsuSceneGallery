@@ -93,6 +93,9 @@ public partial class AuthorsViewModel : ObservableObject
     private static readonly ResourceLoader ResLoader = new();
 
     private readonly AuthorInfoService _authorInfoService;
+    private readonly SettingsViewModel _settingsViewModel;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
+    private readonly GalleryViewModel _galleryViewModel;
     private readonly DispatcherQueueTimer _rebuildTimer;
     private Dictionary<AuthorDisplay, IReadOnlyList<string>>? _thumbnailCache;
 
@@ -127,9 +130,17 @@ public partial class AuthorsViewModel : ObservableObject
     [ObservableProperty]
     public partial string RefreshProgress { get; set; } = string.Empty;
 
-    public AuthorsViewModel(AuthorInfoService authorInfoService, DispatcherQueue dispatcher)
+    public AuthorsViewModel(
+        AuthorInfoService authorInfoService,
+        DispatcherQueue dispatcher,
+        SettingsViewModel settingsViewModel,
+        ThumbnailCacheService thumbnailCacheService,
+        GalleryViewModel galleryViewModel)
     {
         _authorInfoService = authorInfoService;
+        _settingsViewModel = settingsViewModel;
+        _thumbnailCacheService = thumbnailCacheService;
+        _galleryViewModel = galleryViewModel;
         foreach (var provider in _authorInfoService.ProviderInfos)
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
 
@@ -398,7 +409,7 @@ public partial class AuthorsViewModel : ObservableObject
 
     private List<AuthorSummary> EnrichWithThumbnails(List<AuthorSummary> summaries)
     {
-        if (App.SettingsViewModel is not { AuthorLiveTilesEnabled: true })
+        if (!_settingsViewModel.AuthorLiveTilesEnabled)
             return summaries;
 
         var thumbsByAuthor = _thumbnailCache ?? BuildThumbnailCache();
@@ -416,11 +427,11 @@ public partial class AuthorsViewModel : ObservableObject
 
     private Dictionary<AuthorDisplay, IReadOnlyList<string>> BuildThumbnailCache()
     {
-        var cache = App.ThumbnailCacheService;
-        var cards = App.GalleryViewModel?.Cards;
+        var cache = _thumbnailCacheService;
+        var cards = _galleryViewModel.Cards;
         var result = new Dictionary<AuthorDisplay, IReadOnlyList<string>>();
 
-        if (cache is null || cards is null || cards.Count == 0)
+        if (cards.Count == 0)
         {
             _thumbnailCache = result;
             return result;

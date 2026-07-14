@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
@@ -13,32 +14,8 @@ namespace KoikatsuSceneGallery.ViewModels;
 
 public partial class ImportViewModel : ObservableObject
 {
-    private enum ManualAssignmentSource
-    {
-        Unknown,
-        FetchFailed,
-    }
-
-    private sealed record ManualItemState(
-        ImportItem Item,
-        ArtworkId? ArtworkId,
-        ContentRating Rating,
-        string? AuthorName,
-        string? AuthorId,
-        string? AuthorProviderId,
-        string? Title,
-        IReadOnlyList<ArtworkTag>? Tags,
-        ImportItemStatus Status,
-        string? ErrorMessage,
-        string? ManualAuthorId,
-        string? ManualArtworkId,
-        string? DestinationPath);
-
-    private sealed record ManualAssignmentUndo(
-        ManualAssignmentSource Source,
-        IReadOnlyList<ManualItemState> Items);
-
     private readonly ImportService _importService;
+    private readonly PluginService _pluginService;
     private readonly DispatcherQueue _dispatcher;
     private readonly HashSet<CancellationTokenSource> _analysisCts = [];
     private CancellationTokenSource? _importCts;
@@ -67,9 +44,8 @@ public partial class ImportViewModel : ObservableObject
     private readonly HashSet<ImportArtworkGroup> _subscribedFetchFailedGroups = [];
     private readonly List<ImportItem> _pendingUnknownItems = [];
     private readonly HashSet<ImportUnknownGroup> _subscribedUnknownGroups = [];
-    private readonly Dictionary<ImportItem, ManualItemState> _manualBaselines = [];
+    private readonly ImportManualAssignmentHistory _manualHistory = new();
     private readonly HashSet<string> _currentAnalysisPaths = new(StringComparer.OrdinalIgnoreCase);
-    private ManualAssignmentUndo? _lastManualAssignment;
     private int _currentRejectedAnalysisCount;
     private int _unknownGroupCounter;
 
@@ -174,14 +150,17 @@ public partial class ImportViewModel : ObservableObject
 
     private DispatcherTimer? _warningTimer;
     private readonly SettingsService _settingsService;
+    private readonly IAppLogger _logger;
     private CancellationTokenSource? _resolveCts;
     private Task _settingsLoaded;
 
-    public ImportViewModel(ImportService importService, SettingsService settingsService, DispatcherQueue dispatcher)
+    public ImportViewModel(ImportService importService, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher, IAppLogger logger)
     {
         _importService = importService;
         _settingsService = settingsService;
+        _pluginService = pluginService;
         _dispatcher = dispatcher;
+        _logger = logger;
 
         _settingsLoaded = LoadSettingsAsync();
 
@@ -352,12 +331,11 @@ public partial class ImportViewModel : ObservableObject
             BatchFetchFailedAuthorId = null;
             BatchManualAuthorProviderId = null;
             BatchFetchFailedAuthorProviderId = null;
-            _manualBaselines.Clear();
+            _manualHistory.Clear();
             _currentAnalysisPaths.Clear();
             _currentRejectedAnalysisCount = 0;
             AnalysisTotalCount = 0;
             AnalysisCompletedCount = 0;
-            _lastManualAssignment = null;
             CanUndoManualAssignment = false;
             _authorsLoaded = false;
         }
@@ -369,7 +347,7 @@ public partial class ImportViewModel : ObservableObject
     {
         if (item.ArtworkId is null)
         {
-            RememberManualBaseline(item);
+            _manualHistory.RememberBaseline(item);
             _pendingUnknownItems.Add(item);
             return;
         }
@@ -437,7 +415,7 @@ public partial class ImportViewModel : ObservableObject
     private void MoveFetchFailed(ImportItem item)
     {
         AnalyzingItems.Remove(item);
-        RememberManualBaseline(item);
+        _manualHistory.RememberBaseline(item);
 
         var artworkId = item.ArtworkId!.Id;
         var group = FetchFailedGroups.FirstOrDefault(g => g.ArtworkId == artworkId);
@@ -453,7 +431,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.LoadAvailableAuthors");
         }
     }
 
@@ -480,7 +458,7 @@ public partial class ImportViewModel : ObservableObject
                 }
             });
         }
-        catch { }
+        catch (Exception ex) { _logger.LogError("Import.LoadAvailableAuthors", ex); }
     }
 
     public string? ResolveAuthorName(string authorId)
@@ -563,9 +541,9 @@ public partial class ImportViewModel : ObservableObject
             };
     }
 
-    private static string? GetReverseImageSearchApiKey()
+    private string? GetReverseImageSearchApiKey()
     {
-        if (App.PluginService.ReverseImageSearchProvider is not IPluginSettingsProvider settingsProvider)
+        if (_pluginService.ReverseImageSearchProvider is not IPluginSettingsProvider settingsProvider)
             return null;
 
         return settingsProvider.GetSettingValue("sauceNaoApiKey")?.Trim();
@@ -663,7 +641,7 @@ public partial class ImportViewModel : ObservableObject
 
     private void MoveToUnknown(ImportItem item)
     {
-        RememberManualBaseline(item);
+        _manualHistory.RememberBaseline(item);
         var groupId = $"Group {++_unknownGroupCounter}";
         var group = new ImportUnknownGroup(groupId, [item]);
         UnknownGroups.Add(group);
@@ -671,7 +649,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.ReloadAvailableAuthors");
         }
     }
 
@@ -697,7 +675,7 @@ public partial class ImportViewModel : ObservableObject
         if (!_authorsLoaded && UnknownGroups.Count > 0)
         {
             _authorsLoaded = true;
-            _ = LoadAvailableAuthorsAsync();
+            LoadAvailableAuthorsAsync().Observe(_logger, "Import.ReloadAvailableAuthors");
         }
     }
 
@@ -922,7 +900,7 @@ public partial class ImportViewModel : ObservableObject
             if (rejected > 0)
                 ShowRejectedFiles(rejected);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.AnalysisCanceled", ex); }
         finally
         {
             EndAnalysisOperation(cts, newPaths, rejected);
@@ -945,7 +923,7 @@ public partial class ImportViewModel : ObservableObject
             await _importService.ImportAsync(Items, _dispatcher, _importCts.Token);
             completed = true;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.OperationCanceled", ex); }
         finally
         {
             IsImporting = false;
@@ -1029,17 +1007,15 @@ public partial class ImportViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUndoManualAssignment))]
     private async Task UndoManualAssignmentAsync()
     {
-        if (_lastManualAssignment is null) return;
-
-        var undo = _lastManualAssignment;
-        _lastManualAssignment = null;
+        var undo = _manualHistory.TakeUndo();
+        if (undo is null) return;
         CanUndoManualAssignment = false;
 
         var unknownItems = new List<ImportItem>();
         foreach (var state in undo.Items)
         {
             RemoveItemFromManualContainers(state.Item);
-            RestoreManualState(state);
+            ImportManualAssignmentHistory.Restore(state);
 
             if (undo.Source == ManualAssignmentSource.Unknown)
                 unknownItems.Add(state.Item);
@@ -1054,7 +1030,7 @@ public partial class ImportViewModel : ObservableObject
             if (!_authorsLoaded && UnknownGroups.Count > 0)
             {
                 _authorsLoaded = true;
-                _ = LoadAvailableAuthorsAsync();
+                LoadAvailableAuthorsAsync().Observe(_logger, "Import.RefreshAvailableAuthors");
             }
         }
 
@@ -1068,7 +1044,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var cts in _analysisCts.ToList())
             cts.Cancel();
         _importCts?.Cancel();
-        _lastManualAssignment = null;
+        _manualHistory.Clear();
         CanUndoManualAssignment = false;
         Items.Clear();
         HasItems = false;
@@ -1100,7 +1076,7 @@ public partial class ImportViewModel : ObservableObject
     partial void OnArtworkSubfolderThresholdChanged(double value)
     {
         if (HasItems)
-            _ = DebouncedReResolveAsync();
+            DebouncedReResolveAsync().Observe(_logger, "Import.DebouncedResolve");
     }
 
     partial void OnUseVisualSimilarityChanged(bool value)
@@ -1108,7 +1084,7 @@ public partial class ImportViewModel : ObservableObject
         RegroupUnknowns();
 
         if (HasItems)
-            _ = DebouncedReResolveAsync();
+            DebouncedReResolveAsync().Observe(_logger, "Import.DebouncedResolve");
     }
 
     private List<List<ImportItem>> GroupUnknownItems(IReadOnlyList<ImportItem> items) =>
@@ -1144,7 +1120,7 @@ public partial class ImportViewModel : ObservableObject
             await Task.Delay(150, cts.Token);
             await ReResolveDestinationsAsync(cts.Token);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex) { _logger.LogError("Import.DebouncedResolveCanceled", ex); }
     }
 
     private Task ReResolveDestinationsAsync(CancellationToken ct = default) =>
@@ -1244,49 +1220,10 @@ public partial class ImportViewModel : ObservableObject
         CompletedCount = Items.Count(i => i.Status == ImportItemStatus.Completed);
     }
 
-    private void RememberManualBaseline(ImportItem item)
-    {
-        _manualBaselines.TryAdd(item, CreateManualState(item));
-    }
-
     private void CaptureUndo(ManualAssignmentSource source, IReadOnlyList<ImportItem> items)
     {
-        _lastManualAssignment = new ManualAssignmentUndo(
-            source,
-            items.Select(item => _manualBaselines.GetValueOrDefault(item, CreateManualState(item))).ToList());
+        _manualHistory.Capture(source, items);
         CanUndoManualAssignment = true;
-    }
-
-    private static ManualItemState CreateManualState(ImportItem item) =>
-        new(
-            item,
-            item.ArtworkId,
-            item.Rating,
-            item.AuthorName,
-            item.AuthorId,
-            item.AuthorProviderId,
-            item.Title,
-            item.Tags,
-            item.Status,
-            item.ErrorMessage,
-            item.ManualAuthorId,
-            item.ManualArtworkId,
-            item.DestinationPath);
-
-    private static void RestoreManualState(ManualItemState state)
-    {
-        state.Item.ArtworkId = state.ArtworkId;
-        state.Item.Rating = state.Rating;
-        state.Item.AuthorName = state.AuthorName;
-        state.Item.AuthorId = state.AuthorId;
-        state.Item.AuthorProviderId = state.AuthorProviderId;
-        state.Item.Title = state.Title;
-        state.Item.Tags = state.Tags;
-        state.Item.Status = state.Status;
-        state.Item.ErrorMessage = state.ErrorMessage;
-        state.Item.ManualAuthorId = state.ManualAuthorId;
-        state.Item.ManualArtworkId = state.ManualArtworkId;
-        state.Item.DestinationPath = state.DestinationPath;
     }
 
     private void RemoveItemFromManualContainers(ImportItem item)

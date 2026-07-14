@@ -11,14 +11,16 @@ public class ThumbnailCacheService
 {
     private const int ThumbnailWidth = 300;
     private volatile string _cacheFolder;
+    private readonly IAppLogger _logger;
 
     public string CacheFolder => _cacheFolder;
 
     public static string DefaultCacheFolder =>
         Path.Combine(AppPaths.LocalFolder, "gallery_temp");
 
-    public ThumbnailCacheService(string? cacheFolder = null)
+    public ThumbnailCacheService(IAppLogger logger, string? cacheFolder = null)
     {
+        _logger = logger;
         _cacheFolder = string.IsNullOrWhiteSpace(cacheFolder) ? DefaultCacheFolder : cacheFolder;
         Directory.CreateDirectory(_cacheFolder);
     }
@@ -40,13 +42,19 @@ public class ThumbnailCacheService
         return File.Exists(cachePath) ? cachePath : null;
     }
 
-    public Task<string?> EnsureThumbnailAsync(SceneCard card) =>
-        EnsureThumbnailAsync(card.FilePath, card.DateModified);
+    public Task<string?> EnsureThumbnailAsync(
+        SceneCard card,
+        CancellationToken cancellationToken = default) =>
+        EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken);
 
-    public async Task<string?> EnsureThumbnailAsync(string filePath, DateTime dateModified)
+    public async Task<string?> EnsureThumbnailAsync(
+        string filePath,
+        DateTime dateModified,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var folder = _cacheFolder;
             var cacheKey = ComputeCacheKey(filePath, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
@@ -55,8 +63,10 @@ public class ThumbnailCacheService
                 return cachePath;
 
             var file = await StorageFile.GetFileFromPathAsync(filePath);
+            cancellationToken.ThrowIfCancellationRequested();
             using var stream = await file.OpenReadAsync();
             var decoder = await BitmapDecoder.CreateAsync(stream);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var originalWidth = decoder.PixelWidth;
             var originalHeight = decoder.PixelHeight;
@@ -76,6 +86,7 @@ public class ThumbnailCacheService
                 transform,
                 ExifOrientationMode.RespectExifOrientation,
                 ColorManagementMode.DoNotColorManage);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var cacheFile = await StorageFolder.GetFolderFromPathAsync(folder);
             var outputFile = await cacheFile.CreateFileAsync(
@@ -94,18 +105,28 @@ public class ThumbnailCacheService
                 pixels.DetachPixelData());
 
             await encoder.FlushAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return cachePath;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Thumbnail.GenerateImage", ex, filePath);
             return null;
         }
     }
 
-    public async Task<string?> EnsureVideoThumbnailAsync(string filePath, DateTime dateModified)
+    public async Task<string?> EnsureVideoThumbnailAsync(
+        string filePath,
+        DateTime dateModified,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var folder = _cacheFolder;
             var cacheKey = ComputeCacheKey(filePath, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
@@ -114,9 +135,11 @@ public class ThumbnailCacheService
                 return cachePath;
 
             var file = await StorageFile.GetFileFromPathAsync(filePath);
+            cancellationToken.ThrowIfCancellationRequested();
             using var thumbnail = await file.GetThumbnailAsync(
                 Windows.Storage.FileProperties.ThumbnailMode.SingleItem, ThumbnailWidth);
             if (thumbnail == null) return null;
+            cancellationToken.ThrowIfCancellationRequested();
 
             var decoder = await BitmapDecoder.CreateAsync(thumbnail);
 
@@ -136,6 +159,7 @@ public class ThumbnailCacheService
                 transform,
                 ExifOrientationMode.RespectExifOrientation,
                 ColorManagementMode.DoNotColorManage);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var cacheFile = await StorageFolder.GetFolderFromPathAsync(folder);
             var outputFile = await cacheFile.CreateFileAsync(
@@ -154,15 +178,21 @@ public class ThumbnailCacheService
                 pixels.DetachPixelData());
 
             await encoder.FlushAsync();
+            cancellationToken.ThrowIfCancellationRequested();
             return cachePath;
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Thumbnail.GenerateVideo", ex, filePath);
             return null;
         }
     }
 
-    public async Task ClearCacheAsync()
+    public async Task ClearCacheAsync(CancellationToken cancellationToken = default)
     {
         var folder = _cacheFolder;
         await Task.Run(() =>
@@ -170,9 +200,11 @@ public class ThumbnailCacheService
             if (!Directory.Exists(folder)) return;
             foreach (var file in Directory.EnumerateFiles(folder, "*.jpg"))
             {
-                try { File.Delete(file); } catch (Exception) { }
+                cancellationToken.ThrowIfCancellationRequested();
+                try { File.Delete(file); }
+                catch (Exception ex) { _logger.LogError("Thumbnail.Delete", ex, file); }
             }
-        });
+        }, cancellationToken);
     }
 
     private static string ComputeCacheKey(string filePath, DateTime dateModified)

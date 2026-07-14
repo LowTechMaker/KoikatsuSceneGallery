@@ -8,7 +8,15 @@ namespace KoikatsuSceneGallery.ViewModels;
 
 public partial class DetailViewModel : ObservableObject
 {
+    private readonly AuthorInfoService _authorInfoService;
+    private readonly GalleryViewModel _galleryViewModel;
     private FilenameLinkInfo _linkInfo = FilenameLinkParser.Empty;
+
+    public DetailViewModel(AuthorInfoService authorInfoService, GalleryViewModel galleryViewModel)
+    {
+        _authorInfoService = authorInfoService;
+        _galleryViewModel = galleryViewModel;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PixivArtworkId))]
@@ -39,7 +47,7 @@ public partial class DetailViewModel : ObservableObject
 
     public AuthorSummary? AuthorSummary =>
         Author is { } a
-            ? App.AuthorInfoService.GetSummaries().FirstOrDefault(s => s.Display == a)
+            ? _authorInfoService.GetSummaries().FirstOrDefault(s => s.Display == a)
             : null;
 
     public ObservableCollection<SceneCard> SiblingCards { get; } = [];
@@ -59,7 +67,7 @@ public partial class DetailViewModel : ObservableObject
 
         if (artworkId is not null)
         {
-            foreach (var c in App.GalleryViewModel.Cards)
+            foreach (var c in _galleryViewModel.Cards)
             {
                 var info = FilenameLinkParser.Parse(c.FilePath);
                 if (info.PixivArtworkId == artworkId)
@@ -71,7 +79,7 @@ public partial class DetailViewModel : ObservableObject
             var folder = Path.GetDirectoryName(Card.FilePath);
             if (folder is not null)
             {
-                foreach (var c in App.GalleryViewModel.Cards)
+                foreach (var c in _galleryViewModel.Cards)
                 {
                     if (string.Equals(Path.GetDirectoryName(c.FilePath), folder, StringComparison.OrdinalIgnoreCase))
                         siblings.Add(c);

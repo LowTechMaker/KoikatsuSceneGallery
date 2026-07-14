@@ -16,6 +16,7 @@ public sealed partial class CharacterDetailPage : Page
     public CharacterDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
+    private CancellationTokenSource? _metadataCts;
 
     public CharacterDetailPage()
     {
@@ -25,8 +26,10 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.CharacterGalleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
-        App.CharacterGalleryViewModel.CardsReloaded += OnCardsReloaded;
+        var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        galleryViewModel.ActivateThumbnailRequests();
+        galleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
+        galleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
             ShowCard(card);
     }
@@ -34,8 +37,13 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.CharacterGalleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
-        App.CharacterGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        galleryViewModel.CancelPendingWork();
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = null;
+        galleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
+        galleryViewModel.CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnVersionIndexChanged(string characterName)
@@ -45,7 +53,7 @@ public sealed partial class CharacterDetailPage : Page
             if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
             if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
 
-            var versions = App.CharacterGalleryViewModel.GetVersions(characterName);
+            var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(characterName);
             if (versions != null && versions.Contains(ViewModel.Card))
             {
                 LoadVersions(ViewModel.Card, characterName);
@@ -71,18 +79,30 @@ public sealed partial class CharacterDetailPage : Page
 
     private void ShowCard(CharacterCard card)
     {
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = new CancellationTokenSource();
         ViewModel.Card = card;
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        _ = LoadMetadataAsync(card);
+        LoadMetadataAsync(card, _metadataCts.Token).Observe(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "CharacterDetail.LoadMetadata");
     }
 
-    private async Task LoadMetadataAsync(CharacterCard card)
+    private async Task LoadMetadataAsync(CharacterCard card, CancellationToken cancellationToken)
     {
         ViewModel.MetadataLoaded = false;
-        var meta = await Task.Run(() => CharacterCardParser.TryParse(card.FilePath));
+        var meta = await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var parsed = CharacterCardParser.TryParse(card.FilePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return parsed;
+        }, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!ReferenceEquals(ViewModel.Card, card)) return;
 
         meta ??= new CharacterMetadata(null, null, null, -1, GameVersion.Unknown, false);
@@ -112,7 +132,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void LoadVersions(CharacterCard card, string fullName)
     {
-        var versions = App.CharacterGalleryViewModel.GetVersions(fullName);
+        var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(fullName);
         if (versions != null && versions.Count > 1)
         {
             ViewModel.Versions = new System.Collections.ObjectModel.ObservableCollection<CharacterCard>(versions);
@@ -120,7 +140,7 @@ public sealed partial class CharacterDetailPage : Page
             ViewModel.TotalVersions = versions.Count;
             ViewModel.VersionIndex = versions.IndexOf(card) + 1;
             foreach (var v in versions)
-                App.CharacterGalleryViewModel.RequestThumbnail(v);
+                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(v);
         }
         else
         {
@@ -142,14 +162,14 @@ public sealed partial class CharacterDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.CharacterGalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -159,7 +179,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.CharacterGalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 
@@ -175,18 +195,21 @@ public sealed partial class CharacterDetailPage : Page
         args.Handled = true;
     }
 
-    private async void PixivButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.PixivUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void PixivButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CharacterDetail.OpenPixiv", async () =>
+        {
+            if (ViewModel.PixivUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
-    private async void BepisDbButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.BepisDbUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void BepisDbButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CharacterDetail.OpenBepisDb", async () =>
+        {
+            if (ViewModel.BepisDbUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
     private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
+        => DetailNavigationHelper.HandleDragStartingAsync(ViewModel.Card, e)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "CharacterDetail.PrepareDrag");
 }

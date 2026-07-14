@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SceneGallery.PluginSdk"
+                      Version="1.0.0"
+                      ExcludeAssets="runtime"
+                      PrivateAssets="all" />
+    <PackageReference Include="SceneGallery.PluginCommon"
+                      Version="0.1.0"
+                      PrivateAssets="all" />
+    <PackageReference Include="SceneGallery.PluginCommon.Secrets"
+                      Version="0.1.0"
+                      PrivateAssets="all" />
+  </ItemGroup>
+</Project>

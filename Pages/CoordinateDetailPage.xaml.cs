@@ -16,6 +16,7 @@ public sealed partial class CoordinateDetailPage : Page
     public CoordinateDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
+    private CancellationTokenSource? _metadataCts;
 
     public CoordinateDetailPage()
     {
@@ -25,7 +26,7 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.CoordinateGalleryViewModel.CardsReloaded += OnCardsReloaded;
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CoordinateCard card)
             ShowCard(card);
     }
@@ -33,7 +34,10 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        App.CoordinateGalleryViewModel.CardsReloaded -= OnCardsReloaded;
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = null;
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
     private void OnCardsReloaded()
@@ -46,18 +50,30 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void ShowCard(CoordinateCard card)
     {
+        _metadataCts?.Cancel();
+        _metadataCts?.Dispose();
+        _metadataCts = new CancellationTokenSource();
         ViewModel.Card = card;
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        _ = LoadMetadataAsync(card);
+        LoadMetadataAsync(card, _metadataCts.Token).Observe(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "CoordinateDetail.LoadMetadata");
     }
 
-    private async Task LoadMetadataAsync(CoordinateCard card)
+    private async Task LoadMetadataAsync(CoordinateCard card, CancellationToken cancellationToken)
     {
         ViewModel.MetadataLoaded = false;
-        var meta = await Task.Run(() => CoordinateCardParser.TryParse(card.FilePath));
+        var meta = await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var parsed = CoordinateCardParser.TryParse(card.FilePath);
+            cancellationToken.ThrowIfCancellationRequested();
+            return parsed;
+        }, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!ReferenceEquals(ViewModel.Card, card)) return;
 
         meta ??= new CoordinateMetadata(null);
@@ -69,14 +85,14 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -86,7 +102,7 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.CoordinateGalleryViewModel.CardsView, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 
@@ -102,18 +118,21 @@ public sealed partial class CoordinateDetailPage : Page
         args.Handled = true;
     }
 
-    private async void PixivButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.PixivUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void PixivButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.OpenPixiv", async () =>
+        {
+            if (ViewModel.PixivUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
-    private async void BepisDbButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.BepisDbUrl is { } url)
-            await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
-    }
+    private void BepisDbButton_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.OpenBepisDb", async () =>
+        {
+            if (ViewModel.BepisDbUrl is { } url)
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
+        });
 
     private void PreviewImage_DragStarting(UIElement sender, DragStartingEventArgs e)
-        => DetailNavigationHelper.HandleDragStarting(ViewModel.Card, e);
+        => DetailNavigationHelper.HandleDragStartingAsync(ViewModel.Card, e)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateDetail.PrepareDrag");
 }

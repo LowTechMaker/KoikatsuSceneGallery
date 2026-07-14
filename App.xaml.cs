@@ -11,36 +11,32 @@ namespace KoikatsuSceneGallery;
 
 public partial class App : Application
 {
-    private static MainWindow? _mainWindow;
+    public static AppServiceRegistry Services { get; } = new();
 
-    public static MainWindow MainWindow => _mainWindow!;
-    public static SettingsService SettingsService { get; } = new();
-    public static SceneCardService SceneCardService { get; } = new();
-    public static CharacterCardService CharacterCardService { get; } = new();
-    public static CoordinateCardService CoordinateCardService { get; } = new();
-    public static ThumbnailCacheService ThumbnailCacheService { get; private set; } = null!;
-    public static SceneCardCacheService SceneCardCacheService { get; } = new();
-    public static SceneMetadataService SceneMetadataService { get; } = new();
-    public static CharacterMetadataService CharacterMetadataService { get; } = new();
-    public static CoordinateMetadataService CoordinateMetadataService { get; } = new();
-    public static MediaCardService ScreenshotCardService { get; } = new([".png", ".jpg", ".jpeg", ".bmp"], isVideo: false);
-    public static MediaCardService VideoCardService { get; } = new([".mp4", ".avi", ".webm", ".mov", ".mkv", ".gif"], isVideo: true);
-    public static PluginService PluginService { get; } = new();
-    public static AuthorInfoService AuthorInfoService { get; private set; } = null!;
-    public static SettingsViewModel SettingsViewModel { get; private set; } = null!;
-    public static GalleryViewModel GalleryViewModel { get; private set; } = null!;
-    public static CharacterGalleryViewModel CharacterGalleryViewModel { get; private set; } = null!;
-    public static CoordinateGalleryViewModel CoordinateGalleryViewModel { get; private set; } = null!;
-    public static AuthorsViewModel AuthorsViewModel { get; private set; } = null!;
-    public static MediaGalleryViewModel ScreenshotGalleryViewModel { get; private set; } = null!;
-    public static MediaGalleryViewModel VideoGalleryViewModel { get; private set; } = null!;
-    public static ImportService? ImportService { get; private set; }
-    public static ImportViewModel? ImportViewModel { get; private set; }
-    public static AuthorPostService? AuthorPostService { get; private set; }
-    private static Task? _authorSourcesWarmupTask;
+    private readonly IAppLogger _logger = new CrashLogLogger();
+    private readonly SettingsService _settingsService = new();
+    private readonly SceneCardService _sceneCardService = new();
+    private readonly CharacterCardService _characterCardService = new();
+    private readonly CoordinateCardService _coordinateCardService = new();
+    private readonly SceneCardCacheService _sceneCardCacheService;
+    private readonly SceneMetadataService _sceneMetadataService;
+    private readonly CharacterMetadataService _characterMetadataService;
+    private readonly CoordinateMetadataService _coordinateMetadataService;
+    private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"], isVideo: false);
+    private readonly MediaCardService _videoCardService = new([".mp4", ".avi", ".webm", ".mov", ".mkv", ".gif"], isVideo: true);
+    private readonly PluginService _pluginService;
+    private ThumbnailCacheService _thumbnailCacheService = null!;
+    private MainWindow? _mainWindow;
 
     public App()
     {
+        _sceneCardCacheService = new SceneCardCacheService(_logger);
+        _sceneMetadataService = new SceneMetadataService(_logger);
+        _characterMetadataService = new CharacterMetadataService(_logger);
+        _coordinateMetadataService = new CoordinateMetadataService(_logger);
+        _pluginService = new PluginService(
+            _logger,
+            Path.Combine(AppPaths.LocalFolder, "Plugins"));
         InitializeComponent();
 
         // No debugger is attached in a packaged-zip test build, so route every
@@ -49,135 +45,235 @@ public partial class App : Application
         // (e.g. decoding one corrupt scene) doesn't take down the whole window.
         UnhandledException += (_, e) =>
         {
-            CrashLog.Write("UI", e.Exception);
+            _logger.LogError("UI", e.Exception);
             e.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            CrashLog.Write("Domain", e.ExceptionObject as Exception);
+            _logger.LogError("Domain", e.ExceptionObject as Exception ?? new InvalidOperationException("Unknown unhandled exception"));
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            CrashLog.Write("Task", e.Exception);
+            _logger.LogError("Task", e.Exception);
             e.SetObserved();
         };
     }
 
-    protected override async void OnLaunched(LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+        => UiEventGuard.Run(_logger, "App.OnLaunched", () => OnLaunchedAsync(args));
+
+    private async Task OnLaunchedAsync(LaunchActivatedEventArgs args)
     {
         SettingsService.ConfigData? config = null;
         try
         {
-            config = await SettingsService.LoadConfigAsync();
+            config = await _settingsService.LoadConfigAsync();
 
             // Apply the saved UI language override before any window/page is created.
             // Empty means follow the system language (resources fall back to en-US).
             if (!string.IsNullOrEmpty(config.Language))
                 Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = config.Language;
 
-            ThumbnailCacheService = new ThumbnailCacheService(config.CacheFolderPath);
+            _thumbnailCacheService = new ThumbnailCacheService(_logger, config.CacheFolderPath);
         }
         catch (Exception ex)
         {
             // A bad config or cache path must not stop the window from opening,
             // otherwise the app can become permanently unlaunchable.
-            CrashLog.Write("OnLaunched", ex);
-            ThumbnailCacheService ??= new ThumbnailCacheService(null);
+            _logger.LogError("OnLaunched", ex);
+            _thumbnailCacheService ??= new ThumbnailCacheService(_logger, null);
         }
 
         try
         {
             // Local-disk reflection only; a broken plugin is recorded as Failed
             // and must never stop the window from opening.
-            PluginService.LoadPlugins();
+            _pluginService.LoadPlugins();
         }
         catch (Exception ex)
         {
-            CrashLog.Write("Plugins", ex);
+            _logger.LogError("Plugins", ex);
         }
 
-        _ = Task.Run(async () =>
+        Task.Run(async () =>
         {
             try
             {
-                var updates = await new PluginUpdateChecker()
+                var updates = await new PluginUpdateChecker(_logger)
                     .CheckUpdatesAsync(
-                        PluginService.Plugins,
-                        PluginService.UpdateProviders,
+                        _pluginService.Plugins,
+                        _pluginService.UpdateProviders,
                         CancellationToken.None);
                 if (updates.Count > 0)
-                    PluginService.ApplyUpdateInfo(updates);
+                    _pluginService.ApplyUpdateInfo(updates);
             }
             catch (Exception ex)
             {
-                CrashLog.Write("PluginUpdateCheck", ex);
+                _logger.LogError("PluginUpdateCheck", ex);
             }
-        });
+        }).Observe(_logger, "PluginUpdate.BackgroundCheck");
 
         var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
 
-        AuthorInfoService = new AuthorInfoService(
-            PluginService.AuthorProviders,
-            dispatcherQueue);
+        var authorInfoService = new AuthorInfoService(
+            _pluginService.AuthorProviders,
+            dispatcherQueue,
+            _logger);
 
-        SettingsViewModel = new SettingsViewModel(SettingsService);
-        SettingsViewModel.Load(config ?? new SettingsService.ConfigData());
-        GalleryViewModel = new GalleryViewModel(SceneCardService, SettingsService, ThumbnailCacheService, SceneMetadataService, SceneCardCacheService);
-        CharacterGalleryViewModel = new CharacterGalleryViewModel(CharacterCardService, SettingsService, ThumbnailCacheService, CharacterMetadataService);
-        CoordinateGalleryViewModel = new CoordinateGalleryViewModel(CoordinateCardService, SettingsService, ThumbnailCacheService, CoordinateMetadataService);
-        ScreenshotGalleryViewModel = new MediaGalleryViewModel(ScreenshotCardService, SettingsService, ThumbnailCacheService, isVideo: false);
-        VideoGalleryViewModel = new MediaGalleryViewModel(VideoCardService, SettingsService, ThumbnailCacheService, isVideo: true);
+        GalleryViewModel? galleryViewModel = null;
+        var settingsViewModel = new SettingsViewModel(
+            _settingsService,
+            _thumbnailCacheService,
+            () => _mainWindow,
+            () => galleryViewModel,
+            _logger);
+        settingsViewModel.Load(config ?? new SettingsService.ConfigData());
+        galleryViewModel = new GalleryViewModel(
+            _sceneCardService,
+            _settingsService,
+            _thumbnailCacheService,
+            _sceneMetadataService,
+            _sceneCardCacheService,
+            settingsViewModel,
+            _pluginService,
+            _logger);
+        var characterGalleryViewModel = new CharacterGalleryViewModel(
+            _characterCardService,
+            _settingsService,
+            _thumbnailCacheService,
+            _characterMetadataService,
+            settingsViewModel,
+            _logger);
+        var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
+            _coordinateCardService,
+            _settingsService,
+            _thumbnailCacheService,
+            _coordinateMetadataService,
+            settingsViewModel,
+            _logger);
+        var screenshotGalleryViewModel = new MediaGalleryViewModel(
+            _screenshotCardService,
+            _settingsService,
+            _thumbnailCacheService,
+            settingsViewModel,
+            _logger,
+            isVideo: false);
+        var videoGalleryViewModel = new MediaGalleryViewModel(
+            _videoCardService,
+            _settingsService,
+            _thumbnailCacheService,
+            settingsViewModel,
+            _logger,
+            isVideo: true);
 
-        if (AuthorInfoService.IsAvailable)
+        ImportService? importService = null;
+        ImportViewModel? importViewModel = null;
+        AuthorPostService? authorPostService = null;
+        if (_pluginService.ImportProviders.Count > 0)
         {
-            ApplyAuthorLibraryRoots();
-            AuthorInfoService.Attach(GalleryViewModel.Cards, AuthorCardKind.Scene);
-            AuthorInfoService.Attach(CharacterGalleryViewModel.Cards, AuthorCardKind.Character);
-            AuthorInfoService.Attach(CoordinateGalleryViewModel.Cards, AuthorCardKind.Coordinate);
+            importService = new ImportService(
+                _pluginService.ImportProviders,
+                _pluginService.AuthorProviders,
+                _pluginService.ReverseImageSearchProvider,
+                _settingsService,
+                _logger);
+            importViewModel = new ImportViewModel(
+                importService,
+                _settingsService,
+                _pluginService,
+                dispatcherQueue,
+                _logger);
 
-            // Folder-list edits change which directories count as library roots;
-            // refresh them so author resolution follows (galleries reload too).
-            SettingsViewModel.SceneFolderPathsChanged += OnAnyFolderPathsChanged;
-            SettingsViewModel.CharacterFolderPathsChanged += OnAnyFolderPathsChanged;
-            SettingsViewModel.CoordinateFolderPathsChanged += OnAnyFolderPathsChanged;
-        }
-
-        if (PluginService.ImportProviders.Count > 0)
-        {
-            ImportService = new ImportService(
-                PluginService.ImportProviders,
-                PluginService.AuthorProviders,
-                PluginService.ReverseImageSearchProvider,
-                SettingsService);
-            ImportViewModel = new ImportViewModel(
-                ImportService,
-                SettingsService,
-                dispatcherQueue);
-
-            if (PluginService.AuthorProviders.Count > 0)
+            if (_pluginService.AuthorProviders.Count > 0)
             {
-                AuthorPostService = new AuthorPostService(
-                    PluginService.ImportProviders,
-                    PluginService.AuthorProviders,
-                    SettingsService);
+                authorPostService = new AuthorPostService(
+                    _pluginService.ImportProviders,
+                    _pluginService.AuthorProviders,
+                    _settingsService,
+                    _logger);
             }
         }
 
-        AuthorsViewModel = new AuthorsViewModel(
-            AuthorInfoService,
-            dispatcherQueue);
+        var authorsViewModel = new AuthorsViewModel(
+            authorInfoService,
+            dispatcherQueue,
+            settingsViewModel,
+            _thumbnailCacheService,
+            galleryViewModel);
+        var authorSourceCoordinator = new AuthorSourceCoordinator(
+            authorInfoService,
+            settingsViewModel,
+            galleryViewModel,
+            characterGalleryViewModel,
+            coordinateGalleryViewModel);
+        authorSourceCoordinator.Initialize();
+
+        RegisterServices(
+            authorInfoService,
+            settingsViewModel,
+            galleryViewModel,
+            characterGalleryViewModel,
+            coordinateGalleryViewModel,
+            screenshotGalleryViewModel,
+            videoGalleryViewModel,
+            authorsViewModel,
+            authorSourceCoordinator,
+            importService,
+            importViewModel,
+            authorPostService);
 
         _mainWindow = new MainWindow();
-        _mainWindow.Closed += (_, _) => PluginService.Shutdown();
+        _mainWindow.Closed += (_, _) => _pluginService.Shutdown();
         _mainWindow.Activate();
 
         PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
-        _ = EnsureAuthorSourcesLoadedAsync();
+        authorSourceCoordinator.EnsureLoadedAsync().Observe(_logger, "AuthorSource.InitialLoad");
+    }
+
+    private void RegisterServices(
+        AuthorInfoService authorInfoService,
+        SettingsViewModel settingsViewModel,
+        GalleryViewModel galleryViewModel,
+        CharacterGalleryViewModel characterGalleryViewModel,
+        CoordinateGalleryViewModel coordinateGalleryViewModel,
+        MediaGalleryViewModel screenshotGalleryViewModel,
+        MediaGalleryViewModel videoGalleryViewModel,
+        AuthorsViewModel authorsViewModel,
+        AuthorSourceCoordinator authorSourceCoordinator,
+        ImportService? importService,
+        ImportViewModel? importViewModel,
+        AuthorPostService? authorPostService)
+    {
+        Services.Add(_logger);
+        Services.Add(_settingsService);
+        Services.Add(_sceneCardService);
+        Services.Add(_characterCardService);
+        Services.Add(_coordinateCardService);
+        Services.Add(_thumbnailCacheService);
+        Services.Add(_sceneCardCacheService);
+        Services.Add(_sceneMetadataService);
+        Services.Add(_characterMetadataService);
+        Services.Add(_coordinateMetadataService);
+        Services.Add(_screenshotCardService, "screenshots");
+        Services.Add(_videoCardService, "videos");
+        Services.Add(_pluginService);
+        Services.Add(authorInfoService);
+        Services.Add(settingsViewModel);
+        Services.Add(galleryViewModel);
+        Services.Add(characterGalleryViewModel);
+        Services.Add(coordinateGalleryViewModel);
+        Services.Add(screenshotGalleryViewModel, "screenshots");
+        Services.Add(videoGalleryViewModel, "videos");
+        Services.Add(authorsViewModel);
+        Services.Add(authorSourceCoordinator);
+        if (importService is not null) Services.Add(importService);
+        if (importViewModel is not null) Services.Add(importViewModel);
+        if (authorPostService is not null) Services.Add(authorPostService);
     }
 
     private static readonly ResourceLoader ResLoader = new();
 
-    private static Task<string?> ShowInputDialogAsync(
+    private Task<string?> ShowInputDialogAsync(
         DispatcherQueue dispatcherQueue,
         string title,
         string message,
@@ -250,61 +346,4 @@ public partial class App : Application
         return tcs.Task;
     }
 
-    private static void OnAnyFolderPathsChanged()
-    {
-        RefreshAuthorSources(reloadLoadedSources: true);
-    }
-
-    public static void RefreshAuthorSources(bool reloadLoadedSources = false)
-    {
-        if (!AuthorInfoService.IsAvailable)
-            return;
-
-        ApplyAuthorLibraryRoots();
-        AuthorInfoService.RebuildAssignments(
-            GalleryViewModel.Cards,
-            CharacterGalleryViewModel.Cards,
-            CoordinateGalleryViewModel.Cards);
-        _authorSourcesWarmupTask = LoadAuthorSourcesAsync(reloadLoadedSources);
-    }
-
-    private static void ApplyAuthorLibraryRoots()
-    {
-        var vm = SettingsViewModel;
-        AuthorInfoService.UpdateRoots(
-            [.. vm.FolderPaths, .. vm.CharacterFolderPaths, .. vm.CoordinateFolderPaths]);
-    }
-
-    public static Task EnsureAuthorSourcesLoadedAsync()
-    {
-        if (!AuthorInfoService.IsAvailable)
-            return Task.CompletedTask;
-
-        if (_authorSourcesWarmupTask is { IsCompleted: false } runningTask)
-            return runningTask;
-
-        _authorSourcesWarmupTask = LoadAuthorSourcesAsync();
-        return _authorSourcesWarmupTask;
-    }
-
-    private static async Task LoadAuthorSourcesAsync(bool forceReload = false)
-    {
-        var loadTasks = new List<Task>(3);
-
-        AwaitOrLoad(loadTasks, GalleryViewModel.Cards.Count, GalleryViewModel.IsLoading, GalleryViewModel.LoadCardsCommand, forceReload);
-        AwaitOrLoad(loadTasks, CharacterGalleryViewModel.Cards.Count, CharacterGalleryViewModel.IsLoading, CharacterGalleryViewModel.LoadCardsCommand, forceReload);
-        AwaitOrLoad(loadTasks, CoordinateGalleryViewModel.Cards.Count, CoordinateGalleryViewModel.IsLoading, CoordinateGalleryViewModel.LoadCardsCommand, forceReload);
-
-        if (loadTasks.Count > 0)
-            await Task.WhenAll(loadTasks);
-
-        static void AwaitOrLoad(List<Task> tasks, int cardCount, bool isLoading, CommunityToolkit.Mvvm.Input.IAsyncRelayCommand cmd, bool forceReload)
-        {
-            if (!forceReload && cardCount > 0) return;
-            if (isLoading)
-                tasks.Add(cmd.ExecutionTask ?? Task.CompletedTask);
-            else
-                tasks.Add(cmd.ExecuteAsync(null));
-        }
-    }
 }
