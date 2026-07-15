@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -35,7 +35,7 @@ jobs:
         configuration: [Release]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -54,12 +54,12 @@ jobs:
 
     steps:
       - name: Checkout application
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: KoikatsuSceneGallery
 
       - name: Checkout Pixiv Authors plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/pixiv-data-plugin
           path: PixivAuthorsPlugin
@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout BepisDB plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/BepisDbPlugin
           path: BepisDbPlugin
@@ -75,7 +75,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout Fanbox plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: lowtechmaker/FanboxWebView2Plugin
           path: FanboxWebView2Plugin
@@ -83,7 +83,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout GitHub release update plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/GitHubReleaseUpdatePlugin
           path: GitHubReleaseUpdatePlugin

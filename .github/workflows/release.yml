@@ -21,30 +21,30 @@ jobs:
 
     steps:
       - name: Checkout application
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: KoikatsuSceneGallery
 
       - name: Checkout Pixiv Authors plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/pixiv-data-plugin
           path: PixivAuthorsPlugin
 
       - name: Checkout BepisDB plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/BepisDbPlugin
           path: BepisDbPlugin
 
       - name: Checkout Fanbox plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: lowtechmaker/FanboxWebView2Plugin
           path: FanboxWebView2Plugin
 
       - name: Checkout GitHub release update plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: LowTechMaker/GitHubReleaseUpdatePlugin
           path: GitHubReleaseUpdatePlugin
