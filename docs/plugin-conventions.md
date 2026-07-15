@@ -66,6 +66,12 @@ Rule: Break a lower-layer-to-higher-layer dependency with the narrowest semantic
 
 Why: Fanbox challenge navigation needed to probe API usability, but giving Navigator an ApiClient reference would create a cycle. A documented `Func<CancellationToken, Task<bool>>` kept Navigator dependent only on Host while preserving the linked caller/challenge token semantics.
 
+## SDK façades and coordinator granularity
+
+Rule: Keep a plugin entry type focused on its SDK capability surface, settings, secret exchange, and host wiring when fetch de-duplication, cache policy, API calls, and result conversion form a cohesive internal workflow worth extracting. Choose the number and size of internal collaborators from the actual dependency and lifecycle boundaries; do not target a fixed class count or copy another plugin's decomposition.
+
+Why: Pixiv author and artwork fetches share one API client, cache lifecycle, and coordination pattern, so one small fetch coordinator is the correct boundary. Fanbox has independent browser-host, navigation, parsing, API, and disposal concerns, so its five-part split is the same principle applied at a larger scale rather than a template every plugin should follow.
+
 ## Evidence for runtime-only behavior moves
 
 Rule: When extracting behavior that cannot be deterministically exercised offline, preserve the critical block statement-for-statement and record a before/after source index in addition to the available regression tests. Explicitly identify which behavior remains manually verified; source comparison is evidence for a move, not a substitute for a feasible test seam.
