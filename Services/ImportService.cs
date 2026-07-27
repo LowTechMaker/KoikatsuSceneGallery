@@ -293,8 +293,9 @@ public sealed class ImportService
         // so visual similarity falls back to count threshold here — a second
         // ReResolveAsync call after ComputeFingerprintsAsync corrects this)
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var (existingFilenames, folderIndex) = await BuildLibraryIndexAsync(config, ct).ConfigureAwait(false);
-        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, existingFilenames, folderIndex,
+        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
+            config, validItems, ct).ConfigureAwait(false);
+        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, identicalSourcePaths, folderIndex,
             config.ArtworkSubfolderThreshold, config.UseVisualSimilarity));
 
         return rejectedCount;
@@ -376,11 +377,13 @@ public sealed class ImportService
         bool? useVisualSimilarity = null)
     {
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var (existingFilenames, folderIndex) = await BuildLibraryIndexAsync(config, ct).ConfigureAwait(false);
+        var itemSnapshot = items.ToList();
+        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
+            config, itemSnapshot, ct).ConfigureAwait(false);
         int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
         bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
         dispatcher.TryEnqueue(() => ResolveDestinations(
-            items, config, existingFilenames, folderIndex, threshold, visual));
+            items, config, identicalSourcePaths, folderIndex, threshold, visual));
     }
 
     /// <summary>
@@ -400,7 +403,7 @@ public sealed class ImportService
     private void ResolveDestinations(
         ObservableCollection<ImportItem> items,
         SettingsService.ConfigData config,
-        HashSet<string> existingFilenames,
+        IReadOnlySet<string> identicalSourcePaths,
         Dictionary<string, Dictionary<string, string>> folderIndex,
         int artworkThreshold = 1,
         bool useVisualSimilarity = false)
@@ -423,7 +426,7 @@ public sealed class ImportService
             if (item.Status != ImportItemStatus.ReadyToImport || item.CardType == CardType.NotACard)
                 continue;
 
-            if (ImportDestinationPolicy.IsDuplicateFilename(existingFilenames, item.FileName))
+            if (identicalSourcePaths.Contains(item.SourceFilePath))
             {
                 item.Status = ImportItemStatus.AlreadyInLibrary;
                 continue;
@@ -570,20 +573,25 @@ public sealed class ImportService
             authorName);
     }
 
-    private Task<(HashSet<string> ExistingFilenames, Dictionary<string, Dictionary<string, string>> FolderIndex)>
-        BuildLibraryIndexAsync(SettingsService.ConfigData config, CancellationToken cancellationToken)
+    private Task<(HashSet<string> IdenticalSourcePaths, Dictionary<string, Dictionary<string, string>> FolderIndex)>
+        BuildLibraryIndexAsync(
+            SettingsService.ConfigData config,
+            IReadOnlyList<ImportItem> items,
+            CancellationToken cancellationToken)
         => Task.Run(() =>
         {
-            var filenames = BuildExistingFilenameSet(config, cancellationToken);
+            var filesByName = BuildExistingFileIndex(config, cancellationToken);
+            var identicalSourcePaths = FindIdenticalSourcePaths(
+                items, filesByName, cancellationToken);
             var folders = BuildFolderIndex(config, cancellationToken);
-            return (filenames, folders);
+            return (identicalSourcePaths, folders);
         }, cancellationToken);
 
-    private HashSet<string> BuildExistingFilenameSet(
+    private Dictionary<string, List<string>> BuildExistingFileIndex(
         SettingsService.ConfigData config,
         CancellationToken cancellationToken)
     {
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var allRoots = config.FolderPaths
             .Concat(config.CharacterFolderPaths)
             .Concat(config.CoordinateFolderPaths)
@@ -598,14 +606,69 @@ public sealed class ImportService
                 foreach (var file in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    set.Add(Path.GetFileName(file));
+                    var fileName = Path.GetFileName(file);
+                    if (!index.TryGetValue(fileName, out var paths))
+                    {
+                        paths = [];
+                        index[fileName] = paths;
+                    }
+                    paths.Add(file);
                 }
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { _logger.LogError("Import.ScanExistingFilenames", ex, root); }
         }
 
-        return set;
+        return index;
+    }
+
+    private HashSet<string> FindIdenticalSourcePaths(
+        IReadOnlyList<ImportItem> items,
+        IReadOnlyDictionary<string, List<string>> existingFilesByName,
+        CancellationToken cancellationToken)
+    {
+        var identicalSourcePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!File.Exists(item.SourceFilePath)
+                || !existingFilesByName.TryGetValue(item.FileName, out var candidates))
+            {
+                continue;
+            }
+
+            foreach (var candidate in candidates)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    if (!ImportDuplicateDetector.AreFilesIdentical(
+                            item.SourceFilePath,
+                            candidate,
+                            cancellationToken))
+                    {
+                        continue;
+                    }
+
+                    identicalSourcePaths.Add(item.SourceFilePath);
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        "Import.CompareExistingFile",
+                        ex,
+                        $"{item.SourceFilePath} | {candidate}");
+                }
+            }
+        }
+
+        return identicalSourcePaths;
     }
 
     private Dictionary<string, Dictionary<string, string>> BuildFolderIndex(
