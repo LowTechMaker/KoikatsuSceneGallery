@@ -112,6 +112,10 @@ public partial class App : Application
         }).Observe(_logger, "PluginUpdate.BackgroundCheck");
 
         var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        var thumbnailService = new ThumbnailService(
+            _thumbnailCacheService,
+            _sceneCardCacheService,
+            dispatcherQueue);
 
         var authorInfoService = new AuthorInfoService(
             _pluginService.AuthorProviders,
@@ -216,6 +220,7 @@ public partial class App : Application
             videoGalleryViewModel,
             authorsViewModel,
             authorSourceCoordinator,
+            thumbnailService,
             importService,
             importViewModel,
             authorPostService);
@@ -240,6 +245,7 @@ public partial class App : Application
         MediaGalleryViewModel videoGalleryViewModel,
         AuthorsViewModel authorsViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
+        ThumbnailService thumbnailService,
         ImportService? importService,
         ImportViewModel? importViewModel,
         AuthorPostService? authorPostService)
@@ -266,6 +272,7 @@ public partial class App : Application
         Services.Add(videoGalleryViewModel, "videos");
         Services.Add(authorsViewModel);
         Services.Add(authorSourceCoordinator);
+        Services.Add(thumbnailService);
         if (importService is not null) Services.Add(importService);
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null) Services.Add(authorPostService);
