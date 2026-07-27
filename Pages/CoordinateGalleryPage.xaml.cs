@@ -54,6 +54,7 @@ public sealed partial class CoordinateGalleryPage : Page
                 _reloadPending = true;
                 return;
             }
+            _thumbnailRequests.Activate();
             ViewModel.LoadCardsCommand.ExecuteAsync(null)
                 .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.ReloadFolders");
         });

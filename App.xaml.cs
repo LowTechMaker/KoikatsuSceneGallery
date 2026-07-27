@@ -133,7 +133,6 @@ public partial class App : Application
         galleryViewModel = new GalleryViewModel(
             _sceneCardService,
             _settingsService,
-            _thumbnailCacheService,
             _sceneMetadataService,
             _sceneCardCacheService,
             settingsViewModel,
@@ -142,28 +141,24 @@ public partial class App : Application
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
             _settingsService,
-            _thumbnailCacheService,
             _characterMetadataService,
             settingsViewModel,
             _logger);
         var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
             _coordinateCardService,
             _settingsService,
-            _thumbnailCacheService,
             _coordinateMetadataService,
             settingsViewModel,
             _logger);
         var screenshotGalleryViewModel = new MediaGalleryViewModel(
             _screenshotCardService,
             _settingsService,
-            _thumbnailCacheService,
             settingsViewModel,
             _logger,
             isVideo: false);
         var videoGalleryViewModel = new MediaGalleryViewModel(
             _videoCardService,
             _settingsService,
-            _thumbnailCacheService,
             settingsViewModel,
             _logger,
             isVideo: true);

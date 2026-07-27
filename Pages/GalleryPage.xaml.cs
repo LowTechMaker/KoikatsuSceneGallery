@@ -55,6 +55,7 @@ public sealed partial class GalleryPage : Page
                 _reloadPending = true;
                 return;
             }
+            _thumbnailRequests.Activate();
             ViewModel.LoadCardsCommand.ExecuteAsync(null)
                 .Observe(App.Services.GetRequiredService<IAppLogger>(), "Gallery.ReloadFolders");
         });

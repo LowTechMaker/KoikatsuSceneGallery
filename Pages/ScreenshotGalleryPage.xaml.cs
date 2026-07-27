@@ -54,6 +54,7 @@ public sealed partial class ScreenshotGalleryPage : Page
                 _reloadPending = true;
                 return;
             }
+            _thumbnailRequests.Activate();
             ViewModel.LoadCardsCommand.ExecuteAsync(null)
                 .Observe(App.Services.GetRequiredService<IAppLogger>(), "ScreenshotGallery.ReloadFolders");
         });
