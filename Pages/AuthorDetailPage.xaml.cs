@@ -35,27 +35,27 @@ public sealed partial class AuthorDetailPage : Page
     private const int CoordinatesTabIndex = 2;
     private const int PostsTabIndex = 3;
 
+    private readonly ThumbnailRequestController _thumbnailRequests;
     private CancellationTokenSource? _postsCts;
     private AuthorDetailNavigationParameter? _navigationParameter;
 
     public AuthorDetailPage()
     {
+        _thumbnailRequests = new ThumbnailRequestController(
+            App.Services.GetRequiredService<ThumbnailService>(),
+            App.Services.GetRequiredService<IAppLogger>(),
+            "AuthorDetail.GenerateThumbnail");
         InitializeComponent();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _thumbnailRequests.Activate();
         if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
-            foreach (var card in ViewModel.Scenes)
-                App.Services.GetRequiredService<GalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Characters)
-                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Coordinates)
-                App.Services.GetRequiredService<CoordinateGalleryViewModel>().RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
             {
@@ -80,6 +80,7 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _thumbnailRequests.Cancel();
         _postsCts?.Cancel();
         _postsCts?.Dispose();
         _postsCts = null;
@@ -92,6 +93,22 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (sender is GridView grid)
             ApplyLayout(grid, grid == ScenesGrid ? SceneImageRatio : CharaImageRatio);
+    }
+
+    private void CardGrid_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue) return;
+        args.RegisterUpdateCallback(CardGrid_Phase1);
+    }
+
+    private void CardGrid_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CardBase card)
+            _thumbnailRequests.Request(card);
     }
 
     private static void ApplyLayout(GridView grid, double imageRatio)

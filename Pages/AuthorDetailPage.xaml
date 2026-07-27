@@ -135,6 +135,7 @@
                     IsItemClickEnabled="True"
                     ItemClick="ScenesGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Scenes}"
+                    ContainerContentChanging="CardGrid_ContainerContentChanging"
                     SelectionMode="None">
                     <GridView.ItemContainerTransitions>
                         <TransitionCollection />
@@ -211,6 +212,7 @@
                     IsItemClickEnabled="True"
                     ItemClick="CharactersGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Characters}"
+                    ContainerContentChanging="CardGrid_ContainerContentChanging"
                     SelectionMode="None">
                     <GridView.ItemContainerTransitions>
                         <TransitionCollection />
@@ -287,6 +289,7 @@
                     IsItemClickEnabled="True"
                     ItemClick="CoordinatesGrid_ItemClick"
                     ItemsSource="{x:Bind ViewModel.Coordinates}"
+                    ContainerContentChanging="CardGrid_ContainerContentChanging"
                     SelectionMode="None">
                     <GridView.ItemContainerTransitions>
                         <TransitionCollection />

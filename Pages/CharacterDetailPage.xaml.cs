@@ -16,18 +16,23 @@ public sealed partial class CharacterDetailPage : Page
     public CharacterDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
+    private readonly ThumbnailRequestController _thumbnailRequests;
     private CancellationTokenSource? _metadataCts;
 
     public CharacterDetailPage()
     {
+        _thumbnailRequests = new ThumbnailRequestController(
+            App.Services.GetRequiredService<ThumbnailService>(),
+            App.Services.GetRequiredService<IAppLogger>(),
+            "CharacterDetail.GenerateThumbnail");
         InitializeComponent();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _thumbnailRequests.Activate();
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
-        galleryViewModel.ActivateThumbnailRequests();
         galleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
         galleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
@@ -37,8 +42,8 @@ public sealed partial class CharacterDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _thumbnailRequests.Cancel();
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
-        galleryViewModel.CancelPendingWork();
         _metadataCts?.Cancel();
         _metadataCts?.Dispose();
         _metadataCts = null;
@@ -139,8 +144,6 @@ public sealed partial class CharacterDetailPage : Page
             ViewModel.HasMultipleVersions = true;
             ViewModel.TotalVersions = versions.Count;
             ViewModel.VersionIndex = versions.IndexOf(card) + 1;
-            foreach (var v in versions)
-                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(v);
         }
         else
         {
@@ -155,6 +158,22 @@ public sealed partial class CharacterDetailPage : Page
     {
         if (e.ClickedItem is CharacterCard card && !ReferenceEquals(card, ViewModel.Card))
             ShowCard(card);
+    }
+
+    private void VersionsList_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue) return;
+        args.RegisterUpdateCallback(VersionsList_Phase1);
+    }
+
+    private void VersionsList_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CharacterCard card)
+            _thumbnailRequests.Request(card);
     }
 
     public static string FormatTimestamp(CharacterCard card) =>
