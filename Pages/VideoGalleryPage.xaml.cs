@@ -18,12 +18,18 @@ public sealed partial class VideoGalleryPage : Page
 
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
     private readonly GalleryLayoutEngine _layout;
+    private readonly ThumbnailRequestController _thumbnailRequests;
     private bool _isActive;
     private bool _reloadPending;
 
     public VideoGalleryPage()
     {
         ViewModel = App.Services.GetRequiredService<MediaGalleryViewModel>("videos");
+        _thumbnailRequests = new ThumbnailRequestController(
+            App.Services.GetRequiredService<ThumbnailService>(),
+            App.Services.GetRequiredService<IAppLogger>(),
+            "VideoGallery.GenerateThumbnail",
+            count => ViewModel.PendingThumbnailCount = count);
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
         _layout = new GalleryLayoutEngine(135.0 / 240.0, GalleryGrid, DispatcherQueue, ViewModel.SetShuffleDisplayCount, App.Services.GetRequiredService<SettingsViewModel>());
@@ -56,6 +62,7 @@ public sealed partial class VideoGalleryPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _thumbnailRequests.Activate();
         _isActive = true;
         ViewModel.Activate();
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "VideoGallery.Navigate", async () =>
@@ -74,6 +81,7 @@ public sealed partial class VideoGalleryPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         _isActive = false;
+        _thumbnailRequests.Cancel();
         ViewModel.CancelPendingWork();
         base.OnNavigatedFrom(e);
     }
@@ -110,18 +118,14 @@ public sealed partial class VideoGalleryPage : Page
 
     private void GalleryGrid_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (args.InRecycleQueue)
-        {
-            if (args.Item is MediaCard recycled) ViewModel.ReleaseThumbnail(recycled);
-            return;
-        }
+        if (args.InRecycleQueue) return;
         args.RegisterUpdateCallback(GalleryGrid_Phase1);
         _layout.EnsureLayoutOnFirstContent();
     }
 
     private void GalleryGrid_Phase1(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
-        if (args.Item is MediaCard card) ViewModel.RequestThumbnail(card);
+        if (args.Item is MediaCard card) _thumbnailRequests.Request(card, isVideo: true);
     }
 
     private void SizeButton_Click(object sender, RoutedEventArgs e)
@@ -223,7 +227,7 @@ public sealed partial class VideoGalleryPage : Page
         for (int i = first; i <= last && i < ViewModel.CardsView.Count; i++)
         {
             if (ViewModel.CardsView[i] is MediaCard card)
-                ViewModel.RequestThumbnail(card);
+                _thumbnailRequests.Request(card, isVideo: true);
         }
     }
 }
