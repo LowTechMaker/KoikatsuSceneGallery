@@ -17,6 +17,7 @@ public sealed partial class AuthorDetailPage : Page
         App.Services.GetRequiredService<GalleryViewModel>(),
         App.Services.GetRequiredService<CharacterGalleryViewModel>(),
         App.Services.GetRequiredService<CoordinateGalleryViewModel>(),
+        App.Services.GetRequiredService<ThumbnailCacheService>(),
         App.Services.GetRequiredService<IAppLogger>());
 
     private const double SceneImageRatio = 135.0 / 240.0;
@@ -30,39 +31,49 @@ public sealed partial class AuthorDetailPage : Page
     private const double DesiredWidth = 240;
     private const double PostDesiredWidth = 160;
     private const double PostItemSpacing = 8;
+    private const double LayoutEpsilon = 0.5;
     private const int ScenesTabIndex = 0;
     private const int CharactersTabIndex = 1;
     private const int CoordinatesTabIndex = 2;
     private const int PostsTabIndex = 3;
 
+    private readonly ThumbnailRequestController _thumbnailRequests;
     private CancellationTokenSource? _postsCts;
     private AuthorDetailNavigationParameter? _navigationParameter;
+    private int? _pendingRestoreSelectedTabIndex;
+    private bool _isNavigated;
+    private bool _postsLoadStarted;
 
     public AuthorDetailPage()
     {
+        _thumbnailRequests = new ThumbnailRequestController(
+            App.Services.GetRequiredService<ThumbnailService>(),
+            App.Services.GetRequiredService<IAppLogger>(),
+            "AuthorDetail.GenerateThumbnail");
         InitializeComponent();
+        NavigationCacheMode = NavigationCacheMode.Enabled;
+        Loaded += AuthorDetailPage_Loaded;
+        TabPivot.SelectionChanged += TabPivot_SelectionChanged;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _isNavigated = true;
+        _postsLoadStarted = false;
+        _thumbnailRequests.Activate();
         if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(
+                $"[AuthorDetail.NavigateTo] "
+                + $"{navigationParameter.Summary.Display.Key.ProviderId}:"
+                + $"{navigationParameter.Summary.Display.Key.Id}");
+#endif
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
-            foreach (var card in ViewModel.Scenes)
-                App.Services.GetRequiredService<GalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Characters)
-                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Coordinates)
-                App.Services.GetRequiredService<CoordinateGalleryViewModel>().RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
-            if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
-            {
-                _postsCts = new CancellationTokenSource();
-                ViewModel.LoadPostsAsync(postService, _postsCts.Token)
-                    .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
-            }
+            TryStartPostLoad();
         }
 
         ScenesGrid.SizeChanged += Grid_SizeChanged;
@@ -79,19 +90,69 @@ public sealed partial class AuthorDetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        _isNavigated = false;
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine(
+            $"[AuthorDetail.NavigateFrom] {ViewModel.Author?.Key.ProviderId}:"
+            + $"{ViewModel.Author?.Key.Id}");
+#endif
         base.OnNavigatedFrom(e);
+        _thumbnailRequests.Cancel();
         _postsCts?.Cancel();
         _postsCts?.Dispose();
         _postsCts = null;
+        ViewModel.Unload();
         ScenesGrid.SizeChanged -= Grid_SizeChanged;
         CharactersGrid.SizeChanged -= Grid_SizeChanged;
         CoordinatesGrid.SizeChanged -= Grid_SizeChanged;
     }
 
+    private void TabPivot_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine(
+            $"[AuthorDetail.Pivot] SelectedIndex={TabPivot.SelectedIndex}");
+#endif
+        TryStartPostLoad();
+    }
+
+    private void TryStartPostLoad()
+    {
+        if (!_isNavigated
+            || _postsLoadStarted
+            || TabPivot.SelectedIndex != PostsTabIndex
+            || !ViewModel.CanLoadPosts
+            || App.Services.GetService<AuthorPostService>() is not { } postService)
+        {
+            return;
+        }
+
+        _postsLoadStarted = true;
+        _postsCts = new CancellationTokenSource();
+        ViewModel.LoadPostsAsync(postService, _postsCts.Token)
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
+    }
+
     private void Grid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (sender is GridView grid)
+        if (sender is GridView grid && WidthChanged(e))
             ApplyLayout(grid, grid == ScenesGrid ? SceneImageRatio : CharaImageRatio);
+    }
+
+    private void CardGrid_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue) return;
+        args.RegisterUpdateCallback(CardGrid_Phase1);
+    }
+
+    private void CardGrid_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CardBase card)
+            _thumbnailRequests.Request(card);
     }
 
     private static void ApplyLayout(GridView grid, double imageRatio)
@@ -105,8 +166,7 @@ public sealed partial class AuthorDetailPage : Page
         double imageH = Math.Max(0, cellW - ContentInsetW) * imageRatio;
         double cellH = imageH + FilenameReserve + (CardMargin + CardInset) * 2;
 
-        panel.ItemWidth = cellW;
-        panel.ItemHeight = cellH;
+        ApplyItemSize(panel, cellW, cellH);
     }
 
     private static void ApplyPostImageLayout(GridView grid)
@@ -119,23 +179,34 @@ public sealed partial class AuthorDetailPage : Page
         double cellW = (available / columns) - PostItemSpacing;
         double cellH = cellW * PostImageRatio;
 
-        panel.ItemWidth = cellW;
-        panel.ItemHeight = cellH;
+        ApplyItemSize(panel, cellW, cellH);
     }
 
     private void PostImagesGrid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (sender is GridView grid)
+        if (sender is GridView grid && WidthChanged(e))
             ApplyPostImageLayout(grid);
     }
 
-    public static string FormatCount(int count) => $"({count})";
+    private static bool WidthChanged(SizeChangedEventArgs e)
+        => Math.Abs(e.NewSize.Width - e.PreviousSize.Width) >= LayoutEpsilon;
 
-    public static BitmapImage CreateThumbnail(Uri uri) => new() { DecodePixelWidth = 160, UriSource = uri };
+    private static void ApplyItemSize(ItemsWrapGrid panel, double itemWidth, double itemHeight)
+    {
+        if (!NearlyEqual(panel.ItemWidth, itemWidth))
+            panel.ItemWidth = itemWidth;
+        if (!NearlyEqual(panel.ItemHeight, itemHeight))
+            panel.ItemHeight = itemHeight;
+    }
+
+    private static bool NearlyEqual(double left, double right)
+        => !double.IsNaN(left) && Math.Abs(left - right) < LayoutEpsilon;
+
+    public static string FormatCount(int count) => $"({count})";
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
+    private void GoBack_Click(object sender, RoutedEventArgs e) => App.TryGoBack(Frame);
 
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
@@ -289,10 +360,20 @@ public sealed partial class AuthorDetailPage : Page
             _navigationParameter.RestoreSelectedTabOnBack = tabIndex;
     }
 
+    private void AuthorDetailPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_pendingRestoreSelectedTabIndex is not { } tabIndex)
+            return;
+
+        _pendingRestoreSelectedTabIndex = null;
+        if (tabIndex >= 0 && tabIndex < TabPivot.Items.Count)
+            TabPivot.SelectedIndex = tabIndex;
+    }
+
     private void RestoreSelectedTab(NavigationMode navigationMode)
     {
         if (navigationMode == NavigationMode.Back && _navigationParameter?.RestoreSelectedTabOnBack is { } tabIndex)
-            TabPivot.SelectedIndex = tabIndex;
+            _pendingRestoreSelectedTabIndex = tabIndex;
 
         if (_navigationParameter is not null)
             _navigationParameter.RestoreSelectedTabOnBack = null;

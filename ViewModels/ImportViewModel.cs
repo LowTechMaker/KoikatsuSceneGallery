@@ -721,6 +721,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var item in files)
         {
             item.ArtworkId = artworkId;
+            item.FetchedArtworkInfo = null;
             item.AuthorName = null;
             item.AuthorId = null;
             item.AuthorProviderId = null;
@@ -736,6 +737,7 @@ public partial class ImportViewModel : ObservableObject
         {
             if (info is not null)
             {
+                item.FetchedArtworkInfo = info;
                 item.AuthorName = info.AuthorName;
                 item.AuthorId = info.AuthorId;
                 item.AuthorProviderId = artworkId.ProviderId;
@@ -808,6 +810,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var item in files)
         {
             item.ArtworkId = artworkId;
+            item.FetchedArtworkInfo = null;
             item.AuthorName = null;
             item.AuthorId = null;
             item.AuthorProviderId = null;
@@ -823,6 +826,7 @@ public partial class ImportViewModel : ObservableObject
         {
             if (info is not null)
             {
+                item.FetchedArtworkInfo = info;
                 item.AuthorName = info.AuthorName;
                 item.AuthorId = info.AuthorId;
                 item.AuthorProviderId = artworkId.ProviderId;

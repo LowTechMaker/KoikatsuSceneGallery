@@ -21,7 +21,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 {
     private readonly SceneCardService _sceneCardService;
     private readonly SettingsService _settingsService;
-    private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly SceneMetadataService _metadataService;
     private readonly SceneCardCacheService _cardCacheService;
     private readonly SettingsViewModel _settingsViewModel;
@@ -66,13 +65,12 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, IAppLogger logger)
+    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, IAppLogger logger)
         : base(new ObservableCollection<SceneCard>())
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
         _sceneCardService = sceneCardService;
         _settingsService = settingsService;
-        _thumbnailCacheService = thumbnailCacheService;
         _metadataService = metadataService;
         _cardCacheService = cardCacheService;
         _settingsViewModel = settingsViewModel;
@@ -127,7 +125,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         var cancellationToken = BeginLoad();
         _metadataCts?.Cancel();
-        ResetThumbnailState();
 
         IsLoading = true;
         try
@@ -185,10 +182,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                                 Height = entry.Height,
                             };
                             if (entry.ThumbnailPath is not null && !staleThumbnails.Contains(filePath))
-                            {
                                 card.ThumbnailPath = entry.ThumbnailPath;
-                                _thumbnailPathCache[filePath] = entry.ThumbnailPath;
-                            }
                             card.IsR18Content = IsR18Path(card.FilePath);
                             if (_cardIndex.TryAdd(card.FilePath, card))
                                 Cards.Add(card);
@@ -271,10 +265,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
         }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("Gallery.LoadCanceled", ex);
-        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)
@@ -383,76 +374,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         {
             CardsView.RefreshFilter();
             OnPropertyChanged(nameof(IsEmpty));
-        }
-    }
-
-    public void RequestThumbnail(SceneCard card)
-    {
-        if (card.HasThumbnail) return;
-        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
-        {
-            card.ThumbnailPath = cached;
-            return;
-        }
-
-        var diskCached = _thumbnailCacheService.TryGetCachedPath(card);
-        if (diskCached is not null)
-        {
-            _thumbnailPathCache[card.FilePath] = diskCached;
-            card.ThumbnailPath = diskCached;
-            return;
-        }
-
-        var token = _thumbnailCts?.Token ?? CancellationToken.None;
-        if (token.IsCancellationRequested || !_thumbnailRequested.Add(card.FilePath)) return;
-
-        PendingThumbnailCount++;
-        Task.Run(() => GenerateOneAsync(card, token), token)
-            .Observe(_logger, "Gallery.GenerateThumbnail");
-    }
-
-    public void ReleaseThumbnail(SceneCard card)
-    {
-    }
-
-    private async Task GenerateOneAsync(SceneCard card, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _thumbnailGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (card.HasThumbnail) return;
-                var thumbnailPath = await _thumbnailCacheService
-                    .EnsureThumbnailAsync(card, cancellationToken)
-                    .ConfigureAwait(false);
-                if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-                {
-                    _cardCacheService.SetThumbnailPath(card.FilePath, thumbnailPath);
-                    _dispatcherQueue.TryEnqueue(() =>
-                    {
-                        _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                        card.ThumbnailPath = thumbnailPath;
-                    });
-                }
-            }
-            finally
-            {
-                _thumbnailGate.Release();
-            }
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("Gallery.GenerateThumbnailCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("Gallery.GenerateThumbnail", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-                PendingThumbnailCount--;
-                if (!card.HasThumbnail)
-                    _thumbnailRequested.Remove(card.FilePath);
-            });
         }
     }
 
@@ -599,8 +520,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
         _metadataCts?.Cancel();
         _metadataCts?.Dispose();
         _metadataRefreshTimer?.Stop();

@@ -13,6 +13,10 @@ public partial class App : Application
 {
     public static AppServiceRegistry Services { get; } = new();
 
+    internal static bool TryGoBack(Frame frame)
+        => Current is App { _mainWindow: { } mainWindow }
+            && mainWindow.TryGoBack(frame);
+
     private readonly IAppLogger _logger = new CrashLogLogger();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
@@ -39,6 +43,10 @@ public partial class App : Application
             Path.Combine(AppPaths.LocalFolder, "Plugins"));
         InitializeComponent();
 
+#if DEBUG
+        AppDomain.CurrentDomain.FirstChanceException += DebugFirstChanceException;
+#endif
+
         // No debugger is attached in a packaged-zip test build, so route every
         // flavour of unhandled exception to a crash log the tester can hand back.
         // UI-thread exceptions are also marked handled so a single bad operation
@@ -56,6 +64,38 @@ public partial class App : Application
             e.SetObserved();
         };
     }
+
+#if DEBUG
+    private static int _debugFirstChanceCount;
+
+    private static void DebugFirstChanceException(
+        object? sender,
+        System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+    {
+        var sequence = Interlocked.Increment(ref _debugFirstChanceCount);
+        if (sequence > 500)
+            return;
+
+        var exception = e.Exception;
+        var projectFrame = exception.StackTrace?
+            .Split(Environment.NewLine)
+            .FirstOrDefault(line =>
+                line.Contains("KoikatsuSceneGallery", StringComparison.Ordinal)
+                || line.Contains("SceneGallery", StringComparison.Ordinal))
+            ?.Trim();
+        var message = exception.Message
+            .Replace('\r', ' ')
+            .Replace('\n', ' ');
+
+        Debug.WriteLine(
+            $"[ManagedFirstChance #{sequence}] "
+            + $"T{Environment.CurrentManagedThreadId} "
+            + $"{exception.GetType().FullName} "
+            + $"HR=0x{exception.HResult:X8} "
+            + $"{message} "
+            + $"{projectFrame}");
+    }
+#endif
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
         => UiEventGuard.Run(_logger, "App.OnLaunched", () => OnLaunchedAsync(args));
@@ -112,10 +152,15 @@ public partial class App : Application
         }).Observe(_logger, "PluginUpdate.BackgroundCheck");
 
         var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        var thumbnailService = new ThumbnailService(
+            _thumbnailCacheService,
+            _sceneCardCacheService,
+            dispatcherQueue);
 
         var authorInfoService = new AuthorInfoService(
             _pluginService.AuthorProviders,
             dispatcherQueue,
+            _thumbnailCacheService,
             _logger);
 
         GalleryViewModel? galleryViewModel = null;
@@ -129,7 +174,6 @@ public partial class App : Application
         galleryViewModel = new GalleryViewModel(
             _sceneCardService,
             _settingsService,
-            _thumbnailCacheService,
             _sceneMetadataService,
             _sceneCardCacheService,
             settingsViewModel,
@@ -138,28 +182,24 @@ public partial class App : Application
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
             _settingsService,
-            _thumbnailCacheService,
             _characterMetadataService,
             settingsViewModel,
             _logger);
         var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
             _coordinateCardService,
             _settingsService,
-            _thumbnailCacheService,
             _coordinateMetadataService,
             settingsViewModel,
             _logger);
         var screenshotGalleryViewModel = new MediaGalleryViewModel(
             _screenshotCardService,
             _settingsService,
-            _thumbnailCacheService,
             settingsViewModel,
             _logger,
             isVideo: false);
         var videoGalleryViewModel = new MediaGalleryViewModel(
             _videoCardService,
             _settingsService,
-            _thumbnailCacheService,
             settingsViewModel,
             _logger,
             isVideo: true);
@@ -197,7 +237,8 @@ public partial class App : Application
             dispatcherQueue,
             settingsViewModel,
             _thumbnailCacheService,
-            galleryViewModel);
+            galleryViewModel,
+            _logger);
         var authorSourceCoordinator = new AuthorSourceCoordinator(
             authorInfoService,
             settingsViewModel,
@@ -216,6 +257,7 @@ public partial class App : Application
             videoGalleryViewModel,
             authorsViewModel,
             authorSourceCoordinator,
+            thumbnailService,
             importService,
             importViewModel,
             authorPostService);
@@ -240,6 +282,7 @@ public partial class App : Application
         MediaGalleryViewModel videoGalleryViewModel,
         AuthorsViewModel authorsViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
+        ThumbnailService thumbnailService,
         ImportService? importService,
         ImportViewModel? importViewModel,
         AuthorPostService? authorPostService)
@@ -266,6 +309,7 @@ public partial class App : Application
         Services.Add(videoGalleryViewModel, "videos");
         Services.Add(authorsViewModel);
         Services.Add(authorSourceCoordinator);
+        Services.Add(thumbnailService);
         if (importService is not null) Services.Add(importService);
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null) Services.Add(authorPostService);

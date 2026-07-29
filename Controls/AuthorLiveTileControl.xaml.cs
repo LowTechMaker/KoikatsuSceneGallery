@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -60,7 +61,8 @@ public sealed partial class AuthorLiveTileControl : UserControl
         var summary = Summary;
         if (summary is null) return;
 
-        if (summary.Display == _boundAuthor)
+        if (summary.Display == _boundAuthor
+            && summary.ThumbnailPaths.SequenceEqual(_thumbnailPaths, StringComparer.OrdinalIgnoreCase))
         {
             UpdateCounts(summary);
             return;
@@ -188,6 +190,10 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        // A virtualized container can be unloaded and later recycled without
+        // changing its Summary dependency property. Re-apply it explicitly
+        // because OnUnloaded releases all image and author subscriptions.
+        ApplySummary();
         ResetVisuals();
         if (_thumbnailPaths.Count > 1 && App.Services.GetRequiredService<SettingsViewModel>()?.AuthorLiveTilesEnabled == true)
             StartCycling();
@@ -196,8 +202,14 @@ public sealed partial class AuthorLiveTileControl : UserControl
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         StopCycling();
+        ResetVisuals();
         UnsubscribeAuthorChanges();
         _boundAuthor = null;
+        ImageA.Source = null;
+        ImageB.Source = null;
+        LiveAvatar.ProfilePicture = null;
+        ClassicAvatar.ProfilePicture = null;
+        _thumbnailPaths = [];
         _imageCache.Clear();
         _easing = null;
         _inSlide = null;
@@ -227,6 +239,12 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
     private void OnCycleTick(DispatcherQueueTimer sender, object e)
     {
+        if (!IsLoaded || _thumbnailPaths.Count < 2)
+        {
+            StopCycling();
+            return;
+        }
+
         _currentIndex = (_currentIndex + 1) % _thumbnailPaths.Count;
         var nextImage = GetOrCreateThumbnail(_thumbnailPaths[_currentIndex]);
 
@@ -236,7 +254,17 @@ public sealed partial class AuthorLiveTileControl : UserControl
         incoming.Source = nextImage;
         _showingA = !_showingA;
 
-        AnimateTransition(incoming, outgoing);
+        try
+        {
+            AnimateTransition(incoming, outgoing);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
+        {
+            App.Services.GetRequiredService<IAppLogger>()
+                .LogError("AuthorLiveTile.AnimateTransition", ex);
+            StopCycling();
+            return;
+        }
 
         sender.Interval = CycleInterval;
         sender.Start();
@@ -302,7 +330,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
             visualA.Opacity = 1;
             visualB.Opacity = 0;
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
         {
             App.Services.GetRequiredService<IAppLogger>()
                 .LogError("AuthorLiveTile.StartAnimation", ex);

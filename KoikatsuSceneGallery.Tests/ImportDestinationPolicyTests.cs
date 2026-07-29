@@ -49,17 +49,6 @@ public sealed class ImportDestinationPolicyTests
         Assert.Equal("(123)", ImportDestinationPolicy.FormatArtworkFolder(Options, null, "123"));
     }
 
-    [Fact]
-    public void DuplicateFilename_IsCaseInsensitiveWhenLibraryIndexIsCaseInsensitive()
-    {
-        IReadOnlySet<string> existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "同名.PNG",
-        };
-
-        Assert.True(ImportDestinationPolicy.IsDuplicateFilename(existing, "同名.png"));
-    }
-
     [Theory]
     [InlineData(false, false, 0)]
     [InlineData(true, true, 1)]
@@ -97,11 +86,11 @@ public sealed class ImportDestinationPolicyTests
     }
 
     [Fact]
-    public void DuplicateDetector_RejectsDifferentSyntheticCards()
+    public void DuplicateDetector_RejectsSameNamedFilesWithDifferentContents()
     {
         using var directory = new TestDirectory();
-        var source = directory.Write("source.png", TestFiles.Png(320, 180));
-        var destination = directory.Write("destination.png", TestFiles.Png(1600, 900));
+        var source = directory.Write(Path.Combine("來源", "同名.png"), TestFiles.Png(320, 180));
+        var destination = directory.Write(Path.Combine("收藏庫", "同名.png"), TestFiles.Png(1600, 900));
 
         Assert.False(ImportDuplicateDetector.AreFilesIdentical(source, destination));
     }

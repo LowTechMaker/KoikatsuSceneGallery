@@ -3,17 +3,25 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Pages;
 using KoikatsuSceneGallery.Services;
+using Microsoft.UI.Xaml.Media.Imaging;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
-public sealed record LocalImagePreview(Uri ImageUri, string FileName, string FilePath);
+public sealed record LocalImagePreview(BitmapImage? ThumbnailSource, string FileName, string FilePath);
 
 public partial class PostDetailViewModel : ObservableObject
 {
     private readonly IAppLogger _logger;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
 
-    public PostDetailViewModel(IAppLogger logger) => _logger = logger;
+    public PostDetailViewModel(
+        IAppLogger logger,
+        ThumbnailCacheService thumbnailCacheService)
+    {
+        _logger = logger;
+        _thumbnailCacheService = thumbnailCacheService;
+    }
 
     public AuthorPost? Post { get; private set; }
 
@@ -36,16 +44,13 @@ public partial class PostDetailViewModel : ObservableObject
     public partial string ArtworkIdText { get; set; } = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSave))]
     public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSave))]
     [NotifyPropertyChangedFor(nameof(SavedStatusText))]
     public partial bool IsDetailLoaded { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSave))]
     [NotifyPropertyChangedFor(nameof(SavedStatusText))]
     public partial bool IsSaved { get; set; }
 
@@ -60,7 +65,6 @@ public partial class PostDetailViewModel : ObservableObject
     public bool HasLocalImages => LocalImages.Count > 0;
     public bool HasDescription => !string.IsNullOrEmpty(Description);
     public bool ShowRating => !string.IsNullOrEmpty(RatingText);
-    public bool CanSave => IsDetailLoaded && !IsSaved && !IsLoading;
 
     public string SavedStatusText => IsSaved
         ? "Details saved locally"
@@ -70,19 +74,36 @@ public partial class PostDetailViewModel : ObservableObject
     {
         Post = post;
         DisplayTitle = post.DisplayTitle;
-        ArtworkIdText = $"pixiv #{post.ArtworkId.Id}";
+        ArtworkIdText = $"{post.ArtworkId.ProviderId} #{post.ArtworkId.Id}";
         LocalFileInfo = post.LocalFileCount == 1
             ? "1 local file"
             : $"{post.LocalFileCount} local files";
         LocalImages.Clear();
-        foreach (var path in post.LocalFilePaths.Where(File.Exists))
-            LocalImages.Add(new LocalImagePreview(new Uri(path), Path.GetFileName(path), path));
-        OnPropertyChanged(nameof(HasLocalImages));
         IsDetailLoaded = post.IsDetailLoaded;
         IsSaved = post.IsSaved;
 
         if (post.IsDetailLoaded)
             ApplyDetail(post);
+    }
+
+    public async Task LoadLocalImagesAsync(AuthorPost post, CancellationToken ct)
+    {
+        foreach (var path in post.LocalFilePaths.Where(File.Exists))
+        {
+            ct.ThrowIfCancellationRequested();
+            var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(
+                path,
+                File.GetLastWriteTime(path),
+                ct);
+            LocalImages.Add(new LocalImagePreview(
+                thumbnailPath is null
+                    ? null
+                    : new BitmapImage(new Uri(thumbnailPath)) { DecodePixelWidth = 240 },
+                Path.GetFileName(path),
+                path));
+        }
+
+        OnPropertyChanged(nameof(HasLocalImages));
     }
 
     public async Task LoadDetailAsync(AuthorPostService postService, CancellationToken ct)
@@ -92,44 +113,16 @@ public partial class PostDetailViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var info = await postService.FetchArtworkDetailAsync(
-                Post.ArtworkId,
-                ct,
-                saveToLocalCache: false);
+            var info = await postService.FetchArtworkDetailAsync(Post, ct);
             if (info is not null)
             {
                 ApplyInfo(info);
             }
         }
-        catch (OperationCanceledException ex) { _logger.LogError("PostDetail.LoadCanceled", ex, Post?.ArtworkId.Id); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         catch (Exception ex)
         {
             _logger.LogError("PostDetail.Load", ex, Post?.ArtworkId.Id);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    public async Task SaveToCacheAsync(AuthorPostService postService, CancellationToken ct)
-    {
-        if (Post is null || !IsDetailLoaded || IsSaved) return;
-
-        IsLoading = true;
-        try
-        {
-            var info = await postService.FetchArtworkDetailAsync(
-                Post.ArtworkId,
-                ct,
-                saveToLocalCache: true);
-            if (info is not null)
-                ApplyInfo(info);
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("PostDetail.SaveCanceled", ex, Post?.ArtworkId.Id); }
-        catch (Exception ex)
-        {
-            _logger.LogError("PostDetail.Save", ex, Post?.ArtworkId.Id);
         }
         finally
         {

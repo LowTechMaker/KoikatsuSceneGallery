@@ -604,9 +604,6 @@
   <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
     <value>在瀏覽器開啟</value>
   </data>
-  <data name="PostDetail_SaveLabel.Text" xml:space="preserve">
-    <value>儲存詳情</value>
-  </data>
   <data name="PostDetail_Loading.Text" xml:space="preserve">
     <value>載入中...</value>
   </data>
@@ -960,5 +957,11 @@
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>偵測並群組圖庫中外觀相似的圖片</value>
+  </data>
+  <data name="Import_ErrorFileAlreadyExists" xml:space="preserve">
+    <value>檔案已存在</value>
+  </data>
+  <data name="Import_ErrorConflictingFile" xml:space="preserve">
+    <value>檔案內容衝突：{0}</value>
   </data>
 </root>

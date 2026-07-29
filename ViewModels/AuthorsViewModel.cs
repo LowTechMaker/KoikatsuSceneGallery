@@ -62,9 +62,11 @@ public partial class AuthorProviderTabViewModel : ObservableObject
 
     public string DisplayName { get; }
 
-    public ObservableCollection<AuthorSummary> Authors { get; } = [];
+    [ObservableProperty]
+    public partial IReadOnlyList<AuthorSummary> Authors { get; set; } = [];
 
-    public ObservableCollection<AuthorGroupViewModel> Groups { get; } = [];
+    [ObservableProperty]
+    public partial ObservableCollection<AuthorGroupViewModel> Groups { get; set; } = [];
 
     public ObservableCollection<AuthorIndexItemViewModel> QuickJumpItems { get; } = [];
 
@@ -89,6 +91,7 @@ public partial class AuthorProviderTabViewModel : ObservableObject
 /// </summary>
 public partial class AuthorsViewModel : ObservableObject
 {
+    private static readonly TimeSpan InitialRebuildDelay = TimeSpan.FromMilliseconds(1);
     private static readonly TimeSpan RebuildDebounce = TimeSpan.FromMilliseconds(500);
     private static readonly ResourceLoader ResLoader = new();
 
@@ -96,29 +99,44 @@ public partial class AuthorsViewModel : ObservableObject
     private readonly SettingsViewModel _settingsViewModel;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly GalleryViewModel _galleryViewModel;
+    private readonly IAppLogger _logger;
     private readonly DispatcherQueueTimer _rebuildTimer;
     private Dictionary<AuthorDisplay, IReadOnlyList<string>>? _thumbnailCache;
+    private CancellationTokenSource? _rebuildCts;
+    private int _rebuildGeneration;
+    private bool _isActive;
+    private bool _rebuildPending = true;
 
     public ObservableCollection<AuthorProviderTabViewModel> ProviderTabs { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowInitialLoading))]
     public partial bool HasAuthors { get; set; }
 
     public bool IsEmpty => !HasAuthors;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowInitialLoading))]
+    public partial bool IsLoading { get; set; }
+
+    public bool ShowInitialLoading => IsLoading && !HasAuthors;
+
+    [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
-    partial void OnSearchTextChanged(string value) => Rebuild();
+    partial void OnSearchTextChanged(string value) => QueueRebuild();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSortByName))]
+    [NotifyPropertyChangedFor(nameof(SortModeIndex))]
     public partial AuthorSortMode SortMode { get; set; }
 
     public bool IsSortByName => SortMode == AuthorSortMode.Name;
 
-    partial void OnSortModeChanged(AuthorSortMode value) => Rebuild();
+    public int SortModeIndex => (int)SortMode;
+
+    partial void OnSortModeChanged(AuthorSortMode value) => QueueRebuild();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotRefreshing))]
@@ -135,83 +153,249 @@ public partial class AuthorsViewModel : ObservableObject
         DispatcherQueue dispatcher,
         SettingsViewModel settingsViewModel,
         ThumbnailCacheService thumbnailCacheService,
-        GalleryViewModel galleryViewModel)
+        GalleryViewModel galleryViewModel,
+        IAppLogger logger)
     {
         _authorInfoService = authorInfoService;
         _settingsViewModel = settingsViewModel;
         _thumbnailCacheService = thumbnailCacheService;
         _galleryViewModel = galleryViewModel;
+        _logger = logger;
         foreach (var provider in _authorInfoService.ProviderInfos)
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
 
         _rebuildTimer = dispatcher.CreateTimer();
         _rebuildTimer.Interval = RebuildDebounce;
         _rebuildTimer.IsRepeating = false;
-        _rebuildTimer.Tick += (_, _) => Rebuild();
+        _rebuildTimer.Tick += (_, _) => _ = RebuildAsync();
 
-        _authorInfoService.AuthorsChanged += () =>
-        {
-            _thumbnailCache = null;
-            _rebuildTimer.Start();
-        };
-        Rebuild();
+        _authorInfoService.AuthorsChanged += OnAuthorsChanged;
+        _authorInfoService.AuthorProfilesChanged += OnAuthorProfilesChanged;
     }
 
-    private void Rebuild()
+    public void Activate()
     {
-        var search = SearchText.Trim();
-        var filtered = _authorInfoService.GetSummaries()
-            .Where(s => s.TotalCount > 0)
+        _isActive = true;
+        if (_rebuildPending)
+        {
+            IsLoading = true;
+            RestartRebuildTimer(InitialRebuildDelay);
+        }
+    }
+
+    public void Deactivate()
+    {
+        _isActive = false;
+        _rebuildTimer.Stop();
+        if (_rebuildCts is not null)
+        {
+            _rebuildPending = true;
+            _rebuildGeneration++;
+            _rebuildCts.Cancel();
+        }
+        IsLoading = false;
+    }
+
+    private void OnAuthorsChanged()
+    {
+        _thumbnailCache = null;
+        QueueRebuild();
+    }
+
+    private void OnAuthorProfilesChanged()
+    {
+        // Tiles observe AuthorDisplay directly. A collection rebuild is only
+        // needed when the profile name affects filtering or primary ordering.
+        if (SortMode == AuthorSortMode.Name || !string.IsNullOrWhiteSpace(SearchText))
+            QueueRebuild();
+    }
+
+    private void QueueRebuild()
+    {
+        _rebuildPending = true;
+        _rebuildGeneration++;
+        _rebuildCts?.Cancel();
+        if (!_isActive)
+            return;
+
+        // Restarting makes this a trailing debounce, so a burst of profile or
+        // assignment changes produces one rebuild after the burst settles.
+        IsLoading = true;
+        RestartRebuildTimer(RebuildDebounce);
+    }
+
+    private void RestartRebuildTimer(TimeSpan interval)
+    {
+        _rebuildTimer.Stop();
+        _rebuildTimer.Interval = interval;
+        _rebuildTimer.Start();
+    }
+
+    private async Task RebuildAsync()
+    {
+        _rebuildTimer.Stop();
+        if (!_isActive)
+        {
+            _rebuildPending = true;
+            IsLoading = false;
+            return;
+        }
+
+        var generation = _rebuildGeneration;
+        _rebuildPending = false;
+        var cts = new CancellationTokenSource();
+        var previousCts = _rebuildCts;
+        _rebuildCts = cts;
+        previousCts?.Cancel();
+        IsLoading = true;
+
+        try
+        {
+            var search = SearchText.Trim();
+            var sortMode = SortMode;
+            var liveTilesEnabled = _settingsViewModel.AuthorLiveTilesEnabled;
+            var sourceSnapshots = _authorInfoService.GetSummaries()
+                .Select(summary => new AuthorSortSnapshot(
+                    summary,
+                    summary.Display.Name,
+                    summary.Display.Key.Id,
+                    summary.Display.ProfileUrl))
+                .ToList();
+            var thumbnailCandidates = liveTilesEnabled && _thumbnailCache is null
+                ? CaptureThumbnailCandidates()
+                : null;
+            var cachedThumbnails = _thumbnailCache;
+
+            var summaries = await Task.Run(
+                () => PrepareSummaries(
+                    sourceSnapshots,
+                    search,
+                    sortMode,
+                    cts.Token));
+
+            if (cts.IsCancellationRequested ||
+                !_isActive ||
+                generation != _rebuildGeneration)
+                return;
+
+            if (liveTilesEnabled && cachedThumbnails is { Count: > 0 })
+                EnrichWithThumbnails(summaries, cachedThumbnails);
+            PublishSummaries(summaries, sortMode);
+            IsLoading = false;
+
+            if (!liveTilesEnabled || cachedThumbnails is not null)
+                return;
+
+            var thumbnails = await Task.Run(
+                () => BuildThumbnailCache(
+                    thumbnailCandidates ?? [],
+                    cts.Token));
+
+            if (cts.IsCancellationRequested ||
+                !_isActive ||
+                generation != _rebuildGeneration)
+                return;
+
+            _thumbnailCache = thumbnails;
+            if (thumbnails.Count > 0)
+            {
+                var enrichedSummaries = summaries.ToList();
+                EnrichWithThumbnails(enrichedSummaries, thumbnails);
+                PublishSummaries(enrichedSummaries, sortMode);
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _rebuildPending = true;
+            _logger.LogError("Authors.Rebuild", ex);
+        }
+        finally
+        {
+            if (ReferenceEquals(_rebuildCts, cts))
+            {
+                _rebuildCts = null;
+                IsLoading = false;
+            }
+            cts.Dispose();
+        }
+    }
+
+    private static List<AuthorSummary> PrepareSummaries(
+        IReadOnlyList<AuthorSortSnapshot> sourceSnapshots,
+        string search,
+        AuthorSortMode sortMode,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return [];
+        var filtered = sourceSnapshots
+            .Where(s => s.Summary.TotalCount > 0)
             .Where(s => MatchesSearch(s, search));
 
-        var sorted = (SortMode switch
+        var sorted = (sortMode switch
         {
             AuthorSortMode.Name => filtered
-                .OrderBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
+                .OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase),
             AuthorSortMode.LastUpdated => filtered
-                .OrderByDescending(s => s.LastUpdated)
-                .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
+                .OrderByDescending(s => s.Summary.LastUpdated)
+                .ThenBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase),
             _ => filtered
-                .OrderByDescending(s => s.TotalCount)
-                .ThenBy(s => s.Display.Name, StringComparer.CurrentCultureIgnoreCase),
-        }).ToList();
+                .OrderByDescending(s => s.Summary.TotalCount)
+                .ThenBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase),
+        }).Select(s => s.Summary).ToList();
 
-        var summaries = EnrichWithThumbnails(sorted);
+        return cancellationToken.IsCancellationRequested ? [] : sorted;
+    }
 
+    private List<ThumbnailCandidate> CaptureThumbnailCandidates()
+    {
+        var cards = _galleryViewModel.Cards;
+        var candidates = new List<ThumbnailCandidate>(cards.Count);
+        foreach (var card in cards)
+        {
+            if (card.Author is { } author)
+            {
+                candidates.Add(new ThumbnailCandidate(
+                    author,
+                    card.FilePath,
+                    card.DateModified));
+            }
+        }
+        return candidates;
+    }
+
+    private void PublishSummaries(
+        IReadOnlyList<AuthorSummary> summaries,
+        AuthorSortMode sortMode)
+    {
         foreach (var tab in ProviderTabs)
         {
             var tabSummaries = summaries
-                .Where(s => s.Display.Key.ProviderId.Equals(tab.ProviderId, StringComparison.OrdinalIgnoreCase))
+                .Where(s => s.Display.Key.ProviderId.Equals(
+                    tab.ProviderId,
+                    StringComparison.OrdinalIgnoreCase))
                 .ToList();
+            tab.Authors = tabSummaries;
 
-            for (int i = 0; i < tabSummaries.Count; i++)
-            {
-                if (i < tab.Authors.Count)
-                {
-                    if (SummaryChanged(tab.Authors[i], tabSummaries[i]))
-                        tab.Authors[i] = tabSummaries[i];
-                }
-                else
-                    tab.Authors.Add(tabSummaries[i]);
-            }
-            while (tab.Authors.Count > tabSummaries.Count)
-                tab.Authors.RemoveAt(tab.Authors.Count - 1);
-
-            var sortByName = SortMode == AuthorSortMode.Name;
-
+            var sortByName = sortMode == AuthorSortMode.Name;
             List<AuthorGroupViewModel> groups = tabSummaries.Count == 0
                 ? []
                 : sortByName
                     ? BuildNameGroups(tabSummaries)
                     : [BuildUngroupedAuthors(tabSummaries)];
 
-            SyncGroups(tab.Groups, groups);
+            // Publish fully-built snapshots atomically. The grouped view must
+            // never observe a chain of intermediate collection mutations.
+            tab.Groups = new ObservableCollection<AuthorGroupViewModel>(groups);
             if (sortByName)
                 SyncIndex(tab);
             else
                 tab.QuickJumpItems.Clear();
-            tab.AuthorCount = tab.Authors.Count;
-            tab.HasAuthors = tab.Authors.Count > 0;
+            tab.AuthorCount = tabSummaries.Count;
+            tab.HasAuthors = tabSummaries.Count > 0;
         }
 
         HasAuthors = ProviderTabs.Any(t => t.HasAuthors);
@@ -246,14 +430,14 @@ public partial class AuthorsViewModel : ObservableObject
     public Task RefreshOneAsync(AuthorSummary summary)
         => _authorInfoService.RefreshAuthorAsync(summary.Display.Key);
 
-    private static bool MatchesSearch(AuthorSummary summary, string search)
+    private static bool MatchesSearch(AuthorSortSnapshot snapshot, string search)
     {
         if (string.IsNullOrWhiteSpace(search))
             return true;
 
-        return summary.Display.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-            summary.Display.Key.Id.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-            summary.Display.ProfileUrl.Contains(search, StringComparison.OrdinalIgnoreCase);
+        return snapshot.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+            snapshot.AuthorId.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+            snapshot.ProfileUrl.Contains(search, StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<AuthorGroupViewModel> BuildNameGroups(IReadOnlyList<AuthorSummary> summaries)
@@ -313,63 +497,6 @@ public partial class AuthorsViewModel : ObservableObject
         return 100;
     }
 
-    private static void SyncGroups(
-        ObservableCollection<AuthorGroupViewModel> target,
-        IReadOnlyList<AuthorGroupViewModel> source)
-    {
-        // Check if the group keys are identical — if so, update in place.
-        // Otherwise clear-and-rebuild to avoid Replace events that trigger
-        // re-entrant layout crashes inside the Pivot's ListView.
-        bool sameStructure = target.Count == source.Count;
-        if (sameStructure)
-        {
-            for (var i = 0; i < target.Count; i++)
-            {
-                if (target[i].Key != source[i].Key) { sameStructure = false; break; }
-            }
-        }
-
-        if (sameStructure)
-        {
-            for (var i = 0; i < source.Count; i++)
-            {
-                SyncAuthors(target[i].Authors, source[i].Authors);
-                target[i].ShowHeader = source[i].ShowHeader;
-                target[i].NotifyCountChanged();
-            }
-            return;
-        }
-
-        target.Clear();
-        foreach (var group in source)
-            target.Add(group);
-    }
-
-    private static bool SummaryChanged(AuthorSummary a, AuthorSummary b) =>
-        !ReferenceEquals(a.Display, b.Display) ||
-        a.SceneCount != b.SceneCount ||
-        a.CharacterCount != b.CharacterCount ||
-        a.CoordinateCount != b.CoordinateCount;
-
-    private static void SyncAuthors(
-        ObservableCollection<AuthorSummary> target,
-        IReadOnlyList<AuthorSummary> source)
-    {
-        for (var i = 0; i < source.Count; i++)
-        {
-            if (i < target.Count)
-            {
-                if (SummaryChanged(target[i], source[i]))
-                    target[i] = source[i];
-            }
-            else
-                target.Add(source[i]);
-        }
-
-        while (target.Count > source.Count)
-            target.RemoveAt(target.Count - 1);
-    }
-
     private static void SyncIndex(AuthorProviderTabViewModel tab)
     {
         var groupMap = tab.Groups.ToDictionary(g => g.Key, StringComparer.Ordinal);
@@ -407,44 +534,34 @@ public partial class AuthorsViewModel : ObservableObject
 
     private const int MaxThumbnailsPerAuthor = 6;
 
-    private List<AuthorSummary> EnrichWithThumbnails(List<AuthorSummary> summaries)
+    private static void EnrichWithThumbnails(
+        List<AuthorSummary> summaries,
+        IReadOnlyDictionary<AuthorDisplay, IReadOnlyList<string>> thumbnails)
     {
-        if (!_settingsViewModel.AuthorLiveTilesEnabled)
-            return summaries;
-
-        var thumbsByAuthor = _thumbnailCache ?? BuildThumbnailCache();
-        if (thumbsByAuthor.Count == 0)
-            return summaries;
-
         for (var i = 0; i < summaries.Count; i++)
         {
-            if (thumbsByAuthor.TryGetValue(summaries[i].Display, out var paths) && paths.Count > 0)
+            if (thumbnails.TryGetValue(summaries[i].Display, out var paths) && paths.Count > 0)
                 summaries[i] = summaries[i] with { ThumbnailPaths = paths };
         }
-
-        return summaries;
     }
 
-    private Dictionary<AuthorDisplay, IReadOnlyList<string>> BuildThumbnailCache()
+    private Dictionary<AuthorDisplay, IReadOnlyList<string>> BuildThumbnailCache(
+        IReadOnlyList<ThumbnailCandidate> candidates,
+        CancellationToken cancellationToken)
     {
         var cache = _thumbnailCacheService;
-        var cards = _galleryViewModel.Cards;
         var result = new Dictionary<AuthorDisplay, IReadOnlyList<string>>();
-
-        if (cards.Count == 0)
-        {
-            _thumbnailCache = result;
-            return result;
-        }
-
         var temp = new Dictionary<AuthorDisplay, List<string>>();
-        foreach (var card in cards)
+        foreach (var candidate in candidates)
         {
-            if (card.Author is not { } author) continue;
-            if (!temp.TryGetValue(author, out var list))
-                temp[author] = list = [];
+            if (cancellationToken.IsCancellationRequested)
+                return result;
+            if (!temp.TryGetValue(candidate.Author, out var list))
+                temp[candidate.Author] = list = [];
             if (list.Count >= MaxThumbnailsPerAuthor) continue;
-            var path = cache.TryGetCachedPath(card);
+            var path = cache.TryGetCachedPath(
+                candidate.FilePath,
+                candidate.DateModified);
             if (path is not null)
                 list.Add(path);
         }
@@ -452,7 +569,17 @@ public partial class AuthorsViewModel : ObservableObject
         foreach (var (key, list) in temp)
             result[key] = list;
 
-        _thumbnailCache = result;
         return result;
     }
+
+    private sealed record AuthorSortSnapshot(
+        AuthorSummary Summary,
+        string Name,
+        string AuthorId,
+        string ProfileUrl);
+
+    private sealed record ThumbnailCandidate(
+        AuthorDisplay Author,
+        string FilePath,
+        DateTime DateModified);
 }

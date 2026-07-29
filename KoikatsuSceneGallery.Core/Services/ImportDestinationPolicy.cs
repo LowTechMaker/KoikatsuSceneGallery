@@ -65,11 +65,6 @@ internal static class ImportDestinationPolicy
         return visualSimilarityVerdict ?? countExceeds;
     }
 
-    public static bool IsDuplicateFilename(
-        IReadOnlySet<string> existingFilenames,
-        string fileName)
-        => existingFilenames.Contains(fileName);
-
     public static ImportFileConflict ClassifyFileConflict(
         bool destinationExists,
         bool filesAreIdentical)

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Services;
@@ -49,53 +50,87 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
-    public Task ScanFoldersAsync(
+    public async Task ScanFoldersAsync(
         IEnumerable<string> folderPaths,
-        Action<List<TCard>> onBatch,
+        Func<IReadOnlyList<TCard>, CancellationToken, Task> onBatch,
         CancellationToken cancellationToken = default,
         int batchSize = 200)
     {
-        return Task.Run(() =>
+        ArgumentNullException.ThrowIfNull(onBatch);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+
+        using var scanCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var scanToken = scanCancellation.Token;
+        var channel = Channel.CreateBounded<TCard>(new BoundedChannelOptions(batchSize * 2)
         {
-            var options = CreateScanOptions(cancellationToken);
-            var batchLock = new object();
-            var batch = new List<TCard>(batchSize);
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait,
+            AllowSynchronousContinuations = false,
+        });
 
-            void Accumulate(TCard card)
+        var producer = Task.Run(async () =>
+        {
+            Exception? completionError = null;
+            try
             {
-                List<TCard>? ready = null;
-                lock (batchLock)
+                var options = CreateScanOptions(scanToken);
+                foreach (var folder in folderPaths)
                 {
-                    batch.Add(card);
-                    if (batch.Count >= batchSize)
-                    {
-                        ready = batch;
-                        batch = new List<TCard>(batchSize);
-                    }
+                    scanToken.ThrowIfCancellationRequested();
+                    if (!Directory.Exists(folder)) continue;
+
+                    await Parallel.ForEachAsync(
+                        EnumerateCardFiles(folder),
+                        options,
+                        async (file, token) =>
+                        {
+                            token.ThrowIfCancellationRequested();
+                            var card = TryCreateCard(file);
+                            if (card is not null)
+                                await channel.Writer.WriteAsync(card, token)
+                                    .ConfigureAwait(false);
+                        }).ConfigureAwait(false);
                 }
-                if (ready != null)
-                    onBatch(ready);
             }
-
-            foreach (var folder in folderPaths)
+            catch (Exception ex)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!Directory.Exists(folder)) continue;
-                Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var card = TryCreateCard(file);
-                    if (card != null)
-                        Accumulate(card);
-                });
+                completionError = ex;
+            }
+            finally
+            {
+                channel.Writer.TryComplete(completionError);
+            }
+        }, CancellationToken.None);
+
+        try
+        {
+            var batch = new List<TCard>(batchSize);
+            await foreach (var card in channel.Reader
+                               .ReadAllAsync(scanToken)
+                               .ConfigureAwait(false))
+            {
+                batch.Add(card);
+                if (batch.Count < batchSize)
+                    continue;
+
+                var ready = batch;
+                batch = new List<TCard>(batchSize);
+                await onBatch(ready, scanToken).ConfigureAwait(false);
             }
 
             if (batch.Count > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                onBatch(batch);
+                scanToken.ThrowIfCancellationRequested();
+                await onBatch(batch, scanToken).ConfigureAwait(false);
             }
-        }, cancellationToken);
+        }
+        finally
+        {
+            scanCancellation.Cancel();
+            await producer.ConfigureAwait(false);
+        }
     }
 
     private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)

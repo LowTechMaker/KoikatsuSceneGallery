@@ -73,6 +73,7 @@ public sealed class AuthorSourceCoordinator
 
     private async Task LoadAsync(bool forceReload = false)
     {
+        using var notificationDeferral = _authorInfoService.DeferNotifications();
         var loadTasks = new List<Task>(3);
         AwaitOrLoad(loadTasks, _galleryViewModel.Cards.Count, _galleryViewModel.IsLoading, _galleryViewModel.LoadCardsCommand, forceReload);
         AwaitOrLoad(loadTasks, _characterGalleryViewModel.Cards.Count, _characterGalleryViewModel.IsLoading, _characterGalleryViewModel.LoadCardsCommand, forceReload);

@@ -15,7 +15,8 @@ public sealed record TagDisplay(string Display);
 public sealed partial class PostDetailPage : Page
 {
     public PostDetailViewModel ViewModel { get; } = new(
-        App.Services.GetRequiredService<IAppLogger>());
+        App.Services.GetRequiredService<IAppLogger>(),
+        App.Services.GetRequiredService<ThumbnailCacheService>());
 
     private CancellationTokenSource? _cts;
 
@@ -30,11 +31,13 @@ public sealed partial class PostDetailPage : Page
         base.OnNavigatedTo(e);
         if (e.Parameter is AuthorPost post)
         {
+            _cts = new CancellationTokenSource();
             ViewModel.Load(post);
+            ViewModel.LoadLocalImagesAsync(post, _cts.Token)
+                .Observe(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.LoadLocalImages");
             RenderDescription();
             if (!post.IsDetailLoaded && App.Services.GetService<AuthorPostService>() is { } postService)
             {
-                _cts = new CancellationTokenSource();
                 ViewModel.LoadDetailAsync(postService, _cts.Token)
                     .Observe(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.Load");
             }
@@ -49,7 +52,7 @@ public sealed partial class PostDetailPage : Page
         _cts = null;
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
+    private void GoBack_Click(object sender, RoutedEventArgs e) => App.TryGoBack(Frame);
 
     private void LocalImage_ItemClick(object sender, ItemClickEventArgs e)
     {
@@ -71,13 +74,6 @@ public sealed partial class PostDetailPage : Page
         {
             if (ViewModel.Post is { } post)
                 await Windows.System.Launcher.LaunchUriAsync(new Uri(post.ArtworkUrl));
-        });
-
-    private void Save_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.Save", async () =>
-        {
-            if (App.Services.GetService<AuthorPostService>() is { } postService)
-                await ViewModel.SaveToCacheAsync(postService, _cts?.Token ?? CancellationToken.None);
         });
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

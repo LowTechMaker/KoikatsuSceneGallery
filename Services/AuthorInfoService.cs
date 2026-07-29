@@ -41,6 +41,7 @@ public sealed class AuthorInfoService
 {
     private readonly IReadOnlyList<IFolderAuthorProvider> _providers;
     private readonly DispatcherQueue _dispatcher;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly IAppLogger _logger;
 
     // Folder-chain resolution memoized per directory; cleared when the
@@ -61,11 +62,20 @@ public sealed class AuthorInfoService
     };
     private List<string> _roots = [];
     private bool _isRebuilding;
+    private int _notificationDeferralCount;
+    private bool _hasDeferredAuthorChanges;
 
     /// <summary>Fired (on the UI thread) whenever author assignments or counts change.</summary>
     public event Action? AuthorsChanged;
 
-    public AuthorInfoService(IReadOnlyList<IFolderAuthorProvider> providers, DispatcherQueue dispatcher, IAppLogger logger)
+    /// <summary>Fired (on the UI thread) when a known author's profile fields change.</summary>
+    public event Action? AuthorProfilesChanged;
+
+    public AuthorInfoService(
+        IReadOnlyList<IFolderAuthorProvider> providers,
+        DispatcherQueue dispatcher,
+        ThumbnailCacheService thumbnailCacheService,
+        IAppLogger logger)
     {
         _providers = providers
             .GroupBy(p => p.ProviderId, StringComparer.OrdinalIgnoreCase)
@@ -75,6 +85,7 @@ public sealed class AuthorInfoService
             .Select(p => new AuthorProviderInfo(p.ProviderId, GetDisplayName(p)))
             .ToList();
         _dispatcher = dispatcher;
+        _thumbnailCacheService = thumbnailCacheService;
         _logger = logger;
     }
 
@@ -126,10 +137,21 @@ public sealed class AuthorInfoService
                     _counts[kind].Clear();
                     _updatedTimes[kind].Clear();
                     PruneOrphanedDisplays();
-                    AuthorsChanged?.Invoke();
+                    NotifyAuthorsChanged();
                     break;
             }
         };
+    }
+
+    /// <summary>
+    /// Coalesces assignment/count notifications until the returned scope is
+    /// disposed. Scanners can therefore add thousands of cards without
+    /// rebuilding the Authors page once per collection change.
+    /// </summary>
+    public IDisposable DeferNotifications()
+    {
+        _notificationDeferralCount++;
+        return new NotificationDeferral(this);
     }
 
     /// <summary>Snapshot of all known authors with per-gallery card counts.</summary>
@@ -188,7 +210,7 @@ public sealed class AuthorInfoService
             _isRebuilding = false;
         }
 
-        AuthorsChanged?.Invoke();
+        NotifyAuthorsChanged();
     }
 
     /// <summary>Re-fetches one author from the network, bypassing the plugin's cache.</summary>
@@ -198,7 +220,7 @@ public sealed class AuthorInfoService
         if (provider is null) return;
         var info = await provider.GetAuthorInfoAsync(key, forceRefresh: true, ct);
         if (info is not null)
-            ApplyInfo(info);
+            await ApplyInfoAsync(info, ct);
     }
 
     private void AssignAuthor(IAuthorOwner card, AuthorCardKind kind)
@@ -362,7 +384,7 @@ public sealed class AuthorInfoService
 
             var info = await provider.GetAuthorInfoAsync(key, forceRefresh: false, CancellationToken.None);
             if (info is not null)
-                ApplyInfo(info);
+                await ApplyInfoAsync(info, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -371,21 +393,53 @@ public sealed class AuthorInfoService
         }
     }
 
-    private void ApplyInfo(AuthorInfo info)
+    private async Task ApplyInfoAsync(AuthorInfo info, CancellationToken ct)
     {
+        string? safeAvatarPath = null;
+        if (!string.IsNullOrWhiteSpace(info.AvatarFilePath)
+            && File.Exists(info.AvatarFilePath))
+        {
+            safeAvatarPath = await _thumbnailCacheService
+                .EnsureThumbnailAsync(
+                    info.AvatarFilePath,
+                    File.GetLastWriteTime(info.AvatarFilePath),
+                    ct)
+                .ConfigureAwait(false);
+        }
+
         _dispatcher.TryEnqueue(() =>
         {
             if (!_displays.TryGetValue(info.Key, out var display)) return;
+
+            var changed = !string.Equals(display.Name, info.Name, StringComparison.Ordinal)
+                || !string.Equals(display.AvatarPath, safeAvatarPath, StringComparison.OrdinalIgnoreCase);
             display.Name = info.Name;
-            display.AvatarPath = info.AvatarFilePath;
-            NotifyAuthorsChanged();
+            display.AvatarPath = safeAvatarPath;
+            if (changed)
+                AuthorProfilesChanged?.Invoke();
         });
     }
 
     private void NotifyAuthorsChanged()
     {
-        if (!_isRebuilding)
-            AuthorsChanged?.Invoke();
+        if (_isRebuilding || _notificationDeferralCount > 0)
+        {
+            _hasDeferredAuthorChanges = true;
+            return;
+        }
+
+        _hasDeferredAuthorChanges = false;
+        AuthorsChanged?.Invoke();
+    }
+
+    private void EndNotificationDeferral()
+    {
+        if (_notificationDeferralCount == 0)
+            return;
+
+        _notificationDeferralCount--;
+        if (_notificationDeferralCount == 0 && _hasDeferredAuthorChanges && !_isRebuilding)
+            NotifyAuthorsChanged();
     }
 
     private IFolderAuthorProvider? FindProvider(string providerId)
@@ -471,5 +525,16 @@ public sealed class AuthorInfoService
         }
 
         return string.IsNullOrWhiteSpace(provider.Name) ? provider.ProviderId : provider.Name;
+    }
+
+    private sealed class NotificationDeferral(AuthorInfoService owner) : IDisposable
+    {
+        private AuthorInfoService? _owner = owner;
+
+        public void Dispose()
+        {
+            var owner = Interlocked.Exchange(ref _owner, null);
+            owner?.EndNotificationDeferral();
+        }
     }
 }
