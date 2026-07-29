@@ -14,6 +14,8 @@ namespace KoikatsuSceneGallery.ViewModels;
 
 public partial class ImportViewModel : ObservableObject
 {
+    private const int AnalyzingPreviewLimit = 8;
+
     private readonly ImportService _importService;
     private readonly PluginService _pluginService;
     private readonly DispatcherQueue _dispatcher;
@@ -74,6 +76,7 @@ public partial class ImportViewModel : ObservableObject
     public partial bool HasUnknownItems { get; set; }
 
     public int AnalysisPendingCount => AnalyzingItems.Count;
+    public IReadOnlyList<ImportItem> AnalyzingPreviewItems { get; private set; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AnalysisProgressPercent))]
@@ -174,6 +177,17 @@ public partial class ImportViewModel : ObservableObject
     {
         HasAnalyzingItems = AnalyzingItems.Count > 0;
         OnPropertyChanged(nameof(AnalysisPendingCount));
+        RefreshAnalyzingPreview();
+    }
+
+    private void RefreshAnalyzingPreview()
+    {
+        var preview = AnalyzingItems.Take(AnalyzingPreviewLimit).ToList();
+        if (AnalyzingPreviewItems.SequenceEqual(preview))
+            return;
+
+        AnalyzingPreviewItems = preview;
+        OnPropertyChanged(nameof(AnalyzingPreviewItems));
     }
 
     private void OnFetchFailedGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
