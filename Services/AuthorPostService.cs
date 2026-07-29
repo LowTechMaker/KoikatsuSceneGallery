@@ -14,14 +14,19 @@ public sealed class AuthorPostService
     private sealed class PostAccumulator
     {
         public required string ProviderId { get; init; }
+        public required string ArtworkId { get; init; }
         public string? Title { get; set; }
+        public PostMetadataDocument? Metadata { get; set; }
         public List<string> FilePaths { get; } = [];
+        public HashSet<string> AuthorDirectories { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
     }
 
     private readonly IReadOnlyList<ICardImportProvider> _importProviders;
     private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly SettingsService _settingsService;
     private readonly IAppLogger _logger;
+    private readonly PostMetadataStore _postMetadataStore = new();
 
     public AuthorPostService(
         IReadOnlyList<ICardImportProvider> importProviders,
@@ -110,7 +115,7 @@ public sealed class AuthorPostService
                                     var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
                                     if (parsed is null || parsed.Key != authorKey) continue;
 
-                                    ScanAuthorDirectory(authorDir, authorKey.ProviderId, posts, ct);
+                                    ScanAuthorDirectory(authorDir, authorKey, posts, ct);
                                 }
                             }
                             catch (OperationCanceledException) { throw; }
@@ -121,18 +126,29 @@ public sealed class AuthorPostService
             }
 
             var result = new List<AuthorPost>(posts.Count);
-            foreach (var (id, post) in posts)
+            foreach (var post in posts.Values)
             {
-                var artworkId = new ArtworkId(post.ProviderId, id);
+                var artworkId = new ArtworkId(post.ProviderId, post.ArtworkId);
                 var provider = FindProvider(post.ProviderId);
                 var distinctPaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var metadata = post.Metadata;
                 result.Add(new AuthorPost
                 {
                     ArtworkId = artworkId,
                     ArtworkUrl = provider?.GetArtworkUrl(artworkId) ?? "",
-                    Title = post.Title,
+                    Title = metadata?.Title ?? post.Title,
+                    Description = metadata?.Description,
+                    Rating = metadata is null
+                        ? ContentRating.AllAges
+                        : (ContentRating)metadata.Rating,
+                    Tags = metadata?.Tags
+                        .Select(static tag => new ArtworkTag(tag.Name, tag.TranslatedName))
+                        .ToList(),
+                    IsDetailLoaded = metadata is not null,
+                    IsSaved = metadata is not null,
                     LocalFileCount = distinctPaths.Count,
                     LocalFilePaths = distinctPaths,
+                    AuthorDirectories = [.. post.AuthorDirectories],
                 });
             }
 
@@ -144,22 +160,67 @@ public sealed class AuthorPostService
     /// <summary>
     /// Fetches detailed artwork info from the provider (or its cache).
     /// </summary>
-    public Task<ArtworkInfo?> FetchArtworkDetailAsync(
-        ArtworkId id,
-        CancellationToken ct,
-        bool saveToLocalCache)
+    public async Task<ArtworkInfo?> FetchArtworkDetailAsync(
+        AuthorPost post,
+        CancellationToken ct)
     {
-        var provider = FindProvider(id.ProviderId);
-        return provider?.FetchArtworkInfoAsync(id, ct, saveToLocalCache)
-            ?? Task.FromResult<ArtworkInfo?>(null);
+        ArgumentNullException.ThrowIfNull(post);
+
+        var provider = FindProvider(post.ArtworkId.ProviderId);
+        if (provider is null)
+            return null;
+
+        var info = await provider.FetchArtworkInfoAsync(
+            post.ArtworkId,
+            ct,
+            saveToLocalCache: true).ConfigureAwait(false);
+        if (info is null)
+            return null;
+
+        foreach (var authorDirectory in post.AuthorDirectories
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!post.LocalFilePaths.Any(path =>
+                    File.Exists(path) && IsWithinDirectory(path, authorDirectory)))
+            {
+                continue;
+            }
+
+            try
+            {
+                await _postMetadataStore.WriteAsync(
+                    authorDirectory,
+                    PostMetadataMapper.ToDocument(info),
+                    ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "AuthorPosts.WritePostMetadata",
+                    ex,
+                    _postMetadataStore.GetSidecarPath(
+                        authorDirectory,
+                        info.ArtworkId.ProviderId,
+                        info.ArtworkId.Id));
+            }
+        }
+
+        return info;
     }
 
     private void ScanAuthorDirectory(
         string authorDir,
-        string providerId,
+        AuthorKey authorKey,
         Dictionary<string, PostAccumulator> posts,
         CancellationToken ct)
     {
+        var providerId = authorKey.ProviderId;
+        var scanSucceeded = true;
         try
         {
             foreach (var file in Directory.EnumerateFiles(authorDir, "*.png"))
@@ -167,11 +228,15 @@ public sealed class AuthorPostService
                 ct.ThrowIfCancellationRequested();
                 var artworkId = TryParseFilename(Path.GetFileName(file), providerId);
                 if (artworkId is not null)
-                    AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file);
+                    AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file, authorDir);
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { _logger.LogError("AuthorPosts.ScanAuthorFiles", ex, authorDir); }
+        catch (Exception ex)
+        {
+            scanSucceeded = false;
+            _logger.LogError("AuthorPosts.ScanAuthorFiles", ex, authorDir);
+        }
 
         try
         {
@@ -179,6 +244,13 @@ public sealed class AuthorPostService
             {
                 ct.ThrowIfCancellationRequested();
                 var folderName = Path.GetFileName(subDir);
+                if (folderName.Equals(
+                        PostMetadataStore.MetadataDirectoryName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 var artworkId = TryParseArtworkFolderName(folderName, providerId);
 
                 var localFiles = new List<string>();
@@ -196,39 +268,165 @@ public sealed class AuthorPostService
                         {
                             var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
                             if (fromFile is not null)
-                                AddOrUpdate(posts, fromFile.ProviderId, fromFile.Id, null, file);
+                                AddOrUpdate(
+                                    posts,
+                                    fromFile.ProviderId,
+                                    fromFile.Id,
+                                    null,
+                                    file,
+                                    authorDir);
                         }
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { _logger.LogError("AuthorPosts.ScanArtworkFiles", ex, subDir); }
+                catch (Exception ex)
+                {
+                    scanSucceeded = false;
+                    _logger.LogError("AuthorPosts.ScanArtworkFiles", ex, subDir);
+                }
 
-                if (artworkId is not null)
-                    AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, titleFromFolder, localFiles);
+                if (artworkId is not null && localFiles.Count > 0)
+                    AddOrUpdate(
+                        posts,
+                        artworkId.ProviderId,
+                        artworkId.Id,
+                        titleFromFolder,
+                        localFiles,
+                        authorDir);
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { _logger.LogError("AuthorPosts.ScanAuthorDirectories", ex, authorDir); }
+        catch (Exception ex)
+        {
+            scanSucceeded = false;
+            _logger.LogError("AuthorPosts.ScanAuthorDirectories", ex, authorDir);
+        }
+
+        ReconcileSidecars(
+            authorDir,
+            authorKey,
+            posts,
+            deleteOrphans: scanSucceeded,
+            ct);
+    }
+
+    private void ReconcileSidecars(
+        string authorDir,
+        AuthorKey authorKey,
+        Dictionary<string, PostAccumulator> posts,
+        bool deleteOrphans,
+        CancellationToken ct)
+    {
+        IReadOnlyList<PostMetadataDocument> documents;
+        try
+        {
+            documents = _postMetadataStore.ReadAll(authorDir);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("AuthorPosts.ReadPostMetadata", ex, authorDir);
+            return;
+        }
+
+        foreach (var document in documents)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!document.ProviderId.Equals(
+                    authorKey.ProviderId,
+                    StringComparison.OrdinalIgnoreCase)
+                || !document.AuthorId.Equals(
+                    authorKey.Id,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var key = BuildPostKey(document.ProviderId, document.ArtworkId);
+            if (posts.TryGetValue(key, out var post)
+                && post.AuthorDirectories.Contains(authorDir))
+            {
+                if (post.Metadata is null
+                    || document.FetchedAt > post.Metadata.FetchedAt)
+                {
+                    post.Metadata = document;
+                }
+                continue;
+            }
+
+            if (!deleteOrphans)
+                continue;
+
+            try
+            {
+                _postMetadataStore.Delete(
+                    authorDir,
+                    document.ProviderId,
+                    document.ArtworkId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "AuthorPosts.DeleteOrphanPostMetadata",
+                    ex,
+                    _postMetadataStore.GetSidecarPath(
+                        authorDir,
+                        document.ProviderId,
+                        document.ArtworkId));
+            }
+        }
     }
 
     private static void AddOrUpdate(
         Dictionary<string, PostAccumulator> posts,
-        string providerId, string id, string? title, string filePath)
-        => AddOrUpdate(posts, providerId, id, title, [filePath]);
+        string providerId,
+        string id,
+        string? title,
+        string filePath,
+        string authorDirectory)
+        => AddOrUpdate(
+            posts,
+            providerId,
+            id,
+            title,
+            [filePath],
+            authorDirectory);
 
     private static void AddOrUpdate(
         Dictionary<string, PostAccumulator> posts,
-        string providerId, string id, string? title, IReadOnlyList<string> filePaths)
+        string providerId,
+        string id,
+        string? title,
+        IReadOnlyList<string> filePaths,
+        string authorDirectory)
     {
-        if (!posts.TryGetValue(id, out var post))
+        var key = BuildPostKey(providerId, id);
+        if (!posts.TryGetValue(key, out var post))
         {
-            post = new PostAccumulator { ProviderId = providerId };
-            posts[id] = post;
+            post = new PostAccumulator
+            {
+                ProviderId = providerId,
+                ArtworkId = id,
+            };
+            posts[key] = post;
         }
 
         post.Title ??= title;
         foreach (var filePath in filePaths)
             post.FilePaths.Add(filePath);
+        if (filePaths.Count > 0)
+            post.AuthorDirectories.Add(authorDirectory);
+    }
+
+    private static string BuildPostKey(string providerId, string artworkId)
+        => $"{providerId}\u001F{artworkId}";
+
+    private static bool IsWithinDirectory(string path, string directory)
+    {
+        var relativePath = Path.GetRelativePath(directory, path);
+        return !relativePath.Equals("..", StringComparison.Ordinal)
+            && !relativePath.StartsWith(
+                $"..{Path.DirectorySeparatorChar}",
+                StringComparison.Ordinal);
     }
 
     private static string? ExtractTitleFromFolderName(string folderName, string artworkId)

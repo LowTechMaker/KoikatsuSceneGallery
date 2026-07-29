@@ -13,6 +13,10 @@ public partial class App : Application
 {
     public static AppServiceRegistry Services { get; } = new();
 
+    internal static bool TryGoBack(Frame frame)
+        => Current is App { _mainWindow: { } mainWindow }
+            && mainWindow.TryGoBack(frame);
+
     private readonly IAppLogger _logger = new CrashLogLogger();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
@@ -39,6 +43,10 @@ public partial class App : Application
             Path.Combine(AppPaths.LocalFolder, "Plugins"));
         InitializeComponent();
 
+#if DEBUG
+        AppDomain.CurrentDomain.FirstChanceException += DebugFirstChanceException;
+#endif
+
         // No debugger is attached in a packaged-zip test build, so route every
         // flavour of unhandled exception to a crash log the tester can hand back.
         // UI-thread exceptions are also marked handled so a single bad operation
@@ -56,6 +64,38 @@ public partial class App : Application
             e.SetObserved();
         };
     }
+
+#if DEBUG
+    private static int _debugFirstChanceCount;
+
+    private static void DebugFirstChanceException(
+        object? sender,
+        System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+    {
+        var sequence = Interlocked.Increment(ref _debugFirstChanceCount);
+        if (sequence > 500)
+            return;
+
+        var exception = e.Exception;
+        var projectFrame = exception.StackTrace?
+            .Split(Environment.NewLine)
+            .FirstOrDefault(line =>
+                line.Contains("KoikatsuSceneGallery", StringComparison.Ordinal)
+                || line.Contains("SceneGallery", StringComparison.Ordinal))
+            ?.Trim();
+        var message = exception.Message
+            .Replace('\r', ' ')
+            .Replace('\n', ' ');
+
+        Debug.WriteLine(
+            $"[ManagedFirstChance #{sequence}] "
+            + $"T{Environment.CurrentManagedThreadId} "
+            + $"{exception.GetType().FullName} "
+            + $"HR=0x{exception.HResult:X8} "
+            + $"{message} "
+            + $"{projectFrame}");
+    }
+#endif
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
         => UiEventGuard.Run(_logger, "App.OnLaunched", () => OnLaunchedAsync(args));
@@ -120,6 +160,7 @@ public partial class App : Application
         var authorInfoService = new AuthorInfoService(
             _pluginService.AuthorProviders,
             dispatcherQueue,
+            _thumbnailCacheService,
             _logger);
 
         GalleryViewModel? galleryViewModel = null;
@@ -196,7 +237,8 @@ public partial class App : Application
             dispatcherQueue,
             settingsViewModel,
             _thumbnailCacheService,
-            galleryViewModel);
+            galleryViewModel,
+            _logger);
         var authorSourceCoordinator = new AuthorSourceCoordinator(
             authorInfoService,
             settingsViewModel,

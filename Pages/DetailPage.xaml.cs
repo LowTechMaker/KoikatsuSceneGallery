@@ -83,7 +83,7 @@ public sealed partial class DetailPage : Page
         if (next != null) ShowCard(next);
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
+    private void GoBack_Click(object sender, RoutedEventArgs e) => App.TryGoBack(Frame);
     private void PrevButton_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void NextButton_Click(object sender, RoutedEventArgs e) => Navigate(1);
 

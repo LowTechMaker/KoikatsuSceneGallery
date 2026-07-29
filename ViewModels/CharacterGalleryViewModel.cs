@@ -97,40 +97,29 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             _cardIndex.Clear();
             _versionIndex.Clear();
 
-            await _cardService.ScanFoldersAsync(paths, batch =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var processed = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
-                {
-                    if (cancellationToken.IsCancellationRequested)
+            await _cardService.ScanFoldersAsync(
+                paths,
+                (batch, token) => EnqueueBatchAsync(
+                    () =>
                     {
-                        processed.TrySetResult();
-                        return;
-                    }
-                    using (CardsView.DeferRefresh())
-                    {
-                        foreach (var card in batch)
+                        using (CardsView.DeferRefresh())
                         {
-                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                            Cards.Add(card);
+                            foreach (var card in batch)
+                            {
+                                if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
+                                Cards.Add(card);
+                            }
                         }
-                    }
-                    processed.TrySetResult();
-                });
-                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
-                    .GetAwaiter().GetResult();
-            }, cancellationToken);
+                    },
+                    "Unable to dispatch character card batch.",
+                    token),
+                cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
         }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("CharacterGallery.LoadCanceled", ex);
-        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)

@@ -32,7 +32,27 @@ public abstract partial class CardBase : ObservableObject
         }
     }
 
-    partial void OnThumbnailPathChanged(string? value) => _thumbnailSource = null;
+    partial void OnThumbnailPathChanged(string? value)
+    {
+        _thumbnailSource = null;
+        if (value is not null)
+            ThumbnailGenerationFailed = false;
+    }
 
     public bool HasThumbnail => ThumbnailPath != null;
+
+    /// <summary>
+    /// A terminal failure for this card snapshot. A new scan creates a new card
+    /// (and therefore retries if the source file's timestamp or contents changed).
+    /// </summary>
+    private int _thumbnailGenerationFailed;
+    public bool ThumbnailGenerationFailed
+    {
+        get => Volatile.Read(ref _thumbnailGenerationFailed) != 0;
+        internal set => Volatile.Write(
+            ref _thumbnailGenerationFailed,
+            value ? 1 : 0);
+    }
+
+    public bool NeedsThumbnail => !HasThumbnail && !ThumbnailGenerationFailed;
 }

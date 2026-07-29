@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
+using Microsoft.UI.Xaml.Media.Imaging;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
@@ -11,12 +13,7 @@ public sealed class PostImageGroupViewModel
     public AuthorPost Post { get; }
     public ObservableCollection<LocalImagePreview> Images { get; } = [];
 
-    public PostImageGroupViewModel(AuthorPost post)
-    {
-        Post = post;
-        foreach (var path in post.LocalFilePaths.Where(File.Exists))
-            Images.Add(new LocalImagePreview(new Uri(path.Replace("#", "%23")), Path.GetFileName(path), path));
-    }
+    public PostImageGroupViewModel(AuthorPost post) => Post = post;
 }
 
 public partial class AuthorDetailViewModel : ObservableObject
@@ -25,24 +22,32 @@ public partial class AuthorDetailViewModel : ObservableObject
     private readonly GalleryViewModel _galleryViewModel;
     private readonly CharacterGalleryViewModel _characterGalleryViewModel;
     private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
+    private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly IAppLogger _logger;
+    private AuthorDisplay? _subscribedAuthor;
 
     public AuthorDetailViewModel(
         AuthorPostService? authorPostService,
         GalleryViewModel galleryViewModel,
         CharacterGalleryViewModel characterGalleryViewModel,
         CoordinateGalleryViewModel coordinateGalleryViewModel,
+        ThumbnailCacheService thumbnailCacheService,
         IAppLogger logger)
     {
         _authorPostService = authorPostService;
         _galleryViewModel = galleryViewModel;
         _characterGalleryViewModel = characterGalleryViewModel;
         _coordinateGalleryViewModel = coordinateGalleryViewModel;
+        _thumbnailCacheService = thumbnailCacheService;
         _logger = logger;
     }
 
     [ObservableProperty]
     public partial AuthorDisplay? Author { get; set; }
+
+    public string AuthorName => Author?.Name ?? "";
+
+    public BitmapImage? AuthorAvatarSource => Author?.AvatarSource;
 
     public ObservableCollection<SceneCard> Scenes { get; } = [];
     public ObservableCollection<CharacterCard> Characters { get; } = [];
@@ -68,10 +73,62 @@ public partial class AuthorDetailViewModel : ObservableObject
     public bool CanLoadPosts => Author is { } author
                                 && _authorPostService?.CanScanPosts(author.Key) == true;
 
+    partial void OnAuthorChanging(AuthorDisplay? value)
+    {
+        UnsubscribeAuthorChanges();
+    }
+
+    partial void OnAuthorChanged(AuthorDisplay? value)
+    {
+        SubscribeAuthorChanges(value);
+
+        OnPropertyChanged(nameof(AuthorName));
+        OnPropertyChanged(nameof(AuthorAvatarSource));
+        OnPropertyChanged(nameof(CanLoadPosts));
+    }
+
+    private void SubscribeAuthorChanges(AuthorDisplay? author)
+    {
+        if (ReferenceEquals(_subscribedAuthor, author))
+            return;
+
+        UnsubscribeAuthorChanges();
+        if (author is null)
+            return;
+
+        author.PropertyChanged += Author_PropertyChanged;
+        _subscribedAuthor = author;
+    }
+
+    private void UnsubscribeAuthorChanges()
+    {
+        if (_subscribedAuthor is null)
+            return;
+
+        _subscribedAuthor.PropertyChanged -= Author_PropertyChanged;
+        _subscribedAuthor = null;
+    }
+
+    private void Author_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AuthorDisplay.Name))
+            OnPropertyChanged(nameof(AuthorName));
+        else if (e.PropertyName == nameof(AuthorDisplay.AvatarSource))
+            OnPropertyChanged(nameof(AuthorAvatarSource));
+    }
+
     public void Load(AuthorSummary summary)
     {
         Author = summary.Display;
+        // Load can be called with the same Author instance after a cached page
+        // was unloaded, in which case the generated property setter is a no-op.
+        SubscribeAuthorChanges(Author);
         var key = summary.Display.Key;
+
+        Posts.Clear();
+        PostGroups.Clear();
+        PostCount = 0;
+        IsLoadingPosts = false;
 
         Scenes.Clear();
         foreach (var card in _galleryViewModel.Cards)
@@ -100,6 +157,8 @@ public partial class AuthorDetailViewModel : ObservableObject
         OnPropertyChanged(nameof(CanLoadPosts));
     }
 
+    public void Unload() => UnsubscribeAuthorChanges();
+
     public async Task LoadPostsAsync(AuthorPostService postService, CancellationToken ct)
     {
         if (Author is null || !CanLoadPosts) return;
@@ -108,19 +167,36 @@ public partial class AuthorDetailViewModel : ObservableObject
         try
         {
             var posts = await postService.ScanAuthorPostsAsync(Author.Key, ct);
-            var groups = await Task.Run(
-                () => posts.Select(p => new PostImageGroupViewModel(p)).ToList(), ct);
-
+            ct.ThrowIfCancellationRequested();
             Posts.Clear();
             PostGroups.Clear();
-            for (int i = 0; i < posts.Count; i++)
+            foreach (var post in posts)
             {
-                Posts.Add(posts[i]);
-                PostGroups.Add(groups[i]);
+                Posts.Add(post);
+                PostGroups.Add(new PostImageGroupViewModel(post));
             }
             PostCount = Posts.Count;
+
+            foreach (var group in PostGroups)
+            {
+                foreach (var path in group.Post.LocalFilePaths.Where(File.Exists))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(
+                        path,
+                        File.GetLastWriteTime(path),
+                        ct);
+                    ct.ThrowIfCancellationRequested();
+                    group.Images.Add(new LocalImagePreview(
+                        thumbnailPath is null
+                            ? null
+                            : new BitmapImage(new Uri(thumbnailPath)) { DecodePixelWidth = 160 },
+                        Path.GetFileName(path),
+                        path));
+                }
+            }
         }
-        catch (OperationCanceledException ex) { _logger.LogError("AuthorDetail.LoadPostsCanceled", ex, Author?.Key.Id); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         finally
         {
             IsLoadingPosts = false;

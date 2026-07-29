@@ -15,13 +15,22 @@ public sealed partial class AuthorsPage : Page
     {
         ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
         InitializeComponent();
-        NavigationCacheMode = NavigationCacheMode.Required;
+        NavigationCacheMode = NavigationCacheMode.Enabled;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.Services.GetRequiredService<AuthorSourceCoordinator>().Refresh();
+        ViewModel.Activate();
+        App.Services.GetRequiredService<AuthorSourceCoordinator>()
+            .EnsureLoadedAsync()
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "Authors.EnsureLoaded");
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.Deactivate();
+        base.OnNavigatedFrom(e);
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -80,15 +89,19 @@ public sealed partial class AuthorsPage : Page
 
     private void JumpToGroup(AuthorGroupViewModel group)
     {
+        var firstAuthor = group.Authors.FirstOrDefault();
+        if (firstAuthor is null)
+            return;
+
         DispatcherQueue.TryEnqueue(() =>
         {
             if (AuthorsPivot.SelectedItem is not AuthorProviderTabViewModel tab)
                 return;
 
             if (AuthorsPivot.ContainerFromItem(tab) is DependencyObject container
-                && VisualTreeSearch.FindDescendantByName<ListView>(container, "GroupListView") is { } listView)
+                && VisualTreeSearch.FindDescendantByName<GridView>(container, "AuthorsGrid") is { } gridView)
             {
-                listView.ScrollIntoView(group, ScrollIntoViewAlignment.Leading);
+                gridView.ScrollIntoView(firstAuthor, ScrollIntoViewAlignment.Leading);
             }
         });
     }

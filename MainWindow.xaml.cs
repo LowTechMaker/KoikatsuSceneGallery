@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using KoikatsuSceneGallery.Pages;
@@ -12,7 +14,14 @@ namespace KoikatsuSceneGallery;
 
 public sealed partial class MainWindow : Window
 {
+    private static readonly TimeSpan NavigationDebounceInterval = TimeSpan.FromMilliseconds(100);
+
     private bool _suppressLibrarySelectionChanged;
+    private DispatcherQueueTimer? _navigationDebounceTimer;
+    private Type? _pendingPageType;
+    private bool _pendingReplaceCurrentLibraryPage;
+    private bool _isBackNavigationInProgress;
+    private bool _releaseBackNavigationOnNextFrame;
 
     public MainWindow()
     {
@@ -95,9 +104,32 @@ public sealed partial class MainWindow : Window
     }
 
     private void TitleBar_BackRequested(TitleBar sender, object args)
+        => TryGoBack(NavFrame);
+
+    internal bool TryGoBack(Frame frame)
     {
-        if (NavFrame.CanGoBack)
-            NavFrame.GoBack();
+        if (!ReferenceEquals(frame, NavFrame)
+            || _isBackNavigationInProgress
+            || !frame.CanGoBack)
+        {
+            return false;
+        }
+
+        _isBackNavigationInProgress = true;
+        AppTitleBar.IsBackButtonEnabled = false;
+
+        try
+        {
+            frame.GoBack();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            CompleteBackNavigation();
+            App.Services.GetRequiredService<IAppLogger>()
+                .LogError("MainWindow.GoBack", ex);
+            return false;
+        }
     }
 
     private void ApplyNavVisibility()
@@ -185,7 +217,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        NavigateToSelectedLibraryPage(replaceCurrentLibraryPage: true);
+        QueueNavigationToSelectedLibraryPage(replaceCurrentLibraryPage: true);
     }
 
     private void NavigateToSelectedLibraryPage(bool replaceCurrentLibraryPage = false)
@@ -197,12 +229,72 @@ public sealed partial class MainWindow : Window
             _ => typeof(GalleryPage),
         };
 
+        NavigateToPage(pageType, replaceCurrentLibraryPage);
+    }
+
+    private void QueueNavigationToSelectedLibraryPage(bool replaceCurrentLibraryPage = false)
+    {
+        var pageType = LibrarySelectorBar.SelectedItem switch
+        {
+            var item when item == CharactersSelectorItem => typeof(CharacterGalleryPage),
+            var item when item == CoordinatesSelectorItem => typeof(CoordinateGalleryPage),
+            _ => typeof(GalleryPage),
+        };
+
+        QueueNavigation(pageType, replaceCurrentLibraryPage);
+    }
+
+    private void QueueNavigation(Type pageType, bool replaceCurrentLibraryPage = false)
+    {
+        _pendingPageType = pageType;
+        _pendingReplaceCurrentLibraryPage = replaceCurrentLibraryPage;
+
+        if (_navigationDebounceTimer is null)
+        {
+            _navigationDebounceTimer = DispatcherQueue.CreateTimer();
+            _navigationDebounceTimer.Interval = NavigationDebounceInterval;
+            _navigationDebounceTimer.IsRepeating = false;
+            _navigationDebounceTimer.Tick += NavigationDebounceTimer_Tick;
+        }
+
+        _navigationDebounceTimer.Stop();
+        _navigationDebounceTimer.Start();
+    }
+
+    private void NavigationDebounceTimer_Tick(DispatcherQueueTimer sender, object args)
+    {
+        sender.Stop();
+        var pageType = _pendingPageType;
+        var replaceCurrentLibraryPage = _pendingReplaceCurrentLibraryPage;
+        _pendingPageType = null;
+        _pendingReplaceCurrentLibraryPage = false;
+
+        if (pageType is not null)
+            NavigateToPage(pageType, replaceCurrentLibraryPage);
+    }
+
+    private void NavigateToPage(Type pageType, bool replaceCurrentLibraryPage = false)
+    {
         var previousPageType = NavFrame.CurrentSourcePageType;
         if (previousPageType == pageType)
             return;
 
-        if (!NavFrame.Navigate(pageType, null, new SuppressNavigationTransitionInfo()))
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine(
+            $"[Navigation] {previousPageType?.Name ?? "<none>"} -> {pageType.Name}");
+#endif
+
+        try
+        {
+            if (!NavFrame.Navigate(pageType, null, new SuppressNavigationTransitionInfo()))
+                return;
+        }
+        catch (Exception ex)
+        {
+            App.Services.GetRequiredService<IAppLogger>()
+                .LogError("MainWindow.Navigate", ex, pageType.FullName);
             return;
+        }
 
         if (replaceCurrentLibraryPage
             && IsLibraryPage(previousPageType)
@@ -214,6 +306,9 @@ public sealed partial class MainWindow : Window
 
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
+        if (_isBackNavigationInProgress)
+            ReleaseBackNavigationAfterRender();
+
         var isLibraryPage = IsLibraryPage(e.SourcePageType);
         LibrarySelectorBar.Visibility = isLibraryPage
             ? Visibility.Visible
@@ -239,6 +334,40 @@ public sealed partial class MainWindow : Window
         NavView.SelectedItem = LibraryNavItem;
     }
 
+    private void ReleaseBackNavigationAfterRender()
+    {
+        if (_releaseBackNavigationOnNextFrame)
+            return;
+
+        _releaseBackNavigationOnNextFrame = true;
+        CompositionTarget.Rendering += CompositionTarget_Rendering;
+    }
+
+    private void CompositionTarget_Rendering(object? sender, object e)
+    {
+        CompositionTarget.Rendering -= CompositionTarget_Rendering;
+        _releaseBackNavigationOnNextFrame = false;
+
+        if (!DispatcherQueue.TryEnqueue(
+                DispatcherQueuePriority.Low,
+                CompleteBackNavigation))
+        {
+            CompleteBackNavigation();
+        }
+    }
+
+    private void CompleteBackNavigation()
+    {
+        if (_releaseBackNavigationOnNextFrame)
+        {
+            CompositionTarget.Rendering -= CompositionTarget_Rendering;
+            _releaseBackNavigationOnNextFrame = false;
+        }
+
+        _isBackNavigationInProgress = false;
+        AppTitleBar.IsBackButtonEnabled = true;
+    }
+
     private static bool IsLibraryPage(Type? pageType) =>
         pageType == typeof(GalleryPage)
         || pageType == typeof(CharacterGalleryPage)
@@ -248,26 +377,26 @@ public sealed partial class MainWindow : Window
     {
         if (args.IsSettingsSelected)
         {
-            NavFrame.Navigate(typeof(SettingsPage));
+            QueueNavigation(typeof(SettingsPage));
         }
         else if (args.SelectedItem is NavigationViewItem item)
         {
             switch (item.Tag)
             {
                 case "library":
-                    NavigateToSelectedLibraryPage();
+                    QueueNavigationToSelectedLibraryPage();
                     break;
                 case "screenshots":
-                    NavFrame.Navigate(typeof(ScreenshotGalleryPage));
+                    QueueNavigation(typeof(ScreenshotGalleryPage));
                     break;
                 case "videos":
-                    NavFrame.Navigate(typeof(VideoGalleryPage));
+                    QueueNavigation(typeof(VideoGalleryPage));
                     break;
                 case "authors" when App.Services.GetRequiredService<AuthorInfoService>().IsAvailable:
-                    NavFrame.Navigate(typeof(AuthorsPage));
+                    QueueNavigation(typeof(AuthorsPage));
                     break;
                 case "import" when App.Services.GetService<ImportViewModel>() is not null:
-                    NavFrame.Navigate(typeof(ImportPage));
+                    QueueNavigation(typeof(ImportPage));
                     break;
             }
         }

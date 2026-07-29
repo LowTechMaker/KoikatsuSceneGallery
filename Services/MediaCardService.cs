@@ -28,7 +28,7 @@ public class MediaCardService : CardScanService<MediaCard>
     {
         try
         {
-            if (!info.Exists) return null;
+            if (!info.Exists || info.Length == 0) return null;
 
             return new MediaCard
             {

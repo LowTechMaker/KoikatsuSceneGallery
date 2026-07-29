@@ -75,6 +75,7 @@
                 AutomationProperties.AutomationId="AuthorSearchBox"
                 Height="32"
                 QueryIcon="Find"
+                Text="{x:Bind ViewModel.SearchText, Mode=OneWay}"
                 TextChanged="AuthorSearchBox_TextChanged" />
 
             <ComboBox
@@ -83,7 +84,7 @@
                 Grid.Column="1"
                 Width="160"
                 Height="32"
-                SelectedIndex="0"
+                SelectedIndex="{x:Bind ViewModel.SortModeIndex, Mode=OneWay}"
                 SelectionChanged="SortComboBox_SelectionChanged">
                 <ComboBoxItem x:Uid="Authors_SortCount" Tag="Count" />
                 <ComboBoxItem x:Uid="Authors_SortLastUpdated" Tag="LastUpdated" />
@@ -114,92 +115,110 @@
                 </Pivot.HeaderTemplate>
                 <Pivot.ItemTemplate>
                     <DataTemplate x:DataType="viewModels:AuthorProviderTabViewModel">
-                        <ListView
-                            x:Name="GroupListView"
-                            Padding="0"
-                            Background="Transparent"
-                            IsItemClickEnabled="False"
-                            ItemsSource="{x:Bind Groups, Mode=OneWay}"
-                            SelectionMode="None">
-                            <ListView.ItemContainerTransitions>
-                                <TransitionCollection />
-                            </ListView.ItemContainerTransitions>
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0" />
-                                    <Setter Property="MinHeight" Value="0" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
-                            <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
-                                        <StackPanel Margin="0,0,0,4" Spacing="8">
-                                            <StackPanel Orientation="Horizontal" Spacing="8" Padding="0,0,8,0" MinHeight="28"
-                                                         Margin="0,8,0,0"
-                                                         Visibility="{x:Bind ShowHeader, Mode=OneWay}">
-                                                <TextBlock
-                                                    Style="{StaticResource SubtitleTextBlockStyle}"
-                                                    Text="{x:Bind Header}" />
-                                                <TextBlock
-                                                    VerticalAlignment="Center"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind CountText, Mode=OneWay}" />
-                                            </StackPanel>
+                        <Grid>
+                            <Grid.Resources>
+                                <CollectionViewSource
+                                    x:Name="GroupedAuthorsSource"
+                                    IsSourceGrouped="True"
+                                    ItemsPath="Authors"
+                                    Source="{x:Bind Groups, Mode=OneWay}" />
+                            </Grid.Resources>
 
-                                            <GridView
-                                                IsItemClickEnabled="True"
-                                                ItemClick="AuthorsGrid_ItemClick"
-                                                ItemsSource="{x:Bind Authors, Mode=OneWay}"
-                                                SelectionMode="None">
-                                                <GridView.ItemContainerTransitions>
-                                                    <TransitionCollection />
-                                                </GridView.ItemContainerTransitions>
-                                                <GridView.ItemContainerStyle>
-                                                    <Style TargetType="GridViewItem">
-                                                        <Setter Property="Margin" Value="0" />
-                                                        <Setter Property="Padding" Value="0" />
-                                                        <Setter Property="MinHeight" Value="0" />
-                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                    </Style>
-                                                </GridView.ItemContainerStyle>
-                                                <GridView.ItemTemplate>
-                                                    <DataTemplate x:DataType="services:AuthorSummary">
-                                                        <Grid Margin="4"
-                                                              ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
-                                                            <controls:AuthorLiveTileControl Summary="{x:Bind}" />
-                                                            <Grid.ContextFlyout>
-                                                                <MenuFlyout>
-                                                                    <MenuFlyoutItem
-                                                                        x:Uid="Authors_OpenProfile"
-                                                                        Click="OpenProfile_Click"
-                                                                        Tag="{x:Bind}">
-                                                                        <MenuFlyoutItem.Icon>
-                                                                            <FontIcon Glyph="&#xE774;" />
-                                                                        </MenuFlyoutItem.Icon>
-                                                                    </MenuFlyoutItem>
-                                                                    <MenuFlyoutItem
-                                                                        x:Uid="Authors_RefreshOne"
-                                                                        Click="RefreshOne_Click"
-                                                                        Tag="{x:Bind}">
-                                                                        <MenuFlyoutItem.Icon>
-                                                                            <FontIcon Glyph="&#xE72C;" />
-                                                                        </MenuFlyoutItem.Icon>
-                                                                    </MenuFlyoutItem>
-                                                                </MenuFlyout>
-                                                            </Grid.ContextFlyout>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </GridView.ItemTemplate>
-                                            </GridView>
-                                        </StackPanel>
+                            <GridView
+                                x:Name="AuthorsGrid"
+                                Padding="0"
+                                Background="Transparent"
+                                IsItemClickEnabled="True"
+                                IsSwipeEnabled="False"
+                                ItemClick="AuthorsGrid_ItemClick"
+                                ItemsSource="{Binding Source={StaticResource GroupedAuthorsSource}}"
+                                SelectionMode="None">
+                                <GridView.ItemContainerTransitions>
+                                    <TransitionCollection />
+                                </GridView.ItemContainerTransitions>
+                                <GridView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsWrapGrid Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </GridView.ItemsPanel>
+                                <GridView.GroupStyle>
+                                    <GroupStyle HidesIfEmpty="True">
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
+                                                <StackPanel
+                                                    MinHeight="28"
+                                                    Margin="4,8,0,4"
+                                                    Orientation="Horizontal"
+                                                    Padding="0,0,8,0"
+                                                    Spacing="8"
+                                                    Visibility="{x:Bind ShowHeader, Mode=OneWay}">
+                                                    <TextBlock
+                                                        Style="{StaticResource SubtitleTextBlockStyle}"
+                                                        Text="{x:Bind Header}" />
+                                                    <TextBlock
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                                        Text="{x:Bind CountText, Mode=OneWay}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </GridView.GroupStyle>
+                                <GridView.ItemContainerStyle>
+                                    <Style TargetType="GridViewItem">
+                                        <Setter Property="Margin" Value="0" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="MinHeight" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </GridView.ItemContainerStyle>
+                                <GridView.ItemTemplate>
+                                    <DataTemplate x:DataType="services:AuthorSummary">
+                                        <Grid
+                                            Margin="4"
+                                            ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
+                                            <controls:AuthorLiveTileControl Summary="{x:Bind}" />
+                                            <Grid.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuFlyoutItem
+                                                        x:Uid="Authors_OpenProfile"
+                                                        Click="OpenProfile_Click"
+                                                        Tag="{x:Bind}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <FontIcon Glyph="&#xE774;" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem
+                                                        x:Uid="Authors_RefreshOne"
+                                                        Click="RefreshOne_Click"
+                                                        Tag="{x:Bind}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <FontIcon Glyph="&#xE72C;" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                </MenuFlyout>
+                                            </Grid.ContextFlyout>
+                                        </Grid>
                                     </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                </GridView.ItemTemplate>
+                            </GridView>
+                        </Grid>
                     </DataTemplate>
                 </Pivot.ItemTemplate>
             </Pivot>
+
+            <ProgressRing
+                x:Name="AuthorsLoadingIndicator"
+                AutomationProperties.AutomationId="AuthorsLoadingIndicator"
+                Grid.ColumnSpan="2"
+                Width="32"
+                Height="32"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsActive="{x:Bind ViewModel.ShowInitialLoading, Mode=OneWay}"
+                IsHitTestVisible="False"
+                Visibility="{x:Bind ViewModel.ShowInitialLoading, Mode=OneWay}" />
 
             <ScrollViewer
                 x:Name="QuickJumpScroller"

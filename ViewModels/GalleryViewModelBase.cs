@@ -256,6 +256,48 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         RaiseViewRefreshed();
     }
 
+    protected async Task EnqueueBatchAsync(
+        Action action,
+        string failureMessage,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_dispatcherQueue.HasThreadAccess)
+        {
+            action();
+            return;
+        }
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellationRegistration = cancellationToken.Register(
+            () => completion.TrySetCanceled(cancellationToken));
+
+        if (!_dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    completion.TrySetCanceled(cancellationToken);
+                    return;
+                }
+
+                try
+                {
+                    action();
+                    completion.TrySetResult();
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+            }))
+        {
+            completion.TrySetException(new InvalidOperationException(failureMessage));
+        }
+
+        await completion.Task.ConfigureAwait(false);
+    }
+
     protected void RaiseCardsReloaded() => CardsReloaded?.Invoke();
     protected void RaiseViewRefreshed() => ViewRefreshed?.Invoke();
 }

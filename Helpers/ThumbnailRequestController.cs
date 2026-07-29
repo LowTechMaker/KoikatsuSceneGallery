@@ -38,7 +38,7 @@ internal sealed class ThumbnailRequestController
 
     public void Request(CardBase card, bool isVideo = false)
     {
-        if (card.HasThumbnail || !_scope.TryBegin(card.FilePath))
+        if (!card.NeedsThumbnail || !_scope.TryBegin(card.FilePath))
             return;
 
         var cancellationToken = _scope.Token;
@@ -70,7 +70,9 @@ internal sealed class ThumbnailRequestController
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                _scope.Complete(card.FilePath, card.HasThumbnail);
+                _scope.Complete(
+                    card.FilePath,
+                    card.HasThumbnail || card.ThumbnailGenerationFailed);
                 SetPendingCount(Math.Max(0, _pendingCount - 1));
             }
         }

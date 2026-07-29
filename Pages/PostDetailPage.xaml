@@ -56,17 +56,6 @@
                             <TextBlock x:Uid="PostDetail_OpenInBrowserLabel" />
                         </StackPanel>
                     </Button>
-                    <Button
-                        x:Name="SaveButton"
-                        x:Uid="PostDetail_Save"
-                        AutomationProperties.AutomationId="PostSaveButton"
-                        Click="Save_Click"
-                        IsEnabled="{x:Bind ViewModel.CanSave, Mode=OneWay}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="14" Glyph="&#xE74E;" />
-                            <TextBlock x:Uid="PostDetail_SaveLabel" />
-                        </StackPanel>
-                    </Button>
                 </StackPanel>
             </Grid>
 
@@ -117,13 +106,9 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image Stretch="Uniform">
-                                        <Image.Source>
-                                            <BitmapImage
-                                                DecodePixelWidth="240"
-                                                UriSource="{x:Bind ImageUri}" />
-                                        </Image.Source>
-                                    </Image>
+                                    <Image
+                                        Stretch="Uniform"
+                                        Source="{x:Bind ThumbnailSource}" />
                                 </Border>
                             </Grid>
                         </DataTemplate>

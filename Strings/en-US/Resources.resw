@@ -604,9 +604,6 @@
   <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
     <value>Open in browser</value>
   </data>
-  <data name="PostDetail_SaveLabel.Text" xml:space="preserve">
-    <value>Save details</value>
-  </data>
   <data name="PostDetail_Loading.Text" xml:space="preserve">
     <value>Loading details...</value>
   </data>
@@ -960,5 +957,11 @@
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>Detect and group visually similar images in the gallery</value>
+  </data>
+  <data name="Import_ErrorFileAlreadyExists" xml:space="preserve">
+    <value>File already exists</value>
+  </data>
+  <data name="Import_ErrorConflictingFile" xml:space="preserve">
+    <value>Conflicting file: {0}</value>
   </data>
 </root>

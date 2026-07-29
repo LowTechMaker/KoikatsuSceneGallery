@@ -265,10 +265,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
         }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("Gallery.LoadCanceled", ex);
-        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)

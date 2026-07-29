@@ -31,8 +31,12 @@ internal static partial class HtmlDescriptionRenderer
         var styles = new Stack<TextStyle>();
         styles.Push(new TextStyle());
 
-        foreach (Match match in TagPattern().Matches(text))
+        while (position < text.Length)
         {
+            var match = TagPattern().Match(text, position);
+            if (!match.Success)
+                break;
+
             AppendText(paragraph, text[position..match.Index], styles.Peek());
 
             var tag = match.Value;

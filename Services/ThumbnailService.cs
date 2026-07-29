@@ -9,7 +9,7 @@ public sealed class ThumbnailService
     private readonly SceneCardCacheService _sceneCardCacheService;
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly SemaphoreSlim _generationGate =
-        new(Math.Max(1, Environment.ProcessorCount - 1));
+        new(Math.Clamp(Environment.ProcessorCount - 1, 1, 4));
 
     public ThumbnailService(
         ThumbnailCacheService cacheService,
@@ -37,43 +37,40 @@ public sealed class ThumbnailService
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (card.HasThumbnail)
+        if (!card.NeedsThumbnail)
             return;
-
-        var cachedPath = _cacheService.TryGetCachedPath(card.FilePath, card.DateModified);
-        if (cachedPath is not null)
-        {
-            await SetThumbnailPathAsync(card, cachedPath, cancellationToken);
-            return;
-        }
 
         await _generationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (card.HasThumbnail)
+            if (!card.NeedsThumbnail)
                 return;
 
-            cachedPath = _cacheService.TryGetCachedPath(card.FilePath, card.DateModified);
+            var cachedPath = await Task.Run(async () =>
+            {
+                var path = _cacheService.TryGetCachedPath(
+                    card.FilePath,
+                    card.DateModified);
+                if (path is not null)
+                    return path;
+
+                return isVideo
+                    ? await _cacheService.EnsureVideoThumbnailAsync(
+                        card.FilePath,
+                        card.DateModified,
+                        cancellationToken).ConfigureAwait(false)
+                    : await _cacheService.EnsureThumbnailAsync(
+                        card.FilePath,
+                        card.DateModified,
+                        cancellationToken).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
+
             if (cachedPath is null)
             {
-                cachedPath = isVideo
-                    ? await _cacheService
-                        .EnsureVideoThumbnailAsync(
-                            card.FilePath,
-                            card.DateModified,
-                            cancellationToken)
-                        .ConfigureAwait(false)
-                    : await _cacheService
-                        .EnsureThumbnailAsync(
-                            card.FilePath,
-                            card.DateModified,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-            }
-
-            if (cachedPath is null)
+                card.ThumbnailGenerationFailed = true;
                 return;
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
             if (card is SceneCard)

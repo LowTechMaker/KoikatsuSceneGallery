@@ -37,8 +37,8 @@
                 Grid.Column="1"
                 Width="64"
                 Height="64"
-                DisplayName="{x:Bind ViewModel.Author.Name, Mode=OneWay}"
-                ProfilePicture="{x:Bind ViewModel.Author.AvatarSource, Mode=OneWay}" />
+                DisplayName="{x:Bind ViewModel.AuthorName, Mode=OneWay}"
+                ProfilePicture="{x:Bind ViewModel.AuthorAvatarSource, Mode=OneWay}" />
 
             <StackPanel
                 Grid.Column="2"
@@ -46,7 +46,7 @@
                 Spacing="4">
                 <TextBlock
                     Style="{StaticResource TitleTextBlockStyle}"
-                    Text="{x:Bind ViewModel.Author.Name, Mode=OneWay}" />
+                    Text="{x:Bind ViewModel.AuthorName, Mode=OneWay}" />
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <FontIcon
@@ -346,10 +346,11 @@
                 </GridView>
             </PivotItem>
 
-            <!-- Posts Tab (added dynamically for providers with artwork scanning) -->
+            <!-- Keep this item in the Pivot collection and collapse it when unsupported.
+                 Dynamically loading/unloading a PivotItem can race with navigation. -->
             <PivotItem
                 x:Name="PostsPivotItem"
-                x:Load="{x:Bind ViewModel.CanLoadPosts, Mode=OneWay}">
+                Visibility="{x:Bind ViewModel.CanLoadPosts, Mode=OneWay}">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE8F1;" />
@@ -438,7 +439,7 @@
                                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                                         <Image
                                                             Stretch="Uniform"
-                                                            Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ImageUri)}" />
+                                                            Source="{x:Bind ThumbnailSource}" />
                                                     </Border>
                                                 </Grid>
                                             </DataTemplate>
