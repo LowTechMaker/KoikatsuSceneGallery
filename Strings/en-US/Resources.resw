@@ -705,6 +705,27 @@
   <data name="Import_DropZoneHint.Text" xml:space="preserve">
     <value>Drop PNG files downloaded from pixiv or BepisDB</value>
   </data>
+  <data name="Import_PickSourceLabel.Text" xml:space="preserve">
+    <value>Choose files or folder</value>
+  </data>
+  <data name="Import_PickFiles.Text" xml:space="preserve">
+    <value>Choose PNG files</value>
+  </data>
+  <data name="Import_PickFolder.Text" xml:space="preserve">
+    <value>Choose a folder</value>
+  </data>
+  <data name="Import_PickerExplanationTitle" xml:space="preserve">
+    <value>Why are these separate?</value>
+  </data>
+  <data name="Import_PickerExplanationMessage" xml:space="preserve">
+    <value>Windows provides file and folder pickers as two separate modes, so one picker window cannot select both. This app still keeps them under one button: choosing files imports the selected PNGs, while choosing a folder scans it and all subfolders for PNGs.</value>
+  </data>
+  <data name="Import_PickerExplanationContinue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Import_PickerExplanationCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>All Ages</value>
   </data>
@@ -957,6 +978,15 @@
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>Detect and group visually similar images in the gallery</value>
+  </data>
+  <data name="SC_ImportPickerExplanation.Header" xml:space="preserve">
+    <value>Import source explanation</value>
+  </data>
+  <data name="SC_ImportPickerExplanation.Description" xml:space="preserve">
+    <value>Show the “Choose files or folder” explanation again the next time it is used</value>
+  </data>
+  <data name="Settings_ResetImportPickerExplanation.Text" xml:space="preserve">
+    <value>Reset explanation</value>
   </data>
   <data name="Import_ErrorFileAlreadyExists" xml:space="preserve">
     <value>File already exists</value>

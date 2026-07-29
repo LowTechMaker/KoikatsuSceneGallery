@@ -13,6 +13,17 @@
     Drop="Page_Drop">
 
     <Page.Resources>
+        <MenuFlyout x:Key="ImportSourceFlyout" Placement="Bottom">
+            <MenuFlyoutItem
+                x:Uid="Import_PickFiles"
+                AutomationProperties.AutomationId="ImportPickFilesMenuItem"
+                Click="PickFiles_Click" />
+            <MenuFlyoutItem
+                x:Uid="Import_PickFolder"
+                AutomationProperties.AutomationId="ImportPickFolderMenuItem"
+                Click="PickFolder_Click" />
+        </MenuFlyout>
+
         <DataTemplate x:Key="AuthorPickerItemTemplate" x:DataType="vm:SelectableAuthor">
             <Grid Padding="4,6" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
@@ -105,6 +116,12 @@
                         Style="{StaticResource CaptionTextBlockStyle}"
                         HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <DropDownButton
+                        AutomationProperties.AutomationId="ImportPickSourceButton"
+                        HorizontalAlignment="Center"
+                        Click="PickSource_Click">
+                        <TextBlock x:Uid="Import_PickSourceLabel" />
+                    </DropDownButton>
                 </StackPanel>
 
                 <!-- Scanning: progress animation -->
@@ -149,19 +166,23 @@
                                     <ProgressRing Width="14" Height="14" IsActive="True" />
                                     <TextBlock x:Uid="Import_Analyzing"
                                                Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <Grid Width="136"
+                                    <Grid x:Name="AnalyzingIdViewport"
                                           Height="20"
-                                          VerticalAlignment="Center">
+                                          MaxWidth="136"
+                                          VerticalAlignment="Center"
+                                          Visibility="Collapsed">
                                         <Grid.Clip>
-                                            <RectangleGeometry Rect="0,0,136,20" />
+                                            <RectangleGeometry x:Name="AnalyzingIdClip" />
                                         </Grid.Clip>
                                         <TextBlock x:Name="AnalyzingIdTextA"
+                                                   MaxWidth="136"
                                                    MaxLines="1"
                                                    VerticalAlignment="Center"
                                                    Style="{StaticResource CaptionTextBlockStyle}"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis" />
                                         <TextBlock x:Name="AnalyzingIdTextB"
+                                                   MaxWidth="136"
                                                    MaxLines="1"
                                                    VerticalAlignment="Center"
                                                    Style="{StaticResource CaptionTextBlockStyle}"

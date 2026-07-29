@@ -705,6 +705,27 @@
   <data name="Import_DropZoneHint.Text" xml:space="preserve">
     <value>拖放從 pixiv 或 BepisDB 下載的 PNG 檔案</value>
   </data>
+  <data name="Import_PickSourceLabel.Text" xml:space="preserve">
+    <value>選擇檔案或資料夾</value>
+  </data>
+  <data name="Import_PickFiles.Text" xml:space="preserve">
+    <value>選擇 PNG 檔案</value>
+  </data>
+  <data name="Import_PickFolder.Text" xml:space="preserve">
+    <value>選擇資料夾</value>
+  </data>
+  <data name="Import_PickerExplanationTitle" xml:space="preserve">
+    <value>為什麼要分開選擇？</value>
+  </data>
+  <data name="Import_PickerExplanationMessage" xml:space="preserve">
+    <value>Windows 將檔案選擇器與資料夾選擇器設計為兩種不同模式，因此無法在同一個選取視窗中同時選擇檔案和資料夾。這裡仍使用同一個按鈕：選擇檔案會匯入指定的 PNG，選擇資料夾則會掃描其中所有子資料夾的 PNG。</value>
+  </data>
+  <data name="Import_PickerExplanationContinue" xml:space="preserve">
+    <value>繼續</value>
+  </data>
+  <data name="Import_PickerExplanationCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>全年齡</value>
   </data>
@@ -957,6 +978,15 @@
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>偵測並群組圖庫中外觀相似的圖片</value>
+  </data>
+  <data name="SC_ImportPickerExplanation.Header" xml:space="preserve">
+    <value>匯入來源說明</value>
+  </data>
+  <data name="SC_ImportPickerExplanation.Description" xml:space="preserve">
+    <value>讓「選擇檔案或資料夾」的說明在下次使用時再次顯示</value>
+  </data>
+  <data name="Settings_ResetImportPickerExplanation.Text" xml:space="preserve">
+    <value>重設說明</value>
   </data>
   <data name="Import_ErrorFileAlreadyExists" xml:space="preserve">
     <value>檔案已存在</value>

@@ -102,6 +102,10 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool UseVisualSimilarity { get; set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ResetImportPickerExplanationCommand))]
+    public partial bool ImportPickerExplanationShown { get; set; }
+
+    [ObservableProperty]
     public partial string AuthorFolderFormat { get; set; } = "{name} ({id})";
 
     [ObservableProperty]
@@ -262,6 +266,10 @@ public partial class SettingsViewModel : ObservableObject
         if (_isLoading)
             return;
 
+        // Persist the OS-level override as soon as the user chooses it so the
+        // next process starts with the correct language before XAML/resources
+        // are initialized. Empty clears the override and follows the system.
+        Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = value;
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowRestartHint = true;
     }
@@ -402,6 +410,7 @@ public partial class SettingsViewModel : ObservableObject
             ImportSubfolder = config.ImportSubfolder;
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
+            ImportPickerExplanationShown = config.ImportPickerExplanationShown;
             AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
 
             AuthorFolderFormat = config.AuthorFolderFormat;
@@ -675,6 +684,25 @@ public partial class SettingsViewModel : ObservableObject
         await SaveConfigAsync();
     }
 
+    public async Task MarkImportPickerExplanationShownAsync()
+    {
+        if (ImportPickerExplanationShown)
+            return;
+
+        ImportPickerExplanationShown = true;
+        await SaveConfigAsync();
+    }
+
+    private bool CanResetImportPickerExplanation()
+        => ImportPickerExplanationShown;
+
+    [RelayCommand(CanExecute = nameof(CanResetImportPickerExplanation))]
+    private async Task ResetImportPickerExplanationAsync()
+    {
+        ImportPickerExplanationShown = false;
+        await SaveConfigAsync();
+    }
+
     private async Task SaveConfigAsync()
     {
         await _saveLock.WaitAsync();
@@ -705,6 +733,7 @@ public partial class SettingsViewModel : ObservableObject
                 ImportSubfolder = ImportSubfolder,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
+                ImportPickerExplanationShown = ImportPickerExplanationShown,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
                 HiddenNavItems = GetHiddenNavItems(),
                 AuthorFolderFormat = AuthorFolderFormat,
