@@ -107,11 +107,6 @@ public partial class App : Application
         {
             config = await _settingsService.LoadConfigAsync();
 
-            // Apply the saved UI language override before any window/page is created.
-            // Empty means follow the system language (resources fall back to en-US).
-            if (!string.IsNullOrEmpty(config.Language))
-                Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = config.Language;
-
             _thumbnailCacheService = new ThumbnailCacheService(_logger, config.CacheFolderPath);
         }
         catch (Exception ex)
