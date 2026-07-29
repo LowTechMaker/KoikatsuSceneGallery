@@ -19,7 +19,8 @@ public partial class ImportViewModel : ObservableObject
     private readonly ImportService _importService;
     private readonly PluginService _pluginService;
     private readonly DispatcherQueue _dispatcher;
-    private readonly HashSet<CancellationTokenSource> _analysisCts = [];
+    private readonly List<CancellationTokenSource> _analysisCts = [];
+    private readonly Dictionary<CancellationTokenSource, string?> _analysisArtworkIds = [];
     private CancellationTokenSource? _importCts;
     private int _activeAnalysisCount;
 
@@ -77,6 +78,9 @@ public partial class ImportViewModel : ObservableObject
 
     public int AnalysisPendingCount => AnalyzingItems.Count;
     public IReadOnlyList<ImportItem> AnalyzingPreviewItems { get; private set; } = [];
+
+    [ObservableProperty]
+    public partial string? CurrentAnalyzingArtworkId { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AnalysisProgressPercent))]
@@ -901,7 +905,12 @@ public partial class ImportViewModel : ObservableObject
         {
             await _settingsLoaded;
 
-            rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, cts.Token);
+            rejected = await _importService.AnalyzeAsync(
+                newPaths,
+                Items,
+                _dispatcher,
+                cts.Token,
+                artworkId => SetCurrentAnalyzingArtworkId(cts, artworkId));
             AddRejectedAnalysisCount(rejected);
 
             // Compute fingerprints for subfolder decisions and optional unknown visual grouping.
@@ -1061,6 +1070,7 @@ public partial class ImportViewModel : ObservableObject
     {
         foreach (var cts in _analysisCts.ToList())
             cts.Cancel();
+        CurrentAnalyzingArtworkId = null;
         _importCts?.Cancel();
         _manualHistory.Clear();
         CanUndoManualAssignment = false;
@@ -1149,6 +1159,7 @@ public partial class ImportViewModel : ObservableObject
     {
         var cts = new CancellationTokenSource();
         _analysisCts.Add(cts);
+        _analysisArtworkIds.Add(cts, null);
         _activeAnalysisCount++;
         IsAnalyzing = true;
         BeginAnalysisProgress(filePaths);
@@ -1163,9 +1174,28 @@ public partial class ImportViewModel : ObservableObject
         if (_analysisCts.Remove(cts))
             _activeAnalysisCount = Math.Max(0, _activeAnalysisCount - 1);
 
+        _analysisArtworkIds.Remove(cts);
+        RefreshCurrentAnalyzingArtworkId();
         cts.Dispose();
         EndAnalysisProgress(filePaths, rejectedCount);
         IsAnalyzing = _activeAnalysisCount > 0;
+    }
+
+    private void SetCurrentAnalyzingArtworkId(CancellationTokenSource cts, string? artworkId)
+    {
+        if (cts.IsCancellationRequested || !_analysisArtworkIds.ContainsKey(cts))
+            return;
+
+        _analysisArtworkIds[cts] = artworkId;
+        RefreshCurrentAnalyzingArtworkId();
+    }
+
+    private void RefreshCurrentAnalyzingArtworkId()
+    {
+        CurrentAnalyzingArtworkId = _analysisCts
+            .Where(cts => !cts.IsCancellationRequested)
+            .Select(cts => _analysisArtworkIds.GetValueOrDefault(cts))
+            .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
     }
 
     private void BeginAnalysisProgress(IReadOnlyList<string> filePaths)

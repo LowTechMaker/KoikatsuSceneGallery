@@ -1,12 +1,17 @@
 using System.IO;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.UI.ViewManagement;
 using Microsoft.Windows.ApplicationModel.Resources;
+using Microsoft.UI.Composition;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using SceneGallery.PluginSdk;
@@ -16,18 +21,29 @@ namespace KoikatsuSceneGallery.Pages;
 public sealed partial class ImportPage : Page
 {
     private static readonly ResourceLoader ResLoader = new();
+    private static readonly TimeSpan AnalysisIdAnimationDuration = TimeSpan.FromMilliseconds(240);
+    private const float AnalysisIdAnimationOffset = 16f;
 
     public ImportViewModel ViewModel { get; }
 
     private readonly IReadOnlyList<ICookieSetupProvider> _cookieSetupProviders;
+    private readonly IAppLogger _logger;
+    private readonly UISettings _uiSettings = new();
+    private bool _showingAnalysisIdA = true;
+    private bool _isAnimatingAnalysisId;
+    private bool _hasPendingAnalysisId;
+    private string? _displayedAnalysisId;
+    private string? _pendingAnalysisId;
 
     public ImportPage()
     {
         ViewModel = App.Services.GetService<ImportViewModel>()!;
-        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        _logger = App.Services.GetRequiredService<IAppLogger>();
         _cookieSetupProviders = App.Services.GetRequiredService<PluginService>().CookieSetupProviders;
         InitializeComponent();
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         NavigationCacheMode = NavigationCacheMode.Required;
+        SetAnalyzingIdImmediately(ViewModel.CurrentAnalyzingArtworkId);
 
         if (_cookieSetupProviders.Count > 0)
             CookieSetupButton.Visibility = Visibility.Visible;
@@ -41,6 +57,146 @@ public sealed partial class ImportPage : Page
                 ResLoader.GetString("Import_RejectedWarningMessage"),
                 ViewModel.RejectedCount);
         }
+        else if (e.PropertyName == nameof(ImportViewModel.CurrentAnalyzingArtworkId))
+        {
+            QueueAnalyzingIdTransition(ViewModel.CurrentAnalyzingArtworkId);
+        }
+    }
+
+    private void QueueAnalyzingIdTransition(string? artworkId)
+    {
+        if (!_isAnimatingAnalysisId
+            && string.Equals(_displayedAnalysisId, artworkId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _pendingAnalysisId = artworkId;
+        _hasPendingAnalysisId = true;
+        StartNextAnalyzingIdTransition();
+    }
+
+    private void StartNextAnalyzingIdTransition()
+    {
+        if (_isAnimatingAnalysisId || !_hasPendingAnalysisId)
+            return;
+
+        var nextId = _pendingAnalysisId;
+        _pendingAnalysisId = null;
+        _hasPendingAnalysisId = false;
+
+        if (string.Equals(_displayedAnalysisId, nextId, StringComparison.Ordinal))
+            return;
+
+        if (!IsLoaded || !_uiSettings.AnimationsEnabled)
+        {
+            SetAnalyzingIdImmediately(nextId);
+            StartNextAnalyzingIdTransition();
+            return;
+        }
+
+        var outgoing = _showingAnalysisIdA ? AnalyzingIdTextA : AnalyzingIdTextB;
+        var incoming = _showingAnalysisIdA ? AnalyzingIdTextB : AnalyzingIdTextA;
+        incoming.Text = nextId ?? string.Empty;
+
+        try
+        {
+            AnimateAnalyzingIdTransition(outgoing, incoming, nextId is not null);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
+        {
+            _logger.LogError("Import.AnimateArtworkId", ex);
+            SetAnalyzingIdImmediately(nextId);
+            StartNextAnalyzingIdTransition();
+        }
+    }
+
+    private void AnimateAnalyzingIdTransition(TextBlock outgoing, TextBlock incoming, bool hasIncomingId)
+    {
+        var outgoingVisual = ElementCompositionPreview.GetElementVisual(outgoing);
+        var incomingVisual = ElementCompositionPreview.GetElementVisual(incoming);
+        var compositor = outgoingVisual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(
+            new Vector2(0.4f, 0f),
+            new Vector2(0.2f, 1f));
+
+        outgoingVisual.Offset = Vector3.Zero;
+        outgoingVisual.Opacity = string.IsNullOrEmpty(outgoing.Text) ? 0f : 1f;
+        incomingVisual.Offset = new Vector3(0, -AnalysisIdAnimationOffset, 0);
+        incomingVisual.Opacity = 0f;
+
+        var outgoingSlide = compositor.CreateVector3KeyFrameAnimation();
+        outgoingSlide.InsertKeyFrame(1f, new Vector3(0, AnalysisIdAnimationOffset, 0), easing);
+        outgoingSlide.Duration = AnalysisIdAnimationDuration;
+
+        var outgoingFade = compositor.CreateScalarKeyFrameAnimation();
+        outgoingFade.InsertKeyFrame(1f, 0f, easing);
+        outgoingFade.Duration = AnalysisIdAnimationDuration;
+
+        var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        outgoingVisual.StartAnimation("Offset", outgoingSlide);
+        outgoingVisual.StartAnimation("Opacity", outgoingFade);
+
+        if (hasIncomingId)
+        {
+            var incomingSlide = compositor.CreateVector3KeyFrameAnimation();
+            incomingSlide.InsertKeyFrame(1f, Vector3.Zero, easing);
+            incomingSlide.Duration = AnalysisIdAnimationDuration;
+
+            var incomingFade = compositor.CreateScalarKeyFrameAnimation();
+            incomingFade.InsertKeyFrame(1f, 1f, easing);
+            incomingFade.Duration = AnalysisIdAnimationDuration;
+
+            incomingVisual.StartAnimation("Offset", incomingSlide);
+            incomingVisual.StartAnimation("Opacity", incomingFade);
+        }
+
+        _isAnimatingAnalysisId = true;
+        batch.Completed += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            outgoing.Text = string.Empty;
+            ResetAnalyzingIdVisual(outgoingVisual, 0f);
+            ResetAnalyzingIdVisual(incomingVisual, hasIncomingId ? 1f : 0f);
+            _showingAnalysisIdA = !_showingAnalysisIdA;
+            _displayedAnalysisId = hasIncomingId ? incoming.Text : null;
+            _isAnimatingAnalysisId = false;
+            StartNextAnalyzingIdTransition();
+        });
+        batch.End();
+    }
+
+    private void SetAnalyzingIdImmediately(string? artworkId)
+    {
+        AnalyzingIdTextA.Text = artworkId ?? string.Empty;
+        AnalyzingIdTextB.Text = string.Empty;
+
+        try
+        {
+            ResetAnalyzingIdVisual(
+                ElementCompositionPreview.GetElementVisual(AnalyzingIdTextA),
+                artworkId is null ? 0f : 1f);
+            ResetAnalyzingIdVisual(
+                ElementCompositionPreview.GetElementVisual(AnalyzingIdTextB),
+                0f);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
+        {
+            _logger.LogError("Import.ResetArtworkIdAnimation", ex);
+            AnalyzingIdTextA.Opacity = artworkId is null ? 0 : 1;
+            AnalyzingIdTextB.Opacity = 0;
+        }
+
+        _showingAnalysisIdA = true;
+        _displayedAnalysisId = artworkId;
+        _isAnimatingAnalysisId = false;
+    }
+
+    private static void ResetAnalyzingIdVisual(Visual visual, float opacity)
+    {
+        visual.StopAnimation("Offset");
+        visual.StopAnimation("Opacity");
+        visual.Offset = Vector3.Zero;
+        visual.Opacity = opacity;
     }
 
     private void Page_DragOver(object sender, DragEventArgs e)
