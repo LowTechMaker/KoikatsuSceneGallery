@@ -131,6 +131,8 @@ public class SettingsService
 
         public bool UseVisualSimilarity { get; set; }
 
+        public bool ImportPickerExplanationShown { get; set; }
+
         public bool AuthorLiveTilesEnabled { get; set; } = true;
 
         public List<string> HiddenNavItems { get; set; } = [];

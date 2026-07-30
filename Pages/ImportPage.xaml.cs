@@ -1,14 +1,21 @@
 using System.IO;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
+using Windows.UI.ViewManagement;
 using Microsoft.Windows.ApplicationModel.Resources;
+using Microsoft.UI.Composition;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.Storage.Pickers;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -16,18 +23,34 @@ namespace KoikatsuSceneGallery.Pages;
 public sealed partial class ImportPage : Page
 {
     private static readonly ResourceLoader ResLoader = new();
+    private static readonly TimeSpan AnalysisIdAnimationDuration = TimeSpan.FromMilliseconds(240);
+    private const float AnalysisIdAnimationOffset = 16f;
+    private const double AnalysisIdMaxWidth = 136;
+    private const double AnalysisIdViewportHeight = 20;
 
     public ImportViewModel ViewModel { get; }
 
     private readonly IReadOnlyList<ICookieSetupProvider> _cookieSetupProviders;
+    private readonly IAppLogger _logger;
+    private readonly SettingsViewModel _settingsViewModel;
+    private readonly UISettings _uiSettings = new();
+    private bool _showingAnalysisIdA = true;
+    private bool _isPreparingAnalysisId;
+    private bool _isAnimatingAnalysisId;
+    private bool _hasPendingAnalysisId;
+    private string? _displayedAnalysisId;
+    private string? _pendingAnalysisId;
 
     public ImportPage()
     {
         ViewModel = App.Services.GetService<ImportViewModel>()!;
-        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        _logger = App.Services.GetRequiredService<IAppLogger>();
+        _settingsViewModel = App.Services.GetRequiredService<SettingsViewModel>();
         _cookieSetupProviders = App.Services.GetRequiredService<PluginService>().CookieSetupProviders;
         InitializeComponent();
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         NavigationCacheMode = NavigationCacheMode.Required;
+        SetAnalyzingIdImmediately(ViewModel.CurrentAnalyzingArtworkId);
 
         if (_cookieSetupProviders.Count > 0)
             CookieSetupButton.Visibility = Visibility.Visible;
@@ -41,6 +64,206 @@ public sealed partial class ImportPage : Page
                 ResLoader.GetString("Import_RejectedWarningMessage"),
                 ViewModel.RejectedCount);
         }
+        else if (e.PropertyName == nameof(ImportViewModel.CurrentAnalyzingArtworkId))
+        {
+            QueueAnalyzingIdTransition(ViewModel.CurrentAnalyzingArtworkId);
+        }
+    }
+
+    private void QueueAnalyzingIdTransition(string? artworkId)
+    {
+        if (!_isAnimatingAnalysisId
+            && string.Equals(_displayedAnalysisId, artworkId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _pendingAnalysisId = artworkId;
+        _hasPendingAnalysisId = true;
+        StartNextAnalyzingIdTransition();
+    }
+
+    private void StartNextAnalyzingIdTransition()
+    {
+        if (_isPreparingAnalysisId || _isAnimatingAnalysisId || !_hasPendingAnalysisId)
+            return;
+
+        var nextId = _pendingAnalysisId;
+        _pendingAnalysisId = null;
+        _hasPendingAnalysisId = false;
+
+        if (string.Equals(_displayedAnalysisId, nextId, StringComparison.Ordinal))
+            return;
+
+        if (!IsLoaded || !_uiSettings.AnimationsEnabled)
+        {
+            SetAnalyzingIdImmediately(nextId);
+            StartNextAnalyzingIdTransition();
+            return;
+        }
+
+        var outgoing = _showingAnalysisIdA ? AnalyzingIdTextA : AnalyzingIdTextB;
+        var incoming = _showingAnalysisIdA ? AnalyzingIdTextB : AnalyzingIdTextA;
+        incoming.Text = nextId ?? string.Empty;
+
+        AnalyzingIdViewport.Visibility = Visibility.Visible;
+        var outgoingWidth = MeasureAnalyzingIdWidth(outgoing);
+        var incomingWidth = MeasureAnalyzingIdWidth(incoming);
+        SetAnalyzingIdViewportWidth(Math.Max(outgoingWidth, incomingWidth));
+        _isPreparingAnalysisId = true;
+
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            _isPreparingAnalysisId = false;
+            if (!IsLoaded || !_uiSettings.AnimationsEnabled)
+            {
+                SetAnalyzingIdImmediately(nextId);
+                StartNextAnalyzingIdTransition();
+                return;
+            }
+
+            try
+            {
+                AnimateAnalyzingIdTransition(
+                    outgoing,
+                    incoming,
+                    nextId is not null,
+                    incomingWidth);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or COMException)
+            {
+                _logger.LogError("Import.AnimateArtworkId", ex);
+                SetAnalyzingIdImmediately(nextId);
+                StartNextAnalyzingIdTransition();
+            }
+        }))
+        {
+            _isPreparingAnalysisId = false;
+            SetAnalyzingIdImmediately(nextId);
+            StartNextAnalyzingIdTransition();
+        }
+    }
+
+    private void AnimateAnalyzingIdTransition(
+        TextBlock outgoing,
+        TextBlock incoming,
+        bool hasIncomingId,
+        double incomingWidth)
+    {
+        var outgoingVisual = ElementCompositionPreview.GetElementVisual(outgoing);
+        var incomingVisual = ElementCompositionPreview.GetElementVisual(incoming);
+        var compositor = outgoingVisual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(
+            new Vector2(0.4f, 0f),
+            new Vector2(0.2f, 1f));
+
+        outgoingVisual.Offset = Vector3.Zero;
+        outgoingVisual.Opacity = string.IsNullOrEmpty(outgoing.Text) ? 0f : 1f;
+        incomingVisual.Offset = new Vector3(0, -AnalysisIdAnimationOffset, 0);
+        incomingVisual.Opacity = 0f;
+
+        var outgoingSlide = compositor.CreateVector3KeyFrameAnimation();
+        outgoingSlide.InsertKeyFrame(1f, new Vector3(0, AnalysisIdAnimationOffset, 0), easing);
+        outgoingSlide.Duration = AnalysisIdAnimationDuration;
+
+        var outgoingFade = compositor.CreateScalarKeyFrameAnimation();
+        outgoingFade.InsertKeyFrame(1f, 0f, easing);
+        outgoingFade.Duration = AnalysisIdAnimationDuration;
+
+        var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        outgoingVisual.StartAnimation("Offset", outgoingSlide);
+        outgoingVisual.StartAnimation("Opacity", outgoingFade);
+
+        if (hasIncomingId)
+        {
+            var incomingSlide = compositor.CreateVector3KeyFrameAnimation();
+            incomingSlide.InsertKeyFrame(1f, Vector3.Zero, easing);
+            incomingSlide.Duration = AnalysisIdAnimationDuration;
+
+            var incomingFade = compositor.CreateScalarKeyFrameAnimation();
+            incomingFade.InsertKeyFrame(1f, 1f, easing);
+            incomingFade.Duration = AnalysisIdAnimationDuration;
+
+            incomingVisual.StartAnimation("Offset", incomingSlide);
+            incomingVisual.StartAnimation("Opacity", incomingFade);
+        }
+
+        _isAnimatingAnalysisId = true;
+        batch.Completed += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            outgoing.Text = string.Empty;
+            ResetAnalyzingIdVisual(outgoingVisual, 0f);
+            ResetAnalyzingIdVisual(incomingVisual, hasIncomingId ? 1f : 0f);
+            _showingAnalysisIdA = !_showingAnalysisIdA;
+            _displayedAnalysisId = hasIncomingId ? incoming.Text : null;
+            _isAnimatingAnalysisId = false;
+            SetAnalyzingIdViewportWidth(hasIncomingId ? incomingWidth : 0);
+            AnalyzingIdViewport.Visibility = hasIncomingId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            StartNextAnalyzingIdTransition();
+        });
+        batch.End();
+    }
+
+    private void SetAnalyzingIdImmediately(string? artworkId)
+    {
+        AnalyzingIdTextA.Text = artworkId ?? string.Empty;
+        AnalyzingIdTextB.Text = string.Empty;
+        var width = artworkId is null ? 0 : MeasureAnalyzingIdWidth(AnalyzingIdTextA);
+        SetAnalyzingIdViewportWidth(width);
+        AnalyzingIdViewport.Visibility = artworkId is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        try
+        {
+            ResetAnalyzingIdVisual(
+                ElementCompositionPreview.GetElementVisual(AnalyzingIdTextA),
+                artworkId is null ? 0f : 1f);
+            ResetAnalyzingIdVisual(
+                ElementCompositionPreview.GetElementVisual(AnalyzingIdTextB),
+                0f);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
+        {
+            _logger.LogError("Import.ResetArtworkIdAnimation", ex);
+            AnalyzingIdTextA.Opacity = artworkId is null ? 0 : 1;
+            AnalyzingIdTextB.Opacity = 0;
+        }
+
+        _showingAnalysisIdA = true;
+        _displayedAnalysisId = artworkId;
+        _isPreparingAnalysisId = false;
+        _isAnimatingAnalysisId = false;
+    }
+
+    private static double MeasureAnalyzingIdWidth(TextBlock textBlock)
+    {
+        textBlock.Measure(new Size(double.PositiveInfinity, AnalysisIdViewportHeight));
+        return Math.Clamp(
+            Math.Ceiling(textBlock.DesiredSize.Width),
+            0,
+            AnalysisIdMaxWidth);
+    }
+
+    private void SetAnalyzingIdViewportWidth(double width)
+    {
+        var constrainedWidth = Math.Clamp(width, 0, AnalysisIdMaxWidth);
+        AnalyzingIdViewport.Width = constrainedWidth;
+        AnalyzingIdClip.Rect = new Rect(
+            0,
+            0,
+            constrainedWidth,
+            AnalysisIdViewportHeight);
+    }
+
+    private static void ResetAnalyzingIdVisual(Visual visual, float opacity)
+    {
+        visual.StopAnimation("Offset");
+        visual.StopAnimation("Opacity");
+        visual.Offset = Vector3.Zero;
+        visual.Opacity = opacity;
     }
 
     private void Page_DragOver(object sender, DragEventArgs e)
@@ -54,7 +277,7 @@ public sealed partial class ImportPage : Page
     }
 
     private void Page_Drop(object sender, DragEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Drop", async () =>
+        => UiEventGuard.Run(_logger, "Import.Drop", async () =>
         {
         if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
 
@@ -70,26 +293,107 @@ public sealed partial class ImportPage : Page
             }
             else if (item is Windows.Storage.StorageFolder folder && !string.IsNullOrEmpty(folder.Path))
             {
-                var folderPath = folder.Path;
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        foreach (var p in Directory.EnumerateFiles(folderPath, "*.png", SearchOption.AllDirectories))
-                            paths.Add(p);
-                    }
-                    catch (Exception ex)
-                    {
-                        App.Services.GetRequiredService<IAppLogger>()
-                            .LogError("Import.EnumerateDroppedFolder", ex, folderPath);
-                    }
-                });
+                paths.AddRange(await EnumeratePngFilesAsync(folder.Path, "Import.EnumerateDroppedFolder"));
             }
         }
 
+        await ImportPathsAsync(paths);
+        });
+
+    private void PickSource_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(_logger, "Import.PickSource", async () =>
+        {
+            if (sender is not DropDownButton button
+                || !await EnsureImportPickerExplanationAsync())
+            {
+                return;
+            }
+
+            if (Resources["ImportSourceFlyout"] is MenuFlyout flyout)
+                flyout.ShowAt(button);
+        });
+
+    private void PickFiles_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(_logger, "Import.PickFiles", async () =>
+        {
+            var picker = new FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
+            picker.FileTypeFilter.Add(".png");
+            var files = await picker.PickMultipleFilesAsync();
+            var paths = files
+                .Select(file => file.Path)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .ToList();
+
+            await ImportPathsAsync(paths);
+        });
+
+    private void PickFolder_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(_logger, "Import.PickFolder", async () =>
+        {
+            var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(
+                XamlRoot.ContentIslandEnvironment.AppWindowId);
+            var folder = await picker.PickSingleFolderAsync();
+            if (folder is null || string.IsNullOrWhiteSpace(folder.Path))
+                return;
+
+            var paths = await EnumeratePngFilesAsync(
+                folder.Path,
+                "Import.EnumeratePickedFolder");
+            await ImportPathsAsync(paths);
+        });
+
+    private async Task<bool> EnsureImportPickerExplanationAsync()
+    {
+        if (_settingsViewModel.ImportPickerExplanationShown)
+            return true;
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = ResLoader.GetString("Import_PickerExplanationTitle"),
+            Content = new TextBlock
+            {
+                Text = ResLoader.GetString("Import_PickerExplanationMessage"),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 440,
+            },
+            PrimaryButtonText = ResLoader.GetString("Import_PickerExplanationContinue"),
+            CloseButtonText = ResLoader.GetString("Import_PickerExplanationCancel"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            return false;
+
+        await _settingsViewModel.MarkImportPickerExplanationShownAsync();
+        return true;
+    }
+
+    private async Task<IReadOnlyList<string>> EnumeratePngFilesAsync(
+        string folderPath,
+        string operation)
+    {
+        return await Task.Run<IReadOnlyList<string>>(() =>
+        {
+            try
+            {
+                return Directory
+                    .EnumerateFiles(folderPath, "*.png", SearchOption.AllDirectories)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(operation, ex, folderPath);
+                return [];
+            }
+        });
+    }
+
+    private async Task ImportPathsAsync(IReadOnlyList<string> paths)
+    {
         if (paths.Count > 0 && await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
-        });
+    }
 
     private void AssignAuthor_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.AssignAuthor", async () =>

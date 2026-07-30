@@ -846,6 +846,22 @@
                                 IsOn="{x:Bind ViewModel.UseVisualSimilarity, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
+                        <controls:SettingsCard
+                            x:Uid="SC_ImportPickerExplanation"
+                            AutomationProperties.AutomationId="SettingsImportPickerExplanationCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE897;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <Button
+                                AutomationProperties.AutomationId="SettingsResetImportPickerExplanationButton"
+                                Command="{x:Bind ViewModel.ResetImportPickerExplanationCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                    <TextBlock x:Uid="Settings_ResetImportPickerExplanation" />
+                                </StackPanel>
+                            </Button>
+                        </controls:SettingsCard>
+
                     </StackPanel>
                 </ScrollViewer>
             </PivotItem>

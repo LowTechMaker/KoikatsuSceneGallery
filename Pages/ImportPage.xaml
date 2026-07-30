@@ -13,6 +13,17 @@
     Drop="Page_Drop">
 
     <Page.Resources>
+        <MenuFlyout x:Key="ImportSourceFlyout" Placement="Bottom">
+            <MenuFlyoutItem
+                x:Uid="Import_PickFiles"
+                AutomationProperties.AutomationId="ImportPickFilesMenuItem"
+                Click="PickFiles_Click" />
+            <MenuFlyoutItem
+                x:Uid="Import_PickFolder"
+                AutomationProperties.AutomationId="ImportPickFolderMenuItem"
+                Click="PickFolder_Click" />
+        </MenuFlyout>
+
         <DataTemplate x:Key="AuthorPickerItemTemplate" x:DataType="vm:SelectableAuthor">
             <Grid Padding="4,6" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
@@ -105,6 +116,12 @@
                         Style="{StaticResource CaptionTextBlockStyle}"
                         HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <DropDownButton
+                        AutomationProperties.AutomationId="ImportPickSourceButton"
+                        HorizontalAlignment="Center"
+                        Click="PickSource_Click">
+                        <TextBlock x:Uid="Import_PickSourceLabel" />
+                    </DropDownButton>
                 </StackPanel>
 
                 <!-- Scanning: progress animation -->
@@ -140,7 +157,7 @@
 
                         <!-- Analyzing section: items waiting for metadata -->
                         <Expander
-                            IsExpanded="True"
+                            IsExpanded="False"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
                             Visibility="{x:Bind ViewModel.HasAnalyzingItems, Mode=OneWay}">
@@ -149,19 +166,44 @@
                                     <ProgressRing Width="14" Height="14" IsActive="True" />
                                     <TextBlock x:Uid="Import_Analyzing"
                                                Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <Grid x:Name="AnalyzingIdViewport"
+                                          Height="20"
+                                          MaxWidth="136"
+                                          VerticalAlignment="Center"
+                                          Visibility="Collapsed">
+                                        <Grid.Clip>
+                                            <RectangleGeometry x:Name="AnalyzingIdClip" />
+                                        </Grid.Clip>
+                                        <TextBlock x:Name="AnalyzingIdTextA"
+                                                   MaxWidth="136"
+                                                   MaxLines="1"
+                                                   VerticalAlignment="Center"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="AnalyzingIdTextB"
+                                                   MaxWidth="136"
+                                                   MaxLines="1"
+                                                   VerticalAlignment="Center"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                    <TextBlock Text="{x:Bind ViewModel.AnalysisStatusText, Mode=OneWay}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               VerticalAlignment="Center" />
                                 </StackPanel>
                             </Expander.Header>
-                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.AnalyzingItems}" Margin="24,4,0,4">
-                                <ItemsRepeater.Layout>
-                                    <StackLayout Spacing="2" />
-                                </ItemsRepeater.Layout>
-                                <ItemsRepeater.ItemTemplate>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.AnalyzingPreviewItems, Mode=OneWay}"
+                                          HorizontalContentAlignment="Stretch"
+                                          Margin="24,4,0,4">
+                                <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:ImportItem">
                                         <Grid Padding="4,4" ColumnSpacing="10">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
                                                     Background="{ThemeResource ControlFillColorDefaultBrush}">
@@ -171,12 +213,10 @@
                                                        Style="{StaticResource BodyTextBlockStyle}"
                                                        TextTrimming="CharacterEllipsis" MaxLines="1"
                                                        VerticalAlignment="Center" />
-                                            <ProgressRing Grid.Column="2" Width="14" Height="14" IsActive="True"
-                                                          VerticalAlignment="Center" />
                                         </Grid>
                                     </DataTemplate>
-                                </ItemsRepeater.ItemTemplate>
-                            </ItemsRepeater>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </Expander>
 
                         <!-- Fetch-failed: artwork ID recognized but fetch returned null -->
@@ -349,12 +389,8 @@
                                                                     Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                                     BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                                                                     BorderThickness="1">
-                                                                <Image Stretch="UniformToFill">
-                                                                    <Image.Source>
-                                                                        <BitmapImage DecodePixelWidth="200"
-                                                                                     UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                                                    </Image.Source>
-                                                                </Image>
+                                                                <Image Stretch="UniformToFill"
+                                                                       Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                                                             </Border>
 
                                                             <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
@@ -733,12 +769,8 @@
                                                                 Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                                                                 BorderThickness="1">
-                                                            <Image Stretch="UniformToFill">
-                                                                <Image.Source>
-                                                                    <BitmapImage DecodePixelWidth="200"
-                                                                                 UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                                                </Image.Source>
-                                                            </Image>
+                                                            <Image Stretch="UniformToFill"
+                                                                   Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
                                                         </Border>
 
                                                         <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">

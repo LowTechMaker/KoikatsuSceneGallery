@@ -211,7 +211,8 @@ public sealed class ImportService
         IReadOnlyList<string> filePaths,
         ObservableCollection<ImportItem> items,
         DispatcherQueue dispatcher,
-        CancellationToken ct)
+        CancellationToken ct,
+        Action<string?>? currentArtworkIdChanged = null)
     {
         // Phase 1: classify on a background thread so the UI stays responsive
         // (CardTypeClassifier reads file content for each card).
@@ -244,50 +245,64 @@ public sealed class ImportService
             .GroupBy(i => BuildArtworkIdentityKey(i.ArtworkId!))
             .ToList();
 
-        foreach (var group in groups)
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            foreach (var group in groups)
+            {
+                ct.ThrowIfCancellationRequested();
 
-            var artworkId = group.First().ArtworkId!;
-            var provider = FindProvider(artworkId.ProviderId);
-            ArtworkInfo? info;
-            try
-            {
-                info = provider is not null
-                    ? await provider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false)
-                    : null;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Import.FetchArtworkMetadata", ex, artworkId?.Id);
-                info = null;
-            }
-
-            dispatcher.TryEnqueue(() =>
-            {
-                foreach (var item in group)
+                var artworkId = group.First().ArtworkId!;
+                if (currentArtworkIdChanged is not null)
                 {
-                    if (info is not null)
-                    {
-                        item.FetchedArtworkInfo = info;
-                        item.AuthorName = info.AuthorName;
-                        item.AuthorId = info.AuthorId;
-                        item.AuthorProviderId = artworkId!.ProviderId;
-                        item.Title = info.Title;
-                        item.Rating = info.Rating;
-                        item.Tags = info.Tags;
-                    }
-                    else
-                    {
-                        item.FetchedArtworkInfo = null;
-                    }
-                    item.Status = ImportItemStatus.ReadyToImport;
+                    var currentId = artworkId.Id;
+                    dispatcher.TryEnqueue(() => currentArtworkIdChanged(currentId));
                 }
-            });
+
+                var provider = FindProvider(artworkId.ProviderId);
+                ArtworkInfo? info;
+                try
+                {
+                    info = provider is not null
+                        ? await provider.FetchArtworkInfoAsync(artworkId, ct).ConfigureAwait(false)
+                        : null;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Import.FetchArtworkMetadata", ex, artworkId?.Id);
+                    info = null;
+                }
+
+                dispatcher.TryEnqueue(() =>
+                {
+                    foreach (var item in group)
+                    {
+                        if (info is not null)
+                        {
+                            item.FetchedArtworkInfo = info;
+                            item.AuthorName = info.AuthorName;
+                            item.AuthorId = info.AuthorId;
+                            item.AuthorProviderId = artworkId!.ProviderId;
+                            item.Title = info.Title;
+                            item.Rating = info.Rating;
+                            item.Tags = info.Tags;
+                        }
+                        else
+                        {
+                            item.FetchedArtworkInfo = null;
+                        }
+                        item.Status = ImportItemStatus.ReadyToImport;
+                    }
+                });
+            }
+        }
+        finally
+        {
+            if (currentArtworkIdChanged is not null)
+                dispatcher.TryEnqueue(() => currentArtworkIdChanged(null));
         }
 
         // Mark items without an artwork ID as ready

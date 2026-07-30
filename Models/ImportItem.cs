@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Services;
+using Microsoft.UI.Xaml.Media.Imaging;
 using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Models;
@@ -18,9 +19,12 @@ public enum ImportItemStatus
 
 public partial class ImportItem : ObservableObject
 {
+    private BitmapImage? _thumbnailSource;
+
     public required string SourceFilePath { get; init; }
     public string FileName => Path.GetFileName(SourceFilePath);
-    public Uri ThumbnailUri => new(SourceFilePath);
+    public BitmapImage ThumbnailSource =>
+        _thumbnailSource ??= new BitmapImage(new Uri(SourceFilePath)) { DecodePixelWidth = 200 };
     public string SourceFolder => Path.GetDirectoryName(SourceFilePath)!;
     internal ArtworkInfo? FetchedArtworkInfo { get; set; }
     internal string? AuthorDirectoryPath { get; set; }
