@@ -405,8 +405,41 @@ public sealed class ImportService
             config, itemSnapshot, ct).ConfigureAwait(false);
         int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
         bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
-        dispatcher.TryEnqueue(() => ResolveDestinations(
-            items, config, identicalSourcePaths, folderIndex, threshold, visual));
+
+        if (dispatcher.HasThreadAccess)
+        {
+            ct.ThrowIfCancellationRequested();
+            ResolveDestinations(
+                items, config, identicalSourcePaths, folderIndex, threshold, visual);
+            return;
+        }
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!dispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    ct.ThrowIfCancellationRequested();
+                    ResolveDestinations(
+                        items, config, identicalSourcePaths, folderIndex, threshold, visual);
+                    completion.TrySetResult();
+                }
+                catch (OperationCanceledException)
+                {
+                    completion.TrySetCanceled(ct);
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+            }))
+        {
+            throw new InvalidOperationException(
+                "The destination resolver could not be queued on the UI thread.");
+        }
+
+        await completion.Task.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -428,8 +461,9 @@ public sealed class ImportService
         await _fileExecutor.ExecuteAsync(
             preflightedItems,
             dispatcher,
-            ct,
-            SaveFetchedMetadataAsync);
+            ct);
+
+        await SaveAllFetchedMetadataAsync(preflightedItems, ct).ConfigureAwait(false);
     }
 
     private Task<List<ImportItem>> PrepareArtworkPromotionsAsync(
@@ -512,15 +546,25 @@ public sealed class ImportService
         CancellationToken cancellationToken)
     {
         var info = item.FetchedArtworkInfo;
-        var authorDirectory = item.AuthorDirectoryPath;
-        if (info is null || string.IsNullOrWhiteSpace(authorDirectory))
+        if (info is null)
             return;
+
+        var authorDirectory = FindImportedAuthorDirectory(item, info);
+        if (authorDirectory is null)
+        {
+            _logger.LogError(
+                "Import.WritePostMetadata",
+                new InvalidOperationException(
+                    "Fetched post metadata could not be saved because the author directory was not resolved."),
+                item.DestinationPath);
+            return;
+        }
 
         try
         {
             await _postMetadataStore.WriteAsync(
                 authorDirectory,
-                PostMetadataMapper.ToDocument(info),
+                PostMetadataMapper.ToDocument(info, [item.FileName]),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -537,6 +581,88 @@ public sealed class ImportService
                     info.ArtworkId.ProviderId,
                     info.ArtworkId.Id));
         }
+    }
+
+    private async Task SaveAllFetchedMetadataAsync(
+        IReadOnlyList<ImportItem> items,
+        CancellationToken cancellationToken)
+    {
+        var groups = items
+            .Where(item => item.Status == ImportItemStatus.Completed
+                && item.FetchedArtworkInfo is not null)
+            .Select(item => (
+                Item: item,
+                Info: item.FetchedArtworkInfo!,
+                AuthorDir: FindImportedAuthorDirectory(item, item.FetchedArtworkInfo!)))
+           .Where(entry => entry.AuthorDir is not null)
+            .GroupBy(
+                entry => $"{entry.AuthorDir}\u001F{entry.Info.ArtworkId.ProviderId}\u001F{entry.Info.ArtworkId.Id}",
+                StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var group in groups)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var first = group.First();
+            var info = first.Info;
+            var authorDirectory = first.AuthorDir!;
+            var localFileNames = group
+                .Select(entry => entry.Item.FileName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            try
+            {
+                await _postMetadataStore.WriteAsync(
+                    authorDirectory,
+                    PostMetadataMapper.ToDocument(info, localFileNames),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    "Import.WritePostMetadata",
+                    ex,
+                    _postMetadataStore.GetSidecarPath(
+                        authorDirectory,
+                        info.ArtworkId.ProviderId,
+                        info.ArtworkId.Id));
+            }
+        }
+    }
+
+    private string? FindImportedAuthorDirectory(ImportItem item, ArtworkInfo info)
+    {
+        if (!string.IsNullOrWhiteSpace(item.AuthorDirectoryPath))
+            return item.AuthorDirectoryPath;
+
+        var destinationDirectory = Path.GetDirectoryName(item.DestinationPath);
+        var authorProvider = FindAuthorProvider(info.ArtworkId.ProviderId);
+        if (destinationDirectory is null || authorProvider is null)
+            return null;
+
+        for (var directory = new DirectoryInfo(destinationDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            var parsed = authorProvider.TryParseFolderName(directory.Name);
+            if (parsed is not null
+                && parsed.Key.ProviderId.Equals(
+                    info.ArtworkId.ProviderId,
+                    StringComparison.OrdinalIgnoreCase)
+                && parsed.Key.Id.Equals(
+                    info.AuthorId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return null;
     }
 
     private void ResolveDestinations(

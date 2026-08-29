@@ -5,9 +5,12 @@ namespace KoikatsuSceneGallery.Services;
 
 internal static class PostMetadataMapper
 {
-    public static PostMetadataDocument ToDocument(ArtworkInfo info)
+    public static PostMetadataDocument ToDocument(
+        ArtworkInfo info,
+        IReadOnlyList<string> localFileNames)
     {
         ArgumentNullException.ThrowIfNull(info);
+        ArgumentNullException.ThrowIfNull(localFileNames);
 
         return new PostMetadataDocument(
             PostMetadataDocument.CurrentSchemaVersion,
@@ -21,6 +24,9 @@ internal static class PostMetadataMapper
             info.Tags
                 .Select(static tag => new PostMetadataTag(tag.Name, tag.TranslatedName))
                 .ToList(),
-            info.FetchedAt);
+            info.FetchedAt)
+        {
+            LocalFileNames = localFileNames,
+        };
     }
 }

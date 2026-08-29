@@ -32,12 +32,18 @@ public class ThumbnailCacheService
     }
 
     public string? TryGetCachedPath(SceneCard card) =>
-        TryGetCachedPath(card.FilePath, card.DateModified);
+        TryGetCachedPath(card.FilePath, card.FileSize, card.DateModified);
 
-    public string? TryGetCachedPath(string filePath, DateTime dateModified)
+    public string? TryGetCachedPath(
+        string filePath,
+        long fileSize,
+        DateTime dateModified)
     {
+        if (!MatchesSourceSnapshot(filePath, fileSize, dateModified))
+            return null;
+
         var folder = _cacheFolder;
-        var cacheKey = ComputeCacheKey(filePath, dateModified);
+        var cacheKey = ComputeCacheKey(filePath, fileSize, dateModified);
         var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
         return GetUsableCachePath(cachePath);
     }
@@ -45,18 +51,26 @@ public class ThumbnailCacheService
     public Task<string?> EnsureThumbnailAsync(
         SceneCard card,
         CancellationToken cancellationToken = default) =>
-        EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken);
+        EnsureThumbnailAsync(
+            card.FilePath,
+            card.FileSize,
+            card.DateModified,
+            cancellationToken);
 
     public async Task<string?> EnsureThumbnailAsync(
         string filePath,
+        long fileSize,
         DateTime dateModified,
         CancellationToken cancellationToken = default)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!MatchesSourceSnapshot(filePath, fileSize, dateModified))
+                return null;
+
             var folder = _cacheFolder;
-            var cacheKey = ComputeCacheKey(filePath, dateModified);
+            var cacheKey = ComputeCacheKey(filePath, fileSize, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
             var existingCachePath = GetUsableCachePath(cachePath);
@@ -98,6 +112,9 @@ public class ThumbnailCacheService
                 decoder.DpiX,
                 decoder.DpiY,
                 pixels.DetachPixelData(),
+                filePath,
+                fileSize,
+                dateModified,
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -113,14 +130,18 @@ public class ThumbnailCacheService
 
     public async Task<string?> EnsureVideoThumbnailAsync(
         string filePath,
+        long fileSize,
         DateTime dateModified,
         CancellationToken cancellationToken = default)
     {
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!MatchesSourceSnapshot(filePath, fileSize, dateModified))
+                return null;
+
             var folder = _cacheFolder;
-            var cacheKey = ComputeCacheKey(filePath, dateModified);
+            var cacheKey = ComputeCacheKey(filePath, fileSize, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
             var existingCachePath = GetUsableCachePath(cachePath);
@@ -163,6 +184,9 @@ public class ThumbnailCacheService
                 decoder.DpiX,
                 decoder.DpiY,
                 pixels.DetachPixelData(),
+                filePath,
+                fileSize,
+                dateModified,
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -191,11 +215,32 @@ public class ThumbnailCacheService
         }, cancellationToken);
     }
 
-    private static string ComputeCacheKey(string filePath, DateTime dateModified)
+    private static string ComputeCacheKey(
+        string filePath,
+        long fileSize,
+        DateTime dateModified)
     {
-        var input = $"{filePath}|{dateModified.Ticks}";
+        var input = $"{filePath}|{fileSize}|{dateModified.Ticks}";
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(hash)[..16];
+    }
+
+    private static bool MatchesSourceSnapshot(
+        string filePath,
+        long expectedFileSize,
+        DateTime expectedDateModified)
+    {
+        try
+        {
+            var info = new FileInfo(filePath);
+            return info.Exists
+                   && info.Length == expectedFileSize
+                   && info.LastWriteTime.Ticks == expectedDateModified.Ticks;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private string? GetUsableCachePath(string cachePath)
@@ -218,6 +263,9 @@ public class ThumbnailCacheService
         double dpiX,
         double dpiY,
         byte[] pixelData,
+        string sourcePath,
+        long sourceFileSize,
+        DateTime sourceDateModified,
         CancellationToken cancellationToken)
     {
         var temporaryName = $"{cacheKey}.{Guid.NewGuid():N}.tmp";
@@ -249,6 +297,14 @@ public class ThumbnailCacheService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (!MatchesSourceSnapshot(
+                    sourcePath,
+                    sourceFileSize,
+                    sourceDateModified))
+            {
+                return null;
+            }
+
             File.Move(temporaryPath, cachePath, overwrite: true);
             if (JpegCacheFile.IsComplete(cachePath))
                 return cachePath;

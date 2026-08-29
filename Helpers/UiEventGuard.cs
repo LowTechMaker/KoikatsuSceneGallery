@@ -5,9 +5,21 @@ namespace KoikatsuSceneGallery.Helpers;
 public static class UiEventGuard
 {
     public static void Run(IAppLogger logger, string operation, Func<Task> action)
-        => RunCoreAsync(logger, operation, action).Observe(logger, $"{operation}.Guard");
+        => Run(logger, operation, action, onError: null);
 
-    private static async Task RunCoreAsync(IAppLogger logger, string operation, Func<Task> action)
+    public static void Run(
+        IAppLogger logger,
+        string operation,
+        Func<Task> action,
+        Action<Exception>? onError) =>
+        RunCoreAsync(logger, operation, action, onError)
+            .Observe(logger, $"{operation}.Guard");
+
+    private static async Task RunCoreAsync(
+        IAppLogger logger,
+        string operation,
+        Func<Task> action,
+        Action<Exception>? onError)
     {
         try
         {
@@ -16,6 +28,7 @@ public static class UiEventGuard
         catch (Exception ex)
         {
             logger.LogError(operation, ex);
+            onError?.Invoke(ex);
         }
     }
 }

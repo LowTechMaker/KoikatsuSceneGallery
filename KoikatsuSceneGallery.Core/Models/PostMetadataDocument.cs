@@ -16,5 +16,7 @@ internal sealed record PostMetadataDocument(
     IReadOnlyList<PostMetadataTag> Tags,
     DateTimeOffset FetchedAt)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+
+    public IReadOnlyList<string> LocalFileNames { get; init; } = [];
 }

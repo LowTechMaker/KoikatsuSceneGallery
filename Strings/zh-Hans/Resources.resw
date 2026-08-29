@@ -741,6 +741,9 @@
   <data name="Import_RejectedWarningMessage" xml:space="preserve">
     <value>已移除 {0} 个非 Koikatsu 卡片的文件。</value>
   </data>
+  <data name="Import_ManualArtworkIdWarningMessage" xml:space="preserve">
+    <value>有 {0} 个文件无法获取作品信息，未被导入。请在获取失败分页指定作者后再导入。</value>
+  </data>
   <data name="Import_ScanningHint.Text" xml:space="preserve">
     <value>正在扫描文件…</value>
   </data>
@@ -993,5 +996,353 @@
   </data>
   <data name="Import_ErrorConflictingFile" xml:space="preserve">
     <value>文件内容冲突：{0}</value>
+  </data>
+  <data name="Nav_Friends.Content" xml:space="preserve">
+    <value>朋友</value>
+  </data>
+  <data name="SC_CharacterSearchScope.Header" xml:space="preserve">
+    <value>角色搜索范围</value>
+  </data>
+  <data name="SC_CharacterSearchScope.Description" xml:space="preserve">
+    <value>决定角色搜索结果是否包含替代版本与旧版本</value>
+  </data>
+  <data name="Settings_SearchAlternatives.Content" xml:space="preserve">
+    <value>在搜索结果显示朋友 #alternatives 里的卡片</value>
+  </data>
+  <data name="Settings_SearchOldVersions.Content" xml:space="preserve">
+    <value>在搜索结果显示朋友 #old_version 里的卡片</value>
+  </data>
+  <data name="SC_ResetGuidance.Header" xml:space="preserve">
+    <value>重置提示与警告</value>
+  </data>
+  <data name="SC_ResetGuidance.Description" xml:space="preserve">
+    <value>重新显示导入说明与朋友文件管理警告</value>
+  </data>
+  <data name="Settings_ResetGuidance.Text" xml:space="preserve">
+    <value>重置提示</value>
+  </data>
+  <data name="Character_OldVersionBadge.Text" xml:space="preserve">
+    <value>旧版本</value>
+  </data>
+  <data name="Character_AlternativeBadge.Text" xml:space="preserve">
+    <value>替代版本</value>
+  </data>
+  <data name="Detail_Alternatives.Text" xml:space="preserve">
+    <value>替代版本</value>
+  </data>
+  <data name="Friends_Title.Text" xml:space="preserve">
+    <value>朋友</value>
+  </data>
+  <data name="Friends_Subtitle.Text" xml:space="preserve">
+    <value>整理自己的卡片与朋友私下给你的卡片，不包含任何社交功能。</value>
+  </data>
+  <data name="Friends_AddLabel.Text" xml:space="preserve">
+    <value>添加朋友</value>
+  </data>
+  <data name="Friends_Add.AutomationProperties.Name" xml:space="preserve">
+    <value>添加朋友</value>
+  </data>
+  <data name="Friends_FileWarning.Title" xml:space="preserve">
+    <value>请自行管理好原始文件</value>
+  </data>
+  <data name="Friends_FileWarning.Message" xml:space="preserve">
+    <value>此功能只记录文件夹与卡片路径，不会移动、删除或备份文件。原始文件被移动或删除后，链接就会失效；角色版本也需要由你放进正确的文件夹。</value>
+  </data>
+  <data name="Friends_Search.PlaceholderText" xml:space="preserve">
+    <value>搜索朋友</value>
+  </data>
+  <data name="Friends_NoFolder.Text" xml:space="preserve">
+    <value>尚未设置专用文件夹</value>
+  </data>
+  <data name="Friends_Rename.Text" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="Friends_Delete.Text" xml:space="preserve">
+    <value>删除朋友</value>
+  </data>
+  <data name="Friends_More.AutomationProperties.Name" xml:space="preserve">
+    <value>更多操作</value>
+  </data>
+  <data name="Friends_Empty.Text" xml:space="preserve">
+    <value>还没有朋友</value>
+  </data>
+  <data name="FriendDetail_OpenFolderLabel.Text" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="FriendDetail_OpenFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="FriendDetail_SetFolderLabel.Text" xml:space="preserve">
+    <value>设置文件夹</value>
+  </data>
+  <data name="FriendDetail_SetFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>设置文件夹</value>
+  </data>
+  <data name="FriendDetail_CreateVariantFoldersLabel.Text" xml:space="preserve">
+    <value>创建版本分类文件夹</value>
+  </data>
+  <data name="FriendDetail_CreateVariantFolders.AutomationProperties.Name" xml:space="preserve">
+    <value>创建朋友角色卡的版本分类文件夹</value>
+  </data>
+  <data name="FriendDetail_More.AutomationProperties.Name" xml:space="preserve">
+    <value>更多朋友操作</value>
+  </data>
+  <data name="FriendDetail_ChangeFolder.Text" xml:space="preserve">
+    <value>更改文件夹</value>
+  </data>
+  <data name="FriendDetail_ClearFolder.Text" xml:space="preserve">
+    <value>断开文件夹链接</value>
+  </data>
+  <data name="FriendDetail_RemoveCard.Text" xml:space="preserve">
+    <value>从朋友移除</value>
+  </data>
+  <data name="FriendDetail_CardMore.AutomationProperties.Name" xml:space="preserve">
+    <value>更多卡片操作</value>
+  </data>
+  <data name="FriendDetail_Empty.Text" xml:space="preserve">
+    <value>此分类还没有卡片</value>
+  </data>
+  <data name="FriendDetail_DropHint.Text" xml:space="preserve">
+    <value>把卡片 PNG 拖到这里即可建立链接；文件会保留在原处。</value>
+  </data>
+  <data name="Friends_NameField" xml:space="preserve">
+    <value>名字</value>
+  </data>
+  <data name="Friends_NamePlaceholder" xml:space="preserve">
+    <value>朋友的名字</value>
+  </data>
+  <data name="Friends_CreateFolderOption" xml:space="preserve">
+    <value>现在于设置路径创建 #Personal／朋友名字</value>
+  </data>
+  <data name="Friends_PersonalFolderHint" xml:space="preserve">
+    <value>应用会在下列卡片路径创建 #Personal／朋友名字；配置了多个路径时可自行选择。</value>
+  </data>
+  <data name="Friends_ConfiguredPathSummary" xml:space="preserve">
+    <value>{0}：{1}</value>
+  </data>
+  <data name="Friends_ScenePathHeader" xml:space="preserve">
+    <value>场景卡路径</value>
+  </data>
+  <data name="Friends_CharacterPathHeader" xml:space="preserve">
+    <value>角色卡路径</value>
+  </data>
+  <data name="Friends_CoordinatePathHeader" xml:space="preserve">
+    <value>服装卡路径</value>
+  </data>
+  <data name="Friends_NoConfiguredPaths" xml:space="preserve">
+    <value>请先在设置中添加至少一个卡片文件夹，才能创建专用文件夹。</value>
+  </data>
+  <data name="Friends_AddDialogTitle" xml:space="preserve">
+    <value>添加朋友</value>
+  </data>
+  <data name="Friends_RenameDialogTitle" xml:space="preserve">
+    <value>重命名朋友</value>
+  </data>
+  <data name="Friends_DeleteDialogTitle" xml:space="preserve">
+    <value>要删除朋友吗？</value>
+  </data>
+  <data name="Friends_DeleteDialogMessage" xml:space="preserve">
+    <value>这只会移除“{0}”的朋友记录与卡片链接，不会删除任何文件夹或文件。</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Common_Create" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="FriendDetail_NoFolder" xml:space="preserve">
+    <value>尚未设置专用文件夹</value>
+  </data>
+  <data name="FriendDetail_DropCaption" xml:space="preserve">
+    <value>把卡片链接给这位朋友</value>
+  </data>
+  <data name="FriendDetail_NoValidCards" xml:space="preserve">
+    <value>找不到支持的卡片 PNG 文件。</value>
+  </data>
+  <data name="FriendDetail_CardsLinked" xml:space="preserve">
+    <value>已添加 {0} 张卡片链接。</value>
+  </data>
+  <data name="FriendDetail_NoNewCardLinks" xml:space="preserve">
+    <value>不需要添加链接；位于专用文件夹内的卡片本来就会自动显示。</value>
+  </data>
+  <data name="FriendDetail_FolderMissing" xml:space="preserve">
+    <value>这个卡片类型的专用文件夹已不存在，请从设置路径重新创建。</value>
+  </data>
+  <data name="FriendDetail_FolderOpenFailed" xml:space="preserve">
+    <value>Windows 无法打开这个文件夹，请确认路径仍可访问。</value>
+  </data>
+  <data name="FriendDetail_FolderSet" xml:space="preserve">
+    <value>专用文件夹已准备完成：{0}</value>
+  </data>
+  <data name="FriendDetail_NoConfiguredPath" xml:space="preserve">
+    <value>这个卡片类型尚未设置文件夹路径，请先到设置中添加。</value>
+  </data>
+  <data name="FriendDetail_SelectFolderPathTitle" xml:space="preserve">
+    <value>选择设置中的卡片路径</value>
+  </data>
+  <data name="FriendDetail_VariantFoldersCreated" xml:space="preserve">
+    <value>已在朋友的角色卡文件夹创建 #old_version 和 #alternatives：{0}</value>
+  </data>
+  <data name="FriendDetail_FolderCardCannotUnlink" xml:space="preserve">
+    <value>这张卡片因位于朋友专用文件夹内而显示。应用不会移动它，请自行在文件资源管理器中调整位置。</value>
+  </data>
+  <data name="FriendDetail_CardUnlinked" xml:space="preserve">
+    <value>已移除卡片链接，原始文件没有变动。</value>
+  </data>
+  <data name="FriendDetail_ClearFolderDialogTitle" xml:space="preserve">
+    <value>要断开专用文件夹链接吗？</value>
+  </data>
+  <data name="FriendDetail_ClearFolderDialogMessage" xml:space="preserve">
+    <value>应用将不再把这个文件夹扫描为此朋友的卡片；现有文件夹与文件都不会变动。</value>
+  </data>
+  <data name="FriendDetail_ClearFolderConfirm" xml:space="preserve">
+    <value>断开链接</value>
+  </data>
+  <data name="Common_Select" xml:space="preserve">
+    <value>选择</value>
+  </data>
+  <data name="FriendDetail_Avatar.AutomationProperties.Name" xml:space="preserve">
+    <value>设置朋友头像</value>
+  </data>
+  <data name="FriendDetail_Avatar.ToolTipService.ToolTip" xml:space="preserve">
+    <value>设置朋友头像</value>
+  </data>
+  <data name="FriendDetail_SetAvatar.Text" xml:space="preserve">
+    <value>设置头像</value>
+  </data>
+  <data name="FriendDetail_ChooseLocalAvatar.Text" xml:space="preserve">
+    <value>选择图片</value>
+  </data>
+  <data name="FriendDetail_ChooseAuthorAvatar.Text" xml:space="preserve">
+    <value>从已知的在线作者中选择</value>
+  </data>
+  <data name="FriendDetail_RemoveAvatar.Text" xml:space="preserve">
+    <value>移除头像</value>
+  </data>
+  <data name="FriendDetail_SelectAuthorAvatarTitle" xml:space="preserve">
+    <value>选择作者头像</value>
+  </data>
+  <data name="FriendDetail_AuthorAvatarSearchPlaceholder" xml:space="preserve">
+    <value>搜索已知作者</value>
+  </data>
+  <data name="FriendDetail_NoKnownAuthorAvatars" xml:space="preserve">
+    <value>目前找不到拥有可用头像的已知在线作者。</value>
+  </data>
+  <data name="FriendDetail_InvalidAvatarImage" xml:space="preserve">
+    <value>无法使用所选图片作为头像。</value>
+  </data>
+  <data name="FriendDetail_AvatarUpdated" xml:space="preserve">
+    <value>朋友头像已更新。</value>
+  </data>
+  <data name="FriendDetail_AvatarRemoved" xml:space="preserve">
+    <value>朋友头像已移除。</value>
+  </data>
+  <data name="Friends_OperationFailed" xml:space="preserve">
+    <value>无法完成操作。请检查名称、资料夹路径、可用磁盘空间与存取权限后再试一次。</value>
+  </data>
+  <data name="FriendDetail_OperationFailed" xml:space="preserve">
+    <value>无法完成操作。请检查档案或资料夹、可用磁盘空间与存取权限后再试一次。</value>
+  </data>
+  <data name="Settings_OperationFailed" xml:space="preserve">
+    <value>无法储存设定。变更已还原，请检查可用磁盘空间与存取权限后再试一次。</value>
+  </data>
+  <data name="SelfProfile_DefaultName" xml:space="preserve">
+    <value>我</value>
+  </data>
+  <data name="Friends_SelfBadge.Text" xml:space="preserve">
+    <value>本人</value>
+  </data>
+  <data name="SelfProfile_RenameDialogTitle" xml:space="preserve">
+    <value>编辑我的名称</value>
+  </data>
+  <data name="SelfProfile_AvatarAutomationName" xml:space="preserve">
+    <value>设置我的头像</value>
+  </data>
+  <data name="FriendDetail_AvatarAutomationName" xml:space="preserve">
+    <value>设置朋友头像</value>
+  </data>
+  <data name="SelfProfile_MoreAutomationName" xml:space="preserve">
+    <value>更多本人资料操作</value>
+  </data>
+  <data name="FriendDetail_MoreAutomationName" xml:space="preserve">
+    <value>更多朋友操作</value>
+  </data>
+  <data name="SelfProfile_AvatarUpdated" xml:space="preserve">
+    <value>我的头像已更新。</value>
+  </data>
+  <data name="SelfProfile_AvatarRemoved" xml:space="preserve">
+    <value>我的头像已移除。</value>
+  </data>
+  <data name="SelfProfile_DropCaption" xml:space="preserve">
+    <value>把卡片链接到我的卡片</value>
+  </data>
+  <data name="SelfProfile_VariantFoldersCreated" xml:space="preserve">
+    <value>已在我的角色卡文件夹建立 #old_version 与 #alternatives：{0}</value>
+  </data>
+  <data name="SelfProfile_FolderCardCannotUnlink" xml:space="preserve">
+    <value>这张卡片因位于我的专用文件夹内而显示。应用程序不会移动它，请自行在文件资源管理器中调整位置。</value>
+  </data>
+  <data name="SelfProfile_ClearFolderDialogMessage" xml:space="preserve">
+    <value>应用程序将不再把这个文件夹扫描为我的卡片；现有文件夹与文件都不会变动。</value>
+  </data>
+  <data name="SelfProfile_CreateFoldersDialogTitle" xml:space="preserve">
+    <value>建立“我的”专用卡片文件夹？</value>
+  </data>
+  <data name="SelfProfile_CreateFoldersDialogMessage" xml:space="preserve">
+    <value>尚未找到可使用的 #Personal/#Self。建立后才会进入“我的”页面；应用程序不会移动现有卡片，文件仍由你管理。</value>
+  </data>
+  <data name="SelfProfile_CreateCategoryFolderDialogMessage" xml:space="preserve">
+    <value>目前尚未为“我的”设置{0}。要在下列路径建立 #Personal/#Self 并切换吗？</value>
+  </data>
+  <data name="SelfProfile_SelectExistingFoldersDialogTitle" xml:space="preserve">
+    <value>选择“我的”文件夹</value>
+  </data>
+  <data name="SelfProfile_SelectExistingFoldersDialogMessage" xml:space="preserve">
+    <value>找到多个可用的 #Personal/#Self，请为每种卡片选择一个。绑定不会移动或修改任何文件。</value>
+  </data>
+  <data name="SelfProfile_BindAndOpenButton" xml:space="preserve">
+    <value>绑定并打开</value>
+  </data>
+  <data name="SelfProfile_CreateAndOpenButton" xml:space="preserve">
+    <value>建立并打开</value>
+  </data>
+  <data name="SelfProfile_NotNowButton" xml:space="preserve">
+    <value>暂不建立</value>
+  </data>
+  <data name="SelfProfile_NoConfiguredFoldersDialogTitle" xml:space="preserve">
+    <value>尚未设置卡片路径</value>
+  </data>
+  <data name="SelfProfile_NoConfiguredFoldersDialogMessage" xml:space="preserve">
+    <value>请先到“设置”加入至少一种卡片路径，再回来建立“我的”专用文件夹。这次不会进入“我的”页面。</value>
+  </data>
+  <data name="SelfProfile_FolderConflictDialogTitle" xml:space="preserve">
+    <value>没有可使用的 #Self 文件夹</value>
+  </data>
+  <data name="SelfProfile_FolderConflictDialogMessage" xml:space="preserve">
+    <value>设置路径中的 #Personal/#Self 已绑定给其他人。为避免两份资料共用同一文件夹，请先调整对方的文件夹设置。</value>
+  </data>
+  <data name="Friends_ExistingFolderDialogTitle" xml:space="preserve">
+    <value>专用文件夹已存在</value>
+  </data>
+  <data name="Friends_ExistingFolderDialogMessage" xml:space="preserve">
+    <value>以下同名文件夹已存在。应用程序不会合并、移动或判断卡片版本；要直接把它绑定给这份资料吗？&#x0A;&#x0A;{0}</value>
+  </data>
+  <data name="Friends_BindExistingFolderButton" xml:space="preserve">
+    <value>绑定现有文件夹</value>
+  </data>
+  <data name="Friends_FolderOwnedDialogTitle" xml:space="preserve">
+    <value>文件夹已被使用</value>
+  </data>
+  <data name="Friends_FolderOwnedDialogMessage" xml:space="preserve">
+    <value>为避免不同资料共用卡片，下列文件夹不能再次绑定：&#x0A;&#x0A;{0}</value>
+  </data>
+  <data name="Friends_FolderOwnedEntry" xml:space="preserve">
+    <value>{0}：{1}&#x0A;目前绑定：{2}</value>
   </data>
 </root>

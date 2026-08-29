@@ -51,6 +51,7 @@ public sealed class ThumbnailService
             {
                 var path = _cacheService.TryGetCachedPath(
                     card.FilePath,
+                    card.FileSize,
                     card.DateModified);
                 if (path is not null)
                     return path;
@@ -58,10 +59,12 @@ public sealed class ThumbnailService
                 return isVideo
                     ? await _cacheService.EnsureVideoThumbnailAsync(
                         card.FilePath,
+                        card.FileSize,
                         card.DateModified,
                         cancellationToken).ConfigureAwait(false)
                     : await _cacheService.EnsureThumbnailAsync(
                         card.FilePath,
+                        card.FileSize,
                         card.DateModified,
                         cancellationToken).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);
@@ -74,7 +77,13 @@ public sealed class ThumbnailService
 
             cancellationToken.ThrowIfCancellationRequested();
             if (card is SceneCard)
-                _sceneCardCacheService.SetThumbnailPath(card.FilePath, cachedPath);
+            {
+                _sceneCardCacheService.SetThumbnailPath(
+                    card.FilePath,
+                    card.FileSize,
+                    card.DateModified.Ticks,
+                    cachedPath);
+            }
             await SetThumbnailPathAsync(card, cachedPath, cancellationToken)
                 .ConfigureAwait(false);
         }

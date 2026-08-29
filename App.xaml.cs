@@ -157,6 +157,11 @@ public partial class App : Application
             dispatcherQueue,
             _thumbnailCacheService,
             _logger);
+        var friendService = new FriendService(
+            _logger,
+            authorInfoService,
+            ResLoader.GetString("SelfProfile_DefaultName"));
+        await friendService.LoadAsync();
 
         GalleryViewModel? galleryViewModel = null;
         var settingsViewModel = new SettingsViewModel(
@@ -173,18 +178,21 @@ public partial class App : Application
             _sceneCardCacheService,
             settingsViewModel,
             _pluginService,
+            friendService,
             _logger);
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
             _settingsService,
             _characterMetadataService,
             settingsViewModel,
+            friendService,
             _logger);
         var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
             _coordinateCardService,
             _settingsService,
             _coordinateMetadataService,
             settingsViewModel,
+            friendService,
             _logger);
         var screenshotGalleryViewModel = new MediaGalleryViewModel(
             _screenshotCardService,
@@ -234,16 +242,22 @@ public partial class App : Application
             _thumbnailCacheService,
             galleryViewModel,
             _logger);
+        var friendsViewModel = new FriendsViewModel(
+            friendService,
+            dispatcherQueue);
         var authorSourceCoordinator = new AuthorSourceCoordinator(
             authorInfoService,
             settingsViewModel,
             galleryViewModel,
             characterGalleryViewModel,
-            coordinateGalleryViewModel);
+            coordinateGalleryViewModel,
+            friendService,
+            _logger);
         authorSourceCoordinator.Initialize();
 
         RegisterServices(
             authorInfoService,
+            friendService,
             settingsViewModel,
             galleryViewModel,
             characterGalleryViewModel,
@@ -251,24 +265,59 @@ public partial class App : Application
             screenshotGalleryViewModel,
             videoGalleryViewModel,
             authorsViewModel,
+            friendsViewModel,
             authorSourceCoordinator,
             thumbnailService,
             importService,
             importViewModel,
             authorPostService);
 
+        // Closing the window is the only place these loads are cancelled:
+        // OnNavigatedFrom does not run for a window that goes away. A load
+        // still awaiting a queued UI-thread callback would otherwise never
+        // resume, so its collection-view deferral would never be disposed.
+        GalleryViewModelBase[] galleryViewModels =
+        [
+            galleryViewModel,
+            characterGalleryViewModel,
+            coordinateGalleryViewModel,
+            screenshotGalleryViewModel,
+            videoGalleryViewModel,
+        ];
+
         _mainWindow = new MainWindow();
-        _mainWindow.Closed += (_, _) => _pluginService.Shutdown();
+        _mainWindow.Closed += (_, _) =>
+        {
+            try
+            {
+                foreach (var viewModel in galleryViewModels)
+                    viewModel.CancelPendingWork();
+            }
+            finally
+            {
+                _pluginService.Shutdown();
+            }
+        };
         _mainWindow.Activate();
 
         PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
-        authorSourceCoordinator.EnsureLoadedAsync().Observe(_logger, "AuthorSource.InitialLoad");
+        if (!dispatcherQueue.TryEnqueue(
+                DispatcherQueuePriority.Low,
+                () => authorSourceCoordinator.EnsureLoadedAsync()
+                    .Observe(_logger, "AuthorSource.InitialLoad")))
+        {
+            _logger.LogError(
+                "AuthorSource.InitialLoad.Queue",
+                new InvalidOperationException(
+                    "Unable to queue the initial library load."));
+        }
     }
 
     private void RegisterServices(
         AuthorInfoService authorInfoService,
+        FriendService friendService,
         SettingsViewModel settingsViewModel,
         GalleryViewModel galleryViewModel,
         CharacterGalleryViewModel characterGalleryViewModel,
@@ -276,6 +325,7 @@ public partial class App : Application
         MediaGalleryViewModel screenshotGalleryViewModel,
         MediaGalleryViewModel videoGalleryViewModel,
         AuthorsViewModel authorsViewModel,
+        FriendsViewModel friendsViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
         ThumbnailService thumbnailService,
         ImportService? importService,
@@ -296,6 +346,7 @@ public partial class App : Application
         Services.Add(_videoCardService, "videos");
         Services.Add(_pluginService);
         Services.Add(authorInfoService);
+        Services.Add(friendService);
         Services.Add(settingsViewModel);
         Services.Add(galleryViewModel);
         Services.Add(characterGalleryViewModel);
@@ -303,6 +354,7 @@ public partial class App : Application
         Services.Add(screenshotGalleryViewModel, "screenshots");
         Services.Add(videoGalleryViewModel, "videos");
         Services.Add(authorsViewModel);
+        Services.Add(friendsViewModel);
         Services.Add(authorSourceCoordinator);
         Services.Add(thumbnailService);
         if (importService is not null) Services.Add(importService);

@@ -282,6 +282,34 @@
                                     Text="{x:Bind VersionCount, Mode=OneWay}" />
                             </Border>
 
+                            <Border
+                                x:Phase="1"
+                                Margin="7,4,0,0"
+                                Padding="6,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
+                                Visibility="{x:Bind IsOldVersion, Mode=OneWay}">
+                                <TextBlock
+                                    x:Uid="Character_OldVersionBadge"
+                                    Style="{StaticResource CaptionTextBlockStyle}" />
+                            </Border>
+
+                            <Border
+                                x:Phase="1"
+                                Margin="7,4,0,0"
+                                Padding="6,2"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
+                                Visibility="{x:Bind IsAlternative, Mode=OneWay}">
+                                <TextBlock
+                                    x:Uid="Character_AlternativeBadge"
+                                    Style="{StaticResource CaptionTextBlockStyle}" />
+                            </Border>
+
                             <!--  Author badge (plugin-provided); overlays the thumbnail so
                                   the fixed cell-height layout math stays untouched.  -->
                             <Border

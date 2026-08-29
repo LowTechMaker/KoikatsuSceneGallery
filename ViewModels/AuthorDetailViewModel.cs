@@ -182,9 +182,11 @@ public partial class AuthorDetailViewModel : ObservableObject
                 foreach (var path in group.Post.LocalFilePaths.Where(File.Exists))
                 {
                     ct.ThrowIfCancellationRequested();
+                    var fileInfo = new FileInfo(path);
                     var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(
                         path,
-                        File.GetLastWriteTime(path),
+                        fileInfo.Length,
+                        fileInfo.LastWriteTime,
                         ct);
                     ct.ThrowIfCancellationRequested();
                     group.Images.Add(new LocalImagePreview(

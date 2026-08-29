@@ -79,13 +79,29 @@ public sealed class SceneCardCacheService : IDisposable
             ScheduleSave();
     }
 
-    public void SetThumbnailPath(string filePath, string thumbnailPath)
+    public bool SetThumbnailPath(
+        string filePath,
+        long expectedFileSize,
+        long expectedDateModifiedTicks,
+        string thumbnailPath)
     {
-        if (_cache.TryGetValue(filePath, out var existing))
+        while (_cache.TryGetValue(filePath, out var existing))
         {
-            _cache[filePath] = existing with { ThumbnailPath = thumbnailPath };
+            if (existing.FileSize != expectedFileSize
+                || existing.DateModifiedTicks != expectedDateModifiedTicks)
+            {
+                return false;
+            }
+
+            var replacement = existing with { ThumbnailPath = thumbnailPath };
+            if (!_cache.TryUpdate(filePath, replacement, existing))
+                continue;
+
             ScheduleSave();
+            return true;
         }
+
+        return false;
     }
 
     private void ScheduleSave()

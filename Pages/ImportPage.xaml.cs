@@ -58,11 +58,17 @@ public sealed partial class ImportPage : Page
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ImportViewModel.ShowRejectedWarning) && ViewModel.ShowRejectedWarning)
+        if (e.PropertyName == nameof(ImportViewModel.ShowWarningBar) && ViewModel.ShowWarningBar)
         {
+            var messageKey = ViewModel.WarningKind switch
+            {
+                ImportWarningKind.ManualArtworkIdFetchFailed =>
+                    "Import_ManualArtworkIdWarningMessage",
+                _ => "Import_RejectedWarningMessage",
+            };
             RejectedWarningBar.Message = string.Format(
-                ResLoader.GetString("Import_RejectedWarningMessage"),
-                ViewModel.RejectedCount);
+                ResLoader.GetString(messageKey),
+                ViewModel.WarningCount);
         }
         else if (e.PropertyName == nameof(ImportViewModel.CurrentAnalyzingArtworkId))
         {

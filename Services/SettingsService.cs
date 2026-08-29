@@ -135,6 +135,12 @@ public class SettingsService
 
         public bool AuthorLiveTilesEnabled { get; set; } = true;
 
+        public bool IncludeAlternativeCharactersInSearch { get; set; } = true;
+
+        public bool IncludeOldCharacterVersionsInSearch { get; set; }
+
+        public bool FriendFileWarningShown { get; set; }
+
         public List<string> HiddenNavItems { get; set; } = [];
 
         // ── Folder naming (OCD) ─────────────────────────────────────

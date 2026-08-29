@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
+using DispatcherQueuePriority = Microsoft.UI.Dispatching.DispatcherQueuePriority;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -19,8 +20,6 @@ public sealed partial class CoordinateGalleryPage : Page
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
     private readonly GalleryLayoutEngine _layout;
     private readonly ThumbnailRequestController _thumbnailRequests;
-    private bool _isActive;
-    private bool _reloadPending;
 
     public CoordinateGalleryPage()
     {
@@ -37,51 +36,38 @@ public sealed partial class CoordinateGalleryPage : Page
         ViewModel.ViewRefreshed += () =>
             DispatcherQueue.TryEnqueue(RequestVisibleThumbnails);
         Loaded += (_, _) => _layout.OnLoaded(RequestVisibleThumbnails);
-        App.Services.GetRequiredService<SettingsViewModel>().CoordinateFolderPathsChanged += OnCoordinateFolderPathsChanged;
-    }
-
-    private void OnCoordinateFolderPathsChanged()
-    {
-        if (!_isActive)
-        {
-            _reloadPending = true;
-            return;
-        }
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            if (!_isActive)
-            {
-                _reloadPending = true;
-                return;
-            }
-            _thumbnailRequests.Activate();
-            ViewModel.LoadCardsCommand.ExecuteAsync(null)
-                .Observe(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.ReloadFolders");
-        });
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         _thumbnailRequests.Activate();
-        _isActive = true;
         ViewModel.Activate();
-        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "CoordinateGallery.Navigate", async () =>
+        _layout.ApplyCacheLength();
+        _layout.RefreshSizeSelector(SizeButtonsPanel);
+        _layout.UpdateSizeButtons(
+            SizeSmallButton,
+            SizeMediumButton,
+            SizeLargeButton);
+
+        DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
-            _layout.ApplyCacheLength();
-            _layout.RefreshSizeSelector(SizeButtonsPanel);
-            _layout.UpdateSizeButtons(SizeSmallButton, SizeMediumButton, SizeLargeButton);
-            if (ViewModel.Cards.Count == 0 || _reloadPending)
+            if (Frame?.CurrentSourcePageType != typeof(CoordinateGalleryPage)
+                || ViewModel.HasCompletedLoad
+                || ViewModel.IsLoading)
             {
-                _reloadPending = false;
-                await ViewModel.LoadCardsCommand.ExecuteAsync(null);
+                return;
             }
+
+            UiEventGuard.Run(
+                App.Services.GetRequiredService<IAppLogger>(),
+                "CoordinateGallery.Navigate",
+                () => ViewModel.LoadCardsCommand.ExecuteAsync(null));
         });
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        _isActive = false;
         _thumbnailRequests.Cancel();
         ViewModel.CancelPendingWork();
         base.OnNavigatedFrom(e);

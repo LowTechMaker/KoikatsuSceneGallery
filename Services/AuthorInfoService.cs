@@ -69,7 +69,7 @@ public sealed class AuthorInfoService
     public event Action? AuthorsChanged;
 
     /// <summary>Fired (on the UI thread) when a known author's profile fields change.</summary>
-    public event Action? AuthorProfilesChanged;
+    public event Action<AuthorKey>? AuthorProfilesChanged;
 
     public AuthorInfoService(
         IReadOnlyList<IFolderAuthorProvider> providers,
@@ -136,6 +136,11 @@ public sealed class AuthorInfoService
                 case NotifyCollectionChangedAction.Reset:
                     _counts[kind].Clear();
                     _updatedTimes[kind].Clear();
+                    // Cached entries point at AuthorDisplay instances owned by
+                    // _displays. Reset can prune those instances, so retaining
+                    // the cache would make subsequently added cards count
+                    // against displays that GetSummaries() can no longer see.
+                    _directoryCache.Clear();
                     PruneOrphanedDisplays();
                     NotifyAuthorsChanged();
                     break;
@@ -169,6 +174,9 @@ public sealed class AuthorInfoService
         }
         return summaries;
     }
+
+    public AuthorDisplay? FindDisplay(string providerId, string authorId) =>
+        _displays.GetValueOrDefault(new AuthorKey(providerId, authorId));
 
     public void RebuildAssignments(
         IEnumerable<SceneCard> scenes,
@@ -399,10 +407,12 @@ public sealed class AuthorInfoService
         if (!string.IsNullOrWhiteSpace(info.AvatarFilePath)
             && File.Exists(info.AvatarFilePath))
         {
+            var avatarFile = new FileInfo(info.AvatarFilePath);
             safeAvatarPath = await _thumbnailCacheService
                 .EnsureThumbnailAsync(
                     info.AvatarFilePath,
-                    File.GetLastWriteTime(info.AvatarFilePath),
+                    avatarFile.Length,
+                    avatarFile.LastWriteTime,
                     ct)
                 .ConfigureAwait(false);
         }
@@ -416,7 +426,7 @@ public sealed class AuthorInfoService
             display.Name = info.Name;
             display.AvatarPath = safeAvatarPath;
             if (changed)
-                AuthorProfilesChanged?.Invoke();
+                AuthorProfilesChanged?.Invoke(info.Key);
         });
     }
 

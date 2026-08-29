@@ -10,6 +10,13 @@ public enum ImportItemStatus
     Pending,
     Analyzing,
     ReadyToImport,
+
+    /// <summary>
+    /// A manually entered artwork ID could not be fetched. The item keeps the
+    /// ID the user typed but has no author information, so it must not be
+    /// imported until the user corrects it.
+    /// </summary>
+    NeedsArtworkId,
     AlreadyInLibrary,
     Importing,
     Completed,

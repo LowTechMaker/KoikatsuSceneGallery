@@ -13,6 +13,12 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <Grid.Resources>
+            <Style x:Key="SidebarNavigationItemStyle" TargetType="NavigationViewItem">
+                <Setter Property="FontSize" Value="18" />
+            </Style>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
@@ -37,6 +43,8 @@
             IsBackButtonVisible="Collapsed"
             IsPaneToggleButtonVisible="False"
             IsSettingsVisible="True"
+            ItemInvoked="NavView_ItemInvoked"
+            Loaded="NavView_Loaded"
             SelectionChanged="NavView_SelectionChanged">
             <NavigationView.MenuItems>
                 <NavigationViewItem
@@ -44,44 +52,39 @@
                     x:Uid="Nav_Library"
                     AutomationProperties.AutomationId="LibraryNavItem"
                     IsSelected="True"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
                     Tag="library"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8B9;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    ToolTipService.ToolTip="{x:Null}" />
+                <NavigationViewItem
+                    x:Name="FriendsNavItem"
+                    x:Uid="Nav_Friends"
+                    AutomationProperties.AutomationId="FriendsNavItem"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
+                    Tag="friends"
+                    ToolTipService.ToolTip="{x:Null}" />
                 <NavigationViewItem
                     x:Name="ScreenshotsNavItem"
                     x:Uid="Nav_Screenshots"
                     AutomationProperties.AutomationId="ScreenshotsNavItem"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
                     Tag="screenshots"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE722;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    ToolTipService.ToolTip="{x:Null}" />
                 <NavigationViewItem
                     x:Name="VideosNavItem"
                     x:Uid="Nav_Videos"
                     AutomationProperties.AutomationId="VideosNavItem"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
                     Tag="videos"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE714;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    ToolTipService.ToolTip="{x:Null}" />
                 <!--  Shown only when an author plugin is installed (see ctor).  -->
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"
                     x:Uid="Nav_Authors"
                     AutomationProperties.AutomationId="AuthorsNavItem"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
                     Tag="authors"
                     ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE716;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    Visibility="Collapsed" />
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <!--  Shown only when an import provider plugin is installed (see ctor).  -->
@@ -89,13 +92,10 @@
                     x:Name="ImportNavItem"
                     x:Uid="Nav_Import"
                     AutomationProperties.AutomationId="ImportNavItem"
+                    Style="{StaticResource SidebarNavigationItemStyle}"
                     Tag="import"
                     ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE896;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    Visibility="Collapsed" />
             </NavigationView.FooterMenuItems>
             <Grid>
                 <Grid.RowDefinitions>

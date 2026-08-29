@@ -6,9 +6,15 @@ namespace KoikatsuSceneGallery.Services;
 
 public abstract class CardScanService<TCard> : IDisposable where TCard : CardBase
 {
+    private const int MaxParseAttempts = 4;
+    private const int MaxScanConcurrency = 4;
+
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly System.Timers.Timer _debounceTimer;
-    private readonly HashSet<string> _pendingChanges = [];
+    private readonly HashSet<string> _pendingChanges =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _pendingAddAttempts =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
     public event Action<TCard>? CardAdded;
@@ -24,6 +30,9 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     protected abstract TCard? TryCreateCard(FileInfo info);
     protected abstract IEnumerable<FileInfo> EnumerateCardFiles(string folder);
     protected abstract void ConfigureWatcher(FileSystemWatcher watcher);
+
+    public TCard? TryCreateFromPath(string filePath) =>
+        TryCreateCard(new FileInfo(filePath));
 
     public Task<List<TCard>> ScanFoldersAsync(
         IEnumerable<string> folderPaths,
@@ -137,7 +146,14 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         => new()
         {
             CancellationToken = cancellationToken,
-            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+            // Startup can scan scenes, characters and coordinates together.
+            // Giving every scan all logical processors caused dozens of
+            // concurrent random file opens on large libraries and made the
+            // WinUI window appear hung. Four workers keep storage busy without
+            // saturating the thread pool or the user's disk.
+            MaxDegreeOfParallelism = Math.Min(
+                MaxScanConcurrency,
+                Math.Max(1, Environment.ProcessorCount)),
         };
 
     private TCard? TryCreateCard(string filePath) =>
@@ -145,46 +161,73 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
     public void StartWatching(IEnumerable<string> folderPaths)
     {
-        StopWatching();
-
-        foreach (var folder in folderPaths)
+        var replacement = new List<FileSystemWatcher>();
+        try
         {
-            if (!Directory.Exists(folder)) continue;
-
-            var watcher = new FileSystemWatcher(folder)
+            foreach (var folder in folderPaths)
             {
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-            };
+                if (!Directory.Exists(folder))
+                    continue;
 
-            ConfigureWatcher(watcher);
+                var watcher = new FileSystemWatcher(folder)
+                {
+                    IncludeSubdirectories = true,
+                    NotifyFilter =
+                        NotifyFilters.FileName | NotifyFilters.LastWrite,
+                };
+                replacement.Add(watcher);
 
-            watcher.Created += OnFileCreated;
-            watcher.Deleted += OnFileDeleted;
-            watcher.Renamed += OnFileRenamed;
-            watcher.EnableRaisingEvents = true;
+                ConfigureWatcher(watcher);
 
-            _watchers.Add(watcher);
+                watcher.Created += OnFileCreated;
+                watcher.Changed += OnFileChanged;
+                watcher.Deleted += OnFileDeleted;
+                watcher.Renamed += OnFileRenamed;
+                watcher.EnableRaisingEvents = true;
+            }
         }
+        catch
+        {
+            DisposeWatchers(replacement);
+            throw;
+        }
+
+        var previous = _watchers.ToList();
+        _watchers.Clear();
+        _watchers.AddRange(replacement);
+        DisposeWatchers(previous);
     }
 
     public void StopWatching()
     {
-        foreach (var watcher in _watchers)
+        var previous = _watchers.ToList();
+        _watchers.Clear();
+        DisposeWatchers(previous);
+    }
+
+    private static void DisposeWatchers(
+        IEnumerable<FileSystemWatcher> watchers)
+    {
+        foreach (var watcher in watchers)
         {
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
         }
-        _watchers.Clear();
     }
 
     private void OnFileCreated(object sender, FileSystemEventArgs e)
+        => QueueAddOrChange(e.FullPath);
+
+    private void OnFileChanged(object sender, FileSystemEventArgs e)
+        => QueueAddOrChange(e.FullPath);
+
+    private void QueueAddOrChange(string filePath)
     {
         lock (_lock)
         {
-            _pendingChanges.Add($"+{e.FullPath}");
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            _pendingAddAttempts[filePath] = 0;
+            _pendingChanges.Add(filePath);
+            RestartDebounceTimer();
         }
     }
 
@@ -192,9 +235,9 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     {
         lock (_lock)
         {
-            _pendingChanges.Add($"-{e.FullPath}");
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            _pendingAddAttempts.Remove(e.FullPath);
+            _pendingChanges.Add(e.FullPath);
+            RestartDebounceTimer();
         }
     }
 
@@ -202,11 +245,18 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     {
         lock (_lock)
         {
-            _pendingChanges.Add($"-{e.OldFullPath}");
-            _pendingChanges.Add($"+{e.FullPath}");
-            _debounceTimer.Stop();
-            _debounceTimer.Start();
+            _pendingAddAttempts.Remove(e.OldFullPath);
+            _pendingAddAttempts[e.FullPath] = 0;
+            _pendingChanges.Add(e.OldFullPath);
+            _pendingChanges.Add(e.FullPath);
+            RestartDebounceTimer();
         }
+    }
+
+    private void RestartDebounceTimer()
+    {
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
     }
 
     private void FlushPendingChanges()
@@ -218,19 +268,57 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             _pendingChanges.Clear();
         }
 
-        foreach (var change in changes)
+        foreach (var path in changes)
         {
-            var path = change[1..];
-            if (change[0] == '+')
+            if (File.Exists(path))
             {
                 var card = TryCreateCard(path);
                 if (card != null)
+                {
+                    lock (_lock)
+                        _pendingAddAttempts.Remove(path);
                     CardAdded?.Invoke(card);
+                }
+                else
+                {
+                    // The file is still there, it just does not parse as a
+                    // card: a write in progress, or a file this gallery does
+                    // not handle. Give up quietly once the retries run out —
+                    // reporting a removal here would drop a card that is only
+                    // being overwritten.
+                    QueueParseRetry(path);
+                }
             }
             else
             {
+                lock (_lock)
+                    _pendingAddAttempts.Remove(path);
                 CardRemoved?.Invoke(path);
             }
+        }
+    }
+
+    private void QueueParseRetry(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            lock (_lock)
+                _pendingAddAttempts.Remove(filePath);
+            return;
+        }
+
+        lock (_lock)
+        {
+            var attempt = _pendingAddAttempts.GetValueOrDefault(filePath) + 1;
+            if (attempt >= MaxParseAttempts)
+            {
+                _pendingAddAttempts.Remove(filePath);
+                return;
+            }
+
+            _pendingAddAttempts[filePath] = attempt;
+            _pendingChanges.Add(filePath);
+            RestartDebounceTimer();
         }
     }
 

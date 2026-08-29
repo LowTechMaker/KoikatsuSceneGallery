@@ -25,6 +25,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly SceneCardCacheService _cardCacheService;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly PluginService _pluginService;
+    private readonly FriendService _friendService;
     private readonly IAppLogger _logger;
 
     public ObservableCollection<SceneCard> Cards { get; }
@@ -57,6 +58,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private HashSet<string> _allowedResolutions = [];
     private HashSet<string> _r18FolderNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SceneCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<SceneCard> _lastCompletedCards = [];
 
     private CancellationTokenSource? _metadataCts;
     private const int MetadataParseConcurrency = 4;
@@ -65,7 +67,15 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, IAppLogger logger)
+    public GalleryViewModel(
+        SceneCardService sceneCardService,
+        SettingsService settingsService,
+        SceneMetadataService metadataService,
+        SceneCardCacheService cardCacheService,
+        SettingsViewModel settingsViewModel,
+        PluginService pluginService,
+        FriendService friendService,
+        IAppLogger logger)
         : base(new ObservableCollection<SceneCard>())
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
@@ -75,6 +85,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _cardCacheService = cardCacheService;
         _settingsViewModel = settingsViewModel;
         _pluginService = pluginService;
+        _friendService = friendService;
         _logger = logger;
 
         _sceneCardService.CardAdded += OnCardAdded;
@@ -123,7 +134,10 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     [RelayCommand]
     private async Task LoadCardsAsync()
     {
+        if (HasCompletedLoad)
+            _lastCompletedCards = [.. Cards];
         var cancellationToken = BeginLoad();
+        var completed = false;
         _metadataCts?.Cancel();
 
         IsLoading = true;
@@ -141,7 +155,13 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             _pluginAnalysisEnabled = config.PluginAnalysisEnabled;
             ShowMetadataFilters = config.PluginAnalysisEnabled;
 
-            var paths = config.FolderPaths;
+            var paths = FriendFolderLayout.CollapseNestedRoots(
+                config.FolderPaths.Concat(
+                    _friendService.GetSceneFolders()));
+            var linkedPaths = _friendService.GetLinkedCardPaths();
+            var linkedPathSet = new HashSet<string>(
+                linkedPaths,
+                StringComparer.OrdinalIgnoreCase);
             Cards.Clear();
             _cardIndex.Clear();
 
@@ -149,7 +169,9 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             var configuredRoots = paths.Select(p => p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 .ToArray();
             var relevantCached = cached.Where(kv =>
-                configuredRoots.Any(root => kv.Value.FilePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+                linkedPathSet.Contains(kv.Value.FilePath)
+                || configuredRoots.Any(root =>
+                    FriendFolderLayout.IsWithin(kv.Value.FilePath, root)))
                 .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
             if (relevantCached.Count > 0)
             {
@@ -165,11 +187,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     return stale;
                 }, cancellationToken);
 
-                foreach (var chunk in relevantCached.Chunk(200))
+                // Keep one collection-view deferral for the entire cache
+                // restore. Ending it for every 200 cards repeatedly sorted
+                // the growing 17k+ item view and could starve first render.
+                using (CardsView.DeferRefresh())
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    using (CardsView.DeferRefresh())
+                    foreach (var chunk in relevantCached.Chunk(200))
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         foreach (var (filePath, entry) in chunk)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
@@ -187,8 +212,11 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                             if (_cardIndex.TryAdd(card.FilePath, card))
                                 Cards.Add(card);
                         }
+
+                        // Let WinUI render and process navigation input
+                        // before scheduling the next chunk.
+                        await YieldToUiAsync(cancellationToken);
                     }
-                    await Task.Yield();
                 }
                 ApplyFilter();
                 RaiseViewRefreshed();
@@ -202,6 +230,28 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 scannedIndex.TryAdd(card.FilePath, card);
             }
 
+            var linkedCards = await Task.Run(() =>
+            {
+                var result = new List<SceneCard>();
+                foreach (var filePath in linkedPaths)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!File.Exists(filePath)
+                        || _friendService.GetLinkedCardType(filePath)
+                            != CardType.Scene)
+                    {
+                        continue;
+                    }
+
+                    var card = _sceneCardService.TryCreateFromPath(filePath);
+                    if (card is not null)
+                        result.Add(card);
+                }
+                return result;
+            }, cancellationToken);
+            foreach (var card in linkedCards)
+                scannedIndex.TryAdd(card.FilePath, card);
+
             var toRemove = new List<string>();
             var toUpdate = new List<SceneCard>();
             foreach (var (filePath, existing) in _cardIndex)
@@ -211,7 +261,9 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 {
                     toRemove.Add(filePath);
                 }
-                else if (existing.DateModified.Ticks != fresh.DateModified.Ticks)
+                else if (existing.FileSize != fresh.FileSize
+                         || existing.DateModified.Ticks
+                         != fresh.DateModified.Ticks)
                 {
                     toRemove.Add(filePath);
                     toUpdate.Add(fresh);
@@ -264,14 +316,42 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             _sceneCardService.StartWatching(paths);
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
+            completed = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)
+            {
+                if (completed)
+                    _lastCompletedCards = [.. Cards];
+                else
+                    RestoreLastCompletedCards(
+                        restartMetadata:
+                            !cancellationToken.IsCancellationRequested);
                 IsLoading = false;
-            RaiseCardsReloaded();
+                if (completed)
+                    RaiseCardsReloaded();
+            }
         }
+    }
+
+    private void RestoreLastCompletedCards(bool restartMetadata)
+    {
+        using (CardsView.DeferRefresh())
+        {
+            Cards.Clear();
+            _cardIndex.Clear();
+            foreach (var card in _lastCompletedCards)
+            {
+                if (_cardIndex.TryAdd(card.FilePath, card))
+                    Cards.Add(card);
+            }
+        }
+
+        ApplyFilter();
+        if (restartMetadata && _pluginAnalysisEnabled)
+            StartMetadataScan();
     }
 
     public void ScanMissingMetadata() => StartMetadataScan();
@@ -452,10 +532,24 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             card.Width, card.Height, null));
         _dispatcherQueue.TryEnqueue(() =>
         {
-            if (!_cardIndex.TryAdd(card.FilePath, card)) return;
             card.IsR18Content = IsR18Path(card.FilePath);
-            Cards.Add(card);
+            if (_cardIndex.TryGetValue(card.FilePath, out var existing))
+            {
+                _cardIndex[card.FilePath] = card;
+                var index = Cards.IndexOf(existing);
+                if (index >= 0)
+                    Cards[index] = card;
+                else
+                    Cards.Add(card);
+            }
+            else
+            {
+                _cardIndex.Add(card.FilePath, card);
+                Cards.Add(card);
+            }
+
             QueueMetadata(card);
+            RaiseCardsChanged();
             RaiseViewRefreshed();
         });
     }
@@ -496,6 +590,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             {
                 Cards.Remove(existing);
                 CardRemovedNotification?.Invoke(path);
+                RaiseCardsChanged();
+                RaiseViewRefreshed();
             }
         });
     }

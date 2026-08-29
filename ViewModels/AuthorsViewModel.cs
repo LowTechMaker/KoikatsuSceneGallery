@@ -5,6 +5,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
+using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
@@ -202,7 +203,7 @@ public partial class AuthorsViewModel : ObservableObject
         QueueRebuild();
     }
 
-    private void OnAuthorProfilesChanged()
+    private void OnAuthorProfilesChanged(AuthorKey _)
     {
         // Tiles observe AuthorDisplay directly. A collection rebuild is only
         // needed when the profile name affects filtering or primary ordering.
@@ -361,6 +362,7 @@ public partial class AuthorsViewModel : ObservableObject
                 candidates.Add(new ThumbnailCandidate(
                     author,
                     card.FilePath,
+                    card.FileSize,
                     card.DateModified));
             }
         }
@@ -561,6 +563,7 @@ public partial class AuthorsViewModel : ObservableObject
             if (list.Count >= MaxThumbnailsPerAuthor) continue;
             var path = cache.TryGetCachedPath(
                 candidate.FilePath,
+                candidate.FileSize,
                 candidate.DateModified);
             if (path is not null)
                 list.Add(path);
@@ -581,5 +584,6 @@ public partial class AuthorsViewModel : ObservableObject
     private sealed record ThumbnailCandidate(
         AuthorDisplay Author,
         string FilePath,
+        long FileSize,
         DateTime DateModified);
 }

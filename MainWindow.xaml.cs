@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ConfigureSettingsNavigationItem();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -389,6 +390,9 @@ public sealed partial class MainWindow : Window
                 case "screenshots":
                     QueueNavigation(typeof(ScreenshotGalleryPage));
                     break;
+                case "friends":
+                    QueueNavigation(typeof(FriendsPage));
+                    break;
                 case "videos":
                     QueueNavigation(typeof(VideoGalleryPage));
                     break;
@@ -399,6 +403,31 @@ public sealed partial class MainWindow : Window
                     QueueNavigation(typeof(ImportPage));
                     break;
             }
+        }
+    }
+
+    private void NavView_Loaded(object sender, RoutedEventArgs e)
+    {
+        ConfigureSettingsNavigationItem();
+    }
+
+    private void ConfigureSettingsNavigationItem()
+    {
+        if (NavView.SettingsItem is NavigationViewItem settingsItem)
+        {
+            settingsItem.Icon = null;
+            settingsItem.FontSize = 18;
+        }
+    }
+
+    private void NavView_ItemInvoked(
+        NavigationView sender,
+        NavigationViewItemInvokedEventArgs args)
+    {
+        if (args.InvokedItemContainer is NavigationViewItem { Tag: "friends" }
+            && NavFrame.CurrentSourcePageType == typeof(FriendDetailPage))
+        {
+            QueueNavigation(typeof(FriendsPage));
         }
     }
 }

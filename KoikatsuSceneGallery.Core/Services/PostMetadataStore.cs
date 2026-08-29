@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using KoikatsuSceneGallery.Models;
 
@@ -15,10 +14,123 @@ internal sealed class PostMetadataStore
         WriteIndented = true,
     };
 
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteLocks =
+    /// <summary>
+    /// A per-sidecar write lock together with the number of callers that hold
+    /// a reference to it. Both fields are guarded by <see cref="WriteLocksGate"/>.
+    /// </summary>
+    private sealed class WriteLockEntry
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+        public int ReferenceCount { get; set; }
+    }
+
+    private static readonly object WriteLocksGate = new();
+
+    private static readonly Dictionary<string, WriteLockEntry> WriteLocks =
         new(OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal);
+
+    /// <summary>
+    /// Number of live write locks. Exposed for tests, which assert that the
+    /// dictionary does not grow with the number of sidecars written.
+    /// </summary>
+    internal static int ActiveWriteLockCount
+    {
+        get
+        {
+            lock (WriteLocksGate)
+                return WriteLocks.Count;
+        }
+    }
+
+    /// <summary>
+    /// Number of callers currently referencing the lock for a path. Exposed so
+    /// tests can observe a waiter taking and dropping its reference.
+    /// </summary>
+    internal static int GetWriteLockReferenceCount(string path)
+    {
+        lock (WriteLocksGate)
+            return WriteLocks.TryGetValue(path, out var entry) ? entry.ReferenceCount : 0;
+    }
+
+    /// <summary>
+    /// Holds the same per-path write lock <see cref="WriteAsync"/> uses, so a
+    /// test can block a writer deterministically. Uses the production
+    /// acquire/release sequence rather than reimplementing it.
+    /// </summary>
+    internal static async Task<IDisposable> HoldWriteLockAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        var entry = AcquireWriteLock(path);
+        try
+        {
+            await entry.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            ReleaseWriteLock(path, entry);
+            throw;
+        }
+
+        return new WriteLockHolder(path, entry);
+    }
+
+    private sealed class WriteLockHolder(string path, WriteLockEntry entry)
+        : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) != 0)
+                return;
+
+            entry.Semaphore.Release();
+            ReleaseWriteLock(path, entry);
+        }
+    }
+
+    /// <summary>
+    /// Takes a reference to the lock for <paramref name="path"/>, creating it
+    /// when needed. Taking the reference under the gate is what makes the
+    /// removal in <see cref="ReleaseWriteLock"/> safe: an entry can only be
+    /// removed while no caller holds a reference to it, so a later caller
+    /// cannot end up with a second semaphore for a path someone else is
+    /// still writing.
+    /// </summary>
+    private static WriteLockEntry AcquireWriteLock(string path)
+    {
+        lock (WriteLocksGate)
+        {
+            if (!WriteLocks.TryGetValue(path, out var entry))
+            {
+                entry = new WriteLockEntry();
+                WriteLocks[path] = entry;
+            }
+
+            entry.ReferenceCount++;
+            return entry;
+        }
+    }
+
+    /// <summary>
+    /// Drops a reference and disposes the semaphore once the last one is gone.
+    /// The caller must already have released the semaphore itself.
+    /// </summary>
+    private static void ReleaseWriteLock(string path, WriteLockEntry entry)
+    {
+        lock (WriteLocksGate)
+        {
+            if (--entry.ReferenceCount > 0)
+                return;
+
+            WriteLocks.Remove(path);
+            entry.Semaphore.Dispose();
+        }
+    }
 
     public string GetSidecarPath(
         string authorDirectory,
@@ -50,15 +162,52 @@ internal sealed class PostMetadataStore
             authorDirectory,
             document.ProviderId,
             document.ArtworkId);
-        var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
-        await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var writeLock = AcquireWriteLock(path);
+        try
+        {
+            await writeLock.Semaphore.WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // The semaphore was never entered — drop the reference only.
+            ReleaseWriteLock(path, writeLock);
+            throw;
+        }
 
         string? temporaryPath = null;
         try
         {
             var existing = ReadFile(path);
-            if (existing is not null && existing.FetchedAt >= document.FetchedAt)
-                return false;
+            if (existing is not null)
+            {
+                // Importing another page of the same artwork brings only that
+                // page's file names, so the recorded names have to accumulate.
+                // Losing them would leave the earlier files unmatchable.
+                var mergedFileNames = MergeLocalFileNames(
+                    existing.LocalFileNames,
+                    document.LocalFileNames);
+
+                if (existing.FetchedAt >= document.FetchedAt)
+                {
+                    // The stored metadata is the fresher one and must win, but
+                    // the new file names are still worth persisting.
+                    if (mergedFileNames.Count == existing.LocalFileNames.Count)
+                        return false;
+
+                    // The rewrite adds fields the stored schema version may not
+                    // know about, so it is stamped with the current version.
+                    document = existing with
+                    {
+                        SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
+                        LocalFileNames = mergedFileNames,
+                    };
+                }
+                else
+                {
+                    document = document with { LocalFileNames = mergedFileNames };
+                }
+            }
 
             var metadataDirectory = Path.Combine(
                 Path.GetFullPath(authorDirectory),
@@ -100,7 +249,8 @@ internal sealed class PostMetadataStore
             }
             finally
             {
-                writeLock.Release();
+                writeLock.Semaphore.Release();
+                ReleaseWriteLock(path, writeLock);
             }
         }
     }
@@ -153,6 +303,25 @@ internal sealed class PostMetadataStore
         return true;
     }
 
+    /// <summary>
+    /// Unions the recorded file names, keeping the order already stored so an
+    /// unchanged sidecar is recognised by its name count.
+    /// </summary>
+    private static List<string> MergeLocalFileNames(
+        IReadOnlyList<string> existing,
+        IReadOnlyList<string> added)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var merged = new List<string>(existing.Count + added.Count);
+        foreach (var fileName in existing.Concat(added))
+        {
+            if (!string.IsNullOrWhiteSpace(fileName) && seen.Add(fileName))
+                merged.Add(fileName);
+        }
+
+        return merged;
+    }
+
     private static PostMetadataDocument? ReadFile(string path)
     {
         if (!File.Exists(path))
@@ -161,10 +330,14 @@ internal sealed class PostMetadataStore
         try
         {
             using var stream = File.OpenRead(path);
-            var document = JsonSerializer.Deserialize<PostMetadataDocument>(stream, JsonOptions);
-            return document is not null && IsValid(document)
-                ? document
-                : null;
+        var document = JsonSerializer.Deserialize<PostMetadataDocument>(stream, JsonOptions);
+        // Normalize v1 sidecars that predate LocalFileNames — System.Text.Json
+        // leaves missing init properties as null, not the initializer value.
+        if (document is not null && document.LocalFileNames is null)
+            document = document with { LocalFileNames = [] };
+        return document is not null && IsValid(document)
+            ? document
+            : null;
         }
         catch (JsonException)
         {
@@ -183,13 +356,14 @@ internal sealed class PostMetadataStore
     }
 
     private static bool IsValid(PostMetadataDocument document)
-        => document.SchemaVersion == PostMetadataDocument.CurrentSchemaVersion
+        => document.SchemaVersion is >= 1 and <= PostMetadataDocument.CurrentSchemaVersion
             && !string.IsNullOrWhiteSpace(document.ProviderId)
             && !string.IsNullOrWhiteSpace(document.ArtworkId)
             && !string.IsNullOrWhiteSpace(document.AuthorName)
             && !string.IsNullOrWhiteSpace(document.AuthorId)
             && document.Rating is >= 0 and <= 2
             && document.Tags is not null
+            && document.LocalFileNames is not null
             && document.Tags.All(static tag =>
                 tag is not null && !string.IsNullOrWhiteSpace(tag.Name))
             && document.FetchedAt != default;

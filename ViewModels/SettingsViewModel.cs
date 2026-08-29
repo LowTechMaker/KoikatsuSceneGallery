@@ -97,13 +97,25 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool AuthorLiveTilesEnabled { get; set; } = true;
 
+    [ObservableProperty]
+    public partial bool IncludeAlternativeCharactersInSearch { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IncludeOldCharacterVersionsInSearch { get; set; }
+
     // ── OCD ─────────────────────────────────────────────────────
     [ObservableProperty]
     public partial bool UseVisualSimilarity { get; set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ResetImportPickerExplanationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResetGuidanceCommand))]
+    [NotifyPropertyChangedFor(nameof(CanResetGuidance))]
     public partial bool ImportPickerExplanationShown { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ResetGuidanceCommand))]
+    [NotifyPropertyChangedFor(nameof(CanResetGuidance))]
+    public partial bool FriendFileWarningShown { get; set; }
 
     [ObservableProperty]
     public partial string AuthorFolderFormat { get; set; } = "{name} ({id})";
@@ -141,6 +153,7 @@ public partial class SettingsViewModel : ObservableObject
     public event Action<bool, HashSet<string>>? CoordinateResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
+    public event Action? CharacterSearchScopeChanged;
     public event Action? SceneFolderPathsChanged;
     public event Action? CharacterFolderPathsChanged;
     public event Action? CoordinateFolderPathsChanged;
@@ -348,6 +361,20 @@ public partial class SettingsViewModel : ObservableObject
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
+    partial void OnIncludeAlternativeCharactersInSearchChanged(bool value)
+    {
+        if (_isLoading) return;
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        CharacterSearchScopeChanged?.Invoke();
+    }
+
+    partial void OnIncludeOldCharacterVersionsInSearchChanged(bool value)
+    {
+        if (_isLoading) return;
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        CharacterSearchScopeChanged?.Invoke();
+    }
+
     partial void OnSauceNaoApiKeyChanged(string value)
     {
         if (_isLoading)
@@ -411,7 +438,10 @@ public partial class SettingsViewModel : ObservableObject
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
             ImportPickerExplanationShown = config.ImportPickerExplanationShown;
+            FriendFileWarningShown = config.FriendFileWarningShown;
             AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
+            IncludeAlternativeCharactersInSearch = config.IncludeAlternativeCharactersInSearch;
+            IncludeOldCharacterVersionsInSearch = config.IncludeOldCharacterVersionsInSearch;
 
             AuthorFolderFormat = config.AuthorFolderFormat;
             ArtworkFolderFormat = config.ArtworkFolderFormat;
@@ -458,18 +488,20 @@ public partial class SettingsViewModel : ObservableObject
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
-        if (folder != null && !FolderPaths.Contains(folder.Path))
-        {
-            FolderPaths.Add(folder.Path);
-            await SaveConfigAsync();
-        }
+        if (folder is not null)
+            await AddLibraryFolderAsync(
+                FolderPaths,
+                folder.Path,
+                () => SceneFolderPathsChanged?.Invoke());
     }
 
     [RelayCommand]
     private async Task RemoveFolder(string path)
     {
-        FolderPaths.Remove(path);
-        await SaveConfigAsync();
+        await RemoveLibraryFolderAsync(
+            FolderPaths,
+            path,
+            () => SceneFolderPathsChanged?.Invoke());
     }
 
     [RelayCommand]
@@ -483,18 +515,20 @@ public partial class SettingsViewModel : ObservableObject
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
-        if (folder != null && !CharacterFolderPaths.Contains(folder.Path))
-        {
-            CharacterFolderPaths.Add(folder.Path);
-            await SaveConfigAsync();
-        }
+        if (folder is not null)
+            await AddLibraryFolderAsync(
+                CharacterFolderPaths,
+                folder.Path,
+                () => CharacterFolderPathsChanged?.Invoke());
     }
 
     [RelayCommand]
     private async Task RemoveCharacterFolder(string path)
     {
-        CharacterFolderPaths.Remove(path);
-        await SaveConfigAsync();
+        await RemoveLibraryFolderAsync(
+            CharacterFolderPaths,
+            path,
+            () => CharacterFolderPathsChanged?.Invoke());
     }
 
     [RelayCommand]
@@ -508,18 +542,88 @@ public partial class SettingsViewModel : ObservableObject
         InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
-        if (folder != null && !CoordinateFolderPaths.Contains(folder.Path))
-        {
-            CoordinateFolderPaths.Add(folder.Path);
-            await SaveConfigAsync();
-        }
+        if (folder is not null)
+            await AddLibraryFolderAsync(
+                CoordinateFolderPaths,
+                folder.Path,
+                () => CoordinateFolderPathsChanged?.Invoke());
     }
 
     [RelayCommand]
     private async Task RemoveCoordinateFolder(string path)
     {
-        CoordinateFolderPaths.Remove(path);
-        await SaveConfigAsync();
+        await RemoveLibraryFolderAsync(
+            CoordinateFolderPaths,
+            path,
+            () => CoordinateFolderPathsChanged?.Invoke());
+    }
+
+    private async Task AddLibraryFolderAsync(
+        ObservableCollection<string> paths,
+        string path,
+        Action notifyChanged)
+    {
+        if (paths.Any(existing =>
+                existing.Equals(
+                    path,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        MutateCollectionWithoutSourceNotification(
+            () => paths.Add(path));
+        try
+        {
+            await SaveConfigAsync(throwOnFailure: true);
+        }
+        catch
+        {
+            MutateCollectionWithoutSourceNotification(
+                () => paths.Remove(path));
+            throw;
+        }
+
+        notifyChanged();
+    }
+
+    private async Task RemoveLibraryFolderAsync(
+        ObservableCollection<string> paths,
+        string path,
+        Action notifyChanged)
+    {
+        var index = paths.IndexOf(path);
+        if (index < 0)
+            return;
+
+        MutateCollectionWithoutSourceNotification(
+            () => paths.RemoveAt(index));
+        try
+        {
+            await SaveConfigAsync(throwOnFailure: true);
+        }
+        catch
+        {
+            MutateCollectionWithoutSourceNotification(
+                () => paths.Insert(index, path));
+            throw;
+        }
+
+        notifyChanged();
+    }
+
+    private void MutateCollectionWithoutSourceNotification(Action mutation)
+    {
+        var wasLoading = _isLoading;
+        _isLoading = true;
+        try
+        {
+            mutation();
+        }
+        finally
+        {
+            _isLoading = wasLoading;
+        }
     }
 
     [RelayCommand]
@@ -690,20 +794,60 @@ public partial class SettingsViewModel : ObservableObject
             return;
 
         ImportPickerExplanationShown = true;
-        await SaveConfigAsync();
+        try
+        {
+            await SaveConfigAsync(throwOnFailure: true);
+        }
+        catch
+        {
+            ImportPickerExplanationShown = false;
+            throw;
+        }
     }
 
-    private bool CanResetImportPickerExplanation()
-        => ImportPickerExplanationShown;
-
-    [RelayCommand(CanExecute = nameof(CanResetImportPickerExplanation))]
-    private async Task ResetImportPickerExplanationAsync()
+    public async Task MarkFriendFileWarningShownAsync()
     {
-        ImportPickerExplanationShown = false;
-        await SaveConfigAsync();
+        if (FriendFileWarningShown)
+            return;
+
+        FriendFileWarningShown = true;
+        try
+        {
+            await SaveConfigAsync(throwOnFailure: true);
+        }
+        catch
+        {
+            FriendFileWarningShown = false;
+            throw;
+        }
     }
 
-    private async Task SaveConfigAsync()
+    public bool CanResetGuidance =>
+        ImportPickerExplanationShown || FriendFileWarningShown;
+
+    [RelayCommand(CanExecute = nameof(CanResetGuidance))]
+    private async Task ResetGuidanceAsync()
+    {
+        var importPickerExplanationShown = ImportPickerExplanationShown;
+        var friendFileWarningShown = FriendFileWarningShown;
+        ImportPickerExplanationShown = false;
+        FriendFileWarningShown = false;
+        try
+        {
+            await SaveConfigAsync(throwOnFailure: true);
+        }
+        catch
+        {
+            ImportPickerExplanationShown = importPickerExplanationShown;
+            FriendFileWarningShown = friendFileWarningShown;
+            throw;
+        }
+    }
+
+    private Task SaveConfigAsync() =>
+        SaveConfigAsync(throwOnFailure: false);
+
+    private async Task SaveConfigAsync(bool throwOnFailure)
     {
         await _saveLock.WaitAsync();
         try
@@ -734,7 +878,10 @@ public partial class SettingsViewModel : ObservableObject
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
                 ImportPickerExplanationShown = ImportPickerExplanationShown,
+                FriendFileWarningShown = FriendFileWarningShown,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
+                IncludeAlternativeCharactersInSearch = IncludeAlternativeCharactersInSearch,
+                IncludeOldCharacterVersionsInSearch = IncludeOldCharacterVersionsInSearch,
                 HiddenNavItems = GetHiddenNavItems(),
                 AuthorFolderFormat = AuthorFolderFormat,
                 ArtworkFolderFormat = ArtworkFolderFormat,
@@ -747,7 +894,12 @@ public partial class SettingsViewModel : ObservableObject
             };
             await _settingsService.SaveConfigAsync(config);
         }
-        catch (Exception ex) { _logger.LogError("Settings.SaveConfig", ex); }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+                throw;
+            _logger.LogError("Settings.SaveConfig", ex);
+        }
         finally
         {
             _saveLock.Release();

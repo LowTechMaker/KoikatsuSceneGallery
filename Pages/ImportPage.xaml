@@ -77,11 +77,11 @@
             </Button>
         </Grid>
 
-        <!-- Rejected files warning -->
+        <!-- Import warning (rejected files, unresolved artwork ID, …) -->
         <InfoBar
             x:Name="RejectedWarningBar"
             Grid.Row="1"
-            IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
+            IsOpen="{x:Bind ViewModel.ShowWarningBar, Mode=TwoWay}"
             Severity="Warning"
             IsClosable="True" />
 
