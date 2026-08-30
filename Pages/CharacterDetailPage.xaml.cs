@@ -42,7 +42,6 @@ public sealed partial class CharacterDetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        base.OnNavigatedFrom(e);
         _thumbnailRequests.Cancel();
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         _metadataCts?.Cancel();
@@ -51,6 +50,11 @@ public sealed partial class CharacterDetailPage : Page
         galleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
         galleryViewModel.AlternativesChanged -= OnAlternativesChanged;
         galleryViewModel.CardsReloaded -= OnCardsReloaded;
+        PreviewImage.Source = null;
+        ViewModel.Card = null;
+        ViewModel.Versions = null;
+        ViewModel.Alternatives = null;
+        base.OnNavigatedFrom(e);
     }
 
     private void OnVersionIndexChanged(

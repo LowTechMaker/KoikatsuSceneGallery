@@ -32,9 +32,11 @@ public sealed partial class ScreenshotDetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        base.OnNavigatedFrom(e);
         App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardRemovedNotification -= OnCardRemoved;
         App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsReloaded -= OnCardsReloaded;
+        PreviewImage.Source = null;
+        ViewModel.Card = null;
+        base.OnNavigatedFrom(e);
     }
 
     private void OnCardRemoved(string path)
@@ -63,7 +65,13 @@ public sealed partial class ScreenshotDetailPage : Page
     private void ShowCard(MediaCard card)
     {
         ViewModel.Card = card;
-        var bitmap = new BitmapImage();
+        var bitmap = new BitmapImage
+        {
+            // The detail view does not need a full-resolution screenshot to
+            // fill the application window. Keep its decoded native buffer
+            // within the same 1920px ceiling as the other image detail pages.
+            DecodePixelWidth = 1920,
+        };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         _rotationDegrees = 0;

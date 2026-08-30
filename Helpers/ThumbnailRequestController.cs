@@ -26,6 +26,19 @@ internal sealed class ThumbnailRequestController
 
     public void Activate()
     {
+        if (_scope.Token.IsCancellationRequested)
+        {
+            _scope.Activate();
+            SetPendingCount(0);
+        }
+    }
+
+    /// <summary>
+    /// Cancels the current requests before starting a new page-specific scope.
+    /// Use this only when the source cards themselves have changed.
+    /// </summary>
+    public void Restart()
+    {
         _scope.Activate();
         SetPendingCount(0);
     }

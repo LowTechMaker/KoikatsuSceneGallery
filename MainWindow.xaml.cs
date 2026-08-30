@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Pages;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -22,9 +23,12 @@ public sealed partial class MainWindow : Window
     private bool _pendingReplaceCurrentLibraryPage;
     private bool _isBackNavigationInProgress;
     private bool _releaseBackNavigationOnNextFrame;
+    private readonly ThumbnailCacheActivity _thumbnailCacheActivity;
 
     public MainWindow()
     {
+        _thumbnailCacheActivity =
+            App.Services.GetRequiredService<ThumbnailCacheActivity>();
         InitializeComponent();
         ConfigureSettingsNavigationItem();
 
@@ -45,8 +49,46 @@ public sealed partial class MainWindow : Window
 
         ApplyNavVisibility();
         App.Services.GetRequiredService<SettingsViewModel>().NavItemVisibilityChanged += OnNavItemVisibilityChanged;
+        _thumbnailCacheActivity.ActiveWorkCountChanged +=
+            ThumbnailCacheActivity_ActiveWorkCountChanged;
+        Closed += MainWindow_Closed;
+        UpdateThumbnailCacheStatus(_thumbnailCacheActivity.ActiveWorkCount);
 
         NavigateToSelectedLibraryPage();
+    }
+
+    private void ThumbnailCacheActivity_ActiveWorkCountChanged(int activeWorkCount)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            UpdateThumbnailCacheStatus(activeWorkCount);
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(
+            () => UpdateThumbnailCacheStatus(activeWorkCount));
+    }
+
+    private void UpdateThumbnailCacheStatus(int activeWorkCount)
+    {
+        // Activity notifications may arrive from multiple worker threads. Read
+        // the current total so a queued, older notification cannot overwrite
+        // a newer state in the UI.
+        activeWorkCount = _thumbnailCacheActivity.ActiveWorkCount;
+        var isCaching = activeWorkCount > 0;
+        ThumbnailCacheStatus.Visibility = isCaching
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ThumbnailCachePendingCount.Text = isCaching
+            ? activeWorkCount.ToString()
+            : string.Empty;
+    }
+
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        _thumbnailCacheActivity.ActiveWorkCountChanged -=
+            ThumbnailCacheActivity_ActiveWorkCountChanged;
+        Closed -= MainWindow_Closed;
     }
 
     private void ImportViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

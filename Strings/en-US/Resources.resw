@@ -1345,4 +1345,7 @@
   <data name="Friends_FolderOwnedEntry" xml:space="preserve">
     <value>{0}: {1}&#x0A;Currently assigned to: {2}</value>
   </data>
+  <data name="MainWindow_ThumbnailCacheStatus.Text" xml:space="preserve">
+    <value>Caching images…</value>
+  </data>
 </root>

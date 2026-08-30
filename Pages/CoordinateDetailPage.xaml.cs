@@ -33,11 +33,13 @@ public sealed partial class CoordinateDetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        base.OnNavigatedFrom(e);
         _metadataCts?.Cancel();
         _metadataCts?.Dispose();
         _metadataCts = null;
         App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
+        PreviewImage.Source = null;
+        ViewModel.Card = null;
+        base.OnNavigatedFrom(e);
     }
 
     private void OnCardsReloaded()

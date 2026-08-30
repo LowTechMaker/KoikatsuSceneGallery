@@ -69,8 +69,6 @@ public sealed partial class GalleryPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        _thumbnailRequests.Cancel();
-        ViewModel.CancelPendingWork();
         base.OnNavigatedFrom(e);
     }
 

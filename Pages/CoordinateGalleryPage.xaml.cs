@@ -68,8 +68,6 @@ public sealed partial class CoordinateGalleryPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        _thumbnailRequests.Cancel();
-        ViewModel.CancelPendingWork();
         base.OnNavigatedFrom(e);
     }
 

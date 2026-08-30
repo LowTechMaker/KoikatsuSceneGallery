@@ -1345,4 +1345,7 @@
   <data name="Friends_FolderOwnedEntry" xml:space="preserve">
     <value>{0}：{1}&#x0A;目前綁定：{2}</value>
   </data>
+  <data name="MainWindow_ThumbnailCacheStatus.Text" xml:space="preserve">
+    <value>正在快取圖片…</value>
+  </data>
 </root>

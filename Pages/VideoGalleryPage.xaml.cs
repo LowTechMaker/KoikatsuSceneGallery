@@ -54,7 +54,7 @@ public sealed partial class VideoGalleryPage : Page
                 _reloadPending = true;
                 return;
             }
-            _thumbnailRequests.Activate();
+            _thumbnailRequests.Restart();
             ViewModel.LoadCardsCommand.ExecuteAsync(null)
                 .Observe(App.Services.GetRequiredService<IAppLogger>(), "VideoGallery.ReloadFolders");
         });
@@ -82,8 +82,6 @@ public sealed partial class VideoGalleryPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         _isActive = false;
-        _thumbnailRequests.Cancel();
-        ViewModel.CancelPendingWork();
         base.OnNavigatedFrom(e);
     }
 

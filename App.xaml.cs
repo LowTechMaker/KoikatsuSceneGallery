@@ -147,10 +147,13 @@ public partial class App : Application
         }).Observe(_logger, "PluginUpdate.BackgroundCheck");
 
         var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        var thumbnailCacheActivity = new ThumbnailCacheActivity();
+        var thumbnailMemoryCache = new ThumbnailMemoryCache(dispatcherQueue);
         var thumbnailService = new ThumbnailService(
             _thumbnailCacheService,
             _sceneCardCacheService,
-            dispatcherQueue);
+            dispatcherQueue,
+            thumbnailCacheActivity);
 
         var authorInfoService = new AuthorInfoService(
             _pluginService.AuthorProviders,
@@ -268,6 +271,8 @@ public partial class App : Application
             friendsViewModel,
             authorSourceCoordinator,
             thumbnailService,
+            thumbnailCacheActivity,
+            thumbnailMemoryCache,
             importService,
             importViewModel,
             authorPostService);
@@ -290,6 +295,7 @@ public partial class App : Application
         {
             try
             {
+                thumbnailCacheActivity.CancelForShutdown();
                 foreach (var viewModel in galleryViewModels)
                     viewModel.CancelPendingWork();
             }
@@ -328,6 +334,8 @@ public partial class App : Application
         FriendsViewModel friendsViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
         ThumbnailService thumbnailService,
+        ThumbnailCacheActivity thumbnailCacheActivity,
+        ThumbnailMemoryCache thumbnailMemoryCache,
         ImportService? importService,
         ImportViewModel? importViewModel,
         AuthorPostService? authorPostService)
@@ -357,6 +365,8 @@ public partial class App : Application
         Services.Add(friendsViewModel);
         Services.Add(authorSourceCoordinator);
         Services.Add(thumbnailService);
+        Services.Add(thumbnailCacheActivity);
+        Services.Add(thumbnailMemoryCache);
         if (importService is not null) Services.Add(importService);
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null) Services.Add(authorPostService);
