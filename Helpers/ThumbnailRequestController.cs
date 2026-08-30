@@ -26,6 +26,19 @@ internal sealed class ThumbnailRequestController
 
     public void Activate()
     {
+        if (_scope.Token.IsCancellationRequested)
+        {
+            _scope.Activate();
+            SetPendingCount(0);
+        }
+    }
+
+    /// <summary>
+    /// Cancels the current requests before starting a new page-specific scope.
+    /// Use this only when the source cards themselves have changed.
+    /// </summary>
+    public void Restart()
+    {
         _scope.Activate();
         SetPendingCount(0);
     }
@@ -38,17 +51,19 @@ internal sealed class ThumbnailRequestController
 
     public void Request(CardBase card, bool isVideo = false)
     {
-        if (!card.NeedsThumbnail || !_scope.TryBegin(card.FilePath))
+        var requestKey = GetRequestKey(card);
+        if (!card.NeedsThumbnail || !_scope.TryBegin(requestKey))
             return;
 
         var cancellationToken = _scope.Token;
         SetPendingCount(_pendingCount + 1);
-        LoadAsync(card, isVideo, cancellationToken)
+        LoadAsync(card, requestKey, isVideo, cancellationToken)
             .Observe(_logger, _operation);
     }
 
     private async Task LoadAsync(
         CardBase card,
+        string requestKey,
         bool isVideo,
         CancellationToken cancellationToken)
     {
@@ -71,12 +86,15 @@ internal sealed class ThumbnailRequestController
             if (!cancellationToken.IsCancellationRequested)
             {
                 _scope.Complete(
-                    card.FilePath,
+                    requestKey,
                     card.HasThumbnail || card.ThumbnailGenerationFailed);
                 SetPendingCount(Math.Max(0, _pendingCount - 1));
             }
         }
     }
+
+    private static string GetRequestKey(CardBase card) =>
+        $"{card.FilePath}\0{card.FileSize}\0{card.DateModified.Ticks}";
 
     private void SetPendingCount(int value)
     {

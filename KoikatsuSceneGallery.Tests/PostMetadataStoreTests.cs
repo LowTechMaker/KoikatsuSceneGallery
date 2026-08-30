@@ -59,7 +59,7 @@ public sealed class PostMetadataStoreTests
             });
 
         using var json = JsonDocument.Parse(File.ReadAllText(path));
-        Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(PostMetadataDocument.CurrentSchemaVersion, json.RootElement.GetProperty("schemaVersion").GetInt32());
         Assert.Equal("pixiv", json.RootElement.GetProperty("providerId").GetString());
 
         if (OperatingSystem.IsWindows())
@@ -99,6 +99,98 @@ public sealed class PostMetadataStoreTests
     }
 
     [Fact]
+    public async Task WriteAndRead_RoundTripsLocalFileNames()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument() with
+        {
+            LocalFileNames = ["scene_001.png", "scene_002.png"],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, document));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Equal(["scene_001.png", "scene_002.png"], loaded!.LocalFileNames);
+    }
+
+    [Fact]
+    public async Task Read_LegacySidecarWithoutLocalFileNamesReturnsEmpty()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+
+        // Simulate a v1 sidecar by writing JSON that omits localFileNames.
+        var legacyJson = $$"""
+        {
+          "schemaVersion": 1,
+          "providerId": "pixiv",
+          "artworkId": "12345",
+          "authorName": "作者",
+          "authorId": "987",
+          "title": "title",
+          "description": null,
+          "rating": 1,
+          "tags": [],
+          "fetchedAt": "2026-07-28T12:34:56+00:00"
+        }
+        """;
+        var path = store.GetSidecarPath(directory.Path, "pixiv", "12345");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, legacyJson);
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Empty(loaded!.LocalFileNames);
+        Assert.Equal("title", loaded.Title);
+    }
+
+    [Fact]
+    public async Task Write_MergingIntoALegacySidecarUpgradesItsSchemaVersion()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+
+        // A v1 sidecar predates LocalFileNames entirely.
+        var legacyJson = """
+        {
+          "schemaVersion": 1,
+          "providerId": "pixiv",
+          "artworkId": "12345",
+          "authorName": "作者",
+          "authorId": "987",
+          "title": "legacy title",
+          "description": "legacy description",
+          "rating": 2,
+          "tags": [{ "name": "制服", "translatedName": "uniform" }],
+          "fetchedAt": "2026-07-28T12:34:56+00:00"
+        }
+        """;
+        var path = store.GetSidecarPath(directory.Path, "pixiv", "12345");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, legacyJson);
+
+        Assert.True(await store.WriteAsync(
+            directory.Path,
+            CreateDocument() with { LocalFileNames = ["page1.png"] }));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        // The file now carries current-schema fields, so it says so.
+        Assert.Equal(PostMetadataDocument.CurrentSchemaVersion, loaded!.SchemaVersion);
+        Assert.Equal(["page1.png"], loaded.LocalFileNames);
+        // The stored metadata is the fresher one and survives untouched.
+        Assert.Equal("legacy title", loaded.Title);
+        Assert.Equal("legacy description", loaded.Description);
+        Assert.Equal(2, loaded.Rating);
+        Assert.Equal(FetchedAt, loaded.FetchedAt);
+        var tag = Assert.Single(loaded.Tags);
+        Assert.Equal("制服", tag.Name);
+        Assert.Equal("uniform", tag.TranslatedName);
+    }
+
+    [Fact]
     public async Task Write_OlderFetchCannotOverwriteNewerMetadata()
     {
         using var directory = new TestDirectory();
@@ -123,6 +215,102 @@ public sealed class PostMetadataStoreTests
         Assert.Equal(
             "newest",
             store.Read(directory.Path, "pixiv", "12345")?.Title);
+    }
+
+    [Fact]
+    public async Task Write_MergesLocalFileNamesWhenFetchedAtIsUnchanged()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var firstPage = CreateDocument(title: "stored") with
+        {
+            LocalFileNames = ["page1.png"],
+        };
+        // A second page imported from the same cached artwork info carries the
+        // very same FetchedAt.
+        var secondPage = CreateDocument(title: "stored") with
+        {
+            LocalFileNames = ["page2.png"],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, firstPage));
+        Assert.True(await store.WriteAsync(directory.Path, secondPage));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Equal(["page1.png", "page2.png"], loaded!.LocalFileNames);
+        Assert.Equal(FetchedAt, loaded.FetchedAt);
+    }
+
+    [Fact]
+    public async Task Write_KeepsExistingFileNamesWhenOlderMetadataIsRejected()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var newer = CreateDocument(title: "newer") with
+        {
+            FetchedAt = FetchedAt.AddMinutes(1),
+            LocalFileNames = ["page1.png"],
+        };
+        var older = CreateDocument(title: "older") with
+        {
+            LocalFileNames = ["page2.png"],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, newer));
+        Assert.True(await store.WriteAsync(directory.Path, older));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        // The stale metadata must not win, but its file name is still recorded.
+        Assert.Equal("newer", loaded!.Title);
+        Assert.Equal(newer.FetchedAt, loaded.FetchedAt);
+        Assert.Equal(["page1.png", "page2.png"], loaded.LocalFileNames);
+    }
+
+    [Fact]
+    public async Task Write_MergesFileNamesIntoFreshlyFetchedMetadata()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var stored = CreateDocument(title: "stored") with
+        {
+            LocalFileNames = ["page1.png"],
+        };
+        var refetched = CreateDocument(title: "refetched") with
+        {
+            FetchedAt = FetchedAt.AddMinutes(1),
+            LocalFileNames = ["page2.png"],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, stored));
+        Assert.True(await store.WriteAsync(directory.Path, refetched));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Equal("refetched", loaded!.Title);
+        Assert.Equal(["page1.png", "page2.png"], loaded.LocalFileNames);
+    }
+
+    [Fact]
+    public async Task Write_SkipsRewriteWhenNothingChanged()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument() with
+        {
+            LocalFileNames = ["page1.png"],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, document));
+        Assert.False(await store.WriteAsync(directory.Path, document));
+        // The same names in a different casing are the same files on Windows.
+        Assert.False(await store.WriteAsync(
+            directory.Path,
+            document with { LocalFileNames = ["PAGE1.PNG"] }));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.Equal(["page1.png"], loaded!.LocalFileNames);
     }
 
     [Fact]
@@ -178,6 +366,117 @@ public sealed class PostMetadataStoreTests
             () => store.WriteAsync(
                 directory.Path,
                 CreateDocument() with { ArtworkId = "" }));
+    }
+
+    [Fact]
+    public async Task Write_SerializesConcurrentWritersAndReleasesTheLock()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        const int writerCount = 32;
+
+        // Every writer merges its own file name into the sidecar. A name can
+        // only go missing if two writers read-modify-write at the same time,
+        // so the assertion below is a mutual-exclusion check.
+        await Task.WhenAll(Enumerable.Range(0, writerCount).Select(index =>
+            Task.Run(() => store.WriteAsync(
+                directory.Path,
+                CreateDocument() with { LocalFileNames = [$"page{index}.png"] }))));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Equal(
+            Enumerable.Range(0, writerCount).Select(index => $"page{index}.png").Order(),
+            loaded!.LocalFileNames.Order());
+        Assert.Equal(0, PostMetadataStore.ActiveWriteLockCount);
+    }
+
+    [Fact]
+    public async Task Write_DoesNotAccumulateLocksAcrossSidecars()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+
+        for (var index = 0; index < 16; index++)
+        {
+            await store.WriteAsync(
+                directory.Path,
+                CreateDocument() with { ArtworkId = index.ToString() });
+        }
+
+        Assert.Equal(0, PostMetadataStore.ActiveWriteLockCount);
+    }
+
+    [Fact]
+    public async Task Write_ReleasesTheLockWhenCancelledOrRejected()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => store.WriteAsync(
+                directory.Path,
+                CreateDocument(),
+                cancellation.Token));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => store.WriteAsync(
+                directory.Path,
+                CreateDocument() with { ProviderId = " " }));
+
+        Assert.Equal(0, PostMetadataStore.ActiveWriteLockCount);
+    }
+
+    [Fact]
+    public async Task Write_CancellingAWaiterLeavesTheHolderAndTheEntryIntact()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var path = store.GetSidecarPath(directory.Path, "pixiv", "12345");
+
+        // Writer A holds the per-path lock.
+        using var holder = await PostMetadataStore.HoldWriteLockAsync(path);
+        Assert.Equal(1, PostMetadataStore.GetWriteLockReferenceCount(path));
+
+        // Writer B takes a reference and blocks in WaitAsync behind A.
+        using var waiterCancellation = new CancellationTokenSource();
+        var waiter = store.WriteAsync(
+            directory.Path,
+            CreateDocument(title: "blocked"),
+            waiterCancellation.Token);
+        await WaitForReferenceCountAsync(path, 2);
+        Assert.False(waiter.IsCompleted);
+
+        await waiterCancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiter);
+
+        // B dropped only its own reference; A still owns the entry.
+        Assert.Equal(1, PostMetadataStore.GetWriteLockReferenceCount(path));
+        Assert.Equal(1, PostMetadataStore.ActiveWriteLockCount);
+
+        holder.Dispose();
+        Assert.Equal(0, PostMetadataStore.ActiveWriteLockCount);
+
+        // The entry was disposed only once nobody could reach it, so a later
+        // writer gets a fresh lock and writes normally.
+        Assert.True(await store.WriteAsync(
+            directory.Path,
+            CreateDocument(title: "after")));
+        Assert.Equal("after", store.Read(directory.Path, "pixiv", "12345")?.Title);
+        Assert.Equal(0, PostMetadataStore.ActiveWriteLockCount);
+    }
+
+    private static async Task WaitForReferenceCountAsync(string path, int expected)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (PostMetadataStore.GetWriteLockReferenceCount(path) != expected)
+        {
+            Assert.True(
+                DateTime.UtcNow < deadline,
+                $"The write lock reference count never reached {expected}.");
+            await Task.Delay(10);
+        }
     }
 
     private static PostMetadataDocument CreateDocument(

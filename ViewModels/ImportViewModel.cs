@@ -12,6 +12,15 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
+/// <summary>
+/// Identifies which message the import warning bar is showing.
+/// </summary>
+public enum ImportWarningKind
+{
+    RejectedFiles,
+    ManualArtworkIdFetchFailed,
+}
+
 public partial class ImportViewModel : ObservableObject
 {
     private const int AnalyzingPreviewLimit = 8;
@@ -142,8 +151,9 @@ public partial class ImportViewModel : ObservableObject
     [ObservableProperty] public partial int CoordCount { get; set; }
     [ObservableProperty] public partial int CompletedCount { get; set; }
 
-    [ObservableProperty] public partial bool ShowRejectedWarning { get; set; }
-    [ObservableProperty] public partial int RejectedCount { get; set; }
+    [ObservableProperty] public partial bool ShowWarningBar { get; set; }
+    [ObservableProperty] public partial int WarningCount { get; set; }
+    [ObservableProperty] public partial ImportWarningKind WarningKind { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UndoManualAssignmentCommand))]
@@ -725,7 +735,17 @@ public partial class ImportViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task AssignArtworkIdToUnknownGroupAsync(ImportUnknownGroup group)
+    private Task AssignArtworkIdToUnknownGroupAsync(ImportUnknownGroup group)
+        => ResolveArtworkIdForUnknownGroupAsync(group, CancellationToken.None);
+
+    /// <summary>
+    /// Assigns the manually entered artwork ID to the group and fetches its
+    /// info. Returns the number of files whose fetch failed — those files stay
+    /// in the fetch-failed tab without author information.
+    /// </summary>
+    private async Task ResolveArtworkIdForUnknownGroupAsync(
+        ImportUnknownGroup group,
+        CancellationToken cancellationToken)
     {
         if (!group.CanAssignArtworkId) return;
 
@@ -750,24 +770,47 @@ public partial class ImportViewModel : ObservableObject
             AnalyzingItems.Add(item);
         }
 
-        var info = await _importService.FetchArtworkInfoAsync(artworkId, CancellationToken.None);
+        var info = await _importService.FetchArtworkInfoAsync(artworkId, cancellationToken);
+        ApplyFetchedArtworkInfo(files, artworkId, info);
+
+        await ReResolveDestinationsAsync(cancellationToken);
+        UpdateCounts();
+    }
+
+    /// <summary>
+    /// Applies the fetch result to the files the artwork ID was assigned to.
+    /// A failed fetch leaves them in <see cref="ImportItemStatus.NeedsArtworkId"/>
+    /// so no later import can file them under the unknown-author folder, and
+    /// parks them in the fetch-failed tab where the user can correct them.
+    /// </summary>
+    private void ApplyFetchedArtworkInfo(
+        IReadOnlyList<ImportItem> files,
+        ArtworkId artworkId,
+        ArtworkInfo? info)
+    {
         foreach (var item in files)
         {
-            if (info is not null)
+            if (info is null)
             {
-                item.FetchedArtworkInfo = info;
-                item.AuthorName = info.AuthorName;
-                item.AuthorId = info.AuthorId;
-                item.AuthorProviderId = artworkId.ProviderId;
-                item.Title = info.Title;
-                item.Rating = info.Rating;
-                item.Tags = info.Tags;
+                // ResolveDestinations skips anything that is not ready to
+                // import, so the stale destination would otherwise linger.
+                item.DestinationPath = null;
+                // A status other than ReadyToImport is not routed by
+                // OnItemPropertyChanged, so place the item explicitly.
+                item.Status = ImportItemStatus.NeedsArtworkId;
+                MoveFetchFailed(item);
+                continue;
             }
+
+            item.FetchedArtworkInfo = info;
+            item.AuthorName = info.AuthorName;
+            item.AuthorId = info.AuthorId;
+            item.AuthorProviderId = artworkId.ProviderId;
+            item.Title = info.Title;
+            item.Rating = info.Rating;
+            item.Tags = info.Tags;
             item.Status = ImportItemStatus.ReadyToImport;
         }
-
-        await ReResolveDestinationsAsync();
-        UpdateCounts();
     }
 
     private bool CanAssignBatchAuthorIdToUnknown() =>
@@ -811,7 +854,14 @@ public partial class ImportViewModel : ObservableObject
         SelectedUnknownCount > 0 && !string.IsNullOrWhiteSpace(BatchManualArtworkId);
 
     [RelayCommand(CanExecute = nameof(CanAssignBatchArtworkIdToUnknown))]
-    private async Task AssignBatchArtworkIdToUnknownAsync()
+    private Task AssignBatchArtworkIdToUnknownAsync()
+        => ResolveBatchArtworkIdToUnknownAsync(CancellationToken.None);
+
+    /// <summary>
+    /// Assigns the batch artwork ID to every selected unknown group.
+    /// </summary>
+    private async Task ResolveBatchArtworkIdToUnknownAsync(
+        CancellationToken cancellationToken)
     {
         var groups = UnknownGroups.Where(g => g.IsSelected).ToList();
         if (groups.Count == 0 || string.IsNullOrWhiteSpace(BatchManualArtworkId))
@@ -839,25 +889,12 @@ public partial class ImportViewModel : ObservableObject
             AnalyzingItems.Add(item);
         }
 
-        var info = await _importService.FetchArtworkInfoAsync(artworkId, CancellationToken.None);
-        foreach (var item in files)
-        {
-            if (info is not null)
-            {
-                item.FetchedArtworkInfo = info;
-                item.AuthorName = info.AuthorName;
-                item.AuthorId = info.AuthorId;
-                item.AuthorProviderId = artworkId.ProviderId;
-                item.Title = info.Title;
-                item.Rating = info.Rating;
-                item.Tags = info.Tags;
-            }
-            item.Status = ImportItemStatus.ReadyToImport;
-        }
+        var info = await _importService.FetchArtworkInfoAsync(artworkId, cancellationToken);
+        ApplyFetchedArtworkInfo(files, artworkId, info);
 
         BatchManualArtworkId = null;
 
-        await ReResolveDestinationsAsync();
+        await ReResolveDestinationsAsync(cancellationToken);
         UpdateCounts();
     }
 
@@ -947,6 +984,25 @@ public partial class ImportViewModel : ObservableObject
 
         try
         {
+            await ResolvePendingManualArtworkIdsAsync(_importCts.Token);
+
+            // Read the item state rather than this run's result: files left
+            // over by an earlier failed attempt must keep reporting until the
+            // user corrects them. Their status keeps them out of ImportAsync.
+            var unresolvedFileCount = Items.Count(
+                item => item.Status == ImportItemStatus.NeedsArtworkId);
+            if (unresolvedFileCount > 0)
+            {
+                _logger.LogError(
+                    "Import.ResolveManualArtworkId",
+                    new InvalidOperationException(
+                        "Files were left out of the import because a manually assigned artwork ID could not be fetched."),
+                    unresolvedFileCount.ToString());
+                ShowWarning(
+                    ImportWarningKind.ManualArtworkIdFetchFailed,
+                    unresolvedFileCount);
+            }
+
             await _importService.ImportAsync(Items, _dispatcher, _importCts.Token);
             completed = true;
         }
@@ -959,8 +1015,32 @@ public partial class ImportViewModel : ObservableObject
             UpdateCounts();
         }
 
-        if (completed)
+        // Clearing would throw away the files the user still has to correct,
+        // so the list survives until nothing is left unresolved.
+        if (completed
+            && !Items.Any(item => item.Status == ImportItemStatus.NeedsArtworkId))
+        {
             Clear();
+        }
+    }
+
+    /// <summary>
+    /// Resolves every artwork ID the user typed but has not applied yet.
+    /// Files whose fetch fails end up in <see cref="ImportItemStatus.NeedsArtworkId"/>.
+    /// </summary>
+    private async Task ResolvePendingManualArtworkIdsAsync(
+        CancellationToken cancellationToken)
+    {
+        if (CanAssignBatchArtworkIdToUnknown())
+            await ResolveBatchArtworkIdToUnknownAsync(cancellationToken);
+
+        foreach (var group in UnknownGroups
+                     .Where(group => group.CanAssignArtworkId)
+                     .ToList())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await ResolveArtworkIdForUnknownGroupAsync(group, cancellationToken);
+        }
     }
 
     [RelayCommand]
@@ -979,6 +1059,9 @@ public partial class ImportViewModel : ObservableObject
             item.AuthorName = author.Name;
             item.AuthorId = authorId;
             item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
+            // The item now has an author, so a failed artwork-ID fetch no
+            // longer blocks it.
+            item.Status = ImportItemStatus.ReadyToImport;
         }
 
         FetchFailedGroups.Remove(group);
@@ -1015,6 +1098,7 @@ public partial class ImportViewModel : ObservableObject
             item.AuthorName = author.Name;
             item.AuthorId = authorId;
             item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
+            item.Status = ImportItemStatus.ReadyToImport;
         }
 
         foreach (var group in groups)
@@ -1080,16 +1164,23 @@ public partial class ImportViewModel : ObservableObject
     }
 
     private void ShowRejectedFiles(int count)
+        => ShowWarning(ImportWarningKind.RejectedFiles, count);
+
+    private void ShowWarning(ImportWarningKind kind, int count)
     {
-        RejectedCount = count;
-        ShowRejectedWarning = true;
+        // Close first so the message is refreshed even when the bar is
+        // already showing a previous warning.
+        ShowWarningBar = false;
+        WarningKind = kind;
+        WarningCount = count;
+        ShowWarningBar = true;
 
         _warningTimer?.Stop();
         _warningTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _warningTimer.Tick += (_, _) =>
         {
             _warningTimer.Stop();
-            ShowRejectedWarning = false;
+            ShowWarningBar = false;
         };
         _warningTimer.Start();
     }

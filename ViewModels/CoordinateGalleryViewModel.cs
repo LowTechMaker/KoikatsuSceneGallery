@@ -14,6 +14,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly SettingsService _settingsService;
     private readonly CoordinateMetadataService _metadataService;
     private readonly SettingsViewModel _settingsViewModel;
+    private readonly FriendService _friendService;
     private readonly IAppLogger _logger;
 
     public ObservableCollection<CoordinateCard> Cards { get; }
@@ -30,12 +31,19 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CoordinateCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<CoordinateCard> _lastCompletedCards = [];
 
     private CancellationTokenSource? _metadataCts;
     private const int MetadataParseConcurrency = 4;
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
-    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, IAppLogger logger)
+    public CoordinateGalleryViewModel(
+        CoordinateCardService cardService,
+        SettingsService settingsService,
+        CoordinateMetadataService metadataService,
+        SettingsViewModel settingsViewModel,
+        FriendService friendService,
+        IAppLogger logger)
         : base(new ObservableCollection<CoordinateCard>())
     {
         Cards = (ObservableCollection<CoordinateCard>)_cardsSource;
@@ -43,6 +51,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _settingsService = settingsService;
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
+        _friendService = friendService;
         _logger = logger;
 
         _cardService.CardAdded += OnCardAdded;
@@ -58,7 +67,10 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     [RelayCommand]
     private async Task LoadCardsAsync()
     {
+        if (HasCompletedLoad)
+            _lastCompletedCards = [.. Cards];
         var cancellationToken = BeginLoad();
+        var completed = false;
         _metadataCts?.Cancel();
 
         IsLoading = true;
@@ -70,7 +82,9 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             _resolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             _allowedResolutions = [.. config.CoordinateAllowedResolutions];
 
-            var paths = config.CoordinateFolderPaths;
+            var paths = FriendFolderLayout.CollapseNestedRoots(
+                config.CoordinateFolderPaths.Concat(
+                    _friendService.GetCoordinateFolders()));
             Cards.Clear();
             _cardIndex.Clear();
 
@@ -92,17 +106,71 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
                     token),
                 cancellationToken);
 
+            var linkedPaths = _friendService.GetLinkedCardPaths();
+            var linkedCards = await Task.Run(() =>
+            {
+                var result = new List<CoordinateCard>();
+                foreach (var filePath in linkedPaths)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!File.Exists(filePath)
+                        || _friendService.GetLinkedCardType(filePath)
+                            != CardType.Coordinate)
+                    {
+                        continue;
+                    }
+
+                    var card = _cardService.TryCreateFromPath(filePath);
+                    if (card is not null)
+                        result.Add(card);
+                }
+                return result;
+            }, cancellationToken);
+            foreach (var card in linkedCards)
+            {
+                if (_cardIndex.TryAdd(card.FilePath, card))
+                    Cards.Add(card);
+            }
+
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
+            completed = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)
+            {
+                if (completed)
+                    _lastCompletedCards = [.. Cards];
+                else
+                    RestoreLastCompletedCards(
+                        restartMetadata:
+                            !cancellationToken.IsCancellationRequested);
                 IsLoading = false;
-            RaiseCardsReloaded();
+                if (completed)
+                    RaiseCardsReloaded();
+            }
         }
+    }
+
+    private void RestoreLastCompletedCards(bool restartMetadata)
+    {
+        using (CardsView.DeferRefresh())
+        {
+            Cards.Clear();
+            _cardIndex.Clear();
+            foreach (var card in _lastCompletedCards)
+            {
+                if (_cardIndex.TryAdd(card.FilePath, card))
+                    Cards.Add(card);
+            }
+        }
+
+        ApplyFilter();
+        if (restartMetadata)
+            StartMetadataScan();
     }
 
     private void StartMetadataScan()
@@ -250,9 +318,23 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     {
         _dispatcherQueue.TryEnqueue(() =>
         {
-            if (!_cardIndex.TryAdd(card.FilePath, card)) return;
-            Cards.Add(card);
+            if (_cardIndex.TryGetValue(card.FilePath, out var existing))
+            {
+                _cardIndex[card.FilePath] = card;
+                var index = Cards.IndexOf(existing);
+                if (index >= 0)
+                    Cards[index] = card;
+                else
+                    Cards.Add(card);
+            }
+            else
+            {
+                _cardIndex.Add(card.FilePath, card);
+                Cards.Add(card);
+            }
+
             QueueMetadata(card);
+            RaiseCardsChanged();
         });
     }
 
@@ -284,7 +366,10 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (_cardIndex.Remove(path, out var existing))
+            {
                 Cards.Remove(existing);
+                RaiseCardsChanged();
+            }
         });
     }
 

@@ -3,7 +3,7 @@ namespace KoikatsuSceneGallery.Helpers;
 internal sealed class ThumbnailRequestScope : IDisposable
 {
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly HashSet<string> _requestedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _requestKeys = new(StringComparer.OrdinalIgnoreCase);
 
     public CancellationToken Token =>
         _cancellationTokenSource?.Token ?? new CancellationToken(canceled: true);
@@ -14,17 +14,17 @@ internal sealed class ThumbnailRequestScope : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
     }
 
-    public bool TryBegin(string filePath)
+    public bool TryBegin(string requestKey)
     {
         var source = _cancellationTokenSource;
         return source is { IsCancellationRequested: false }
-               && _requestedPaths.Add(filePath);
+               && _requestKeys.Add(requestKey);
     }
 
-    public void Complete(string filePath, bool succeeded)
+    public void Complete(string requestKey, bool succeeded)
     {
         if (!succeeded)
-            _requestedPaths.Remove(filePath);
+            _requestKeys.Remove(requestKey);
     }
 
     public void Cancel()
@@ -32,7 +32,7 @@ internal sealed class ThumbnailRequestScope : IDisposable
         _cancellationTokenSource?.Cancel();
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;
-        _requestedPaths.Clear();
+        _requestKeys.Clear();
     }
 
     public void Dispose()

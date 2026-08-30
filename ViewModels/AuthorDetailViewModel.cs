@@ -157,7 +157,21 @@ public partial class AuthorDetailViewModel : ObservableObject
         OnPropertyChanged(nameof(CanLoadPosts));
     }
 
-    public void Unload() => UnsubscribeAuthorChanges();
+    public void Unload()
+    {
+        UnsubscribeAuthorChanges();
+        Author = null;
+        Scenes.Clear();
+        Characters.Clear();
+        Coordinates.Clear();
+        Posts.Clear();
+        PostGroups.Clear();
+        SceneCount = 0;
+        CharacterCount = 0;
+        CoordinateCount = 0;
+        PostCount = 0;
+        IsLoadingPosts = false;
+    }
 
     public async Task LoadPostsAsync(AuthorPostService postService, CancellationToken ct)
     {
@@ -182,9 +196,11 @@ public partial class AuthorDetailViewModel : ObservableObject
                 foreach (var path in group.Post.LocalFilePaths.Where(File.Exists))
                 {
                     ct.ThrowIfCancellationRequested();
+                    var fileInfo = new FileInfo(path);
                     var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(
                         path,
-                        File.GetLastWriteTime(path),
+                        fileInfo.Length,
+                        fileInfo.LastWriteTime,
                         ct);
                     ct.ThrowIfCancellationRequested();
                     group.Images.Add(new LocalImagePreview(

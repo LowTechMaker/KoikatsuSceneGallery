@@ -33,9 +33,11 @@ public sealed partial class DetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        base.OnNavigatedFrom(e);
         App.Services.GetRequiredService<GalleryViewModel>().CardRemovedNotification -= OnCardRemoved;
         App.Services.GetRequiredService<GalleryViewModel>().CardsReloaded -= OnCardsReloaded;
+        PreviewImage.Source = null;
+        ViewModel.Card = null;
+        base.OnNavigatedFrom(e);
     }
 
     private void OnCardRemoved(string path)

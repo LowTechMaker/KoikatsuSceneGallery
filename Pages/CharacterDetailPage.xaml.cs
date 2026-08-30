@@ -34,6 +34,7 @@ public sealed partial class CharacterDetailPage : Page
         _thumbnailRequests.Activate();
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         galleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
+        galleryViewModel.AlternativesChanged += OnAlternativesChanged;
         galleryViewModel.CardsReloaded += OnCardsReloaded;
         if (e.Parameter is CharacterCard card)
             ShowCard(card);
@@ -41,25 +42,44 @@ public sealed partial class CharacterDetailPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        base.OnNavigatedFrom(e);
         _thumbnailRequests.Cancel();
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         _metadataCts?.Cancel();
         _metadataCts?.Dispose();
         _metadataCts = null;
         galleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
+        galleryViewModel.AlternativesChanged -= OnAlternativesChanged;
         galleryViewModel.CardsReloaded -= OnCardsReloaded;
+        PreviewImage.Source = null;
+        ViewModel.Card = null;
+        ViewModel.Versions = null;
+        ViewModel.Alternatives = null;
+        base.OnNavigatedFrom(e);
     }
 
-    private void OnVersionIndexChanged(string characterName)
+    private void OnVersionIndexChanged(
+        string? friendFolderPath,
+        string characterName)
     {
         DispatcherQueue.TryEnqueue(() =>
         {
             if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
-            if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
+            if (!string.Equals(
+                    ViewModel.Card.FriendFolderPath,
+                    friendFolderPath,
+                    StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(
+                    ViewModel.FullName,
+                    characterName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
 
-            var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(characterName);
-            if (versions != null && versions.Contains(ViewModel.Card))
+            var galleryViewModel =
+                App.Services.GetRequiredService<CharacterGalleryViewModel>();
+            var versions = galleryViewModel.GetVersions(ViewModel.Card);
+            if (galleryViewModel.ContainsCard(ViewModel.Card))
             {
                 LoadVersions(ViewModel.Card, characterName);
             }
@@ -71,6 +91,29 @@ public sealed partial class CharacterDetailPage : Page
             {
                 if (Frame.CanGoBack) Frame.GoBack();
             }
+        });
+    }
+
+    private void OnAlternativesChanged(
+        string friendFolderPath,
+        string characterName)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var card = ViewModel.Card;
+            if (card?.FriendFolderPath is null
+                || !ViewModel.MetadataLoaded
+                || !card.FriendFolderPath.Equals(
+                    friendFolderPath,
+                    StringComparison.OrdinalIgnoreCase)
+                || !ViewModel.FullName.Equals(
+                    characterName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            LoadVersions(card, characterName);
         });
     }
 
@@ -137,7 +180,8 @@ public sealed partial class CharacterDetailPage : Page
 
     private void LoadVersions(CharacterCard card, string fullName)
     {
-        var versions = App.Services.GetRequiredService<CharacterGalleryViewModel>().GetVersions(fullName);
+        var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        var versions = galleryViewModel.GetVersions(card);
         if (versions != null && versions.Count > 1)
         {
             ViewModel.Versions = new System.Collections.ObjectModel.ObservableCollection<CharacterCard>(versions);
@@ -152,6 +196,12 @@ public sealed partial class CharacterDetailPage : Page
             ViewModel.VersionIndex = 0;
             ViewModel.TotalVersions = 0;
         }
+
+        var alternatives = galleryViewModel.GetAlternatives(card);
+        ViewModel.Alternatives = alternatives.Count == 0
+            ? null
+            : new System.Collections.ObjectModel.ObservableCollection<CharacterCard>(alternatives);
+        ViewModel.HasAlternatives = alternatives.Count > 0;
     }
 
     private void VersionItem_Click(object sender, ItemClickEventArgs e)

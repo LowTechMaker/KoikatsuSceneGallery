@@ -1,4 +1,5 @@
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Helpers;
 using Microsoft.UI.Dispatching;
 
 namespace KoikatsuSceneGallery.Services;
@@ -8,17 +9,20 @@ public sealed class ThumbnailService
     private readonly ThumbnailCacheService _cacheService;
     private readonly SceneCardCacheService _sceneCardCacheService;
     private readonly DispatcherQueue _dispatcherQueue;
+    private readonly ThumbnailCacheActivity _cacheActivity;
     private readonly SemaphoreSlim _generationGate =
         new(Math.Clamp(Environment.ProcessorCount - 1, 1, 4));
 
     public ThumbnailService(
         ThumbnailCacheService cacheService,
         SceneCardCacheService sceneCardCacheService,
-        DispatcherQueue dispatcherQueue)
+        DispatcherQueue dispatcherQueue,
+        ThumbnailCacheActivity cacheActivity)
     {
         _cacheService = cacheService;
         _sceneCardCacheService = sceneCardCacheService;
         _dispatcherQueue = dispatcherQueue;
+        _cacheActivity = cacheActivity;
     }
 
     public Task EnsureThumbnailAsync(
@@ -36,14 +40,18 @@ public sealed class ThumbnailService
         bool isVideo,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        using var shutdownLinkedCts = CancellationTokenSource
+            .CreateLinkedTokenSource(cancellationToken, _cacheActivity.ShutdownToken);
+        var workToken = shutdownLinkedCts.Token;
+        workToken.ThrowIfCancellationRequested();
         if (!card.NeedsThumbnail)
             return;
 
-        await _generationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var cacheActivity = _cacheActivity.Begin();
+        await _generationGate.WaitAsync(workToken).ConfigureAwait(false);
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            workToken.ThrowIfCancellationRequested();
             if (!card.NeedsThumbnail)
                 return;
 
@@ -51,6 +59,7 @@ public sealed class ThumbnailService
             {
                 var path = _cacheService.TryGetCachedPath(
                     card.FilePath,
+                    card.FileSize,
                     card.DateModified);
                 if (path is not null)
                     return path;
@@ -58,13 +67,15 @@ public sealed class ThumbnailService
                 return isVideo
                     ? await _cacheService.EnsureVideoThumbnailAsync(
                         card.FilePath,
+                        card.FileSize,
                         card.DateModified,
-                        cancellationToken).ConfigureAwait(false)
+                        workToken).ConfigureAwait(false)
                     : await _cacheService.EnsureThumbnailAsync(
                         card.FilePath,
+                        card.FileSize,
                         card.DateModified,
-                        cancellationToken).ConfigureAwait(false);
-            }, cancellationToken).ConfigureAwait(false);
+                        workToken).ConfigureAwait(false);
+            }, workToken).ConfigureAwait(false);
 
             if (cachedPath is null)
             {
@@ -72,10 +83,16 @@ public sealed class ThumbnailService
                 return;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
+            workToken.ThrowIfCancellationRequested();
             if (card is SceneCard)
-                _sceneCardCacheService.SetThumbnailPath(card.FilePath, cachedPath);
-            await SetThumbnailPathAsync(card, cachedPath, cancellationToken)
+            {
+                _sceneCardCacheService.SetThumbnailPath(
+                    card.FilePath,
+                    card.FileSize,
+                    card.DateModified.Ticks,
+                    cachedPath);
+            }
+            await SetThumbnailPathAsync(card, cachedPath, workToken)
                 .ConfigureAwait(false);
         }
         finally
@@ -84,7 +101,7 @@ public sealed class ThumbnailService
         }
     }
 
-    private Task SetThumbnailPathAsync(
+    private async Task SetThumbnailPathAsync(
         CardBase card,
         string thumbnailPath,
         CancellationToken cancellationToken)
@@ -93,11 +110,13 @@ public sealed class ThumbnailService
         if (_dispatcherQueue.HasThreadAccess)
         {
             card.ThumbnailPath = thumbnailPath;
-            return Task.CompletedTask;
+            return;
         }
 
         var completion = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellationRegistration = cancellationToken.Register(
+            () => completion.TrySetCanceled(cancellationToken));
         if (!_dispatcherQueue.TryEnqueue(() =>
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -114,6 +133,6 @@ public sealed class ThumbnailService
                 new InvalidOperationException("Unable to dispatch thumbnail update."));
         }
 
-        return completion.Task;
+        await completion.Task.ConfigureAwait(false);
     }
 }

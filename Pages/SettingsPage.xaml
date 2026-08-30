@@ -12,6 +12,7 @@
     <Grid Padding="24,16,24,0" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -19,7 +20,15 @@
             x:Uid="Settings_Title"
             Style="{StaticResource TitleTextBlockStyle}" />
 
-        <Pivot Grid.Row="1">
+        <InfoBar
+            x:Name="OperationStatusInfoBar"
+            AutomationProperties.AutomationId="SettingsOperationStatusInfoBar"
+            Grid.Row="1"
+            IsClosable="True"
+            IsOpen="False"
+            Severity="Error" />
+
+        <Pivot Grid.Row="2">
 
             <!-- General Tab -->
             <PivotItem x:Uid="Settings_TabGeneral">
@@ -63,6 +72,24 @@
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsAuthorLiveTilesToggle"
                                 IsOn="{x:Bind ViewModel.AuthorLiveTilesEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
+                            x:Uid="SC_CharacterSearchScope"
+                            AutomationProperties.AutomationId="SettingsCharacterSearchScopeCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE721;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <StackPanel Spacing="4">
+                                <CheckBox
+                                    x:Uid="Settings_SearchAlternatives"
+                                    AutomationProperties.AutomationId="SettingsSearchAlternativesCheckBox"
+                                    IsChecked="{x:Bind ViewModel.IncludeAlternativeCharactersInSearch, Mode=TwoWay}" />
+                                <CheckBox
+                                    x:Uid="Settings_SearchOldVersions"
+                                    AutomationProperties.AutomationId="SettingsSearchOldVersionsCheckBox"
+                                    IsChecked="{x:Bind ViewModel.IncludeOldCharacterVersionsInSearch, Mode=TwoWay}" />
+                            </StackPanel>
                         </controls:SettingsCard>
 
                         <!-- Navigation Visibility Section -->
@@ -155,7 +182,9 @@
                             </Expander.Header>
                             <StackPanel Spacing="12">
                                 <TextBlock x:Uid="Settings_FoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <Button Command="{x:Bind ViewModel.AddFolderCommand}">
+                                <Button
+                                    AutomationProperties.AutomationId="SettingsAddSceneFolderButton"
+                                    Click="AddFolder_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                         <TextBlock x:Uid="Settings_AddFolder" />
@@ -200,7 +229,9 @@
                             </Expander.Header>
                             <StackPanel Spacing="12">
                                 <TextBlock x:Uid="Settings_CharaFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <Button Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
+                                <Button
+                                    AutomationProperties.AutomationId="SettingsAddCharacterFolderButton"
+                                    Click="AddCharacterFolder_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                         <TextBlock x:Uid="Settings_AddFolder" />
@@ -245,7 +276,9 @@
                             </Expander.Header>
                             <StackPanel Spacing="12">
                                 <TextBlock x:Uid="Settings_CoordFoldersDesc" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <Button Command="{x:Bind ViewModel.AddCoordinateFolderCommand}">
+                                <Button
+                                    AutomationProperties.AutomationId="SettingsAddCoordinateFolderButton"
+                                    Click="AddCoordinateFolder_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                         <TextBlock x:Uid="Settings_AddFolder" />
@@ -813,7 +846,9 @@
             </PivotItem>
 
             <!-- OCD Tab -->
-            <PivotItem x:Uid="Settings_TabOcd">
+            <PivotItem
+                x:Uid="Settings_TabOcd"
+                AutomationProperties.AutomationId="SettingsOcdTab">
                 <ScrollViewer Padding="0,16,0,24">
                     <StackPanel Spacing="4">
 
@@ -847,17 +882,18 @@
                         </controls:SettingsCard>
 
                         <controls:SettingsCard
-                            x:Uid="SC_ImportPickerExplanation"
-                            AutomationProperties.AutomationId="SettingsImportPickerExplanationCard">
+                            x:Uid="SC_ResetGuidance"
+                            AutomationProperties.AutomationId="SettingsResetGuidanceCard">
                             <controls:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE897;" />
                             </controls:SettingsCard.HeaderIcon>
                             <Button
-                                AutomationProperties.AutomationId="SettingsResetImportPickerExplanationButton"
-                                Command="{x:Bind ViewModel.ResetImportPickerExplanationCommand}">
+                                AutomationProperties.AutomationId="SettingsResetGuidanceButton"
+                                Click="ResetGuidance_Click"
+                                IsEnabled="{x:Bind ViewModel.CanResetGuidance, Mode=OneWay}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                                    <TextBlock x:Uid="Settings_ResetImportPickerExplanation" />
+                                    <TextBlock x:Uid="Settings_ResetGuidance" />
                                 </StackPanel>
                             </Button>
                         </controls:SettingsCard>

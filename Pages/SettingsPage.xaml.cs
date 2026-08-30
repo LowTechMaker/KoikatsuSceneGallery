@@ -323,15 +323,34 @@ public sealed partial class SettingsPage : Page
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.Navigate", ViewModel.LoadAsync);
     }
 
+    private void AddFolder_Click(object sender, RoutedEventArgs e) =>
+        RunSettingsAction(
+            "Settings.AddFolder",
+            () => ViewModel.AddFolderCommand.ExecuteAsync(null));
+
+    private void AddCharacterFolder_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        RunSettingsAction(
+            "Settings.AddCharacterFolder",
+            () => ViewModel.AddCharacterFolderCommand.ExecuteAsync(null));
+
+    private void AddCoordinateFolder_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        RunSettingsAction(
+            "Settings.AddCoordinateFolder",
+            () => ViewModel.AddCoordinateFolderCommand.ExecuteAsync(null));
+
     private void RemoveFolder_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveFolder", async () =>
+        => RunSettingsAction("Settings.RemoveFolder", async () =>
         {
             if (sender is Button button && button.CommandParameter is string path)
                 await ViewModel.RemoveFolderCommand.ExecuteAsync(path);
         });
 
     private void RemoveCharacterFolder_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCharacterFolder", async () =>
+        => RunSettingsAction("Settings.RemoveCharacterFolder", async () =>
         {
             if (sender is Button button && button.CommandParameter is string path)
                 await ViewModel.RemoveCharacterFolderCommand.ExecuteAsync(path);
@@ -383,11 +402,16 @@ public sealed partial class SettingsPage : Page
     }
 
     private void RemoveCoordinateFolder_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveCoordinateFolder", async () =>
+        => RunSettingsAction("Settings.RemoveCoordinateFolder", async () =>
         {
             if (sender is Button button && button.CommandParameter is string path)
                 await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
         });
+
+    private void ResetGuidance_Click(object sender, RoutedEventArgs e) =>
+        RunSettingsAction(
+            "Settings.ResetGuidance",
+            () => ViewModel.ResetGuidanceCommand.ExecuteAsync(null));
 
     private void RemoveScreenshotFolder_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveScreenshotFolder", async () =>
@@ -444,4 +468,18 @@ public sealed partial class SettingsPage : Page
     {
         Microsoft.Windows.AppLifecycle.AppInstance.Restart(string.Empty);
     }
+
+    private void RunSettingsAction(
+        string operation,
+        Func<Task> action) =>
+        UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(),
+            operation,
+            action,
+            _ =>
+            {
+                OperationStatusInfoBar.Message =
+                    ResLoader.GetString("Settings_OperationFailed");
+                OperationStatusInfoBar.IsOpen = true;
+            });
 }

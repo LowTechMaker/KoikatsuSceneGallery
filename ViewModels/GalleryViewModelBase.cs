@@ -53,6 +53,8 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool IsLoading { get; set; }
 
+    public bool HasCompletedLoad { get; protected set; }
+
     public bool IsEmpty => !IsLoading && CardsView.Count == 0;
 
     [ObservableProperty]
@@ -65,6 +67,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     public bool IsGeneratingThumbnails => PendingThumbnailCount > 0;
 
     public event Action? CardsReloaded;
+    public event Action? CardsChanged;
     public event Action? ViewRefreshed;
 
     protected abstract bool CardPassesFilter(object card);
@@ -76,7 +79,17 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         CardsView = new AdvancedCollectionView(cardsSource, true);
         if (cardsSource is INotifyCollectionChanged observable)
-            observable.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
+        {
+            observable.CollectionChanged += (_, _) =>
+            {
+                // While a full load is running IsEmpty is false by definition.
+                // Raising the same binding notification for thousands of
+                // individual cards only consumes the UI thread; IsLoading
+                // notifies IsEmpty once when the load finishes.
+                if (!IsLoading)
+                    OnPropertyChanged(nameof(IsEmpty));
+            };
+        }
         ApplySort();
     }
 
@@ -232,6 +245,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
+        HasCompletedLoad = false;
         return _loadCts.Token;
     }
 
@@ -298,6 +312,46 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         await completion.Task.ConfigureAwait(false);
     }
 
-    protected void RaiseCardsReloaded() => CardsReloaded?.Invoke();
+    /// <summary>
+    /// Hands the UI thread back so queued rendering and input run before the
+    /// caller continues. A low-priority dispatcher round-trip costs
+    /// microseconds, while Task.Delay(1) waits out a full Windows timer tick
+    /// (~15 ms) on every call.
+    /// </summary>
+    protected async Task YieldToUiAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Cancellation has to complete the task itself: once the callback is
+        // queued, nothing else guarantees it will ever run — a dispatcher that
+        // is shutting down simply drops it. Both completions are Try* calls,
+        // so whichever loses the race is a no-op.
+        using var cancellationRegistration = cancellationToken.Register(
+            () => completion.TrySetCanceled(cancellationToken));
+
+        if (!_dispatcherQueue.TryEnqueue(
+                DispatcherQueuePriority.Low,
+                () => completion.TrySetResult()))
+        {
+            // No dispatcher to yield to. Complete rather than wait forever;
+            // the caller re-checks cancellation on its next turn.
+            completion.TrySetResult();
+        }
+
+        await completion.Task;
+    }
+
+    protected void RaiseCardsReloaded()
+    {
+        HasCompletedLoad = true;
+        CardsReloaded?.Invoke();
+    }
+    protected void RaiseCardsChanged()
+    {
+        OnPropertyChanged(nameof(IsEmpty));
+        CardsChanged?.Invoke();
+    }
     protected void RaiseViewRefreshed() => ViewRefreshed?.Invoke();
 }

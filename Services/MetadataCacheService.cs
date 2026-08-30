@@ -57,14 +57,20 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     public bool TryGetCached(TCard card, out TMetadata metadata)
     {
         EnsureLoaded();
-        var key = ComputeCacheKey(card.FilePath, card.DateModified);
+        var key = ComputeCacheKey(
+            card.FilePath,
+            card.FileSize,
+            card.DateModified);
         return _cache.TryGetValue(key, out metadata!);
     }
 
     public TMetadata ParseAndCache(TCard card, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var key = ComputeCacheKey(card.FilePath, card.DateModified);
+        var key = ComputeCacheKey(
+            card.FilePath,
+            card.FileSize,
+            card.DateModified);
         if (_cache.TryGetValue(key, out var cached))
             return cached;
 
@@ -77,7 +83,10 @@ public abstract class MetadataCacheService<TCard, TMetadata>
 
     public void Invalidate(TCard card)
     {
-        var key = ComputeCacheKey(card.FilePath, card.DateModified);
+        var key = ComputeCacheKey(
+            card.FilePath,
+            card.FileSize,
+            card.DateModified);
         if (_cache.TryRemove(key, out _))
             ScheduleSave();
     }
@@ -114,9 +123,12 @@ public abstract class MetadataCacheService<TCard, TMetadata>
         }
     }
 
-    private static string ComputeCacheKey(string filePath, DateTime dateModified)
+    private static string ComputeCacheKey(
+        string filePath,
+        long fileSize,
+        DateTime dateModified)
     {
-        var input = $"{filePath}|{dateModified.Ticks}";
+        var input = $"{filePath}|{fileSize}|{dateModified.Ticks}";
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(hash)[..16];
     }

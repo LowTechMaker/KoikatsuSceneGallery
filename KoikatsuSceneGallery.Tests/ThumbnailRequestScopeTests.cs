@@ -47,6 +47,16 @@ public sealed class ThumbnailRequestScopeTests
     }
 
     [Fact]
+    public void SamePathWithDifferentSnapshotCanStartAnotherRequest()
+    {
+        using var scope = new ThumbnailRequestScope();
+        scope.Activate();
+
+        Assert.True(scope.TryBegin("C:\\cards\\scene.png\0" + "100\0" + "1"));
+        Assert.True(scope.TryBegin("c:\\CARDS\\SCENE.PNG\0" + "120\0" + "2"));
+    }
+
+    [Fact]
     public void CanceledScopeRejectsNewRequests()
     {
         using var scope = new ThumbnailRequestScope();

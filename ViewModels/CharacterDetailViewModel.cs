@@ -54,6 +54,12 @@ public partial class CharacterDetailViewModel : ObservableObject
     [ObservableProperty]
     public partial int TotalVersions { get; set; }
 
+    [ObservableProperty]
+    public partial ObservableCollection<CharacterCard>? Alternatives { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasAlternatives { get; set; }
+
     public string? PixivArtworkId => _linkInfo.PixivArtworkId;
     public string? PixivUrl => _linkInfo.PixivUrl;
     public bool HasPixivArtworkId => _linkInfo.PixivArtworkId != null;

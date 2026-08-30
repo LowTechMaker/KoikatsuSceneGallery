@@ -23,6 +23,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private readonly SettingsService _settingsService;
     private readonly CharacterMetadataService _metadataService;
     private readonly SettingsViewModel _settingsViewModel;
+    private readonly FriendService _friendService;
     private readonly IAppLogger _logger;
 
     public ObservableCollection<CharacterCard> Cards { get; }
@@ -43,15 +44,24 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CharacterCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<CharacterCard>> _versionIndex = new();
+    private readonly Dictionary<string, List<CharacterCard>> _versionIndex =
+        new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<CharacterCard> _lastCompletedCards = [];
 
     private CancellationTokenSource? _metadataCts;
     private const int MetadataParseConcurrency = 4;
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
-    public event Action<string>? VersionIndexChanged;
+    public event Action<string?, string>? VersionIndexChanged;
+    public event Action<string, string>? AlternativesChanged;
 
-    public CharacterGalleryViewModel(CharacterCardService cardService, SettingsService settingsService, CharacterMetadataService metadataService, SettingsViewModel settingsViewModel, IAppLogger logger)
+    public CharacterGalleryViewModel(
+        CharacterCardService cardService,
+        SettingsService settingsService,
+        CharacterMetadataService metadataService,
+        SettingsViewModel settingsViewModel,
+        FriendService friendService,
+        IAppLogger logger)
         : base(new ObservableCollection<CharacterCard>())
     {
         Cards = (ObservableCollection<CharacterCard>)_cardsSource;
@@ -59,6 +69,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _settingsService = settingsService;
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
+        _friendService = friendService;
         _logger = logger;
 
         _cardService.CardAdded += OnCardAdded;
@@ -66,6 +77,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
         _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
         _settingsViewModel.CharacterResolutionFilterChanged += OnCharacterResolutionFilterChanged;
+        _settingsViewModel.CharacterSearchScopeChanged += OnCharacterSearchScopeChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -80,7 +92,10 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     [RelayCommand]
     private async Task LoadCardsAsync()
     {
+        if (HasCompletedLoad)
+            _lastCompletedCards = [.. Cards];
         var cancellationToken = BeginLoad();
+        var completed = false;
         _metadataCts?.Cancel();
 
         IsLoading = true;
@@ -92,7 +107,9 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             _resolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             _allowedResolutions = [.. config.CharacterAllowedResolutions];
 
-            var paths = config.CharacterFolderPaths;
+            var paths = FriendFolderLayout.CollapseNestedRoots(
+                config.CharacterFolderPaths.Concat(
+                    _friendService.GetCharacterFolders()));
             Cards.Clear();
             _cardIndex.Clear();
             _versionIndex.Clear();
@@ -115,17 +132,74 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
                     token),
                 cancellationToken);
 
+            var linkedPaths = _friendService.GetLinkedCardPaths();
+            var linkedCards = await Task.Run(() =>
+            {
+                var result = new List<CharacterCard>();
+                foreach (var filePath in linkedPaths)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!File.Exists(filePath)
+                        || _friendService.GetLinkedCardType(filePath)
+                            != CardType.Character)
+                    {
+                        continue;
+                    }
+
+                    var card = _cardService.TryCreateFromPath(filePath);
+                    if (card is not null)
+                        result.Add(card);
+                }
+                return result;
+            }, cancellationToken);
+            foreach (var card in linkedCards)
+            {
+                if (_cardIndex.TryAdd(card.FilePath, card))
+                    Cards.Add(card);
+            }
+
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
+            completed = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         finally
         {
             if (_loadCts?.Token == cancellationToken)
+            {
+                if (completed)
+                    _lastCompletedCards = [.. Cards];
+                else
+                    RestoreLastCompletedCards(
+                        restartMetadata:
+                            !cancellationToken.IsCancellationRequested);
                 IsLoading = false;
-            RaiseCardsReloaded();
+                if (completed)
+                    RaiseCardsReloaded();
+            }
         }
+    }
+
+    private void RestoreLastCompletedCards(bool restartMetadata)
+    {
+        using (CardsView.DeferRefresh())
+        {
+            Cards.Clear();
+            _cardIndex.Clear();
+            _versionIndex.Clear();
+            foreach (var card in _lastCompletedCards)
+            {
+                if (_cardIndex.TryAdd(card.FilePath, card))
+                    Cards.Add(card);
+            }
+        }
+
+        foreach (var card in Cards)
+            UpdateVersionIndex(card);
+        ApplyFilter();
+        if (restartMetadata)
+            StartMetadataScan();
     }
 
     private void StartMetadataScan()
@@ -174,6 +248,14 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             if (!cancellationToken.IsCancellationRequested)
                 _dispatcherQueue.TryEnqueue(() =>
                 {
+                    if (!_cardIndex.TryGetValue(
+                            card.FilePath,
+                            out var current)
+                        || !ReferenceEquals(current, card))
+                    {
+                        return;
+                    }
+
                     ApplyMetadata(card, meta);
                     UpdateVersionIndex(card);
                 });
@@ -202,38 +284,67 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     private void UpdateVersionIndex(CharacterCard card)
     {
-        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
+        if (string.IsNullOrWhiteSpace(card.CharacterName))
+            return;
+        if (card.IsAlternative)
+        {
+            NotifyAlternativesChanged(card);
+            return;
+        }
 
-        if (!_versionIndex.TryGetValue(card.CharacterName, out var group))
+        var key = GetVersionKey(card);
+        if (!_versionIndex.TryGetValue(key, out var group))
         {
             group = [];
-            _versionIndex[card.CharacterName] = group;
+            _versionIndex[key] = group;
         }
         if (!group.Contains(card))
             group.Add(card);
 
-        group.Sort((a, b) => b.FileTimestamp.CompareTo(a.FileTimestamp));
+        group.Sort((a, b) => CharacterVersionRules.CompareVersions(
+            a.VariantKind,
+            a.FileTimestamp,
+            b.VariantKind,
+            b.FileTimestamp));
 
         var count = group.Count;
+        var latest = group
+            .Where(item => item.VariantKind == CharacterVariantKind.Current)
+            .MaxBy(item => item.FileTimestamp);
         for (int i = 0; i < count; i++)
         {
             group[i].VersionCount = count;
-            group[i].IsLatestVersion = i == 0;
+            group[i].IsLatestVersion = ReferenceEquals(group[i], latest);
+            // The sort puts the newest current variant first, and the newest
+            // old version first when the character has no current copy.
+            group[i].IsVersionGroupRepresentative = i == 0;
         }
 
-        VersionIndexChanged?.Invoke(card.CharacterName);
+        VersionIndexChanged?.Invoke(
+            card.FriendFolderPath,
+            card.CharacterName);
     }
 
     private void RemoveFromVersionIndex(CharacterCard card)
     {
-        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
-        if (!_versionIndex.TryGetValue(card.CharacterName, out var group)) return;
+        if (string.IsNullOrWhiteSpace(card.CharacterName))
+            return;
+        if (card.IsAlternative)
+        {
+            NotifyAlternativesChanged(card);
+            return;
+        }
+        var key = GetVersionKey(card);
+        if (!_versionIndex.TryGetValue(key, out var group)) return;
 
         group.Remove(card);
+        card.IsVersionGroupRepresentative = false;
         if (group.Count == 0)
         {
-            _versionIndex.Remove(card.CharacterName);
-            VersionIndexChanged?.Invoke(card.CharacterName);
+            _versionIndex.Remove(key);
+            VersionIndexChanged?.Invoke(
+                card.FriendFolderPath,
+                card.CharacterName);
             return;
         }
 
@@ -241,18 +352,63 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         for (int i = 0; i < count; i++)
         {
             group[i].VersionCount = count;
-            group[i].IsLatestVersion = i == 0;
+            group[i].IsLatestVersion = group[i].VariantKind == CharacterVariantKind.Current
+                && !group.Take(i).Any(item => item.VariantKind == CharacterVariantKind.Current);
+            group[i].IsVersionGroupRepresentative = i == 0;
         }
 
-        VersionIndexChanged?.Invoke(card.CharacterName);
+        VersionIndexChanged?.Invoke(
+            card.FriendFolderPath,
+            card.CharacterName);
     }
 
-    public List<CharacterCard>? GetVersions(string characterName)
+    public List<CharacterCard>? GetVersions(CharacterCard card)
     {
-        if (string.IsNullOrWhiteSpace(characterName)) return null;
-        return _versionIndex.TryGetValue(characterName, out var group) && group.Count > 1
+        if (string.IsNullOrWhiteSpace(card.CharacterName)) return null;
+        return _versionIndex.TryGetValue(GetVersionKey(card), out var group) && group.Count > 1
             ? group
             : null;
+    }
+
+    /// <summary>
+    /// True while <paramref name="card"/> is still the live instance for its
+    /// path. The index lookup keeps callers off a linear scan of the whole
+    /// library — version-index notifications fire once per card during a
+    /// metadata scan.
+    /// </summary>
+    public bool ContainsCard(CharacterCard card) =>
+        _cardIndex.TryGetValue(card.FilePath, out var current)
+        && ReferenceEquals(current, card);
+
+    public List<CharacterCard> GetAlternatives(CharacterCard card)
+    {
+        if (card.FriendFolderPath is null
+            || string.IsNullOrWhiteSpace(card.CharacterName))
+            return [];
+
+        return Cards
+            .Where(candidate => !ReferenceEquals(candidate, card)
+                && candidate.IsAlternative
+                && candidate.FriendFolderPath is not null
+                && candidate.FriendFolderPath.Equals(
+                    card.FriendFolderPath,
+                    StringComparison.OrdinalIgnoreCase)
+                && candidate.CharacterName.Equals(
+                    card.CharacterName,
+                    StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(candidate => candidate.FileTimestamp)
+            .ToList();
+    }
+
+    private static string GetVersionKey(CharacterCard card) =>
+        FriendFolderLayout.BuildCharacterVersionKey(
+            card.FriendFolderPath,
+            card.CharacterName);
+
+    private void NotifyAlternativesChanged(CharacterCard card)
+    {
+        if (card.FriendFolderPath is { } path)
+            AlternativesChanged?.Invoke(path, card.CharacterName);
     }
 
     private void StartMetadataRefreshTimer()
@@ -289,6 +445,9 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         });
     }
 
+    private void OnCharacterSearchScopeChanged() =>
+        _dispatcherQueue.TryEnqueue(ApplyFilter);
+
     public CharacterCard? GetRandomCard()
     {
         if (CardsView.Count == 0) return null;
@@ -297,7 +456,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     private bool BaseFilterPasses(CharacterCard card)
     {
-        if (!card.IsLatestVersion) return false;
+        if (!IsVisibleForCurrentQuery(card)) return false;
 
         foreach (var kw in _searchKeywords)
         {
@@ -327,30 +486,21 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         return true;
     }
 
+    private bool IsVisibleForCurrentQuery(CharacterCard card) =>
+        CharacterVersionRules.IsVisible(
+            card.VariantKind,
+            card.IsLatestVersion,
+            card.IsVersionGroupRepresentative,
+            hasSearchQuery: _searchKeywords.Length > 0,
+            _settingsViewModel.IncludeAlternativeCharactersInSearch,
+            _settingsViewModel.IncludeOldCharacterVersionsInSearch);
+
     protected override void ApplyFilter()
     {
         if (TryApplyShuffleFilter()) return;
 
-        var hasSearch = _searchKeywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
-        var hasSourceFilter = SourceFilter != CardSourceFilterOption.All;
-
-        if (!hasSearch && !filterRes && !hasSourceFilter)
-        {
-            CardsView.Filter = item =>
-            {
-                if (item is not CharacterCard card) return false;
-                return card.IsLatestVersion;
-            };
-        }
-        else
-        {
-            CardsView.Filter = item =>
-            {
-                if (item is not CharacterCard card) return false;
-                return BaseFilterPasses(card);
-            };
-        }
+        CardsView.Filter = item =>
+            item is CharacterCard card && BaseFilterPasses(card);
         RefreshFilterAndNotify();
     }
 
@@ -358,9 +508,24 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     {
         _dispatcherQueue.TryEnqueue(() =>
         {
-            if (!_cardIndex.TryAdd(card.FilePath, card)) return;
-            Cards.Add(card);
+            if (_cardIndex.TryGetValue(card.FilePath, out var existing))
+            {
+                RemoveFromVersionIndex(existing);
+                _cardIndex[card.FilePath] = card;
+                var index = Cards.IndexOf(existing);
+                if (index >= 0)
+                    Cards[index] = card;
+                else
+                    Cards.Add(card);
+            }
+            else
+            {
+                _cardIndex.Add(card.FilePath, card);
+                Cards.Add(card);
+            }
+
             QueueMetadata(card);
+            RaiseCardsChanged();
         });
     }
 
@@ -396,6 +561,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             {
                 RemoveFromVersionIndex(existing);
                 Cards.Remove(existing);
+                RaiseCardsChanged();
             }
         });
     }
@@ -411,6 +577,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
         _settingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
+        _settingsViewModel.CharacterSearchScopeChanged -= OnCharacterSearchScopeChanged;
         GC.SuppressFinalize(this);
     }
 

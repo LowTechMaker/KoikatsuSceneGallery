@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.FriendDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
+    xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <DataTemplate
+            x:Key="FriendAuthorAvatarTemplate"
+            x:DataType="viewModels:FriendAuthorAvatarItemViewModel">
+            <Grid
+                MinHeight="56"
+                Padding="8"
+                ColumnSpacing="12"
+                AutomationProperties.AutomationId="{x:Bind AutomationId}"
+                AutomationProperties.Name="{x:Bind Name}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <PersonPicture
+                    Width="40"
+                    Height="40"
+                    DisplayName="{x:Bind Name}"
+                    ProfilePicture="{x:Bind AvatarSource, Mode=OneTime}" />
+
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Spacing="2">
+                    <TextBlock
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="{x:Bind Name}" />
+                    <TextBlock
+                        MaxLines="1"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ProfileUrl}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid Padding="24,16,24,24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                x:Name="FriendAvatarButton"
+                x:Uid="FriendDetail_Avatar"
+                Width="52"
+                Height="52"
+                Padding="0"
+                AutomationProperties.AutomationId="FriendAvatarButton"
+                Background="Transparent"
+                BorderThickness="0">
+                <PersonPicture
+                    x:Name="FriendPicture"
+                    Width="52"
+                    Height="52" />
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem
+                            x:Uid="FriendDetail_ChooseLocalAvatar"
+                            AutomationProperties.AutomationId="FriendChooseLocalAvatarMenuItem"
+                            Click="ChooseLocalAvatar_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xEB9F;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem
+                            x:Uid="FriendDetail_ChooseAuthorAvatar"
+                            AutomationProperties.AutomationId="FriendChooseAuthorAvatarMenuItem"
+                            Click="ChooseAuthorAvatar_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE716;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
+                            x:Name="RemoveAvatarMenuItem"
+                            x:Uid="FriendDetail_RemoveAvatar"
+                            AutomationProperties.AutomationId="FriendRemoveAvatarMenuItem"
+                            Click="RemoveAvatar_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE711;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+
+            <StackPanel
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock
+                        x:Name="FriendNameText"
+                        Style="{StaticResource TitleTextBlockStyle}" />
+                    <Border
+                        x:Name="SelfProfileBadge"
+                        Padding="7,2"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        CornerRadius="{StaticResource ControlCornerRadius}"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            x:Uid="Friends_SelfBadge"
+                            AutomationProperties.AutomationId="SelfProfileBadge"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </Border>
+                </StackPanel>
+                <TextBlock
+                    x:Name="FolderPathText"
+                    MaxLines="1"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="2"
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    x:Name="OpenFolderButton"
+                    x:Uid="FriendDetail_OpenFolder"
+                    AutomationProperties.AutomationId="FriendOpenFolderButton"
+                    Click="OpenFolder_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE838;" />
+                        <TextBlock x:Uid="FriendDetail_OpenFolderLabel" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="SetFolderButton"
+                    x:Uid="FriendDetail_SetFolder"
+                    AutomationProperties.AutomationId="FriendSetFolderButton"
+                    Click="SetFolder_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE8B7;" />
+                        <TextBlock x:Uid="FriendDetail_SetFolderLabel" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="CreateVariantFoldersButton"
+                    x:Uid="FriendDetail_CreateVariantFolders"
+                    AutomationProperties.AutomationId="FriendCreateVariantFoldersButton"
+                    Click="CreateVariantFolders_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE8F4;" />
+                        <TextBlock x:Uid="FriendDetail_CreateVariantFoldersLabel" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="FriendDetailMoreButton"
+                    x:Uid="FriendDetail_More"
+                    AutomationProperties.AutomationId="FriendDetailMoreButton"
+                    Width="36"
+                    Height="36"
+                    Padding="0">
+                    <FontIcon Glyph="&#xE712;" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem
+                                x:Uid="FriendDetail_SetAvatar"
+                                AutomationProperties.AutomationId="FriendDetailSetAvatarMenuItem"
+                                Click="SetAvatarMenuItem_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xEB9F;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem
+                                x:Uid="Friends_Rename"
+                                AutomationProperties.AutomationId="FriendDetailRenameMenuItem"
+                                Click="RenameFriend_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE70F;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem
+                                x:Uid="FriendDetail_ChangeFolder"
+                                AutomationProperties.AutomationId="FriendDetailChangeFolderMenuItem"
+                                Click="SetFolder_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8B7;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem
+                                x:Name="ClearFolderMenuItem"
+                                x:Uid="FriendDetail_ClearFolder"
+                                AutomationProperties.AutomationId="FriendDetailClearFolderMenuItem"
+                                Click="ClearFolder_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE711;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator
+                                x:Name="DeleteFriendMenuSeparator" />
+                            <MenuFlyoutItem
+                                x:Name="DeleteFriendMenuItem"
+                                x:Uid="Friends_Delete"
+                                AutomationProperties.AutomationId="FriendDetailDeleteMenuItem"
+                                Click="DeleteFriend_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <InfoBar
+            x:Name="StatusInfoBar"
+            AutomationProperties.AutomationId="FriendDetailStatusInfoBar"
+            Grid.Row="1"
+            IsClosable="True"
+            IsOpen="False" />
+
+        <SelectorBar
+            x:Name="CardTypeSelector"
+            AutomationProperties.AutomationId="FriendCardTypeSelector"
+            Grid.Row="2"
+            SelectionChanged="CardTypeSelector_SelectionChanged">
+            <SelectorBarItem
+                x:Name="ScenesSelectorItem"
+                x:Uid="Library_Scenes"
+                AutomationProperties.AutomationId="FriendScenesSelectorItem"
+                IsSelected="True" />
+            <SelectorBarItem
+                x:Name="CharactersSelectorItem"
+                x:Uid="Library_Characters"
+                AutomationProperties.AutomationId="FriendCharactersSelectorItem" />
+            <SelectorBarItem
+                x:Name="CoordinatesSelectorItem"
+                x:Uid="Library_Coordinates"
+                AutomationProperties.AutomationId="FriendCoordinatesSelectorItem" />
+        </SelectorBar>
+
+        <Grid
+            x:Name="CardDropArea"
+            Grid.Row="3"
+            AllowDrop="True"
+            Background="Transparent"
+            DragOver="CardDropArea_DragOver"
+            Drop="CardDropArea_Drop">
+            <GridView
+                x:Name="FriendCardsGrid"
+                AutomationProperties.AutomationId="FriendCardsGrid"
+                CanDragItems="True"
+                ContainerContentChanging="FriendCardsGrid_ContainerContentChanging"
+                DragItemsStarting="FriendCardsGrid_DragItemsStarting"
+                IsItemClickEnabled="True"
+                ItemClick="FriendCardsGrid_ItemClick"
+                ItemsSource="{x:Bind Cards, Mode=OneWay}"
+                Loaded="FriendCardsGrid_Loaded"
+                SizeChanged="FriendCardsGrid_SizeChanged"
+                SelectionMode="None">
+                <GridView.ItemContainerStyle>
+                    <Style TargetType="GridViewItem">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                    </Style>
+                </GridView.ItemContainerStyle>
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" CacheLength="3" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:FriendCardItemViewModel">
+                        <Grid
+                            Margin="4"
+                            Padding="4"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource OverlayCornerRadius}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Border
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                                <Image
+                                    Stretch="Uniform"
+                                    Source="{x:Bind Card.ThumbnailSource, Mode=OneWay}" />
+                            </Border>
+
+                            <StackPanel
+                                Margin="8"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Spacing="4">
+                                <Border
+                                    Padding="8,4"
+                                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                    CornerRadius="{StaticResource OverlayCornerRadius}"
+                                    Visibility="{x:Bind IsOldVersion}">
+                                    <TextBlock
+                                        x:Uid="Character_OldVersionBadge"
+                                        Style="{StaticResource CaptionTextBlockStyle}" />
+                                </Border>
+                                <Border
+                                    Padding="8,4"
+                                    Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
+                                    CornerRadius="{StaticResource OverlayCornerRadius}"
+                                    Visibility="{x:Bind IsAlternative}">
+                                    <TextBlock
+                                        x:Uid="Character_AlternativeBadge"
+                                        Style="{StaticResource CaptionTextBlockStyle}" />
+                                </Border>
+                            </StackPanel>
+
+                            <Button
+                                x:Uid="FriendDetail_CardMore"
+                                AutomationProperties.AutomationId="{x:Bind MoreAutomationId}"
+                                Width="32"
+                                Height="32"
+                                Margin="6"
+                                Padding="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <FontIcon FontSize="12" Glyph="&#xE712;" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem
+                                            x:Uid="FriendDetail_RemoveCard"
+                                            AutomationProperties.AutomationId="{x:Bind RemoveAutomationId}"
+                                            Click="RemoveCard_Click"
+                                            Tag="{x:Bind}">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE711;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Margin="8,4"
+                                MaxLines="1"
+                                Text="{x:Bind FileName}"
+                                TextTrimming="CharacterEllipsis"
+                                ToolTipService.ToolTip="{x:Bind FilePath}" />
+                        </Grid>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+
+            <StackPanel
+                x:Name="EmptyCardsPanel"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="8">
+                <FontIcon
+                    HorizontalAlignment="Center"
+                    FontSize="40"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Glyph="&#xE8B9;" />
+                <TextBlock
+                    x:Uid="FriendDetail_Empty"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="FriendDetail_DropHint"
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    TextAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

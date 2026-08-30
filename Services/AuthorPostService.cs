@@ -189,9 +189,14 @@ public sealed class AuthorPostService
 
             try
             {
+                var localFileNames = post.LocalFilePaths
+                    .Where(path => File.Exists(path) && IsWithinDirectory(path, authorDirectory))
+                    .Select(path => Path.GetFileName(path)!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
                 await _postMetadataStore.WriteAsync(
                     authorDirectory,
-                    PostMetadataMapper.ToDocument(info),
+                    PostMetadataMapper.ToDocument(info, localFileNames),
                     ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -221,12 +226,15 @@ public sealed class AuthorPostService
     {
         var providerId = authorKey.ProviderId;
         var scanSucceeded = true;
+        var scannedFileNames = new ScannedFileNameIndex();
+
         try
         {
             foreach (var file in Directory.EnumerateFiles(authorDir, "*.png"))
             {
                 ct.ThrowIfCancellationRequested();
                 var artworkId = TryParseFilename(Path.GetFileName(file), providerId);
+                scannedFileNames.Record(file, artworkId?.Id);
                 if (artworkId is not null)
                     AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file, authorDir);
             }
@@ -264,18 +272,22 @@ public sealed class AuthorPostService
                     {
                         ct.ThrowIfCancellationRequested();
                         localFiles.Add(file);
-                        if (artworkId is null)
+                        if (artworkId is not null)
                         {
-                            var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
-                            if (fromFile is not null)
-                                AddOrUpdate(
-                                    posts,
-                                    fromFile.ProviderId,
-                                    fromFile.Id,
-                                    null,
-                                    file,
-                                    authorDir);
+                            scannedFileNames.Record(file, artworkId.Id);
+                            continue;
                         }
+
+                        var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
+                        scannedFileNames.Record(file, fromFile?.Id);
+                        if (fromFile is not null)
+                            AddOrUpdate(
+                                posts,
+                                fromFile.ProviderId,
+                                fromFile.Id,
+                                null,
+                                file,
+                                authorDir);
                     }
                 }
                 catch (OperationCanceledException) { throw; }
@@ -306,6 +318,7 @@ public sealed class AuthorPostService
             authorDir,
             authorKey,
             posts,
+            scannedFileNames,
             deleteOrphans: scanSucceeded,
             ct);
     }
@@ -314,6 +327,7 @@ public sealed class AuthorPostService
         string authorDir,
         AuthorKey authorKey,
         Dictionary<string, PostAccumulator> posts,
+        ScannedFileNameIndex scannedFileNames,
         bool deleteOrphans,
         CancellationToken ct)
     {
@@ -353,7 +367,35 @@ public sealed class AuthorPostService
                 continue;
             }
 
-            if (!deleteOrphans)
+            // The sidecar did not match any post found by filename/folder
+            // parsing. Try matching through the file names stored in the
+            // sidecar — this is the path for cards whose original names do
+            // not contain the artwork ID (e.g. manually-assigned posts).
+            var match = scannedFileNames.Match(
+                document.ArtworkId,
+                document.LocalFileNames);
+            if (match.Files.Count > 0)
+            {
+                AddOrUpdate(
+                    posts,
+                    document.ProviderId,
+                    document.ArtworkId,
+                    null,
+                    match.Files,
+                    authorDir);
+                if (posts.TryGetValue(key, out var newPost)
+                    && (newPost.Metadata is null
+                        || document.FetchedAt > newPost.Metadata.FetchedAt))
+                {
+                    newPost.Metadata = document;
+                }
+                continue;
+            }
+
+            // A name that several unowned files share was left unresolved
+            // rather than guessed at, so a local file for this sidecar
+            // plausibly exists. Keep it instead of deleting it as an orphan.
+            if (!deleteOrphans || match.HasAmbiguousName)
                 continue;
 
             try
@@ -417,10 +459,10 @@ public sealed class AuthorPostService
             post.AuthorDirectories.Add(authorDirectory);
     }
 
-    private static string BuildPostKey(string providerId, string artworkId)
-        => $"{providerId}\u001F{artworkId}";
+   private static string BuildPostKey(string providerId, string artworkId)
+       => $"{providerId}\u001F{artworkId}";
 
-    private static bool IsWithinDirectory(string path, string directory)
+   private static bool IsWithinDirectory(string path, string directory)
     {
         var relativePath = Path.GetRelativePath(directory, path);
         return !relativePath.Equals("..", StringComparison.Ordinal)

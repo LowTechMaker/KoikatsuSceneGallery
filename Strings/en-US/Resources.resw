@@ -741,6 +741,9 @@
   <data name="Import_RejectedWarningMessage" xml:space="preserve">
     <value>{0} file(s) are not Koikatsu cards and were removed.</value>
   </data>
+  <data name="Import_ManualArtworkIdWarningMessage" xml:space="preserve">
+    <value>The artwork ID could not be fetched for {0} file(s), so they were not imported. Assign an author in the fetch-failed tab to import them.</value>
+  </data>
   <data name="Import_ScanningHint.Text" xml:space="preserve">
     <value>Scanning files…</value>
   </data>
@@ -993,5 +996,356 @@
   </data>
   <data name="Import_ErrorConflictingFile" xml:space="preserve">
     <value>Conflicting file: {0}</value>
+  </data>
+  <data name="Nav_Friends.Content" xml:space="preserve">
+    <value>Friends</value>
+  </data>
+  <data name="SC_CharacterSearchScope.Header" xml:space="preserve">
+    <value>Character search scope</value>
+  </data>
+  <data name="SC_CharacterSearchScope.Description" xml:space="preserve">
+    <value>Choose whether reserved alternatives and old versions appear in character search results</value>
+  </data>
+  <data name="Settings_SearchAlternatives.Content" xml:space="preserve">
+    <value>Show cards from friends' #alternatives folders in search results</value>
+  </data>
+  <data name="Settings_SearchOldVersions.Content" xml:space="preserve">
+    <value>Show cards from friends' #old_version folders in search results</value>
+  </data>
+  <data name="SC_ResetGuidance.Header" xml:space="preserve">
+    <value>Reset guidance and warnings</value>
+  </data>
+  <data name="SC_ResetGuidance.Description" xml:space="preserve">
+    <value>Show the import explanation and friend file-management warning again</value>
+  </data>
+  <data name="Settings_ResetGuidance.Text" xml:space="preserve">
+    <value>Reset guidance</value>
+  </data>
+  <data name="Character_OldVersionBadge.Text" xml:space="preserve">
+    <value>Old version</value>
+  </data>
+  <data name="Character_AlternativeBadge.Text" xml:space="preserve">
+    <value>Alternative</value>
+  </data>
+  <data name="Detail_Alternatives.Text" xml:space="preserve">
+    <value>Alternatives</value>
+  </data>
+  <data name="Friends_Title.Text" xml:space="preserve">
+    <value>Friends</value>
+  </data>
+  <data name="Friends_Subtitle.Text" xml:space="preserve">
+    <value>Organize your own cards and cards your friends gave you. No social features are involved.</value>
+  </data>
+  <data name="Friends_AddLabel.Text" xml:space="preserve">
+    <value>Add friend</value>
+  </data>
+  <data name="Friends_Add.AutomationProperties.Name" xml:space="preserve">
+    <value>Add friend</value>
+  </data>
+  <data name="Friends_FileWarning.Title" xml:space="preserve">
+    <value>Keep your original files organized</value>
+  </data>
+  <data name="Friends_FileWarning.Message" xml:space="preserve">
+    <value>This feature only records folders and card paths. It does not move, delete, or back up files. Links stop working if originals are moved or deleted, and you remain responsible for placing character versions in the correct folders.</value>
+  </data>
+  <data name="Friends_Search.PlaceholderText" xml:space="preserve">
+    <value>Search friends</value>
+  </data>
+  <data name="Friends_NoFolder.Text" xml:space="preserve">
+    <value>No dedicated folder</value>
+  </data>
+  <data name="Friends_Rename.Text" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="Friends_Delete.Text" xml:space="preserve">
+    <value>Delete friend</value>
+  </data>
+  <data name="Friends_More.AutomationProperties.Name" xml:space="preserve">
+    <value>More actions</value>
+  </data>
+  <data name="Friends_Empty.Text" xml:space="preserve">
+    <value>No friends yet</value>
+  </data>
+  <data name="FriendDetail_OpenFolderLabel.Text" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="FriendDetail_OpenFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="FriendDetail_SetFolderLabel.Text" xml:space="preserve">
+    <value>Set up folder</value>
+  </data>
+  <data name="FriendDetail_SetFolder.AutomationProperties.Name" xml:space="preserve">
+    <value>Set up folder</value>
+  </data>
+  <data name="FriendDetail_CreateVariantFoldersLabel.Text" xml:space="preserve">
+    <value>Create version folders</value>
+  </data>
+  <data name="FriendDetail_CreateVariantFolders.AutomationProperties.Name" xml:space="preserve">
+    <value>Create version folders for this friend's character cards</value>
+  </data>
+  <data name="FriendDetail_More.AutomationProperties.Name" xml:space="preserve">
+    <value>More friend actions</value>
+  </data>
+  <data name="FriendDetail_ChangeFolder.Text" xml:space="preserve">
+    <value>Change folder</value>
+  </data>
+  <data name="FriendDetail_ClearFolder.Text" xml:space="preserve">
+    <value>Disconnect folder</value>
+  </data>
+  <data name="FriendDetail_RemoveCard.Text" xml:space="preserve">
+    <value>Remove from friend</value>
+  </data>
+  <data name="FriendDetail_CardMore.AutomationProperties.Name" xml:space="preserve">
+    <value>More card actions</value>
+  </data>
+  <data name="FriendDetail_Empty.Text" xml:space="preserve">
+    <value>No cards in this category</value>
+  </data>
+  <data name="FriendDetail_DropHint.Text" xml:space="preserve">
+    <value>Drop card PNG files here to link them. Files stay where they are.</value>
+  </data>
+  <data name="Friends_NameField" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Friends_NamePlaceholder" xml:space="preserve">
+    <value>Friend's name</value>
+  </data>
+  <data name="Friends_CreateFolderOption" xml:space="preserve">
+    <value>Create #Personal folders in the configured card paths now</value>
+  </data>
+  <data name="Friends_PersonalFolderHint" xml:space="preserve">
+    <value>The app will create #Personal and a friend-name folder under these card paths. When several paths are configured, choose one.</value>
+  </data>
+  <data name="Friends_ConfiguredPathSummary" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Friends_ScenePathHeader" xml:space="preserve">
+    <value>Scene card path</value>
+  </data>
+  <data name="Friends_CharacterPathHeader" xml:space="preserve">
+    <value>Character card path</value>
+  </data>
+  <data name="Friends_CoordinatePathHeader" xml:space="preserve">
+    <value>Outfit card path</value>
+  </data>
+  <data name="Friends_NoConfiguredPaths" xml:space="preserve">
+    <value>Add at least one card folder in Settings before creating dedicated folders.</value>
+  </data>
+  <data name="Friends_AddDialogTitle" xml:space="preserve">
+    <value>Add friend</value>
+  </data>
+  <data name="Friends_RenameDialogTitle" xml:space="preserve">
+    <value>Rename friend</value>
+  </data>
+  <data name="Friends_DeleteDialogTitle" xml:space="preserve">
+    <value>Delete friend?</value>
+  </data>
+  <data name="Friends_DeleteDialogMessage" xml:space="preserve">
+    <value>This removes the friend record and card links for “{0}”. No folders or files will be deleted.</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Common_Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="FriendDetail_NoFolder" xml:space="preserve">
+    <value>No dedicated folder</value>
+  </data>
+  <data name="FriendDetail_DropCaption" xml:space="preserve">
+    <value>Link cards to this friend</value>
+  </data>
+  <data name="FriendDetail_NoValidCards" xml:space="preserve">
+    <value>No supported card PNG files were found.</value>
+  </data>
+  <data name="FriendDetail_CardsLinked" xml:space="preserve">
+    <value>Added {0} card link(s).</value>
+  </data>
+  <data name="FriendDetail_NoNewCardLinks" xml:space="preserve">
+    <value>No new links were needed. Cards inside the dedicated folder already appear automatically.</value>
+  </data>
+  <data name="FriendDetail_FolderMissing" xml:space="preserve">
+    <value>The dedicated folder for this card type no longer exists. Create it again from a configured path.</value>
+  </data>
+  <data name="FriendDetail_FolderOpenFailed" xml:space="preserve">
+    <value>Windows could not open this folder. Check that the path is still accessible.</value>
+  </data>
+  <data name="FriendDetail_FolderSet" xml:space="preserve">
+    <value>Dedicated folder ready: {0}</value>
+  </data>
+  <data name="FriendDetail_NoConfiguredPath" xml:space="preserve">
+    <value>No folder path is configured for this card type. Add one in Settings first.</value>
+  </data>
+  <data name="FriendDetail_SelectFolderPathTitle" xml:space="preserve">
+    <value>Choose a configured card path</value>
+  </data>
+  <data name="FriendDetail_VariantFoldersCreated" xml:space="preserve">
+    <value>Created #old_version and #alternatives in this friend's character-card folder: {0}</value>
+  </data>
+  <data name="FriendDetail_FolderCardCannotUnlink" xml:space="preserve">
+    <value>This card appears because it is inside the dedicated folder. The app will not move it; change its location yourself in File Explorer.</value>
+  </data>
+  <data name="FriendDetail_CardUnlinked" xml:space="preserve">
+    <value>Card link removed. The original file was not changed.</value>
+  </data>
+  <data name="FriendDetail_ClearFolderDialogTitle" xml:space="preserve">
+    <value>Disconnect dedicated folder?</value>
+  </data>
+  <data name="FriendDetail_ClearFolderDialogMessage" xml:space="preserve">
+    <value>The folder will stop being scanned for this friend. Existing folders and files will remain untouched.</value>
+  </data>
+  <data name="FriendDetail_ClearFolderConfirm" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Common_Select" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="FriendDetail_Avatar.AutomationProperties.Name" xml:space="preserve">
+    <value>Set friend avatar</value>
+  </data>
+  <data name="FriendDetail_Avatar.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Set friend avatar</value>
+  </data>
+  <data name="FriendDetail_SetAvatar.Text" xml:space="preserve">
+    <value>Set avatar</value>
+  </data>
+  <data name="FriendDetail_ChooseLocalAvatar.Text" xml:space="preserve">
+    <value>Choose an image</value>
+  </data>
+  <data name="FriendDetail_ChooseAuthorAvatar.Text" xml:space="preserve">
+    <value>Choose from known online authors</value>
+  </data>
+  <data name="FriendDetail_RemoveAvatar.Text" xml:space="preserve">
+    <value>Remove avatar</value>
+  </data>
+  <data name="FriendDetail_SelectAuthorAvatarTitle" xml:space="preserve">
+    <value>Choose an author avatar</value>
+  </data>
+  <data name="FriendDetail_AuthorAvatarSearchPlaceholder" xml:space="preserve">
+    <value>Search known authors</value>
+  </data>
+  <data name="FriendDetail_NoKnownAuthorAvatars" xml:space="preserve">
+    <value>No known online authors with an available avatar were found.</value>
+  </data>
+  <data name="FriendDetail_InvalidAvatarImage" xml:space="preserve">
+    <value>The selected image could not be used as an avatar.</value>
+  </data>
+  <data name="FriendDetail_AvatarUpdated" xml:space="preserve">
+    <value>The friend avatar has been updated.</value>
+  </data>
+  <data name="FriendDetail_AvatarRemoved" xml:space="preserve">
+    <value>The friend avatar has been removed.</value>
+  </data>
+  <data name="Friends_OperationFailed" xml:space="preserve">
+    <value>The operation could not be completed. Check the name, folder path, available disk space, and access permissions, then try again.</value>
+  </data>
+  <data name="FriendDetail_OperationFailed" xml:space="preserve">
+    <value>The operation could not be completed. Check the file or folder, available disk space, and access permissions, then try again.</value>
+  </data>
+  <data name="Settings_OperationFailed" xml:space="preserve">
+    <value>The settings could not be saved. The change was reverted. Check available disk space and access permissions, then try again.</value>
+  </data>
+  <data name="SelfProfile_DefaultName" xml:space="preserve">
+    <value>Me</value>
+  </data>
+  <data name="Friends_SelfBadge.Text" xml:space="preserve">
+    <value>You</value>
+  </data>
+  <data name="SelfProfile_RenameDialogTitle" xml:space="preserve">
+    <value>Edit my name</value>
+  </data>
+  <data name="SelfProfile_AvatarAutomationName" xml:space="preserve">
+    <value>Set my avatar</value>
+  </data>
+  <data name="FriendDetail_AvatarAutomationName" xml:space="preserve">
+    <value>Set friend avatar</value>
+  </data>
+  <data name="SelfProfile_MoreAutomationName" xml:space="preserve">
+    <value>More self-profile actions</value>
+  </data>
+  <data name="FriendDetail_MoreAutomationName" xml:space="preserve">
+    <value>More friend actions</value>
+  </data>
+  <data name="SelfProfile_AvatarUpdated" xml:space="preserve">
+    <value>My avatar was updated.</value>
+  </data>
+  <data name="SelfProfile_AvatarRemoved" xml:space="preserve">
+    <value>My avatar was removed.</value>
+  </data>
+  <data name="SelfProfile_DropCaption" xml:space="preserve">
+    <value>Link cards to My Cards</value>
+  </data>
+  <data name="SelfProfile_VariantFoldersCreated" xml:space="preserve">
+    <value>Created #old_version and #alternatives in my character-card folder: {0}</value>
+  </data>
+  <data name="SelfProfile_FolderCardCannotUnlink" xml:space="preserve">
+    <value>This card appears because it is inside my dedicated folder. The app will not move it; adjust its location in File Explorer.</value>
+  </data>
+  <data name="SelfProfile_ClearFolderDialogMessage" xml:space="preserve">
+    <value>The app will stop scanning this folder as My Cards. Existing folders and files will not be changed.</value>
+  </data>
+  <data name="SelfProfile_CreateFoldersDialogTitle" xml:space="preserve">
+    <value>Create dedicated folders for My Cards?</value>
+  </data>
+  <data name="SelfProfile_CreateFoldersDialogMessage" xml:space="preserve">
+    <value>No usable #Personal/#Self folder was found. You can open My Cards after creating one. The app will not move existing cards; you remain responsible for the files.</value>
+  </data>
+  <data name="SelfProfile_CreateCategoryFolderDialogMessage" xml:space="preserve">
+    <value>My Cards does not have a {0} folder yet. Create #Personal/#Self at the following path and switch categories?</value>
+  </data>
+  <data name="SelfProfile_SelectExistingFoldersDialogTitle" xml:space="preserve">
+    <value>Choose My Cards folders</value>
+  </data>
+  <data name="SelfProfile_SelectExistingFoldersDialogMessage" xml:space="preserve">
+    <value>More than one usable #Personal/#Self folder was found. Choose one for each card type. Binding does not move or modify files.</value>
+  </data>
+  <data name="SelfProfile_BindAndOpenButton" xml:space="preserve">
+    <value>Bind and open</value>
+  </data>
+  <data name="SelfProfile_CreateAndOpenButton" xml:space="preserve">
+    <value>Create and open</value>
+  </data>
+  <data name="SelfProfile_NotNowButton" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="SelfProfile_NoConfiguredFoldersDialogTitle" xml:space="preserve">
+    <value>No card paths configured</value>
+  </data>
+  <data name="SelfProfile_NoConfiguredFoldersDialogMessage" xml:space="preserve">
+    <value>Add at least one card path in Settings, then return to create a dedicated My Cards folder. My Cards will not open this time.</value>
+  </data>
+  <data name="SelfProfile_FolderConflictDialogTitle" xml:space="preserve">
+    <value>No usable #Self folder</value>
+  </data>
+  <data name="SelfProfile_FolderConflictDialogMessage" xml:space="preserve">
+    <value>The #Personal/#Self folders under the configured paths are already assigned to someone else. Change that folder binding first so two profiles do not share one folder.</value>
+  </data>
+  <data name="Friends_ExistingFolderDialogTitle" xml:space="preserve">
+    <value>Dedicated folder already exists</value>
+  </data>
+  <data name="Friends_ExistingFolderDialogMessage" xml:space="preserve">
+    <value>The following same-name folder already exists. The app will not merge, move, or infer card versions. Bind this profile to it?&#x0A;&#x0A;{0}</value>
+  </data>
+  <data name="Friends_BindExistingFolderButton" xml:space="preserve">
+    <value>Bind existing folder</value>
+  </data>
+  <data name="Friends_FolderOwnedDialogTitle" xml:space="preserve">
+    <value>Folder is already in use</value>
+  </data>
+  <data name="Friends_FolderOwnedDialogMessage" xml:space="preserve">
+    <value>To keep card profiles separate, the following folder cannot be bound again:&#x0A;&#x0A;{0}</value>
+  </data>
+  <data name="Friends_FolderOwnedEntry" xml:space="preserve">
+    <value>{0}: {1}&#x0A;Currently assigned to: {2}</value>
+  </data>
+  <data name="MainWindow_ThumbnailCacheStatus.Text" xml:space="preserve">
+    <value>Caching images…</value>
   </data>
 </root>

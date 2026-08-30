@@ -22,19 +22,19 @@ public abstract partial class CardBase : ObservableObject
     public Uri FileUri => new(FilePath);
     public Uri? ThumbnailUri => ThumbnailPath != null ? new(ThumbnailPath) : null;
 
-    private BitmapImage? _thumbnailSource;
     public BitmapImage? ThumbnailSource
     {
         get
         {
             if (ThumbnailPath is null) return null;
-            return _thumbnailSource ??= new BitmapImage(new Uri(ThumbnailPath)) { DecodePixelWidth = 300 };
+            return App.Services
+                .GetRequiredService<Services.ThumbnailMemoryCache>()
+                .GetOrCreate(ThumbnailPath);
         }
     }
 
     partial void OnThumbnailPathChanged(string? value)
     {
-        _thumbnailSource = null;
         if (value is not null)
             ThumbnailGenerationFailed = false;
     }

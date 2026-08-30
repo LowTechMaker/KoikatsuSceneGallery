@@ -91,9 +91,11 @@ public partial class PostDetailViewModel : ObservableObject
         foreach (var path in post.LocalFilePaths.Where(File.Exists))
         {
             ct.ThrowIfCancellationRequested();
+            var fileInfo = new FileInfo(path);
             var thumbnailPath = await _thumbnailCacheService.EnsureThumbnailAsync(
                 path,
-                File.GetLastWriteTime(path),
+                fileInfo.Length,
+                fileInfo.LastWriteTime,
                 ct);
             LocalImages.Add(new LocalImagePreview(
                 thumbnailPath is null

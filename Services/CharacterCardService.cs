@@ -24,6 +24,8 @@ public class CharacterCardService : CardScanService<CharacterCard>
                 FileSize = info.Length,
                 DateModified = info.LastWriteTime,
                 DateCreated = info.CreationTime,
+                VariantKind = FriendFolderLayout.ClassifyCharacterPath(info.FullName),
+                FriendFolderPath = FriendFolderLayout.TryGetFriendCharacterFolder(info.FullName),
                 Width = width,
                 Height = height
             };
