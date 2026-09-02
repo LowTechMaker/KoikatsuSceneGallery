@@ -11,7 +11,8 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
     public async Task ExecuteAsync(
         IReadOnlyList<ImportItem> items,
         DispatcherQueue dispatcher,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<ImportItem, CancellationToken, Task>? onCompleted = null)
     {
         var completedSourceDirectories = new ConcurrentDictionary<string, byte>(
             StringComparer.OrdinalIgnoreCase);
@@ -23,10 +24,11 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                 CancellationToken = cancellationToken,
                 MaxDegreeOfParallelism = _maxConcurrency,
             },
-            (item, token) =>
+            async (item, token) =>
             {
                 token.ThrowIfCancellationRequested();
                 dispatcher.TryEnqueue(() => item.Status = ImportItemStatus.Importing);
+                var completed = false;
 
                 try
                 {
@@ -50,6 +52,7 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                             File.Delete(item.SourceFilePath);
                             completedSourceDirectories.TryAdd(item.SourceFolder, 0);
                             dispatcher.TryEnqueue(() => item.Status = ImportItemStatus.Completed);
+                            completed = true;
                             break;
                         case ImportFileConflict.Collision:
                             dispatcher.TryEnqueue(() =>
@@ -62,8 +65,12 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                             File.Move(item.SourceFilePath, destination);
                             completedSourceDirectories.TryAdd(item.SourceFolder, 0);
                             dispatcher.TryEnqueue(() => item.Status = ImportItemStatus.Completed);
+                            completed = true;
                             break;
                     }
+
+                    if (completed && onCompleted is not null)
+                        await onCompleted(item, token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -78,8 +85,6 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                         item.ErrorMessage = ex.Message;
                     });
                 }
-
-                return ValueTask.CompletedTask;
             });
 
         await Task.Run(() => CleanupEmptyDirectories(

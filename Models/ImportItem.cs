@@ -22,6 +22,8 @@ public partial class ImportItem : ObservableObject
     public string FileName => Path.GetFileName(SourceFilePath);
     public Uri ThumbnailUri => new(SourceFilePath);
     public string SourceFolder => Path.GetDirectoryName(SourceFilePath)!;
+    internal ArtworkInfo? FetchedArtworkInfo { get; set; }
+    internal string? AuthorDirectoryPath { get; set; }
 
     public ulong? PHash { get; set; }
     public float[]? ColorHistogram { get; set; }

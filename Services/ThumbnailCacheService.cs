@@ -39,7 +39,7 @@ public class ThumbnailCacheService
         var folder = _cacheFolder;
         var cacheKey = ComputeCacheKey(filePath, dateModified);
         var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
-        return File.Exists(cachePath) ? cachePath : null;
+        return GetUsableCachePath(cachePath);
     }
 
     public Task<string?> EnsureThumbnailAsync(
@@ -59,8 +59,9 @@ public class ThumbnailCacheService
             var cacheKey = ComputeCacheKey(filePath, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
-            if (File.Exists(cachePath))
-                return cachePath;
+            var existingCachePath = GetUsableCachePath(cachePath);
+            if (existingCachePath is not null)
+                return existingCachePath;
 
             var file = await StorageFile.GetFileFromPathAsync(filePath);
             cancellationToken.ThrowIfCancellationRequested();
@@ -88,25 +89,16 @@ public class ThumbnailCacheService
                 ColorManagementMode.DoNotColorManage);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var cacheFile = await StorageFolder.GetFolderFromPathAsync(folder);
-            var outputFile = await cacheFile.CreateFileAsync(
-                $"{cacheKey}.jpg",
-                CreationCollisionOption.ReplaceExisting);
-
-            using var outputStream = await outputFile.OpenAsync(FileAccessMode.ReadWrite);
-            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, outputStream);
-            encoder.SetPixelData(
-                BitmapPixelFormat.Bgra8,
-                BitmapAlphaMode.Premultiplied,
+            return await WriteJpegAtomicallyAsync(
+                folder,
+                cacheKey,
+                cachePath,
                 ThumbnailWidth,
                 scaledHeight,
                 decoder.DpiX,
                 decoder.DpiY,
-                pixels.DetachPixelData());
-
-            await encoder.FlushAsync();
-            cancellationToken.ThrowIfCancellationRequested();
-            return cachePath;
+                pixels.DetachPixelData(),
+                cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -139,5 +131,81 @@ public class ThumbnailCacheService
         var input = $"{filePath}|{dateModified.Ticks}";
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(hash)[..16];
+    }
+
+    private string? GetUsableCachePath(string cachePath)
+    {
+        if (!File.Exists(cachePath))
+            return null;
+        if (JpegCacheFile.IsComplete(cachePath))
+            return cachePath;
+
+        TryDeleteFile("Thumbnail.DeleteInvalidCache", cachePath);
+        return null;
+    }
+
+    private async Task<string?> WriteJpegAtomicallyAsync(
+        string folder,
+        string cacheKey,
+        string cachePath,
+        uint width,
+        uint height,
+        double dpiX,
+        double dpiY,
+        byte[] pixelData,
+        CancellationToken cancellationToken)
+    {
+        var temporaryName = $"{cacheKey}.{Guid.NewGuid():N}.tmp";
+        var temporaryPath = Path.Combine(folder, temporaryName);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var cacheFolder = await StorageFolder.GetFolderFromPathAsync(folder);
+            var outputFile = await cacheFolder.CreateFileAsync(
+                temporaryName,
+                CreationCollisionOption.FailIfExists);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            using (var outputStream = await outputFile.OpenAsync(FileAccessMode.ReadWrite))
+            {
+                var encoder = await BitmapEncoder.CreateAsync(
+                    BitmapEncoder.JpegEncoderId,
+                    outputStream);
+                encoder.SetPixelData(
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Premultiplied,
+                    width,
+                    height,
+                    dpiX,
+                    dpiY,
+                    pixelData);
+                await encoder.FlushAsync();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryPath, cachePath, overwrite: true);
+            if (JpegCacheFile.IsComplete(cachePath))
+                return cachePath;
+
+            TryDeleteFile("Thumbnail.DeleteInvalidPublishedCache", cachePath);
+            return null;
+        }
+        finally
+        {
+            TryDeleteFile("Thumbnail.DeleteTemporaryCache", temporaryPath);
+        }
+    }
+
+    private void TryDeleteFile(string operation, string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(operation, ex, filePath);
+        }
     }
 }
