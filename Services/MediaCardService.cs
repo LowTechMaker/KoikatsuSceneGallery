@@ -5,12 +5,10 @@ namespace KoikatsuSceneGallery.Services;
 public class MediaCardService : CardScanService<MediaCard>
 {
     private readonly string[] _extensions;
-    private readonly bool _isVideo;
 
-    public MediaCardService(string[] extensions, bool isVideo)
+    public MediaCardService(string[] extensions)
     {
         _extensions = extensions;
-        _isVideo = isVideo;
     }
 
     protected override IEnumerable<FileInfo> EnumerateCardFiles(string folder) =>
@@ -36,8 +34,7 @@ public class MediaCardService : CardScanService<MediaCard>
                 FileSize = info.Length,
                 DateModified = info.LastWriteTime,
                 Width = 0,
-                Height = 0,
-                IsVideo = _isVideo
+                Height = 0
             };
         }
         catch (Exception)

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -66,8 +67,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, IAppLogger logger)
-        : base(new ObservableCollection<SceneCard>())
+    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
+        : base(new ObservableCollection<SceneCard>(), thumbnailScheduler)
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
         _sceneCardService = sceneCardService;
@@ -200,39 +201,56 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 RaiseViewRefreshed();
             }
 
-            var scanned = await _sceneCardService.ScanFoldersAsync(paths, cancellationToken);
-            var scannedIndex = new Dictionary<string, SceneCard>(scanned.Count, StringComparer.OrdinalIgnoreCase);
-            foreach (var card in scanned)
+            // A cold cache used to wait for every PNG to be scanned before adding the
+            // first card.  Stream modest batches to the UI instead, leaving the grid
+            // virtualized while the rest of the folders are still being enumerated.
+            var scannedIndex = new ConcurrentDictionary<string, SceneCard>(StringComparer.OrdinalIgnoreCase);
+            await _sceneCardService.ScanFoldersAsync(paths, batch =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                scannedIndex.TryAdd(card.FilePath, card);
-            }
+                foreach (var card in batch)
+                    scannedIndex.TryAdd(card.FilePath, card);
 
-            var toRemove = new List<string>();
-            var toUpdate = new List<SceneCard>();
-            foreach (var (filePath, existing) in _cardIndex)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!scannedIndex.TryGetValue(filePath, out var fresh))
+                var processed = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
                 {
-                    toRemove.Add(filePath);
-                }
-                else if (existing.DateModified.Ticks != fresh.DateModified.Ticks)
-                {
-                    toRemove.Add(filePath);
-                    toUpdate.Add(fresh);
-                }
-            }
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        processed.TrySetResult();
+                        return;
+                    }
 
-            var toAdd = new List<SceneCard>();
-            foreach (var (filePath, fresh) in scannedIndex)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!_cardIndex.ContainsKey(filePath))
-                    toAdd.Add(fresh);
-            }
+                    using (CardsView.DeferRefresh())
+                    {
+                        foreach (var fresh in batch)
+                        {
+                            if (_cardIndex.TryGetValue(fresh.FilePath, out var existing))
+                            {
+                                if (existing.DateModified.Ticks == fresh.DateModified.Ticks)
+                                    continue;
 
-            if (toRemove.Count > 0 || toAdd.Count > 0 || toUpdate.Count > 0)
+                                _cardIndex.Remove(fresh.FilePath);
+                                Cards.Remove(existing);
+                            }
+
+                            fresh.IsR18Content = IsR18Path(fresh.FilePath);
+                            if (_cardIndex.TryAdd(fresh.FilePath, fresh))
+                                Cards.Add(fresh);
+                        }
+                    }
+                    processed.TrySetResult();
+                });
+                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
+                    .GetAwaiter().GetResult();
+            }, cancellationToken);
+
+            // Everything received in the batches is current.  Remove cache entries
+            // that were not found without delaying the first visible batch.
+            var toRemove = _cardIndex.Keys
+                .Where(filePath => !scannedIndex.ContainsKey(filePath))
+                .ToList();
+            if (toRemove.Count > 0)
             {
                 using (CardsView.DeferRefresh())
                 {
@@ -240,18 +258,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     {
                         if (_cardIndex.Remove(path, out var old))
                             Cards.Remove(old);
-                    }
-                    foreach (var card in toUpdate)
-                    {
-                        card.IsR18Content = IsR18Path(card.FilePath);
-                        if (_cardIndex.TryAdd(card.FilePath, card))
-                            Cards.Add(card);
-                    }
-                    foreach (var card in toAdd)
-                    {
-                        card.IsR18Content = IsR18Path(card.FilePath);
-                        if (_cardIndex.TryAdd(card.FilePath, card))
-                            Cards.Add(card);
                     }
                 }
             }
@@ -386,7 +392,9 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         }
     }
 
-    public void RequestThumbnail(SceneCard card)
+    public void RequestThumbnail(
+        SceneCard card,
+        ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
     {
         if (card.HasThumbnail) return;
         if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
@@ -403,43 +411,35 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             return;
         }
 
-        var token = _thumbnailCts?.Token ?? CancellationToken.None;
-        if (token.IsCancellationRequested || !_thumbnailRequested.Add(card.FilePath)) return;
-
-        PendingThumbnailCount++;
-        Task.Run(() => GenerateOneAsync(card, token), token)
-            .Observe(_logger, "Gallery.GenerateThumbnail");
+        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
+        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
     }
 
     public void ReleaseThumbnail(SceneCard card)
     {
+        ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private async Task GenerateOneAsync(SceneCard card, CancellationToken cancellationToken)
+    private async Task GenerateOneAsync(
+        SceneCard card,
+        ThumbnailRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await _thumbnailGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
+            cancellationToken.ThrowIfCancellationRequested();
+            if (card.HasThumbnail) return;
+            var thumbnailPath = await _thumbnailCacheService
+                .EnsureThumbnailAsync(card, cancellationToken)
+                .ConfigureAwait(false);
+            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (card.HasThumbnail) return;
-                var thumbnailPath = await _thumbnailCacheService
-                    .EnsureThumbnailAsync(card, cancellationToken)
-                    .ConfigureAwait(false);
-                if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
+                _cardCacheService.SetThumbnailPath(card.FilePath, thumbnailPath);
+                _dispatcherQueue.TryEnqueue(() =>
                 {
-                    _cardCacheService.SetThumbnailPath(card.FilePath, thumbnailPath);
-                    _dispatcherQueue.TryEnqueue(() =>
-                    {
-                        _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                        card.ThumbnailPath = thumbnailPath;
-                    });
-                }
-            }
-            finally
-            {
-                _thumbnailGate.Release();
+                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                    card.ThumbnailPath = thumbnailPath;
+                });
             }
         }
         catch (OperationCanceledException ex) { _logger.LogError("Gallery.GenerateThumbnailCanceled", ex, card.FilePath); }
@@ -448,10 +448,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                PendingThumbnailCount--;
-                if (!card.HasThumbnail)
-                    _thumbnailRequested.Remove(card.FilePath);
+                CompleteThumbnailRequest(request);
             });
         }
     }

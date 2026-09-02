@@ -48,7 +48,7 @@ The earlier packaged `dotnet run` attempt was intentionally superseded by the re
 
 ## Changes
 
-Replaced public static service/ViewModel properties with a single registry entry, added constructor injection throughout ViewModels and services, preserved keyed screenshot/video instances and optional import/post lifetimes, and moved author-source orchestration to `AuthorSourceCoordinator`.
+Replaced public static service/ViewModel properties with a single registry entry, added constructor injection throughout ViewModels and services, preserved the keyed screenshot instance and optional import/post lifetimes, and moved author-source orchestration to `AuthorSourceCoordinator`.
 
 ## Notes / out-of-scope findings
 

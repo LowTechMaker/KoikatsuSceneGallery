@@ -12,7 +12,6 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly MediaCardService _cardService;
     private readonly SettingsService _settingsService;
     private readonly ThumbnailCacheService _thumbnailCacheService;
-    private readonly bool _isVideo;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly IAppLogger _logger;
 
@@ -22,8 +21,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SettingsViewModel settingsViewModel, IAppLogger logger, bool isVideo)
-        : base(new ObservableCollection<MediaCard>())
+    public MediaGalleryViewModel(MediaCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SettingsViewModel settingsViewModel, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
+        : base(new ObservableCollection<MediaCard>(), thumbnailScheduler)
     {
         Cards = (ObservableCollection<MediaCard>)_cardsSource;
         _cardService = cardService;
@@ -31,13 +30,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         _thumbnailCacheService = thumbnailCacheService;
         _settingsViewModel = settingsViewModel;
         _logger = logger;
-        _isVideo = isVideo;
-
-        if (!_isVideo)
-        {
-            SelectedSort = SortOption.DateModified;
-            SortAscending = false;
-        }
+        SelectedSort = SortOption.DateModified;
+        SortAscending = false;
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
@@ -61,7 +55,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             ShowFileNames = config.ShowFileNames;
 
-            var paths = _isVideo ? config.VideoFolderPaths : config.ScreenshotFolderPaths;
+            var paths = config.ScreenshotFolderPaths;
             Cards.Clear();
             _cardIndex.Clear();
 
@@ -106,7 +100,9 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         }
     }
 
-    public void RequestThumbnail(MediaCard card)
+    public void RequestThumbnail(
+        MediaCard card,
+        ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
     {
         if (card.HasThumbnail) return;
         if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
@@ -123,42 +119,36 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
             return;
         }
 
-        var token = _thumbnailCts?.Token ?? CancellationToken.None;
-        if (token.IsCancellationRequested || !_thumbnailRequested.Add(card.FilePath)) return;
-
-        PendingThumbnailCount++;
-        Task.Run(() => GenerateOneAsync(card, token), token)
-            .Observe(_logger, "MediaGallery.GenerateThumbnail");
+        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
+        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
     }
 
     public void ReleaseThumbnail(MediaCard card)
     {
+        ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private async Task GenerateOneAsync(MediaCard card, CancellationToken cancellationToken)
+    private async Task GenerateOneAsync(
+        MediaCard card,
+        ThumbnailRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await _thumbnailGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (card.HasThumbnail) return;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (card.HasThumbnail) return;
 
-                var thumbnailPath = _isVideo
-                    ? await _thumbnailCacheService.EnsureVideoThumbnailAsync(card.FilePath, card.DateModified, cancellationToken).ConfigureAwait(false)
-                    : await _thumbnailCacheService.EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken).ConfigureAwait(false);
+            var thumbnailPath = await _thumbnailCacheService
+                .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
+                .ConfigureAwait(false);
 
-                if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-                    _dispatcherQueue.TryEnqueue(() =>
-                    {
-                        _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                        card.ThumbnailPath = thumbnailPath;
-                    });
-            }
-            finally
+            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
             {
-                _thumbnailGate.Release();
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                    card.ThumbnailPath = thumbnailPath;
+                });
             }
         }
         catch (OperationCanceledException ex) { _logger.LogError("MediaGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
@@ -167,10 +157,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                PendingThumbnailCount--;
-                if (!card.HasThumbnail)
-                    _thumbnailRequested.Remove(card.FilePath);
+                CompleteThumbnailRequest(request);
             });
         }
     }

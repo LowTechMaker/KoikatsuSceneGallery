@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage;
 
@@ -14,6 +15,9 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class CoordinateGalleryPage : Page
 {
+    public static BitmapImage? CreateThumbnail(Uri? uri) =>
+        uri is null ? null : new BitmapImage { DecodePixelWidth = 300, UriSource = uri };
+
     public CoordinateGalleryViewModel ViewModel { get; }
 
     private readonly List<WeakReference<TextBlock>> _fileNameTexts = [];
@@ -228,7 +232,7 @@ public sealed partial class CoordinateGalleryPage : Page
         for (int i = first; i <= last && i < ViewModel.CardsView.Count; i++)
         {
             if (ViewModel.CardsView[i] is CoordinateCard card)
-                ViewModel.RequestThumbnail(card);
+                ViewModel.RequestThumbnail(card, ThumbnailWorkPriority.Visible);
         }
     }
 }

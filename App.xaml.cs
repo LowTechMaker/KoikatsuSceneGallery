@@ -22,8 +22,8 @@ public partial class App : Application
     private readonly SceneMetadataService _sceneMetadataService;
     private readonly CharacterMetadataService _characterMetadataService;
     private readonly CoordinateMetadataService _coordinateMetadataService;
-    private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"], isVideo: false);
-    private readonly MediaCardService _videoCardService = new([".mp4", ".avi", ".webm", ".mov", ".mkv", ".gif"], isVideo: true);
+    private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"]);
+    private readonly ThumbnailPriorityScheduler _thumbnailScheduler = new();
     private readonly PluginService _pluginService;
     private ThumbnailCacheService _thumbnailCacheService = null!;
     private MainWindow? _mainWindow;
@@ -134,6 +134,7 @@ public partial class App : Application
             _sceneCardCacheService,
             settingsViewModel,
             _pluginService,
+            _thumbnailScheduler,
             _logger);
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
@@ -141,6 +142,7 @@ public partial class App : Application
             _thumbnailCacheService,
             _characterMetadataService,
             settingsViewModel,
+            _thumbnailScheduler,
             _logger);
         var coordinateGalleryViewModel = new CoordinateGalleryViewModel(
             _coordinateCardService,
@@ -148,21 +150,15 @@ public partial class App : Application
             _thumbnailCacheService,
             _coordinateMetadataService,
             settingsViewModel,
+            _thumbnailScheduler,
             _logger);
         var screenshotGalleryViewModel = new MediaGalleryViewModel(
             _screenshotCardService,
             _settingsService,
             _thumbnailCacheService,
             settingsViewModel,
-            _logger,
-            isVideo: false);
-        var videoGalleryViewModel = new MediaGalleryViewModel(
-            _videoCardService,
-            _settingsService,
-            _thumbnailCacheService,
-            settingsViewModel,
-            _logger,
-            isVideo: true);
+            _thumbnailScheduler,
+            _logger);
 
         ImportService? importService = null;
         ImportViewModel? importViewModel = null;
@@ -213,7 +209,6 @@ public partial class App : Application
             characterGalleryViewModel,
             coordinateGalleryViewModel,
             screenshotGalleryViewModel,
-            videoGalleryViewModel,
             authorsViewModel,
             authorSourceCoordinator,
             importService,
@@ -221,7 +216,11 @@ public partial class App : Application
             authorPostService);
 
         _mainWindow = new MainWindow();
-        _mainWindow.Closed += (_, _) => _pluginService.Shutdown();
+        _mainWindow.Closed += (_, _) =>
+        {
+            _thumbnailScheduler.Dispose();
+            _pluginService.Shutdown();
+        };
         _mainWindow.Activate();
 
         PluginService.InputRequestHandler = (title, message, placeholder, ct) =>
@@ -237,7 +236,6 @@ public partial class App : Application
         CharacterGalleryViewModel characterGalleryViewModel,
         CoordinateGalleryViewModel coordinateGalleryViewModel,
         MediaGalleryViewModel screenshotGalleryViewModel,
-        MediaGalleryViewModel videoGalleryViewModel,
         AuthorsViewModel authorsViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
         ImportService? importService,
@@ -250,12 +248,12 @@ public partial class App : Application
         Services.Add(_characterCardService);
         Services.Add(_coordinateCardService);
         Services.Add(_thumbnailCacheService);
+        Services.Add(_thumbnailScheduler);
         Services.Add(_sceneCardCacheService);
         Services.Add(_sceneMetadataService);
         Services.Add(_characterMetadataService);
         Services.Add(_coordinateMetadataService);
         Services.Add(_screenshotCardService, "screenshots");
-        Services.Add(_videoCardService, "videos");
         Services.Add(_pluginService);
         Services.Add(authorInfoService);
         Services.Add(settingsViewModel);
@@ -263,7 +261,6 @@ public partial class App : Application
         Services.Add(characterGalleryViewModel);
         Services.Add(coordinateGalleryViewModel);
         Services.Add(screenshotGalleryViewModel, "screenshots");
-        Services.Add(videoGalleryViewModel, "videos");
         Services.Add(authorsViewModel);
         Services.Add(authorSourceCoordinator);
         if (importService is not null) Services.Add(importService);

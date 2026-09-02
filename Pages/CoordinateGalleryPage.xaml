@@ -28,15 +28,17 @@
             <TextBlock
                 x:Uid="Coordinate_Title"
                 Style="{StaticResource TitleTextBlockStyle}" />
+        </StackPanel>
+
+        <!-- Keep thumbnail generation status out of the measured content layout. -->
+        <Grid Grid.RowSpan="3" IsHitTestVisible="False">
             <StackPanel
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
                 Orientation="Horizontal"
-                VerticalAlignment="Center"
                 Spacing="8"
                 Visibility="{x:Bind ViewModel.IsGeneratingThumbnails, Mode=OneWay}">
-                <ProgressRing
-                    Width="16"
-                    Height="16"
-                    IsActive="True" />
+                <ProgressRing Width="16" Height="16" IsActive="True" />
                 <TextBlock
                     x:Uid="Gallery_GeneratingLabel"
                     VerticalAlignment="Center"
@@ -48,7 +50,7 @@
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Text="{x:Bind ViewModel.PendingThumbnailCount, Mode=OneWay}" />
             </StackPanel>
-        </StackPanel>
+        </Grid>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -206,7 +208,7 @@
                             <Image
                                 x:Phase="1"
                                 Stretch="Uniform"
-                                Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                Source="{x:Bind local:CoordinateGalleryPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" />
                         </Border>
 
                         <!--  Author badge (plugin-provided); overlays the thumbnail so

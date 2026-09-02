@@ -22,7 +22,6 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
     public ObservableCollection<string> CoordinateFolderPaths { get; } = [];
     public ObservableCollection<string> ScreenshotFolderPaths { get; } = [];
-    public ObservableCollection<string> VideoFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
     public ObservableCollection<string> CharacterAllowedResolutions { get; } = [];
     public ObservableCollection<string> CoordinateAllowedResolutions { get; } = [];
@@ -31,7 +30,6 @@ public partial class SettingsViewModel : ObservableObject
     public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
     public bool HasNoCoordinateFolders => CoordinateFolderPaths.Count == 0;
     public bool HasNoScreenshotFolders => ScreenshotFolderPaths.Count == 0;
-    public bool HasNoVideoFolders => VideoFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
@@ -92,9 +90,6 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool ShowScreenshotsNav { get; set; } = true;
 
     [ObservableProperty]
-    public partial bool ShowVideosNav { get; set; } = true;
-
-    [ObservableProperty]
     public partial bool AuthorLiveTilesEnabled { get; set; } = true;
 
     // ── OCD ─────────────────────────────────────────────────────
@@ -141,7 +136,6 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? CharacterFolderPathsChanged;
     public event Action? CoordinateFolderPathsChanged;
     public event Action? ScreenshotFolderPathsChanged;
-    public event Action? VideoFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
 
     public SettingsViewModel(
@@ -179,12 +173,6 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNoScreenshotFolders));
             if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 ScreenshotFolderPathsChanged?.Invoke();
-        };
-        VideoFolderPaths.CollectionChanged += (_, e) =>
-        {
-            OnPropertyChanged(nameof(HasNoVideoFolders));
-            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
-                VideoFolderPathsChanged?.Invoke();
         };
     }
 
@@ -325,7 +313,6 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnShowCharactersNavChanged(bool value) => OnNavVisibilityChanged("characters", value);
     partial void OnShowCoordinatesNavChanged(bool value) => OnNavVisibilityChanged("coordinates", value);
     partial void OnShowScreenshotsNavChanged(bool value) => OnNavVisibilityChanged("screenshots", value);
-    partial void OnShowVideosNavChanged(bool value) => OnNavVisibilityChanged("videos", value);
 
     private void OnNavVisibilityChanged(string tag, bool value)
     {
@@ -387,10 +374,6 @@ public partial class SettingsViewModel : ObservableObject
             foreach (var path in config.ScreenshotFolderPaths)
                 ScreenshotFolderPaths.Add(path);
 
-            VideoFolderPaths.Clear();
-            foreach (var path in config.VideoFolderPaths)
-                VideoFolderPaths.Add(path);
-
             ResolutionFilterEnabled = config.ResolutionFilterEnabled;
             CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
@@ -424,7 +407,6 @@ public partial class SettingsViewModel : ObservableObject
             ShowCharactersNav = !hidden.Contains("characters");
             ShowCoordinatesNav = !hidden.Contains("coordinates");
             ShowScreenshotsNav = !hidden.Contains("screenshots");
-            ShowVideosNav = !hidden.Contains("videos");
         }
         finally
         {
@@ -535,31 +517,6 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RemoveScreenshotFolder(string path)
     {
         ScreenshotFolderPaths.Remove(path);
-        await SaveConfigAsync();
-    }
-
-    [RelayCommand]
-    private async Task AddVideoFolderAsync()
-    {
-        var picker = new FolderPicker();
-        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-        picker.FileTypeFilter.Add("*");
-
-        var hwnd = GetWindowHandle();
-        InitializeWithWindow.Initialize(picker, hwnd);
-
-        var folder = await picker.PickSingleFolderAsync();
-        if (folder != null && !VideoFolderPaths.Contains(folder.Path))
-        {
-            VideoFolderPaths.Add(folder.Path);
-            await SaveConfigAsync();
-        }
-    }
-
-    [RelayCommand]
-    private async Task RemoveVideoFolder(string path)
-    {
-        VideoFolderPaths.Remove(path);
         await SaveConfigAsync();
     }
 
@@ -692,7 +649,6 @@ public partial class SettingsViewModel : ObservableObject
                 CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
                 ScreenshotFolderPaths = [.. ScreenshotFolderPaths],
-                VideoFolderPaths = [.. VideoFolderPaths],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 ThumbnailWidth = ThumbnailWidth,
@@ -732,7 +688,6 @@ public partial class SettingsViewModel : ObservableObject
         if (!ShowCharactersNav) list.Add("characters");
         if (!ShowCoordinatesNav) list.Add("coordinates");
         if (!ShowScreenshotsNav) list.Add("screenshots");
-        if (!ShowVideosNav) list.Add("videos");
         return list;
     }
 }

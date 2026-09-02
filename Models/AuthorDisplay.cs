@@ -36,9 +36,7 @@ public partial class AuthorDisplay : ObservableObject
 
     private BitmapImage? _avatarSource;
     /// <summary>
-    /// Stable BitmapImage for binding, same caching contract as
-    /// <see cref="SceneCard.ThumbnailSource"/>: one instance per path so
-    /// virtualized cells render consistently. UI thread only.
+    /// Stable BitmapImage for avatar binding. UI thread only.
     /// </summary>
     public BitmapImage? AvatarSource
     {

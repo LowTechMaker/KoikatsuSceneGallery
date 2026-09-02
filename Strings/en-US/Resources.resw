@@ -151,16 +151,6 @@
   <data name="Screenshot_Empty.Text" xml:space="preserve">
     <value>No screenshots found. Add folders in Settings.</value>
   </data>
-  <!-- VideoGalleryPage -->
-  <data name="Nav_Videos.Content" xml:space="preserve">
-    <value>Videos</value>
-  </data>
-  <data name="Video_Title.Text" xml:space="preserve">
-    <value>Videos</value>
-  </data>
-  <data name="Video_Empty.Text" xml:space="preserve">
-    <value>No videos found. Add folders in Settings.</value>
-  </data>
   <!-- CoordinateGalleryPage -->
   <data name="Coordinate_Title.Text" xml:space="preserve">
     <value>Coordinates</value>
@@ -360,12 +350,6 @@
   </data>
   <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
     <value>Add folders containing screenshot images (.png, .jpg, .jpeg, .bmp). Subfolders are scanned automatically.</value>
-  </data>
-  <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
-    <value>Videos</value>
-  </data>
-  <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
-    <value>Add folders containing video files (.mp4, .avi, .webm, .mov, .mkv, .gif). Subfolders are scanned automatically.</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>Display</value>
@@ -896,9 +880,6 @@
   </data>
   <data name="Settings_ShowScreenshotsNav.Content" xml:space="preserve">
     <value>Screenshots</value>
-  </data>
-  <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
-    <value>Videos</value>
   </data>
   <!-- SettingsCard resources -->
   <data name="SC_ShowFileNames.Header" xml:space="preserve">

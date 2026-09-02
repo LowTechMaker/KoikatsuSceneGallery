@@ -34,9 +34,15 @@
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{StaticResource CaptionTextBlockStyle}"
                 Text="{x:Bind ViewModel.CardsView.Count, Mode=OneWay}" />
+        </StackPanel>
+
+        <!-- This overlay is deliberately outside the auto-sized header rows so its
+             visibility cannot move the search controls or gallery content. -->
+        <Grid Grid.RowSpan="4" IsHitTestVisible="False">
             <StackPanel
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
                 Orientation="Horizontal"
-                VerticalAlignment="Center"
                 Spacing="8"
                 Visibility="{x:Bind ViewModel.IsGeneratingThumbnails, Mode=OneWay}">
                 <ProgressRing
@@ -54,7 +60,7 @@
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Text="{x:Bind ViewModel.PendingThumbnailCount, Mode=OneWay}" />
             </StackPanel>
-        </StackPanel>
+        </Grid>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -278,7 +284,7 @@
                             <Image
                                 x:Phase="1"
                                 Stretch="Uniform"
-                                Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                Source="{x:Bind local:GalleryPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" />
                         </Border>
 
                         <!--  Author badge (plugin-provided); overlays the thumbnail so

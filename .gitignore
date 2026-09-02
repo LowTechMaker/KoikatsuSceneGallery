@@ -59,3 +59,4 @@ Generated\ Files/
 # Local sample/comparison cards (personal data, not for version control)
 compare/
 .claude/
+.codex-remote-attachments/

@@ -113,7 +113,6 @@ public class SettingsService
         public List<string> CoordinateAllowedResolutions { get; set; } = ["252x352"];
 
         public List<string> ScreenshotFolderPaths { get; set; } = [];
-        public List<string> VideoFolderPaths { get; set; } = [];
 
         /// <summary>
         /// Relative subfolder path inserted between the library root and the author

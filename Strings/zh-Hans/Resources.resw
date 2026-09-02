@@ -151,16 +151,6 @@
   <data name="Screenshot_Empty.Text" xml:space="preserve">
     <value>未找到截图。请在设置中添加文件夹。</value>
   </data>
-  <!-- VideoGalleryPage -->
-  <data name="Nav_Videos.Content" xml:space="preserve">
-    <value>视频</value>
-  </data>
-  <data name="Video_Title.Text" xml:space="preserve">
-    <value>视频</value>
-  </data>
-  <data name="Video_Empty.Text" xml:space="preserve">
-    <value>未找到视频。请在设置中添加文件夹。</value>
-  </data>
   <!-- CoordinateGalleryPage -->
   <data name="Coordinate_Title.Text" xml:space="preserve">
     <value>服装卡</value>
@@ -360,12 +350,6 @@
   </data>
   <data name="Settings_ScreenshotFoldersDesc.Text" xml:space="preserve">
     <value>添加包含截图的文件夹（.png、.jpg、.jpeg、.bmp）。子文件夹会自动扫描。</value>
-  </data>
-  <data name="Settings_VideoFoldersHeader.Text" xml:space="preserve">
-    <value>视频</value>
-  </data>
-  <data name="Settings_VideoFoldersDesc.Text" xml:space="preserve">
-    <value>添加包含视频文件的文件夹（.mp4、.avi、.webm、.mov、.mkv、.gif）。子文件夹会自动扫描。</value>
   </data>
   <data name="Settings_DisplayHeader.Text" xml:space="preserve">
     <value>显示</value>
@@ -896,9 +880,6 @@
   </data>
   <data name="Settings_ShowScreenshotsNav.Content" xml:space="preserve">
     <value>截图</value>
-  </data>
-  <data name="Settings_ShowVideosNav.Content" xml:space="preserve">
-    <value>影片</value>
   </data>
   <!-- SettingsCard resources -->
   <data name="SC_ShowFileNames.Header" xml:space="preserve">

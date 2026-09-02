@@ -173,9 +173,11 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image
-                                        Stretch="Uniform"
-                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                    <Image Stretch="Uniform">
+                                        <Image.Source>
+                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                        </Image.Source>
+                                    </Image>
                                 </Border>
 
                                 <TextBlock
@@ -249,9 +251,11 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image
-                                        Stretch="Uniform"
-                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                    <Image Stretch="Uniform">
+                                        <Image.Source>
+                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                        </Image.Source>
+                                    </Image>
                                 </Border>
 
                                 <TextBlock
@@ -325,9 +329,11 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image
-                                        Stretch="Uniform"
-                                        Source="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                                    <Image Stretch="Uniform">
+                                        <Image.Source>
+                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                                        </Image.Source>
+                                    </Image>
                                 </Border>
 
                                 <TextBlock

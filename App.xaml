@@ -18,7 +18,6 @@
                     <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
                     <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
                     <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                    <SolidColorBrush x:Key="VideoPlayIconForegroundBrush" Color="White" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#C62828" />
@@ -28,7 +27,6 @@
                     <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
                     <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
                     <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                    <SolidColorBrush x:Key="VideoPlayIconForegroundBrush" Color="White" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -38,7 +36,6 @@
                     <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
                     <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
                     <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                    <SolidColorBrush x:Key="VideoPlayIconForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

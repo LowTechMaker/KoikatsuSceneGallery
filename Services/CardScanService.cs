@@ -102,7 +102,10 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         => new()
         {
             CancellationToken = cancellationToken,
-            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount),
+            // Scanning opens every card and parses its header.  Unbounded use of a
+            // high-core CPU competes directly with the UI thread and thumbnail work;
+            // four workers retain disk parallelism without causing scroll hitching.
+            MaxDegreeOfParallelism = Math.Min(4, Math.Max(1, Environment.ProcessorCount - 1)),
         };
 
     private TCard? TryCreateCard(string filePath) =>

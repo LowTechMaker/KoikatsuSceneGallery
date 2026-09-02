@@ -36,8 +36,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private const int MetadataParseConcurrency = 4;
     private DispatcherQueueTimer? _metadataRefreshTimer;
 
-    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, IAppLogger logger)
-        : base(new ObservableCollection<CoordinateCard>())
+    public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
+        : base(new ObservableCollection<CoordinateCard>(), thumbnailScheduler)
     {
         Cards = (ObservableCollection<CoordinateCard>)_cardsSource;
         _cardService = cardService;
@@ -204,7 +204,9 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         OnPropertyChanged(nameof(IsEmpty));
     }
 
-    public void RequestThumbnail(CoordinateCard card)
+    public void RequestThumbnail(
+        CoordinateCard card,
+        ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
     {
         if (card.HasThumbnail) return;
         if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
@@ -221,40 +223,34 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             return;
         }
 
-        var token = _thumbnailCts?.Token ?? CancellationToken.None;
-        if (token.IsCancellationRequested || !_thumbnailRequested.Add(card.FilePath)) return;
-
-        PendingThumbnailCount++;
-        Task.Run(() => GenerateOneAsync(card, token), token)
-            .Observe(_logger, "CoordinateGallery.GenerateThumbnail");
+        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
+        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
     }
 
     public void ReleaseThumbnail(CoordinateCard card)
     {
+        ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private async Task GenerateOneAsync(CoordinateCard card, CancellationToken cancellationToken)
+    private async Task GenerateOneAsync(
+        CoordinateCard card,
+        ThumbnailRequest request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await _thumbnailGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
+            cancellationToken.ThrowIfCancellationRequested();
+            if (card.HasThumbnail) return;
+            var thumbnailPath = await _thumbnailCacheService
+                .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
+                .ConfigureAwait(false);
+            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (card.HasThumbnail) return;
-                var thumbnailPath = await _thumbnailCacheService
-                    .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
-                    .ConfigureAwait(false);
-                if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-                    _dispatcherQueue.TryEnqueue(() =>
-                    {
-                        _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                        card.ThumbnailPath = thumbnailPath;
-                    });
-            }
-            finally
-            {
-                _thumbnailGate.Release();
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                    card.ThumbnailPath = thumbnailPath;
+                });
             }
         }
         catch (OperationCanceledException ex) { _logger.LogError("CoordinateGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
@@ -263,10 +259,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                PendingThumbnailCount--;
-                if (!card.HasThumbnail)
-                    _thumbnailRequested.Remove(card.FilePath);
+                CompleteThumbnailRequest(request);
             });
         }
     }

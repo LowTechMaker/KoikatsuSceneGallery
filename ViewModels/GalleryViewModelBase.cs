@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.WinUI.Collections;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 
 namespace KoikatsuSceneGallery.ViewModels;
@@ -32,9 +33,11 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     protected CancellationTokenSource? _thumbnailCts;
     protected CancellationTokenSource? _loadCts;
-    protected readonly SemaphoreSlim _thumbnailGate = new(Math.Max(1, Environment.ProcessorCount - 1));
-    protected readonly HashSet<string> _thumbnailRequested = new(StringComparer.OrdinalIgnoreCase);
     protected readonly Dictionary<string, string> _thumbnailPathCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ThumbnailPriorityScheduler _thumbnailScheduler;
+    private readonly Dictionary<string, ThumbnailRequest> _thumbnailRequests =
+        new(StringComparer.OrdinalIgnoreCase);
+    private long _thumbnailSession;
 
     protected readonly DispatcherQueue _dispatcherQueue;
     protected readonly IList _cardsSource;
@@ -74,9 +77,10 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     protected abstract bool CardPassesFilter(object card);
     protected abstract void ApplyFilter();
 
-    protected GalleryViewModelBase(IList cardsSource)
+    protected GalleryViewModelBase(IList cardsSource, ThumbnailPriorityScheduler thumbnailScheduler)
     {
         _cardsSource = cardsSource;
+        _thumbnailScheduler = thumbnailScheduler;
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         CardsView = new AdvancedCollectionView(cardsSource, true);
         if (cardsSource is INotifyCollectionChanged observable)
@@ -233,12 +237,105 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     protected void ResetThumbnailState()
     {
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
+        var previousCts = _thumbnailCts;
+        previousCts?.Cancel();
+        CancelPendingThumbnailRequests();
+        previousCts?.Dispose();
         _thumbnailCts = new CancellationTokenSource();
-        _thumbnailRequested.Clear();
+        _thumbnailSession++;
         _thumbnailPathCache.Clear();
         PendingThumbnailCount = 0;
+    }
+
+    /// <summary>
+    /// Starts a thumbnail request that belongs to the currently realized item.  A
+    /// recycled container cancels this request, so off-screen work cannot occupy the
+    /// decode gate ahead of thumbnails the user can actually see.
+    /// </summary>
+    protected bool TryBeginThumbnailRequest(
+        string filePath,
+        ThumbnailWorkPriority priority,
+        out ThumbnailRequest request)
+    {
+        var sessionToken = _thumbnailCts?.Token ?? CancellationToken.None;
+        if (sessionToken.IsCancellationRequested)
+        {
+            request = null!;
+            return false;
+        }
+
+        if (_thumbnailRequests.TryGetValue(filePath, out var current))
+        {
+            // A visible request supersedes queued prefetch work. A matching or lower
+            // priority request is already enough, unless it has been cancelled while
+            // the container was recycled and then immediately realized again.
+            if (!current.TokenSource.IsCancellationRequested
+                && (current.Priority == ThumbnailWorkPriority.Visible
+                    || priority == ThumbnailWorkPriority.Prefetch))
+            {
+                request = null!;
+                return false;
+            }
+
+            current.TokenSource.Cancel();
+            if (current.Handle is { } handle)
+                _thumbnailScheduler.Cancel(handle);
+        }
+
+        request = new ThumbnailRequest(
+            filePath,
+            priority,
+            _thumbnailSession,
+            CancellationTokenSource.CreateLinkedTokenSource(sessionToken));
+        _thumbnailRequests[filePath] = request;
+        return true;
+    }
+
+    protected bool ScheduleThumbnailRequest(
+        ThumbnailRequest request,
+        Func<CancellationToken, Task> action)
+    {
+        PendingThumbnailCount++;
+        var handle = _thumbnailScheduler.Enqueue(
+            request.Priority,
+            action,
+            request.TokenSource.Token,
+            () => _dispatcherQueue.TryEnqueue(() => CompleteThumbnailRequest(request)));
+        if (handle is { } scheduled)
+        {
+            request.Handle = scheduled;
+            return true;
+        }
+
+        PendingThumbnailCount = Math.Max(0, PendingThumbnailCount - 1);
+        if (_thumbnailRequests.TryGetValue(request.FilePath, out var current)
+            && ReferenceEquals(current, request))
+        {
+            _thumbnailRequests.Remove(request.FilePath);
+        }
+        request.TokenSource.Dispose();
+        return false;
+    }
+
+    protected void ReleaseThumbnailRequest(string filePath)
+    {
+        if (!_thumbnailRequests.TryGetValue(filePath, out var request)) return;
+        request.TokenSource.Cancel();
+        if (request.Handle is { } handle)
+            _thumbnailScheduler.Cancel(handle);
+    }
+
+    protected void CompleteThumbnailRequest(ThumbnailRequest request)
+    {
+        request.TokenSource.Dispose();
+        if (request.Session == _thumbnailSession)
+            PendingThumbnailCount = Math.Max(0, PendingThumbnailCount - 1);
+
+        if (_thumbnailRequests.TryGetValue(request.FilePath, out var current)
+            && ReferenceEquals(current, request))
+        {
+            _thumbnailRequests.Remove(request.FilePath);
+        }
     }
 
     protected CancellationToken BeginLoad()
@@ -259,9 +356,12 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         if (_thumbnailCts is not null && !_thumbnailCts.IsCancellationRequested)
             return;
 
-        _thumbnailCts?.Dispose();
+        var previousCts = _thumbnailCts;
+        previousCts?.Cancel();
+        CancelPendingThumbnailRequests();
+        previousCts?.Dispose();
         _thumbnailCts = new CancellationTokenSource();
-        _thumbnailRequested.Clear();
+        _thumbnailSession++;
         PendingThumbnailCount = 0;
     }
 
@@ -269,6 +369,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     {
         _loadCts?.Cancel();
         _thumbnailCts?.Cancel();
+        CancelPendingThumbnailRequests();
     }
 
     protected void OnShowFileNamesSettingChanged(bool value)
@@ -285,4 +386,28 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     protected void RaiseCardsReloaded() => CardsReloaded?.Invoke();
     protected void RaiseViewRefreshed() => ViewRefreshed?.Invoke();
+
+    private void CancelPendingThumbnailRequests()
+    {
+        foreach (var request in _thumbnailRequests.Values)
+        {
+            request.TokenSource.Cancel();
+            if (request.Handle is { } handle)
+                _thumbnailScheduler.Cancel(handle);
+        }
+        _thumbnailRequests.Clear();
+    }
+
+    protected sealed class ThumbnailRequest(
+        string filePath,
+        ThumbnailWorkPriority priority,
+        long session,
+        CancellationTokenSource tokenSource)
+    {
+        public string FilePath { get; } = filePath;
+        public ThumbnailWorkPriority Priority { get; } = priority;
+        public long Session { get; } = session;
+        public CancellationTokenSource TokenSource { get; } = tokenSource;
+        public ThumbnailWorkHandle? Handle { get; set; }
+    }
 }

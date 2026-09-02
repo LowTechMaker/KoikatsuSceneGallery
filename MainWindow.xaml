@@ -60,16 +60,6 @@
                         <FontIcon Glyph="&#xE722;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem
-                    x:Name="VideosNavItem"
-                    x:Uid="Nav_Videos"
-                    AutomationProperties.AutomationId="VideosNavItem"
-                    Tag="videos"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE714;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
                 <!--  Shown only when an author plugin is installed (see ctor).  -->
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"

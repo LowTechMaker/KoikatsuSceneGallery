@@ -107,7 +107,6 @@ public sealed partial class MainWindow : Window
         SetNavItemVisibility("characters", vm.ShowCharactersNav);
         SetNavItemVisibility("coordinates", vm.ShowCoordinatesNav);
         SetNavItemVisibility("screenshots", vm.ShowScreenshotsNav);
-        SetNavItemVisibility("videos", vm.ShowVideosNav);
     }
 
     private void OnNavItemVisibilityChanged(string tag, bool visible)
@@ -135,9 +134,6 @@ public sealed partial class MainWindow : Window
                 break;
             case "screenshots":
                 ScreenshotsNavItem.Visibility = visibility;
-                break;
-            case "videos":
-                VideosNavItem.Visibility = visibility;
                 break;
         }
     }
@@ -259,9 +255,6 @@ public sealed partial class MainWindow : Window
                     break;
                 case "screenshots":
                     NavFrame.Navigate(typeof(ScreenshotGalleryPage));
-                    break;
-                case "videos":
-                    NavFrame.Navigate(typeof(VideoGalleryPage));
                     break;
                 case "authors" when App.Services.GetRequiredService<AuthorInfoService>().IsAvailable:
                     NavFrame.Navigate(typeof(AuthorsPage));

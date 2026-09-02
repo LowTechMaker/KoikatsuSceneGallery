@@ -396,13 +396,6 @@ public sealed partial class SettingsPage : Page
                 await ViewModel.RemoveScreenshotFolderCommand.ExecuteAsync(path);
         });
 
-    private void RemoveVideoFolder_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveVideoFolder", async () =>
-        {
-            if (sender is Button button && button.CommandParameter is string path)
-                await ViewModel.RemoveVideoFolderCommand.ExecuteAsync(path);
-        });
-
     private void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.AddCoordinateResolution", TryAddCoordinateResolution);
 

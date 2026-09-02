@@ -27,7 +27,7 @@ Synthetic PNGs reproduce only the byte layout consumed by the current code. Synt
 
 # Task 2 decisions
 
-The app uses a small hand-written `AppServiceRegistry` instead of adding a DI package. It supports the one required UI-boundary resolution entry plus keyed screenshot/video instances, while construction and lifetime order remain explicit in `App.OnLaunched`.
+The app uses a small hand-written `AppServiceRegistry` instead of adding a DI package. It supports the one required UI-boundary resolution entry plus the keyed screenshot instance, while construction and lifetime order remain explicit in `App.OnLaunched`.
 
 ViewModels and services receive dependencies through constructors. The Settings ViewModel receives window and gallery access as delayed delegates because the window and gallery are created after settings are loaded; this preserves the existing initialization order without post-construction mutable properties. Author library attachment, refresh, and warmup moved from static `App` methods into `AuthorSourceCoordinator`.
 
