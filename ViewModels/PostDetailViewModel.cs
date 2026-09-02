@@ -93,7 +93,7 @@ public partial class PostDetailViewModel : ObservableObject
         try
         {
             var info = await postService.FetchArtworkDetailAsync(
-                Post.ArtworkId,
+                Post,
                 ct,
                 saveToLocalCache: false);
             if (info is not null)
@@ -120,7 +120,7 @@ public partial class PostDetailViewModel : ObservableObject
         try
         {
             var info = await postService.FetchArtworkDetailAsync(
-                Post.ArtworkId,
+                Post,
                 ct,
                 saveToLocalCache: true);
             if (info is not null)

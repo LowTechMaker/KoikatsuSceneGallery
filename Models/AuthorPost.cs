@@ -33,6 +33,9 @@ public partial class AuthorPost : ObservableObject
 
     public IReadOnlyList<string> LocalFilePaths { get; init; } = [];
 
+    /// <summary>Author folders which contain this artwork's local files.</summary>
+    public IReadOnlyList<string> AuthorDirectories { get; init; } = [];
+
     public string DisplayTitle => Title ?? ArtworkId.Id;
 
     partial void OnTitleChanged(string? value) => OnPropertyChanged(nameof(DisplayTitle));
