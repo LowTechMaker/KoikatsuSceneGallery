@@ -11,43 +11,16 @@ on:
 
 permissions:
   contents: write
-  packages: read
 
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      NuGetPackageSourceCredentials_SceneGalleryGitHub: "Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }}"
 
     steps:
       - name: Checkout application
         uses: actions/checkout@v6
         with:
           path: KoikatsuSceneGallery
-
-      - name: Checkout Pixiv Authors plugin
-        uses: actions/checkout@v6
-        with:
-          repository: LowTechMaker/pixiv-data-plugin
-          path: PixivAuthorsPlugin
-
-      - name: Checkout BepisDB plugin
-        uses: actions/checkout@v6
-        with:
-          repository: LowTechMaker/BepisDbPlugin
-          path: BepisDbPlugin
-
-      - name: Checkout Fanbox plugin
-        uses: actions/checkout@v6
-        with:
-          repository: lowtechmaker/FanboxWebView2Plugin
-          path: FanboxWebView2Plugin
-
-      - name: Checkout GitHub release update plugin
-        uses: actions/checkout@v6
-        with:
-          repository: LowTechMaker/GitHubReleaseUpdatePlugin
-          path: GitHubReleaseUpdatePlugin
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v5
@@ -62,9 +35,13 @@ jobs:
           $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
-      - name: Publish x64
+      - name: Publish application x64
         shell: pwsh
-        run: KoikatsuSceneGallery/scripts/Publish-WithPlugins.ps1 -Configuration Release -RuntimeIdentifier win-x64
+        run: >
+          dotnet publish KoikatsuSceneGallery/KoikatsuSceneGallery.csproj
+          --configuration Release
+          --runtime win-x64
+          --output KoikatsuSceneGallery/artifacts/release/win-x64
 
       - name: Package zip
         shell: pwsh
