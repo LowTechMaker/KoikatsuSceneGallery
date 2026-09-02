@@ -6,12 +6,15 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class AuthorDetailPage : Page
 {
+    private static readonly ResourceLoader ResLoader = new();
+
     public AuthorDetailViewModel ViewModel { get; } = new(
         App.Services.GetService<AuthorPostService>(),
         App.Services.GetRequiredService<GalleryViewModel>(),
@@ -337,6 +340,126 @@ public sealed partial class AuthorDetailPage : Page
             SetRestoreSelectedTabOnBack(PostsTabIndex);
             Frame.Navigate(typeof(PostDetailPage), post);
         }
+    }
+
+    private void AssignUnclassified_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.AssignUnclassified", async () =>
+        {
+            if (App.Services.GetService<AuthorPostService>() is { } postService)
+                await ShowAssignUnclassifiedDialogAsync(postService);
+        });
+
+    private async Task ShowAssignUnclassifiedDialogAsync(AuthorPostService postService)
+    {
+        if (ViewModel.UnassignedImages.Count == 0)
+            return;
+
+        var artworkIdBox = new TextBox
+        {
+            PlaceholderText = ResLoader.GetString("AuthorDetail_ArtworkIdPlaceholder"),
+        };
+        var selectedCount = new TextBlock
+        { };
+        var error = new TextBlock
+        {
+            Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Microsoft.UI.Colors.IndianRed),
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+        };
+        var progress = new ProgressRing
+        {
+            Width = 18,
+            Height = 18,
+            IsActive = false,
+            Visibility = Visibility.Collapsed,
+        };
+        var files = new ListView
+        {
+            ItemsSource = ViewModel.UnassignedImages,
+            SelectionMode = ListViewSelectionMode.Multiple,
+            ItemTemplate = (DataTemplate)Resources["UnassignedAuthorImageTemplate"],
+            MaxHeight = 360,
+        };
+        var content = new StackPanel { Spacing = 10 };
+        content.Children.Add(new TextBlock
+        {
+            Text = ResLoader.GetString("AuthorDetail_AssignUnclassifiedDescription"),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        content.Children.Add(artworkIdBox);
+        content.Children.Add(selectedCount);
+        content.Children.Add(error);
+        content.Children.Add(progress);
+        content.Children.Add(files);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = ResLoader.GetString("AuthorDetail_AssignUnclassifiedTitle"),
+            Content = content,
+            PrimaryButtonText = ResLoader.GetString("AuthorDetail_Assign"),
+            CloseButtonText = ResLoader.GetString("AuthorDetail_Done"),
+            DefaultButton = ContentDialogButton.Primary,
+            IsPrimaryButtonEnabled = false,
+        };
+
+        var isAssigning = false;
+        void UpdateState()
+        {
+            selectedCount.Text = string.Format(
+                ResLoader.GetString("AuthorDetail_SelectedFiles"),
+                files.SelectedItems.Count);
+            dialog.IsPrimaryButtonEnabled = !isAssigning
+                && files.SelectedItems.Count > 0
+                && !string.IsNullOrWhiteSpace(artworkIdBox.Text);
+        }
+
+        artworkIdBox.TextChanged += (_, _) => UpdateState();
+        files.SelectionChanged += (_, _) => UpdateState();
+        UpdateState();
+
+        dialog.PrimaryButtonClick += async (_, args) =>
+        {
+            // Keep this batch workspace open after each successful assignment.
+            args.Cancel = true;
+            var deferral = args.GetDeferral();
+            isAssigning = true;
+            error.Visibility = Visibility.Collapsed;
+            progress.IsActive = true;
+            progress.Visibility = Visibility.Visible;
+            UpdateState();
+            try
+            {
+                var selected = files.SelectedItems.OfType<UnassignedAuthorImage>().ToList();
+                using var operationCts = new CancellationTokenSource();
+                await ViewModel.AssignUnassignedImagesAsync(
+                    postService,
+                    selected,
+                    artworkIdBox.Text,
+                    operationCts.Token);
+
+                files.SelectedItems.Clear();
+                artworkIdBox.Text = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                App.Services.GetRequiredService<IAppLogger>()
+                    .LogError("AuthorDetail.AssignUnclassified", ex, artworkIdBox.Text);
+                error.Text = ex.Message;
+                error.Visibility = Visibility.Visible;
+            }
+            finally
+            {
+                isAssigning = false;
+                progress.IsActive = false;
+                progress.Visibility = Visibility.Collapsed;
+                UpdateState();
+                deferral.Complete();
+            }
+        };
+
+        await dialog.ShowAsync();
     }
 
     private void PostImage_ItemClick(object sender, ItemClickEventArgs e)

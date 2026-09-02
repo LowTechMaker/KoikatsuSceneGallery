@@ -61,8 +61,31 @@ internal sealed class PostMetadataStore
         try
         {
             var existing = ReadFile(path);
-            if (existing is not null && existing.FetchedAt >= document.FetchedAt)
-                return false;
+            if (existing is not null)
+            {
+                // Artwork pages can be imported at different times. Preserve
+                // every known local filename even when the cached metadata is
+                // newer than the incoming document.
+                var mergedFileNames = MergeLocalFileNames(
+                    existing.LocalFileNames,
+                    document.LocalFileNames);
+
+                if (existing.FetchedAt >= document.FetchedAt)
+                {
+                    if (mergedFileNames.Count == existing.LocalFileNames.Count)
+                        return false;
+
+                    document = existing with
+                    {
+                        SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
+                        LocalFileNames = mergedFileNames,
+                    };
+                }
+                else
+                {
+                    document = document with { LocalFileNames = mergedFileNames };
+                }
+            }
 
             var metadataDirectory = Path.Combine(
                 Path.GetFullPath(authorDirectory),
@@ -163,6 +186,10 @@ internal sealed class PostMetadataStore
         {
             using var stream = File.OpenRead(path);
             var document = JsonSerializer.Deserialize<PostMetadataDocument>(stream, JsonOptions);
+            // Version 1 predates LocalFileNames. System.Text.Json may leave
+            // absent init properties null, so normalize it before validation.
+            if (document is not null && document.LocalFileNames is null)
+                document = document with { LocalFileNames = [] };
             return document is not null && IsValid(document) ? document : null;
         }
         catch (JsonException)
@@ -181,14 +208,30 @@ internal sealed class PostMetadataStore
             throw new ArgumentException("The post metadata document is invalid.", nameof(document));
     }
 
+    private static List<string> MergeLocalFileNames(
+        IReadOnlyList<string> existing,
+        IReadOnlyList<string> added)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var merged = new List<string>(existing.Count + added.Count);
+        foreach (var fileName in existing.Concat(added))
+        {
+            if (!string.IsNullOrWhiteSpace(fileName) && seen.Add(fileName))
+                merged.Add(fileName);
+        }
+
+        return merged;
+    }
+
     private static bool IsValid(PostMetadataDocument document)
-        => document.SchemaVersion == PostMetadataDocument.CurrentSchemaVersion
+        => document.SchemaVersion is >= 1 and <= PostMetadataDocument.CurrentSchemaVersion
             && !string.IsNullOrWhiteSpace(document.ProviderId)
             && !string.IsNullOrWhiteSpace(document.ArtworkId)
             && !string.IsNullOrWhiteSpace(document.AuthorName)
             && !string.IsNullOrWhiteSpace(document.AuthorId)
             && document.Rating is >= 0 and <= 2
             && document.Tags is not null
+            && document.LocalFileNames is not null
             && document.Tags.All(static tag =>
                 tag is not null && !string.IsNullOrWhiteSpace(tag.Name))
             && document.FetchedAt != default;

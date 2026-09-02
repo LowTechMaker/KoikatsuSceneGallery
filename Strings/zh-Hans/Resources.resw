@@ -584,6 +584,33 @@
   <data name="AuthorDetail_PostsTab.Text" xml:space="preserve">
     <value>帖子</value>
   </data>
+  <data name="AuthorDetail_UnassignedFiles.Text" xml:space="preserve">
+    <value>未归类的本地文件</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassified.Content" xml:space="preserve">
+    <value>指定帖子</value>
+  </data>
+  <data name="AuthorDetail_ArtworkIdPlaceholder" xml:space="preserve">
+    <value>作品 ID 或网址</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedDescription" xml:space="preserve">
+    <value>选择属于同一帖子的文件，然后输入作品 ID 或粘贴网址。文件会移入该作品文件夹。</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedTitle" xml:space="preserve">
+    <value>指定本地文件至帖子</value>
+  </data>
+  <data name="AuthorDetail_Assign" xml:space="preserve">
+    <value>指定</value>
+  </data>
+  <data name="AuthorDetail_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AuthorDetail_Done" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="AuthorDetail_SelectedFiles" xml:space="preserve">
+    <value>已选择 {0} 个文件</value>
+  </data>
   <!-- PostDetailPage -->
   <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
     <value>在浏览器打开</value>

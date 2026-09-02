@@ -16,5 +16,12 @@ internal sealed record PostMetadataDocument(
     IReadOnlyList<PostMetadataTag> Tags,
     DateTimeOffset FetchedAt)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+
+    /// <summary>
+    /// Local card file names belonging to this artwork. Version 2 added this
+    /// information so metadata can still be associated with manually named
+    /// files that do not embed an artwork identifier.
+    /// </summary>
+    public IReadOnlyList<string> LocalFileNames { get; init; } = [];
 }

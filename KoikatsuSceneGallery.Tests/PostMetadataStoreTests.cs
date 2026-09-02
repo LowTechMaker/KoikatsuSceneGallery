@@ -38,7 +38,7 @@ public sealed class PostMetadataStoreTests
         Assert.Equal(document.FetchedAt, loaded.FetchedAt);
         Assert.Equal(document.Tags, loaded.Tags);
         using var json = JsonDocument.Parse(File.ReadAllText(path));
-        Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(PostMetadataDocument.CurrentSchemaVersion, json.RootElement.GetProperty("schemaVersion").GetInt32());
 
         if (OperatingSystem.IsWindows())
         {
@@ -77,6 +77,35 @@ public sealed class PostMetadataStoreTests
             }));
 
         Assert.Empty(store.ReadAll(directory.Path));
+    }
+
+    [Fact]
+    public async Task Read_AcceptsExistingVersionTwoSidecar()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var path = store.GetSidecarPath(directory.Path, "pixiv", "12345");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, """
+        {
+          "schemaVersion": 2,
+          "providerId": "pixiv",
+          "artworkId": "12345",
+          "authorName": "作者",
+          "authorId": "987",
+          "title": "已快取作品",
+          "description": "說明",
+          "rating": 1,
+          "tags": [{ "name": "制服", "translatedName": "uniform" }],
+          "fetchedAt": "2026-09-02T12:34:56+00:00",
+          "localFileNames": ["manual-name.png"]
+        }
+        """);
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(loaded);
+        Assert.Equal("已快取作品", loaded!.Title);
+        Assert.Equal(["manual-name.png"], loaded.LocalFileNames);
     }
 
     private static PostMetadataDocument CreateDocument(string title) => new(

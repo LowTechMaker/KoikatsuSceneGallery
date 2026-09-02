@@ -49,6 +49,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     public ObservableCollection<CoordinateCard> Coordinates { get; } = [];
     public ObservableCollection<AuthorPost> Posts { get; } = [];
     public ObservableCollection<PostImageGroupViewModel> PostGroups { get; } = [];
+    public ObservableCollection<UnassignedAuthorImage> UnassignedImages { get; } = [];
 
     [ObservableProperty]
     public partial int SceneCount { get; set; }
@@ -61,6 +62,12 @@ public partial class AuthorDetailViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int PostCount { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnassignedImages))]
+    public partial int UnassignedImageCount { get; set; }
+
+    public bool HasUnassignedImages => UnassignedImageCount > 0;
 
     [ObservableProperty]
     public partial bool IsLoadingPosts { get; set; }
@@ -107,7 +114,8 @@ public partial class AuthorDetailViewModel : ObservableObject
         IsLoadingPosts = true;
         try
         {
-            var posts = await postService.ScanAuthorPostsAsync(Author.Key, ct);
+            var scanResult = await postService.ScanAuthorPostDataAsync(Author.Key, ct);
+            var posts = scanResult.Posts;
             var groups = await Task.Run(
                 () => posts.Select(p => new PostImageGroupViewModel(p)).ToList(), ct);
 
@@ -119,11 +127,33 @@ public partial class AuthorDetailViewModel : ObservableObject
                 PostGroups.Add(groups[i]);
             }
             PostCount = Posts.Count;
+
+            UnassignedImages.Clear();
+            foreach (var image in scanResult.UnassignedImages)
+                UnassignedImages.Add(image);
+            UnassignedImageCount = UnassignedImages.Count;
         }
         catch (OperationCanceledException ex) { _logger.LogError("AuthorDetail.LoadPostsCanceled", ex, Author?.Key.Id); }
         finally
         {
             IsLoadingPosts = false;
         }
+    }
+
+    public async Task AssignUnassignedImagesAsync(
+        AuthorPostService postService,
+        IReadOnlyList<UnassignedAuthorImage> images,
+        string artworkId,
+        CancellationToken ct)
+    {
+        if (Author is null || images.Count == 0)
+            return;
+
+        await postService.AssignUnclassifiedImagesAsync(
+            Author.Key,
+            images,
+            artworkId,
+            ct);
+        await LoadPostsAsync(postService, ct);
     }
 }

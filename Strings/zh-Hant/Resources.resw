@@ -584,6 +584,33 @@
   <data name="AuthorDetail_PostsTab.Text" xml:space="preserve">
     <value>貼文</value>
   </data>
+  <data name="AuthorDetail_UnassignedFiles.Text" xml:space="preserve">
+    <value>未歸類的本機檔案</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassified.Content" xml:space="preserve">
+    <value>指定貼文</value>
+  </data>
+  <data name="AuthorDetail_ArtworkIdPlaceholder" xml:space="preserve">
+    <value>作品 ID 或網址</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedDescription" xml:space="preserve">
+    <value>選擇屬於同一篇貼文的檔案，然後輸入作品 ID 或貼上網址。檔案會搬入該作品資料夾。</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedTitle" xml:space="preserve">
+    <value>指定本機檔案至貼文</value>
+  </data>
+  <data name="AuthorDetail_Assign" xml:space="preserve">
+    <value>指定</value>
+  </data>
+  <data name="AuthorDetail_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AuthorDetail_Done" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="AuthorDetail_SelectedFiles" xml:space="preserve">
+    <value>已選取 {0} 個檔案</value>
+  </data>
   <!-- PostDetailPage -->
   <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
     <value>在瀏覽器開啟</value>

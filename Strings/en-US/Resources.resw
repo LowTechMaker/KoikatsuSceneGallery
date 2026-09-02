@@ -584,6 +584,33 @@
   <data name="AuthorDetail_PostsTab.Text" xml:space="preserve">
     <value>Posts</value>
   </data>
+  <data name="AuthorDetail_UnassignedFiles.Text" xml:space="preserve">
+    <value>Unassigned local files</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassified.Content" xml:space="preserve">
+    <value>Assign to post</value>
+  </data>
+  <data name="AuthorDetail_ArtworkIdPlaceholder" xml:space="preserve">
+    <value>Artwork ID or URL</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedDescription" xml:space="preserve">
+    <value>Select files from one artwork, then enter its artwork ID or paste its URL. Files are moved into an artwork folder.</value>
+  </data>
+  <data name="AuthorDetail_AssignUnclassifiedTitle" xml:space="preserve">
+    <value>Assign local files to a post</value>
+  </data>
+  <data name="AuthorDetail_Assign" xml:space="preserve">
+    <value>Assign</value>
+  </data>
+  <data name="AuthorDetail_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AuthorDetail_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="AuthorDetail_SelectedFiles" xml:space="preserve">
+    <value>{0} files selected</value>
+  </data>
   <!-- PostDetailPage -->
   <data name="PostDetail_OpenInBrowserLabel.Text" xml:space="preserve">
     <value>Open in browser</value>

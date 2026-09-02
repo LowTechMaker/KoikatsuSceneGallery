@@ -613,9 +613,12 @@ public sealed class ImportService
 
         try
         {
+            var localFileNames = string.IsNullOrWhiteSpace(item.DestinationPath)
+                ? []
+                : new[] { Path.GetFileName(item.DestinationPath) };
             await _postMetadataStore.WriteAsync(
                 authorDirectory,
-                PostMetadataMapper.ToDocument(info),
+                PostMetadataMapper.ToDocument(info, localFileNames),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

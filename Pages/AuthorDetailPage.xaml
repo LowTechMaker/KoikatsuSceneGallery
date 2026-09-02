@@ -10,6 +10,31 @@
     xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <DataTemplate x:Key="UnassignedAuthorImageTemplate" x:DataType="models:UnassignedAuthorImage">
+            <Grid Margin="0,2" ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="96" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Height="64"
+                    CornerRadius="4"
+                    Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <Image
+                        Stretch="UniformToFill"
+                        Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(ImageUri)}" />
+                </Border>
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Text="{x:Bind FileName}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{x:Bind FileName}" />
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
     <Grid Padding="24,16,24,0" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -363,12 +388,34 @@
                     </StackPanel>
                 </PivotItem.Header>
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel
+                        Margin="0,8,0,4"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        Visibility="{x:Bind ViewModel.HasUnassignedImages, Mode=OneWay}">
+                        <TextBlock
+                            x:Uid="AuthorDetail_UnassignedFiles"
+                            VerticalAlignment="Center" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind ViewModel.UnassignedImageCount, Mode=OneWay}" />
+                        <Button
+                            x:Uid="AuthorDetail_AssignUnclassified"
+                            Click="AssignUnclassified_Click" />
+                    </StackPanel>
                     <ProgressRing
+                        Grid.RowSpan="2"
                         IsActive="{x:Bind ViewModel.IsLoadingPosts, Mode=OneWay}"
                         Visibility="{x:Bind ViewModel.IsLoadingPosts, Mode=OneWay}"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" />
                     <ListView
+                        Grid.Row="1"
                         x:Name="PostsList"
                         AutomationProperties.AutomationId="AuthorPostsList"
                         Margin="0,8,0,0"

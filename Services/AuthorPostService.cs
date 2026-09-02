@@ -69,15 +69,26 @@ public sealed class AuthorPostService
     /// </summary>
     public async Task<List<AuthorPost>> ScanAuthorPostsAsync(
         AuthorKey authorKey, CancellationToken ct)
+        => (await ScanAuthorPostDataAsync(authorKey, ct).ConfigureAwait(false))
+            .Posts
+            .ToList();
+
+    /// <summary>
+    /// Scans the author's local folders, returning both recognized posts and
+    /// local PNG files for which no safe post association exists.
+    /// </summary>
+    public async Task<AuthorPostScanResult> ScanAuthorPostDataAsync(
+        AuthorKey authorKey, CancellationToken ct)
     {
         var authorProvider = FindAuthorProvider(authorKey.ProviderId);
-        if (authorProvider is null) return [];
+        if (authorProvider is null) return new([], []);
 
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
 
         return await Task.Run(() =>
         {
             var posts = new Dictionary<string, PostAccumulator>(StringComparer.OrdinalIgnoreCase);
+            var scannedImages = new List<UnassignedAuthorImage>();
 
             var allRoots = config.FolderPaths
                 .Concat(config.CharacterFolderPaths)
@@ -115,7 +126,7 @@ public sealed class AuthorPostService
                                     var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
                                     if (parsed is null || parsed.Key != authorKey) continue;
 
-                                    ScanAuthorDirectory(authorDir, authorKey, posts, ct);
+                                    ScanAuthorDirectory(authorDir, authorKey, posts, scannedImages, ct);
                                 }
                             }
                             catch (OperationCanceledException) { throw; }
@@ -153,8 +164,115 @@ public sealed class AuthorPostService
             }
 
             result.Sort((a, b) => string.Compare(b.ArtworkId.Id, a.ArtworkId.Id, StringComparison.Ordinal));
-            return result;
+            var assignedPaths = new HashSet<string>(
+                posts.Values.SelectMany(static post => post.FilePaths),
+                StringComparer.OrdinalIgnoreCase);
+            var unassigned = scannedImages
+                .Where(image => !assignedPaths.Contains(image.FilePath))
+                .GroupBy(image => image.FilePath, StringComparer.OrdinalIgnoreCase)
+                .Select(static group => group.First())
+                .OrderBy(image => image.FileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return new AuthorPostScanResult(result, unassigned);
         }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gives selected unclassified local images an explicit artwork identity.
+    /// The relationship is persisted in an artwork-ID folder, while an
+    /// existing sidecar (when present) is updated with the added filenames.
+    /// </summary>
+    public async Task AssignUnclassifiedImagesAsync(
+        AuthorKey authorKey,
+        IReadOnlyList<UnassignedAuthorImage> images,
+        string artworkId,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        var provider = FindProvider(authorKey.ProviderId)
+            ?? throw new InvalidOperationException("The artwork provider is unavailable.");
+        var submittedArtworkReference = artworkId.Trim();
+        var parsedArtwork = provider.TryParseUrl(submittedArtworkReference);
+        var normalizedArtworkId = parsedArtwork?.Id ?? submittedArtworkReference;
+        if (parsedArtwork is not null
+            && !parsedArtwork.ProviderId.Equals(
+                authorKey.ProviderId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The artwork URL belongs to a different provider.", nameof(artworkId));
+        }
+        if (string.IsNullOrWhiteSpace(normalizedArtworkId)
+            || normalizedArtworkId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            || normalizedArtworkId.Contains(Path.DirectorySeparatorChar)
+            || normalizedArtworkId.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new ArgumentException("Enter a valid artwork ID or artwork URL.", nameof(artworkId));
+        }
+
+        var selectedImages = images
+            .GroupBy(image => image.FilePath, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .ToList();
+        if (selectedImages.Count == 0)
+            return;
+
+        foreach (var image in selectedImages)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!File.Exists(image.FilePath))
+                throw new FileNotFoundException("A selected local file no longer exists.", image.FilePath);
+            if (!IsWithinDirectory(image.FilePath, image.AuthorDirectory))
+                throw new InvalidOperationException("A selected file is outside its author directory.");
+        }
+
+        var artwork = new ArtworkId(authorKey.ProviderId, normalizedArtworkId);
+        var destinations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var authorDirectory in selectedImages
+                     .Select(static image => image.AuthorDirectory)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            ct.ThrowIfCancellationRequested();
+            destinations[authorDirectory] = FindArtworkDirectory(
+                authorDirectory,
+                provider,
+                artwork)
+                ?? Path.Combine(authorDirectory, $"[SCENE] ({normalizedArtworkId})");
+        }
+
+        var assignments = selectedImages
+            .Select(image => new ArtworkFileAssignment(
+                image.FilePath,
+                destinations[image.AuthorDirectory]))
+            .ToList();
+        await Task.Run(
+            () => new ArtworkFileAssignmentService().Move(assignments, ct),
+            ct).ConfigureAwait(false);
+
+        foreach (var authorDirectory in destinations.Keys)
+        {
+            ct.ThrowIfCancellationRequested();
+            var document = _postMetadataStore.Read(
+                authorDirectory,
+                authorKey.ProviderId,
+                normalizedArtworkId);
+            if (document is null)
+                continue;
+
+            var fileNames = selectedImages
+                .Where(image => image.AuthorDirectory.Equals(
+                    authorDirectory,
+                    StringComparison.OrdinalIgnoreCase))
+                .Select(static image => image.FileName)
+                .ToList();
+            await _postMetadataStore.WriteAsync(
+                authorDirectory,
+                document with
+                {
+                    SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
+                    LocalFileNames = fileNames,
+                },
+                ct).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -201,9 +319,16 @@ public sealed class AuthorPostService
 
             try
             {
+                var localFileNames = post.LocalFilePaths
+                    .Where(path => File.Exists(path) && IsWithinDirectory(path, authorDirectory))
+                    .Select(Path.GetFileName)
+                    .Where(static name => !string.IsNullOrWhiteSpace(name))
+                    .Select(static name => name!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
                 await _postMetadataStore.WriteAsync(
                     authorDirectory,
-                    PostMetadataMapper.ToDocument(info),
+                    PostMetadataMapper.ToDocument(info, localFileNames),
                     ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -229,16 +354,20 @@ public sealed class AuthorPostService
         string authorDir,
         AuthorKey authorKey,
         Dictionary<string, PostAccumulator> posts,
+        List<UnassignedAuthorImage> scannedImages,
         CancellationToken ct)
     {
         var providerId = authorKey.ProviderId;
         var scanSucceeded = true;
+        var scannedFileNames = new ScannedFileNameIndex();
         try
         {
             foreach (var file in Directory.EnumerateFiles(authorDir, "*.png"))
             {
                 ct.ThrowIfCancellationRequested();
+                scannedImages.Add(new(file, authorDir));
                 var artworkId = TryParseFilename(Path.GetFileName(file), providerId);
+                scannedFileNames.Record(file, artworkId?.Id);
                 if (artworkId is not null)
                     AddOrUpdate(posts, artworkId.ProviderId, artworkId.Id, null, file, authorDir);
             }
@@ -274,19 +403,24 @@ public sealed class AuthorPostService
                     foreach (var file in Directory.EnumerateFiles(subDir, "*.png"))
                     {
                         ct.ThrowIfCancellationRequested();
+                        scannedImages.Add(new(file, authorDir));
                         localFiles.Add(file);
-                        if (artworkId is null)
+                        if (artworkId is not null)
                         {
-                            var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
-                            if (fromFile is not null)
-                                AddOrUpdate(
-                                    posts,
-                                    fromFile.ProviderId,
-                                    fromFile.Id,
-                                    null,
-                                    file,
-                                    authorDir);
+                            scannedFileNames.Record(file, artworkId.Id);
+                            continue;
                         }
+
+                        var fromFile = TryParseFilename(Path.GetFileName(file), providerId);
+                        scannedFileNames.Record(file, fromFile?.Id);
+                        if (fromFile is not null)
+                            AddOrUpdate(
+                                posts,
+                                fromFile.ProviderId,
+                                fromFile.Id,
+                                null,
+                                file,
+                                authorDir);
                     }
                 }
                 catch (OperationCanceledException) { throw; }
@@ -313,13 +447,14 @@ public sealed class AuthorPostService
             _logger.LogError("AuthorPosts.ScanAuthorDirectories", ex, authorDir);
         }
 
-        ReconcileSidecars(authorDir, authorKey, posts, scanSucceeded, ct);
+        ReconcileSidecars(authorDir, authorKey, posts, scannedFileNames, scanSucceeded, ct);
     }
 
     private void ReconcileSidecars(
         string authorDir,
         AuthorKey authorKey,
         Dictionary<string, PostAccumulator> posts,
+        ScannedFileNameIndex scannedFileNames,
         bool deleteOrphans,
         CancellationToken ct)
     {
@@ -344,15 +479,46 @@ public sealed class AuthorPostService
             }
 
             var key = BuildPostKey(document.ProviderId, document.ArtworkId);
+            PostAccumulator? existingPost = null;
             if (posts.TryGetValue(key, out var post)
                 && post.AuthorDirectories.Contains(authorDir))
             {
-                if (post.Metadata is null || document.FetchedAt > post.Metadata.FetchedAt)
-                    post.Metadata = document;
+                existingPost = post;
+                if (existingPost.Metadata is null || document.FetchedAt > existingPost.Metadata.FetchedAt)
+                    existingPost.Metadata = document;
+            }
+
+            // Version 2 sidecars remember the local filenames. This recovers
+            // manually assigned root files whose filenames/folder names carry
+            // no artwork ID. This must still run when the post was found from
+            // an artwork folder: a post can legitimately contain both folder
+            // based files and legacy root files tracked by the sidecar.
+            var match = scannedFileNames.Match(document.ArtworkId, document.LocalFileNames);
+            if (match.Files.Count > 0)
+            {
+                AddOrUpdate(
+                    posts,
+                    document.ProviderId,
+                    document.ArtworkId,
+                    null,
+                    match.Files,
+                    authorDir);
+                if (posts.TryGetValue(key, out var matchedPost)
+                    && (matchedPost.Metadata is null
+                        || document.FetchedAt > matchedPost.Metadata.FetchedAt))
+                {
+                    matchedPost.Metadata = document;
+                }
                 continue;
             }
 
-            if (!deleteOrphans)
+            // A folder-derived post is valid even if its sidecar has no file
+            // names (for example an old v1 sidecar), so never treat it as an
+            // orphan merely because the filename match found nothing.
+            if (existingPost is not null)
+                continue;
+
+            if (!deleteOrphans || match.HasAmbiguousName)
                 continue;
 
             try
@@ -409,6 +575,25 @@ public sealed class AuthorPostService
 
     private static string BuildPostKey(string providerId, string artworkId)
         => $"{providerId}\u001F{artworkId}";
+
+    private static string? FindArtworkDirectory(
+        string authorDirectory,
+        ICardImportProvider provider,
+        ArtworkId artwork)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(authorDirectory))
+        {
+            var parsed = provider.TryParseArtworkFolderName(Path.GetFileName(directory));
+            if (parsed is not null
+                && parsed.ProviderId.Equals(artwork.ProviderId, StringComparison.OrdinalIgnoreCase)
+                && parsed.Id.Equals(artwork.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return directory;
+            }
+        }
+
+        return null;
+    }
 
     private static bool IsWithinDirectory(string path, string directory)
     {
