@@ -68,26 +68,11 @@ Plugin directories must not contain `SceneGallery.PluginSdk.dll` or `KoikatsuSce
 
 If one or more plugin siblings are absent, the script lists every missing directory and prompts before continuing. `-AllowMissing` (also aliased as `-allow-missing`) skips the prompt and publishes the available plugins. In CI, missing siblings fail unless `-AllowMissing` is explicit, which prevents a non-interactive release from hanging or silently omitting plugins.
 
-## Smoke tests
-
-Run the plugin tests after restoring the test project and all present plugin projects for `win-x64`:
-
-```powershell
-dotnet test .\KoikatsuSceneGallery.PluginSmokeTests\KoikatsuSceneGallery.PluginSmokeTests.csproj `
-  -c Release -p:Platform=x64 -p:RuntimeIdentifier=win-x64
-```
-
-The test project publishes each plugin with `--no-restore` into a unique temporary `Plugins/<name>` directory, rejects duplicate SDK/Core assemblies, and loads it with the production `PluginService` and `PluginLoadContext` source files. Four theory cases independently verify loaded status, name, version, assembly metadata, and every capability interface declared by that plugin. A fifth test publishes all four plugins into one tree and confirms that one `PluginService` instance enumerates all four without shared AssemblyLoadContext conflicts.
-
-When a sibling project is absent, its individual theory case is reported as skipped with the missing repository name. The combined four-plugin case is also skipped and lists all missing siblings. The test project does not reference the WinUI executable project: doing so runs the Windows App SDK module initializer before xUnit reaches the test and fails on machines without a registered runtime. Instead, the test project compile-links the exact production loader source and references only the pure Plugin SDK project.
-
-The tests do not call Pixiv, Fanbox, BepisDB, GitHub, or any other external service. Plugin `Initialize` methods are exercised, but capability methods that fetch remote data are not invoked. The Fanbox and BepisDB plugins are therefore checked for assembly resolution and registration only; the WebView2 runtime, browser environment, authentication, cookies, UI, and actual network operations are outside this smoke test. This is intentional so the test can run after an offline restore and in CI without a WebView2 runtime initialization step.
-
 ## CI and release integration
 
-`.github/workflows/build.yml` contains a Windows plugin smoke-test job. It checks the application and four plugin repositories out as siblings, restores each project, then runs the smoke tests with `--no-restore`. The existing Linux Core tests and Windows application build remain separate.
+The plugin packaging smoke-test project and its cross-repository CI job were retired in September 2026. CI now runs the Core test suite and the Windows application build only.
 
-`.github/workflows/release.yml` now checks out the same five-repository layout and calls `Publish-WithPlugins.ps1`. Its zip is created from `artifacts/release/win-x64`, so the release archive contains the application, all four plugin directories, and `plugins.manifest.json` from the same invocation.
+`.github/workflows/release.yml` publishes the self-contained Windows application directly. Its zip is created from `artifacts/release/win-x64` and does not bundle plugins.
 
 ## Known limitations and lessons
 
