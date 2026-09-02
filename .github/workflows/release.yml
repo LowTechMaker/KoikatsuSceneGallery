@@ -41,6 +41,9 @@ jobs:
           dotnet publish KoikatsuSceneGallery/KoikatsuSceneGallery.csproj
           --configuration Release
           --runtime win-x64
+          --self-contained true
+          -p:WindowsPackageType=None
+          -p:WindowsAppSDKSelfContained=true
           --output KoikatsuSceneGallery/artifacts/release/win-x64
 
       - name: Package zip
