@@ -37,6 +37,9 @@ public sealed partial class AuthorDetailPage : Page
 
     private CancellationTokenSource? _postsCts;
     private AuthorDetailNavigationParameter? _navigationParameter;
+    private readonly HashSet<SceneCard> _requestedSceneThumbnails = [];
+    private readonly HashSet<CharacterCard> _requestedCharacterThumbnails = [];
+    private readonly HashSet<CoordinateCard> _requestedCoordinateThumbnails = [];
 
     public AuthorDetailPage()
     {
@@ -50,12 +53,6 @@ public sealed partial class AuthorDetailPage : Page
         {
             _navigationParameter = navigationParameter;
             ViewModel.Load(navigationParameter.Summary);
-            foreach (var card in ViewModel.Scenes)
-                App.Services.GetRequiredService<GalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Characters)
-                App.Services.GetRequiredService<CharacterGalleryViewModel>().RequestThumbnail(card);
-            foreach (var card in ViewModel.Coordinates)
-                App.Services.GetRequiredService<CoordinateGalleryViewModel>().RequestThumbnail(card);
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
             {
@@ -80,6 +77,7 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        ReleaseRequestedThumbnails();
         _postsCts?.Cancel();
         _postsCts?.Dispose();
         _postsCts = null;
@@ -92,6 +90,129 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (sender is GridView grid)
             ApplyLayout(grid, grid == ScenesGrid ? SceneImageRatio : CharaImageRatio);
+    }
+
+    private void ScenesGrid_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is SceneCard card)
+                ReleaseThumbnail(card);
+            return;
+        }
+
+        args.RegisterUpdateCallback(ScenesGrid_Phase1);
+    }
+
+    private void ScenesGrid_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is SceneCard card)
+            RequestThumbnail(card);
+    }
+
+    private void CharactersGrid_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is CharacterCard card)
+                ReleaseThumbnail(card);
+            return;
+        }
+
+        args.RegisterUpdateCallback(CharactersGrid_Phase1);
+    }
+
+    private void CharactersGrid_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CharacterCard card)
+            RequestThumbnail(card);
+    }
+
+    private void CoordinatesGrid_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is CoordinateCard card)
+                ReleaseThumbnail(card);
+            return;
+        }
+
+        args.RegisterUpdateCallback(CoordinatesGrid_Phase1);
+    }
+
+    private void CoordinatesGrid_Phase1(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.Item is CoordinateCard card)
+            RequestThumbnail(card);
+    }
+
+    private void RequestThumbnail(SceneCard card)
+    {
+        _requestedSceneThumbnails.Add(card);
+        App.Services.GetRequiredService<GalleryViewModel>()
+            .RequestThumbnail(card, ThumbnailWorkPriority.Visible);
+    }
+
+    private void RequestThumbnail(CharacterCard card)
+    {
+        _requestedCharacterThumbnails.Add(card);
+        App.Services.GetRequiredService<CharacterGalleryViewModel>()
+            .RequestThumbnail(card, ThumbnailWorkPriority.Visible);
+    }
+
+    private void RequestThumbnail(CoordinateCard card)
+    {
+        _requestedCoordinateThumbnails.Add(card);
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>()
+            .RequestThumbnail(card, ThumbnailWorkPriority.Visible);
+    }
+
+    private void ReleaseThumbnail(SceneCard card)
+    {
+        _requestedSceneThumbnails.Remove(card);
+        App.Services.GetRequiredService<GalleryViewModel>().ReleaseThumbnail(card);
+    }
+
+    private void ReleaseThumbnail(CharacterCard card)
+    {
+        _requestedCharacterThumbnails.Remove(card);
+        App.Services.GetRequiredService<CharacterGalleryViewModel>().ReleaseThumbnail(card);
+    }
+
+    private void ReleaseThumbnail(CoordinateCard card)
+    {
+        _requestedCoordinateThumbnails.Remove(card);
+        App.Services.GetRequiredService<CoordinateGalleryViewModel>().ReleaseThumbnail(card);
+    }
+
+    private void ReleaseRequestedThumbnails()
+    {
+        var sceneViewModel = App.Services.GetRequiredService<GalleryViewModel>();
+        foreach (var card in _requestedSceneThumbnails)
+            sceneViewModel.ReleaseThumbnail(card);
+        _requestedSceneThumbnails.Clear();
+
+        var characterViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        foreach (var card in _requestedCharacterThumbnails)
+            characterViewModel.ReleaseThumbnail(card);
+        _requestedCharacterThumbnails.Clear();
+
+        var coordinateViewModel = App.Services.GetRequiredService<CoordinateGalleryViewModel>();
+        foreach (var card in _requestedCoordinateThumbnails)
+            coordinateViewModel.ReleaseThumbnail(card);
+        _requestedCoordinateThumbnails.Clear();
     }
 
     private static void ApplyLayout(GridView grid, double imageRatio)
@@ -131,7 +252,11 @@ public sealed partial class AuthorDetailPage : Page
 
     public static string FormatCount(int count) => $"({count})";
 
-    public static BitmapImage CreateThumbnail(Uri uri) => new() { DecodePixelWidth = 160, UriSource = uri };
+    public static BitmapImage? CreateThumbnail(Uri? uri) =>
+        uri is null ? null : new BitmapImage { DecodePixelWidth = 300, UriSource = uri };
+
+    public static BitmapImage? CreatePostThumbnail(Uri? uri) =>
+        uri is null ? null : new BitmapImage { DecodePixelWidth = 160, UriSource = uri };
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 

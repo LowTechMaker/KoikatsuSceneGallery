@@ -131,6 +131,7 @@
                     AutomationProperties.AutomationId="AuthorScenesGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
+                    ContainerContentChanging="ScenesGrid_ContainerContentChanging"
                     DragItemsStarting="ScenesGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="ScenesGrid_ItemClick"
@@ -173,11 +174,10 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image Stretch="Uniform">
-                                        <Image.Source>
-                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                        </Image.Source>
-                                    </Image>
+                                    <Image
+                                        x:Phase="1"
+                                        Stretch="Uniform"
+                                        Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" />
                                 </Border>
 
                                 <TextBlock
@@ -209,6 +209,7 @@
                     AutomationProperties.AutomationId="AuthorCharactersGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
+                    ContainerContentChanging="CharactersGrid_ContainerContentChanging"
                     DragItemsStarting="CharactersGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="CharactersGrid_ItemClick"
@@ -251,11 +252,10 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image Stretch="Uniform">
-                                        <Image.Source>
-                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                        </Image.Source>
-                                    </Image>
+                                    <Image
+                                        x:Phase="1"
+                                        Stretch="Uniform"
+                                        Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" />
                                 </Border>
 
                                 <TextBlock
@@ -287,6 +287,7 @@
                     AutomationProperties.AutomationId="AuthorCoordinatesGrid"
                     Margin="0,8,0,0"
                     CanDragItems="True"
+                    ContainerContentChanging="CoordinatesGrid_ContainerContentChanging"
                     DragItemsStarting="CoordinatesGrid_DragItemsStarting"
                     IsItemClickEnabled="True"
                     ItemClick="CoordinatesGrid_ItemClick"
@@ -329,11 +330,10 @@
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                    <Image Stretch="Uniform">
-                                        <Image.Source>
-                                            <BitmapImage DecodePixelWidth="300" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                        </Image.Source>
-                                    </Image>
+                                    <Image
+                                        x:Phase="1"
+                                        Stretch="Uniform"
+                                        Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" />
                                 </Border>
 
                                 <TextBlock
@@ -441,7 +441,7 @@
                                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                                         <Image
                                                             Stretch="Uniform"
-                                                            Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ImageUri)}" />
+                                                            Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(ImageUri)}" />
                                                     </Border>
                                                 </Grid>
                                             </DataTemplate>
