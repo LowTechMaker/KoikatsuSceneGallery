@@ -48,10 +48,10 @@ public sealed partial class AuthorDetailPage : Page
     public AuthorDetailPage()
     {
         InitializeComponent();
-        // Returning from a post/card detail should restore this author's already
-        // prepared collections. Recreating the page forced a full local scan and
-        // made one Back press look unresponsive.
-        NavigationCacheMode = NavigationCacheMode.Required;
+        // This page is parameterized by author. Reusing one required cache entry
+        // for every author lets Pivot retain visual state from the previous
+        // author, so keep the visual tree scoped to one navigation entry.
+        NavigationCacheMode = NavigationCacheMode.Disabled;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -65,8 +65,13 @@ public sealed partial class AuthorDetailPage : Page
             if (!restoringSameAuthor)
             {
                 ViewModel.Load(navigationParameter.Summary);
-                TabPivot.SelectedIndex = OverviewTabIndex;
+                UpdateTabPresence();
+                SelectTab(OverviewTabIndex);
                 RequestOverviewThumbnails();
+            }
+            else
+            {
+                UpdateTabPresence();
             }
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts
@@ -322,28 +327,29 @@ public sealed partial class AuthorDetailPage : Page
 
     private void Shuffle_Click(object sender, RoutedEventArgs e)
     {
-        switch (TabPivot.SelectedIndex)
+        if (ReferenceEquals(TabPivot.SelectedItem, ScenesPivotItem) && ViewModel.Scenes.Count > 0)
         {
-            case ScenesTabIndex when ViewModel.Scenes.Count > 0:
-                SetRestoreSelectedTabOnBack(ScenesTabIndex);
-                Frame.Navigate(typeof(DetailPage),
-                    CreateScopedParameter(ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]));
-                break;
-            case CharactersTabIndex when ViewModel.Characters.Count > 0:
-                SetRestoreSelectedTabOnBack(CharactersTabIndex);
-                Frame.Navigate(typeof(CharacterDetailPage),
-                    CreateScopedParameter(ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]));
-                break;
-            case CoordinatesTabIndex when ViewModel.Coordinates.Count > 0:
-                SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-                Frame.Navigate(typeof(CoordinateDetailPage),
-                    CreateScopedParameter(ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]));
-                break;
-            case PostsTabIndex when ViewModel.Posts.Count > 0:
-                SetRestoreSelectedTabOnBack(PostsTabIndex);
-                Frame.Navigate(typeof(PostDetailPage),
-                    CreatePostParameter(ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]));
-                break;
+            SetRestoreSelectedTabOnBack(ScenesTabIndex);
+            Frame.Navigate(typeof(DetailPage),
+                CreateScopedParameter(ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]));
+        }
+        else if (ReferenceEquals(TabPivot.SelectedItem, CharactersPivotItem) && ViewModel.Characters.Count > 0)
+        {
+            SetRestoreSelectedTabOnBack(CharactersTabIndex);
+            Frame.Navigate(typeof(CharacterDetailPage),
+                CreateScopedParameter(ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]));
+        }
+        else if (ReferenceEquals(TabPivot.SelectedItem, CoordinatesPivotItem) && ViewModel.Coordinates.Count > 0)
+        {
+            SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
+            Frame.Navigate(typeof(CoordinateDetailPage),
+                CreateScopedParameter(ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]));
+        }
+        else if (ReferenceEquals(TabPivot.SelectedItem, PostsPivotItem) && ViewModel.Posts.Count > 0)
+        {
+            SetRestoreSelectedTabOnBack(PostsTabIndex);
+            Frame.Navigate(typeof(PostDetailPage),
+                CreatePostParameter(ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]));
         }
     }
 
@@ -395,7 +401,7 @@ public sealed partial class AuthorDetailPage : Page
         if (sender is FrameworkElement { Tag: string value }
             && int.TryParse(value, out var tabIndex))
         {
-            TabPivot.SelectedIndex = tabIndex;
+            SelectTab(tabIndex);
         }
     }
 
@@ -631,9 +637,64 @@ public sealed partial class AuthorDetailPage : Page
     private void RestoreSelectedTab(NavigationMode navigationMode)
     {
         if (navigationMode == NavigationMode.Back && _navigationParameter?.RestoreSelectedTabOnBack is { } tabIndex)
-            TabPivot.SelectedIndex = tabIndex;
+            SelectTab(tabIndex);
 
         if (_navigationParameter is not null)
             _navigationParameter.RestoreSelectedTabOnBack = null;
     }
+
+    private void UpdateTabPresence()
+    {
+        SetTabPresence(ScenesPivotItem, ViewModel.HasScenes);
+        SetTabPresence(CharactersPivotItem, ViewModel.HasCharacters);
+        SetTabPresence(CoordinatesPivotItem, ViewModel.HasCoordinates);
+        SetTabPresence(PostsPivotItem, ViewModel.CanLoadPosts);
+    }
+
+    private void SetTabPresence(PivotItem tab, bool shouldShow)
+    {
+        var isPresent = TabPivot.Items.Contains(tab);
+        if (!shouldShow && isPresent)
+        {
+            TabPivot.Items.Remove(tab);
+        }
+        else if (shouldShow && !isPresent)
+        {
+            var orderedTabs = new[]
+            {
+                OverviewPivotItem,
+                ScenesPivotItem,
+                CharactersPivotItem,
+                CoordinatesPivotItem,
+                PostsPivotItem,
+            };
+            var insertAt = 0;
+            foreach (var candidate in orderedTabs)
+            {
+                if (ReferenceEquals(candidate, tab))
+                    break;
+                if (TabPivot.Items.Contains(candidate))
+                    insertAt++;
+            }
+            TabPivot.Items.Insert(insertAt, tab);
+        }
+    }
+
+    private void SelectTab(int logicalTabIndex)
+    {
+        var tab = logicalTabIndex switch
+        {
+            OverviewTabIndex => OverviewPivotItem,
+            ScenesTabIndex => ScenesPivotItem,
+            CharactersTabIndex => CharactersPivotItem,
+            CoordinatesTabIndex => CoordinatesPivotItem,
+            PostsTabIndex => PostsPivotItem,
+            _ => OverviewPivotItem,
+        };
+
+        TabPivot.SelectedItem = TabPivot.Items.Contains(tab)
+            ? tab
+            : OverviewPivotItem;
+    }
+
 }

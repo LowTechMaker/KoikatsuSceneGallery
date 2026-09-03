@@ -73,7 +73,7 @@
                     Style="{StaticResource TitleTextBlockStyle}"
                     Text="{x:Bind ViewModel.Author.Name, Mode=OneWay}" />
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -83,7 +83,7 @@
                             Style="{StaticResource CaptionTextBlockStyle}"
                             Text="{x:Bind ViewModel.SceneCount, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -93,7 +93,7 @@
                             Style="{StaticResource CaptionTextBlockStyle}"
                             Text="{x:Bind ViewModel.CharacterCount, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -141,7 +141,7 @@
         <Pivot x:Name="TabPivot" AutomationProperties.AutomationId="AuthorTabPivot" Grid.Row="1">
 
             <!-- Overview keeps every kind visible instead of privileging scenes. -->
-            <PivotItem>
+            <PivotItem x:Name="OverviewPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE80F;" />
@@ -188,7 +188,7 @@
             </PivotItem>
 
             <!-- Scenes Tab -->
-            <PivotItem>
+            <PivotItem x:Name="ScenesPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE8B9;" />
@@ -266,7 +266,7 @@
             </PivotItem>
 
             <!-- Characters Tab -->
-            <PivotItem>
+            <PivotItem x:Name="CharactersPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE77B;" />
@@ -344,7 +344,7 @@
             </PivotItem>
 
             <!-- Coordinates Tab -->
-            <PivotItem>
+            <PivotItem x:Name="CoordinatesPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE78A;" />
@@ -422,9 +422,7 @@
             </PivotItem>
 
             <!-- Posts Tab (added dynamically for providers with artwork scanning) -->
-            <PivotItem
-                x:Name="PostsPivotItem"
-                x:Load="{x:Bind ViewModel.CanLoadPosts, Mode=OneWay}">
+            <PivotItem x:Name="PostsPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon FontSize="14" Glyph="&#xE8F1;" />

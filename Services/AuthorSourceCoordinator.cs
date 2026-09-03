@@ -11,6 +11,7 @@ public sealed class AuthorSourceCoordinator
     private readonly CharacterGalleryViewModel _characterGalleryViewModel;
     private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
     private Task? _warmupTask;
+    private bool _hasEnsuredLoaded;
 
     public AuthorSourceCoordinator(
         AuthorInfoService authorInfoService,
@@ -50,6 +51,7 @@ public sealed class AuthorSourceCoordinator
             _galleryViewModel.Cards,
             _characterGalleryViewModel.Cards,
             _coordinateGalleryViewModel.Cards);
+        _hasEnsuredLoaded = true;
         _warmupTask = LoadAsync(reloadLoadedSources);
     }
 
@@ -58,9 +60,15 @@ public sealed class AuthorSourceCoordinator
         if (!_authorInfoService.IsAvailable)
             return Task.CompletedTask;
 
-        if (_warmupTask is { IsCompleted: false })
-            return _warmupTask;
+        // AuthorsPage is cached, but OnNavigatedTo still runs whenever the
+        // user returns from an author detail. Retrying an empty gallery on
+        // every return can synchronously start a folder scan on the UI thread
+        // and makes Back visibly stall. Folder changes explicitly call
+        // Refresh, so one warmup per current configuration is sufficient.
+        if (_hasEnsuredLoaded)
+            return _warmupTask ?? Task.CompletedTask;
 
+        _hasEnsuredLoaded = true;
         _warmupTask = LoadAsync();
         return _warmupTask;
     }
