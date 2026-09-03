@@ -9,6 +9,18 @@ namespace KoikatsuSceneGallery.Helpers;
 
 internal static class DetailNavigationHelper
 {
+    public static (bool hasPrev, bool hasNext) GetNavigationState<TCard>(
+        IList<TCard> cards,
+        TCard? card)
+        where TCard : CardBase
+    {
+        if (card is null || cards.Count == 0)
+            return (false, false);
+
+        var index = cards.IndexOf(card);
+        return index < 0 ? (false, false) : (index > 0, index < cards.Count - 1);
+    }
+
     public static (bool hasPrev, bool hasNext) GetNavigationState(AdvancedCollectionView view, object? card)
     {
         if (card == null || view.Count == 0)
@@ -31,6 +43,15 @@ internal static class DetailNavigationHelper
         return null;
     }
 
+    public static TCard? Navigate<TCard>(IList<TCard> cards, TCard? currentCard, int direction)
+        where TCard : CardBase
+    {
+        if (currentCard is null) return null;
+
+        var newIndex = cards.IndexOf(currentCard) + direction;
+        return newIndex >= 0 && newIndex < cards.Count ? cards[newIndex] : null;
+    }
+
     public static TCard? RandomCard<TCard>(AdvancedCollectionView view, TCard? currentCard)
         where TCard : CardBase
     {
@@ -45,6 +66,22 @@ internal static class DetailNavigationHelper
         }
 
         return view[newIndex] as TCard;
+    }
+
+    public static TCard? RandomCard<TCard>(IList<TCard> cards, TCard? currentCard)
+        where TCard : CardBase
+    {
+        if (cards.Count == 0) return null;
+
+        var currentIndex = currentCard is null ? -1 : cards.IndexOf(currentCard);
+        var newIndex = Random.Shared.Next(cards.Count);
+        if (cards.Count > 1)
+        {
+            while (newIndex == currentIndex)
+                newIndex = Random.Shared.Next(cards.Count);
+        }
+
+        return cards[newIndex];
     }
 
     public static TCard? FindAdjacentOnRemoval<TCard>(AdvancedCollectionView view, TCard card)

@@ -569,6 +569,12 @@
   <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
     <value>Open profile</value>
   </data>
+  <data name="AuthorDetail_OverviewTab.Text" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="AuthorDetail_ViewAll.Text" xml:space="preserve">
+    <value>View all →</value>
+  </data>
   <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
     <value>Scenes</value>
   </data>

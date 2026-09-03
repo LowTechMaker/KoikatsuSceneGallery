@@ -7,7 +7,11 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
-public sealed record LocalImagePreview(Uri ImageUri, string FileName, string FilePath);
+public sealed record LocalImagePreview(
+    Uri ImageUri,
+    string FileName,
+    string FilePath,
+    double AspectRatio = 4.0 / 3.0);
 
 public partial class PostDetailViewModel : ObservableObject
 {
@@ -24,6 +28,9 @@ public partial class PostDetailViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasLocalImages))]
     public partial ObservableCollection<LocalImagePreview> LocalImages { get; set; } = [];
+
+    [ObservableProperty]
+    public partial LocalImagePreview? SelectedImage { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDescription))]
@@ -77,6 +84,7 @@ public partial class PostDetailViewModel : ObservableObject
         LocalImages.Clear();
         foreach (var path in post.LocalFilePaths.Where(File.Exists))
             LocalImages.Add(new LocalImagePreview(new Uri(path), Path.GetFileName(path), path));
+        SelectedImage = LocalImages.FirstOrDefault();
         OnPropertyChanged(nameof(HasLocalImages));
         IsDetailLoaded = post.IsDetailLoaded;
         IsSaved = post.IsSaved;

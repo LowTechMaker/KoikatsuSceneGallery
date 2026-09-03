@@ -193,7 +193,9 @@ public partial class App : Application
             dispatcherQueue,
             settingsViewModel,
             _thumbnailCacheService,
-            galleryViewModel);
+            galleryViewModel,
+            characterGalleryViewModel,
+            coordinateGalleryViewModel);
         var authorSourceCoordinator = new AuthorSourceCoordinator(
             authorInfoService,
             settingsViewModel,

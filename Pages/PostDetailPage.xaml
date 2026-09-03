@@ -88,7 +88,23 @@
                 x:Name="LocalImagesPanel"
                 Spacing="8"
                 Visibility="{x:Bind ViewModel.HasLocalImages, Mode=OneWay}">
+                <Button
+                    Padding="0"
+                    HorizontalAlignment="Left"
+                    Click="MainImage_Click"
+                    ToolTipService.ToolTip="Open local card">
+                    <Border
+                        MaxWidth="760"
+                        MinHeight="280"
+                        CornerRadius="{StaticResource ControlCornerRadius}"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                        <Image
+                            Stretch="Uniform"
+                            Source="{x:Bind local:PostDetailPage.CreateMainImage(ViewModel.SelectedImage), Mode=OneWay}" />
+                    </Border>
+                </Button>
                 <GridView
+                    x:Name="LocalImagesGrid"
                     ItemsSource="{x:Bind ViewModel.LocalImages, Mode=OneWay}"
                     CanDragItems="True"
                     DragItemsStarting="LocalImagesGrid_DragItemsStarting"
@@ -111,8 +127,8 @@
                     <GridView.ItemTemplate>
                         <DataTemplate x:DataType="viewModels:LocalImagePreview">
                             <Grid
-                                Width="160"
-                                Height="120"
+                                Width="104"
+                                Height="78"
                                 ToolTipService.ToolTip="{x:Bind FileName}">
                                 <Border
                                     CornerRadius="{StaticResource ControlCornerRadius}"

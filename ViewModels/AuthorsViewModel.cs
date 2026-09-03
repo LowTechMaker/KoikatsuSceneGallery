@@ -96,6 +96,8 @@ public partial class AuthorsViewModel : ObservableObject
     private readonly SettingsViewModel _settingsViewModel;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly GalleryViewModel _galleryViewModel;
+    private readonly CharacterGalleryViewModel _characterGalleryViewModel;
+    private readonly CoordinateGalleryViewModel _coordinateGalleryViewModel;
     private readonly DispatcherQueueTimer _rebuildTimer;
     private Dictionary<AuthorDisplay, IReadOnlyList<string>>? _thumbnailCache;
 
@@ -135,12 +137,16 @@ public partial class AuthorsViewModel : ObservableObject
         DispatcherQueue dispatcher,
         SettingsViewModel settingsViewModel,
         ThumbnailCacheService thumbnailCacheService,
-        GalleryViewModel galleryViewModel)
+        GalleryViewModel galleryViewModel,
+        CharacterGalleryViewModel characterGalleryViewModel,
+        CoordinateGalleryViewModel coordinateGalleryViewModel)
     {
         _authorInfoService = authorInfoService;
         _settingsViewModel = settingsViewModel;
         _thumbnailCacheService = thumbnailCacheService;
         _galleryViewModel = galleryViewModel;
+        _characterGalleryViewModel = characterGalleryViewModel;
+        _coordinateGalleryViewModel = coordinateGalleryViewModel;
         foreach (var provider in _authorInfoService.ProviderInfos)
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
 
@@ -349,7 +355,8 @@ public partial class AuthorsViewModel : ObservableObject
         !ReferenceEquals(a.Display, b.Display) ||
         a.SceneCount != b.SceneCount ||
         a.CharacterCount != b.CharacterCount ||
-        a.CoordinateCount != b.CoordinateCount;
+        a.CoordinateCount != b.CoordinateCount ||
+        !a.ThumbnailPaths.SequenceEqual(b.ThumbnailPaths, StringComparer.OrdinalIgnoreCase);
 
     private static void SyncAuthors(
         ObservableCollection<AuthorSummary> target,
@@ -428,25 +435,36 @@ public partial class AuthorsViewModel : ObservableObject
     private Dictionary<AuthorDisplay, IReadOnlyList<string>> BuildThumbnailCache()
     {
         var cache = _thumbnailCacheService;
-        var cards = _galleryViewModel.Cards;
         var result = new Dictionary<AuthorDisplay, IReadOnlyList<string>>();
-
-        if (cards.Count == 0)
-        {
-            _thumbnailCache = result;
-            return result;
-        }
-
         var temp = new Dictionary<AuthorDisplay, List<string>>();
-        foreach (var card in cards)
+
+        // Round-robin the card kinds so a prolific scene creator's live tile
+        // still surfaces their characters and coordinates.
+        var cardGroups = new IReadOnlyList<(CardBase Card, AuthorDisplay? Author)>[]
         {
-            if (card.Author is not { } author) continue;
-            if (!temp.TryGetValue(author, out var list))
-                temp[author] = list = [];
-            if (list.Count >= MaxThumbnailsPerAuthor) continue;
-            var path = cache.TryGetCachedPath(card);
-            if (path is not null)
-                list.Add(path);
+            _galleryViewModel.Cards.Select(card => ((CardBase)card, card.Author)).ToList(),
+            _characterGalleryViewModel.Cards.Select(card => ((CardBase)card, card.Author)).ToList(),
+            _coordinateGalleryViewModel.Cards.Select(card => ((CardBase)card, card.Author)).ToList(),
+        };
+        var maxCount = cardGroups.Max(group => group.Count);
+        for (var index = 0; index < maxCount; index++)
+        {
+            foreach (var cards in cardGroups)
+            {
+                if (index >= cards.Count || cards[index].Author is not { } author)
+                    continue;
+
+                if (!temp.TryGetValue(author, out var list))
+                    temp[author] = list = [];
+                if (list.Count >= MaxThumbnailsPerAuthor)
+                    continue;
+
+                var card = cards[index].Card;
+                var path = card.ThumbnailPath
+                    ?? cache.TryGetCachedPath(card.FilePath, card.DateModified);
+                if (path is not null && !list.Contains(path, StringComparer.OrdinalIgnoreCase))
+                    list.Add(path);
+            }
         }
 
         foreach (var (key, list) in temp)

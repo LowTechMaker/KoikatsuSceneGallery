@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -22,13 +23,24 @@ public sealed partial class DetailPage : Page
         InitializeComponent();
     }
 
+    private AuthorKey? _authorScope;
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         App.Services.GetRequiredService<GalleryViewModel>().CardRemovedNotification += OnCardRemoved;
         App.Services.GetRequiredService<GalleryViewModel>().CardsReloaded += OnCardsReloaded;
-        if (e.Parameter is SceneCard card)
-            ShowCard(card);
+        switch (e.Parameter)
+        {
+            case AuthorScopedSceneNavigationParameter scoped:
+                _authorScope = scoped.AuthorKey;
+                ShowCard(scoped.Card);
+                break;
+            case SceneCard card:
+                _authorScope = null;
+                ShowCard(card);
+                break;
+        }
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -94,14 +106,20 @@ public sealed partial class DetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
+        var scopedCards = GetScopedCards();
+        var (hasPrev, hasNext) = scopedCards is null
+            ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
+            : DetailNavigationHelper.GetNavigationState(scopedCards, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction);
+        var scopedCards = GetScopedCards();
+        var next = scopedCards is null
+            ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction)
+            : DetailNavigationHelper.Navigate(scopedCards, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -111,9 +129,19 @@ public sealed partial class DetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
+        var scopedCards = GetScopedCards();
+        var card = scopedCards is null
+            ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
+            : DetailNavigationHelper.RandomCard(scopedCards, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
+
+    private List<SceneCard>? GetScopedCards() => _authorScope is not { } author
+        ? null
+        : App.Services.GetRequiredService<GalleryViewModel>().CardsView
+            .OfType<SceneCard>()
+            .Where(card => card.Author?.Key == author)
+            .ToList();
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {

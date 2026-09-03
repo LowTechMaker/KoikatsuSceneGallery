@@ -6,6 +6,7 @@ using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 
 namespace KoikatsuSceneGallery.Pages;
@@ -18,6 +19,7 @@ public sealed partial class PostDetailPage : Page
         App.Services.GetRequiredService<IAppLogger>());
 
     private CancellationTokenSource? _cts;
+    private SceneGallery.PluginSdk.AuthorKey? _authorScope;
 
     public PostDetailPage()
     {
@@ -28,7 +30,13 @@ public sealed partial class PostDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is AuthorPost post)
+        var post = e.Parameter switch
+        {
+            AuthorPostNavigationParameter scoped => SetPostScope(scoped),
+            AuthorPost direct => SetPostScope(direct),
+            _ => null,
+        };
+        if (post is not null)
         {
             ViewModel.Load(post);
             RenderDescription();
@@ -53,18 +61,58 @@ public sealed partial class PostDetailPage : Page
 
     private void LocalImage_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not LocalImagePreview preview) return;
+        if (e.ClickedItem is LocalImagePreview preview)
+            ViewModel.SelectedImage = preview;
+    }
+
+    private void MainImage_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedImage is not { } preview) return;
+
+        OpenLocalImage(preview);
+    }
+
+    private void OpenLocalImage(LocalImagePreview preview)
+    {
 
         var path = preview.FilePath;
         var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (scene is not null) { Frame.Navigate(typeof(DetailPage), scene); return; }
+        if (scene is not null) { Frame.Navigate(typeof(DetailPage), CreateScopedParameter(scene)); return; }
 
         var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (character is not null) { Frame.Navigate(typeof(CharacterDetailPage), character); return; }
+        if (character is not null) { Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(character)); return; }
 
         var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
+        if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
     }
+
+    public static BitmapImage? CreateMainImage(LocalImagePreview? preview) => preview is null
+        ? null
+        : new BitmapImage { DecodePixelWidth = 1200, UriSource = preview.ImageUri };
+
+    private AuthorPost SetPostScope(AuthorPostNavigationParameter scoped)
+    {
+        _authorScope = scoped.AuthorKey;
+        return scoped.Post;
+    }
+
+    private AuthorPost SetPostScope(AuthorPost direct)
+    {
+        _authorScope = null;
+        return direct;
+    }
+
+    private object CreateScopedParameter(SceneCard card) => _authorScope is { } author
+        ? new AuthorScopedSceneNavigationParameter(card, author)
+        : card;
+
+    private object CreateScopedParameter(CharacterCard card) => _authorScope is { } author
+        ? new AuthorScopedCharacterNavigationParameter(card, author)
+        : card;
+
+    private object CreateScopedParameter(CoordinateCard card) => _authorScope is { } author
+        ? new AuthorScopedCoordinateNavigationParameter(card, author)
+        : card;
 
     private void OpenInBrowser_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "PostDetail.OpenBrowser", async () =>

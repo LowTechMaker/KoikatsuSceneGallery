@@ -569,6 +569,12 @@
   <data name="AuthorDetail_OpenProfileLabel.Text" xml:space="preserve">
     <value>開啟個人頁面</value>
   </data>
+  <data name="AuthorDetail_OverviewTab.Text" xml:space="preserve">
+    <value>總覽</value>
+  </data>
+  <data name="AuthorDetail_ViewAll.Text" xml:space="preserve">
+    <value>查看全部 →</value>
+  </data>
   <data name="AuthorDetail_ScenesTab.Text" xml:space="preserve">
     <value>場景</value>
   </data>

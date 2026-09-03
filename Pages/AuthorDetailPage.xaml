@@ -140,6 +140,53 @@
         <!-- Tabs: Scenes / Characters / Coordinates -->
         <Pivot x:Name="TabPivot" AutomationProperties.AutomationId="AuthorTabPivot" Grid.Row="1">
 
+            <!-- Overview keeps every kind visible instead of privileging scenes. -->
+            <PivotItem>
+                <PivotItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE80F;" />
+                        <TextBlock x:Uid="AuthorDetail_OverviewTab" />
+                    </StackPanel>
+                </PivotItem.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="OverviewContent" Margin="0,8,0,16" Spacing="20" SizeChanged="OverviewContent_SizeChanged">
+                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
+                            <Grid>
+                                <TextBlock x:Uid="AuthorDetail_ScenesTab" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <HyperlinkButton Grid.Column="1" HorizontalAlignment="Right" Tag="1" Click="OverviewSection_Click" Padding="0">
+                                    <TextBlock x:Uid="AuthorDetail_ViewAll" />
+                                </HyperlinkButton>
+                            </Grid>
+                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.ScenePreviews}" IsItemClickEnabled="True" ItemClick="ScenesGrid_ItemClick" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:SceneCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                            </GridView>
+                        </StackPanel>
+                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_CharactersTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="2" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.CharacterPreviews}" IsItemClickEnabled="True" ItemClick="CharactersGrid_ItemClick" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CharacterCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                            </GridView>
+                        </StackPanel>
+                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_CoordinatesTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="3" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.CoordinatePreviews}" IsItemClickEnabled="True" ItemClick="CoordinatesGrid_ItemClick" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CoordinateCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                            </GridView>
+                        </StackPanel>
+                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasPosts, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_PostsTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="4" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.PostPreviews}" IsItemClickEnabled="True" ItemClick="OverviewPost_ItemClick" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="viewModels:PostImageGroupViewModel"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(CoverAspectRatio, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(CoverImageUri), Mode=OneTime}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                            </GridView>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+
             <!-- Scenes Tab -->
             <PivotItem>
                 <PivotItem.Header>
@@ -414,90 +461,46 @@
                         Visibility="{x:Bind ViewModel.IsLoadingPosts, Mode=OneWay}"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" />
-                    <ListView
+                    <GridView
                         Grid.Row="1"
-                        x:Name="PostsList"
-                        AutomationProperties.AutomationId="AuthorPostsList"
+                        x:Name="PostsGrid"
+                        AutomationProperties.AutomationId="AuthorPostsGrid"
                         Margin="0,8,0,0"
-                        IsItemClickEnabled="False"
+                        IsItemClickEnabled="True"
+                        ItemClick="PostsGrid_ItemClick"
                         ItemsSource="{x:Bind ViewModel.PostGroups}"
                         SelectionMode="None">
-                        <ListView.ItemContainerTransitions>
+                        <GridView.ItemContainerTransitions>
                             <TransitionCollection />
-                        </ListView.ItemContainerTransitions>
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
+                        </GridView.ItemContainerTransitions>
+                        <GridView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ItemsWrapGrid Orientation="Horizontal" ItemWidth="220" ItemHeight="220" />
+                            </ItemsPanelTemplate>
+                        </GridView.ItemsPanel>
+                        <GridView.ItemContainerStyle>
+                            <Style TargetType="GridViewItem">
                                 <Setter Property="Padding" Value="0" />
-                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="Margin" Value="4" />
                                 <Setter Property="MinHeight" Value="0" />
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.ItemTemplate>
+                        </GridView.ItemContainerStyle>
+                        <GridView.ItemTemplate>
                             <DataTemplate x:DataType="viewModels:PostImageGroupViewModel">
-                                <StackPanel Spacing="8" Padding="0,8,0,0"
-                                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                                            BorderThickness="0,0,0,1">
-                                    <HyperlinkButton
-                                        AutomationProperties.Name="{x:Bind Post.DisplayTitle, Mode=OneWay}"
-                                        Click="PostTitle_Click"
-                                        Tag="{x:Bind Post}"
-                                        Padding="0">
-                                        <TextBlock
-                                            Text="{x:Bind Post.DisplayTitle, Mode=OneWay}"
-                                            Style="{StaticResource BodyStrongTextBlockStyle}"
-                                            TextTrimming="CharacterEllipsis"
-                                            MaxLines="1" />
-                                    </HyperlinkButton>
-                                    <GridView
-                                        ItemsSource="{x:Bind Images}"
-                                        CanDragItems="True"
-                                        DragItemsStarting="PostImages_DragItemsStarting"
-                                        IsItemClickEnabled="True"
-                                        ItemClick="PostImage_ItemClick"
-                                        SelectionMode="None"
-                                        SizeChanged="PostImagesGrid_SizeChanged"
-                                        Padding="0,0,0,8">
-                                        <GridView.ItemContainerTransitions>
-                                            <TransitionCollection />
-                                        </GridView.ItemContainerTransitions>
-                                        <GridView.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <ItemsWrapGrid Orientation="Horizontal" />
-                                            </ItemsPanelTemplate>
-                                        </GridView.ItemsPanel>
-                                        <GridView.ItemContainerStyle>
-                                            <Style TargetType="GridViewItem">
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                                <Setter Property="Margin" Value="0" />
-                                                <Setter Property="Padding" Value="0" />
-                                                <Setter Property="MinWidth" Value="0" />
-                                                <Setter Property="MinHeight" Value="0" />
-                                            </Style>
-                                        </GridView.ItemContainerStyle>
-                                        <GridView.ItemTemplate>
-                                            <DataTemplate x:DataType="viewModels:LocalImagePreview">
-                                                <Grid
-                                                    Margin="4"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Stretch"
-                                                    ToolTipService.ToolTip="{x:Bind FileName}">
-                                                    <Border
-                                                        CornerRadius="{StaticResource ControlCornerRadius}"
-                                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                                        <Image
-                                                            Stretch="Uniform"
-                                                            Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(ImageUri)}" />
-                                                    </Border>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </GridView.ItemTemplate>
-                                    </GridView>
-                                </StackPanel>
+                                <Grid Padding="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="{StaticResource OverlayCornerRadius}">
+                                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                    <Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                        <Image Stretch="UniformToFill" Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(CoverImageUri), Mode=OneTime}" />
+                                    </Border>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="6,3" CornerRadius="{StaticResource ControlCornerRadius}" Background="#AA000000" Visibility="{x:Bind HasAdditionalImages, Mode=OneTime}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4"><FontIcon Glyph="&#xE722;" FontSize="12" Foreground="White" /><TextBlock Text="{x:Bind AdditionalImageCountText, Mode=OneTime}" Foreground="White" Style="{StaticResource CaptionTextBlockStyle}" /></StackPanel>
+                                    </Border>
+                                    <TextBlock Grid.Row="1" Margin="8,6" Text="{x:Bind Post.DisplayTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1" />
+                                </Grid>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                        </GridView.ItemTemplate>
+                    </GridView>
                 </Grid>
             </PivotItem>
 

@@ -33,10 +33,11 @@ public sealed partial class AuthorDetailPage : Page
     private const double DesiredWidth = 240;
     private const double PostDesiredWidth = 160;
     private const double PostItemSpacing = 8;
-    private const int ScenesTabIndex = 0;
-    private const int CharactersTabIndex = 1;
-    private const int CoordinatesTabIndex = 2;
-    private const int PostsTabIndex = 3;
+    private const int OverviewTabIndex = 0;
+    private const int ScenesTabIndex = 1;
+    private const int CharactersTabIndex = 2;
+    private const int CoordinatesTabIndex = 3;
+    private const int PostsTabIndex = 4;
 
     private CancellationTokenSource? _postsCts;
     private AuthorDetailNavigationParameter? _navigationParameter;
@@ -62,7 +63,11 @@ public sealed partial class AuthorDetailPage : Page
                 && ViewModel.Author?.Key == navigationParameter.Summary.Display.Key;
             _navigationParameter = navigationParameter;
             if (!restoringSameAuthor)
+            {
                 ViewModel.Load(navigationParameter.Summary);
+                TabPivot.SelectedIndex = OverviewTabIndex;
+                RequestOverviewThumbnails();
+            }
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts
                 && (!restoringSameAuthor
@@ -81,6 +86,8 @@ public sealed partial class AuthorDetailPage : Page
 
         DispatcherQueue.TryEnqueue(() =>
         {
+            ViewModel.SetOverviewPreviewWidth(OverviewContent.ActualWidth);
+            RequestOverviewThumbnails();
             ApplyLayout(ScenesGrid, SceneImageRatio);
             ApplyLayout(CharactersGrid, CharaImageRatio);
             ApplyLayout(CoordinatesGrid, CharaImageRatio);
@@ -103,6 +110,29 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (sender is GridView grid)
             ApplyLayout(grid, grid == ScenesGrid ? SceneImageRatio : CharaImageRatio);
+    }
+
+    private void OverviewContent_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ViewModel.SetOverviewPreviewWidth(e.NewSize.Width);
+        RequestOverviewThumbnails();
+    }
+
+    private void RequestOverviewThumbnails()
+    {
+        var scenes = App.Services.GetRequiredService<GalleryViewModel>();
+        var characters = App.Services.GetRequiredService<CharacterGalleryViewModel>();
+        var coordinates = App.Services.GetRequiredService<CoordinateGalleryViewModel>();
+        scenes.ActivateThumbnailRequests();
+        characters.ActivateThumbnailRequests();
+        coordinates.ActivateThumbnailRequests();
+
+        foreach (var card in ViewModel.ScenePreviews)
+            RequestThumbnail(card);
+        foreach (var card in ViewModel.CharacterPreviews)
+            RequestThumbnail(card);
+        foreach (var card in ViewModel.CoordinatePreviews)
+            RequestThumbnail(card);
     }
 
     private void ScenesGrid_ContainerContentChanging(
@@ -271,6 +301,14 @@ public sealed partial class AuthorDetailPage : Page
     public static BitmapImage? CreatePostThumbnail(Uri? uri) =>
         uri is null ? null : new BitmapImage { DecodePixelWidth = 160, UriSource = uri };
 
+    public static double GetPreviewWidth(int width, int height, double previewHeight) =>
+        width > 0 && height > 0
+            ? Math.Clamp(previewHeight * width / height, 72, 320)
+            : previewHeight * 4.0 / 3.0;
+
+    public static double GetPreviewWidth(double aspectRatio, double previewHeight) =>
+        Math.Clamp(previewHeight * aspectRatio, 72, 320);
+
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
     private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
@@ -286,25 +324,25 @@ public sealed partial class AuthorDetailPage : Page
     {
         switch (TabPivot.SelectedIndex)
         {
-            case 0 when ViewModel.Scenes.Count > 0:
+            case ScenesTabIndex when ViewModel.Scenes.Count > 0:
                 SetRestoreSelectedTabOnBack(ScenesTabIndex);
                 Frame.Navigate(typeof(DetailPage),
-                    ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]);
+                    CreateScopedParameter(ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]));
                 break;
-            case 1 when ViewModel.Characters.Count > 0:
+            case CharactersTabIndex when ViewModel.Characters.Count > 0:
                 SetRestoreSelectedTabOnBack(CharactersTabIndex);
                 Frame.Navigate(typeof(CharacterDetailPage),
-                    ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]);
+                    CreateScopedParameter(ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]));
                 break;
-            case 2 when ViewModel.Coordinates.Count > 0:
+            case CoordinatesTabIndex when ViewModel.Coordinates.Count > 0:
                 SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
                 Frame.Navigate(typeof(CoordinateDetailPage),
-                    ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]);
+                    CreateScopedParameter(ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]));
                 break;
-            case 3 when ViewModel.Posts.Count > 0:
+            case PostsTabIndex when ViewModel.Posts.Count > 0:
                 SetRestoreSelectedTabOnBack(PostsTabIndex);
                 Frame.Navigate(typeof(PostDetailPage),
-                    ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]);
+                    CreatePostParameter(ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]));
                 break;
         }
     }
@@ -321,7 +359,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is SceneCard card)
         {
             SetRestoreSelectedTabOnBack(ScenesTabIndex);
-            Frame.Navigate(typeof(DetailPage), card);
+            Frame.Navigate(typeof(DetailPage), CreateScopedParameter(card));
         }
     }
 
@@ -330,7 +368,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CharacterCard card)
         {
             SetRestoreSelectedTabOnBack(CharactersTabIndex);
-            Frame.Navigate(typeof(CharacterDetailPage), card);
+            Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(card));
         }
     }
 
@@ -339,7 +377,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CoordinateCard card)
         {
             SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-            Frame.Navigate(typeof(CoordinateDetailPage), card);
+            Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(card));
         }
     }
 
@@ -348,7 +386,34 @@ public sealed partial class AuthorDetailPage : Page
         if (sender is FrameworkElement { Tag: AuthorPost post })
         {
             SetRestoreSelectedTabOnBack(PostsTabIndex);
-            Frame.Navigate(typeof(PostDetailPage), post);
+            Frame.Navigate(typeof(PostDetailPage), CreatePostParameter(post));
+        }
+    }
+
+    private void OverviewSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string value }
+            && int.TryParse(value, out var tabIndex))
+        {
+            TabPivot.SelectedIndex = tabIndex;
+        }
+    }
+
+    private void OverviewPost_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is PostImageGroupViewModel group)
+        {
+            SetRestoreSelectedTabOnBack(OverviewTabIndex);
+            Frame.Navigate(typeof(PostDetailPage), CreatePostParameter(group.Post));
+        }
+    }
+
+    private void PostsGrid_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is PostImageGroupViewModel group)
+        {
+            SetRestoreSelectedTabOnBack(PostsTabIndex);
+            Frame.Navigate(typeof(PostDetailPage), CreatePostParameter(group.Post));
         }
     }
 
@@ -478,13 +543,13 @@ public sealed partial class AuthorDetailPage : Page
 
         var path = preview.FilePath;
         var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), scene); return; }
+        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), CreateScopedParameter(scene)); return; }
 
         var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), character); return; }
+        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(character)); return; }
 
         var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), coordinate); return; }
+        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
     }
 
     private void PostImages_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
@@ -546,6 +611,22 @@ public sealed partial class AuthorDetailPage : Page
         if (_navigationParameter is not null)
             _navigationParameter.RestoreSelectedTabOnBack = tabIndex;
     }
+
+    private object CreateScopedParameter(SceneCard card) => ViewModel.Author is { } author
+        ? new AuthorScopedSceneNavigationParameter(card, author.Key)
+        : card;
+
+    private object CreateScopedParameter(CharacterCard card) => ViewModel.Author is { } author
+        ? new AuthorScopedCharacterNavigationParameter(card, author.Key)
+        : card;
+
+    private object CreateScopedParameter(CoordinateCard card) => ViewModel.Author is { } author
+        ? new AuthorScopedCoordinateNavigationParameter(card, author.Key)
+        : card;
+
+    private object CreatePostParameter(AuthorPost post) => ViewModel.Author is { } author
+        ? new AuthorPostNavigationParameter(post, author.Key)
+        : post;
 
     private void RestoreSelectedTab(NavigationMode navigationMode)
     {
