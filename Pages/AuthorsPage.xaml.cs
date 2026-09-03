@@ -21,7 +21,13 @@ public sealed partial class AuthorsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        App.Services.GetRequiredService<AuthorSourceCoordinator>().Refresh();
+        // AuthorSourceCoordinator already attaches to the gallery collections at
+        // startup, and folder-setting changes explicitly trigger a rebuild. Do not
+        // rebuild every card here: it synchronously clears and reassigns authors
+        // for the whole library and makes opening this page hitch.
+        App.Services.GetRequiredService<AuthorSourceCoordinator>()
+            .EnsureLoadedAsync()
+            .Observe(App.Services.GetRequiredService<IAppLogger>(), "Authors.EnsureLoaded");
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

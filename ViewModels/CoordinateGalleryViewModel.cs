@@ -65,6 +65,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         ResetThumbnailState();
 
         IsLoading = true;
+        var viewRefreshDeferral = DeferCardsViewRefresh();
         try
         {
             var config = await _settingsService.LoadConfigAsync();
@@ -113,6 +114,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         }
         finally
         {
+            viewRefreshDeferral.Dispose();
             if (_loadCts?.Token == cancellationToken)
                 IsLoading = false;
             RaiseCardsReloaded();

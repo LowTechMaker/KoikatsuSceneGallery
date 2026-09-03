@@ -346,6 +346,14 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         return _loadCts.Token;
     }
 
+    /// <summary>
+    /// Holds view notifications while an initial folder scan is adding batches.
+    /// Without this deferral, every partial, re-sorted batch can recycle the same
+    /// visible GridView containers, making their thumbnail and author bindings
+    /// visibly flash until the scan completes.
+    /// </summary>
+    protected IDisposable DeferCardsViewRefresh() => CardsView.DeferRefresh();
+
     public virtual void Activate()
     {
         ActivateThumbnailRequests();

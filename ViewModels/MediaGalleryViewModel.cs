@@ -49,6 +49,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         ResetThumbnailState();
 
         IsLoading = true;
+        var viewRefreshDeferral = DeferCardsViewRefresh();
         try
         {
             var config = await _settingsService.LoadConfigAsync();
@@ -94,6 +95,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         }
         finally
         {
+            viewRefreshDeferral.Dispose();
             if (_loadCts?.Token == cancellationToken)
                 IsLoading = false;
             RaiseCardsReloaded();

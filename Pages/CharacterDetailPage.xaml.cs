@@ -50,6 +50,7 @@ public sealed partial class CharacterDetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
+            if (!ReferenceEquals(Frame?.Content, this)) return;
             if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
             if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
 
@@ -73,7 +74,24 @@ public sealed partial class CharacterDetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (Frame.CanGoBack) Frame.GoBack();
+            if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
+                return;
+
+            var refreshed = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards
+                .FirstOrDefault(card => string.Equals(
+                    card.FilePath,
+                    current.FilePath,
+                    StringComparison.OrdinalIgnoreCase));
+            if (refreshed is null)
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+                return;
+            }
+
+            if (!ReferenceEquals(refreshed, current))
+                ShowCard(refreshed);
+            else
+                UpdateNavigationButtons();
         });
     }
 

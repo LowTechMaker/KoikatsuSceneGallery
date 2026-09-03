@@ -33,6 +33,13 @@ internal static partial class HtmlDescriptionRenderer
 
         foreach (Match match in TagPattern().Matches(text))
         {
+            // An anchor is consumed together with everything through its closing
+            // tag below. Its nested markup is still present in the regex match
+            // enumeration, so ignore those already-consumed matches rather than
+            // attempting a negative-length slice from the later position.
+            if (match.Index < position)
+                continue;
+
             AppendText(paragraph, text[position..match.Index], styles.Peek());
 
             var tag = match.Value;

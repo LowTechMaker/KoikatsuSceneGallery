@@ -44,7 +44,24 @@ public sealed partial class CoordinateDetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (Frame.CanGoBack) Frame.GoBack();
+            if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
+                return;
+
+            var refreshed = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards
+                .FirstOrDefault(card => string.Equals(
+                    card.FilePath,
+                    current.FilePath,
+                    StringComparison.OrdinalIgnoreCase));
+            if (refreshed is null)
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+                return;
+            }
+
+            if (!ReferenceEquals(refreshed, current))
+                ShowCard(refreshed);
+            else
+                UpdateNavigationButtons();
         });
     }
 

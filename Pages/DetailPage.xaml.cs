@@ -42,6 +42,7 @@ public sealed partial class DetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
+            if (!ReferenceEquals(Frame?.Content, this)) return;
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -57,7 +58,28 @@ public sealed partial class DetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (Frame.CanGoBack) Frame.GoBack();
+            // A gallery reload can complete just after this page was opened from
+            // an author/post image. Keep the detail page when its card still
+            // exists; the previous unconditional GoBack made that navigation
+            // appear to do nothing and could pop an unrelated page later.
+            if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
+                return;
+
+            var refreshed = App.Services.GetRequiredService<GalleryViewModel>().Cards
+                .FirstOrDefault(card => string.Equals(
+                    card.FilePath,
+                    current.FilePath,
+                    StringComparison.OrdinalIgnoreCase));
+            if (refreshed is null)
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+                return;
+            }
+
+            if (!ReferenceEquals(refreshed, current))
+                ShowCard(refreshed);
+            else
+                UpdateNavigationButtons();
         });
     }
 

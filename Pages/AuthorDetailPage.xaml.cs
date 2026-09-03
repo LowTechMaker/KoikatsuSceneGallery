@@ -47,6 +47,10 @@ public sealed partial class AuthorDetailPage : Page
     public AuthorDetailPage()
     {
         InitializeComponent();
+        // Returning from a post/card detail should restore this author's already
+        // prepared collections. Recreating the page forced a full local scan and
+        // made one Back press look unresponsive.
+        NavigationCacheMode = NavigationCacheMode.Required;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -54,10 +58,16 @@ public sealed partial class AuthorDetailPage : Page
         base.OnNavigatedTo(e);
         if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
+            var restoringSameAuthor = e.NavigationMode == NavigationMode.Back
+                && ViewModel.Author?.Key == navigationParameter.Summary.Display.Key;
             _navigationParameter = navigationParameter;
-            ViewModel.Load(navigationParameter.Summary);
+            if (!restoringSameAuthor)
+                ViewModel.Load(navigationParameter.Summary);
             RestoreSelectedTab(e.NavigationMode);
-            if (ViewModel.CanLoadPosts && App.Services.GetService<AuthorPostService>() is { } postService)
+            if (ViewModel.CanLoadPosts
+                && (!restoringSameAuthor
+                    || (ViewModel.Posts.Count == 0 && ViewModel.UnassignedImages.Count == 0))
+                && App.Services.GetService<AuthorPostService>() is { } postService)
             {
                 _postsCts = new CancellationTokenSource();
                 ViewModel.LoadPostsAsync(postService, _postsCts.Token)

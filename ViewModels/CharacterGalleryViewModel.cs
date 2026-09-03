@@ -87,6 +87,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         ResetThumbnailState();
 
         IsLoading = true;
+        var viewRefreshDeferral = DeferCardsViewRefresh();
         try
         {
             var config = await _settingsService.LoadConfigAsync();
@@ -136,6 +137,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         }
         finally
         {
+            viewRefreshDeferral.Dispose();
             if (_loadCts?.Token == cancellationToken)
                 IsLoading = false;
             RaiseCardsReloaded();

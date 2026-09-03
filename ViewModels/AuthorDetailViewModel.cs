@@ -80,6 +80,16 @@ public partial class AuthorDetailViewModel : ObservableObject
         Author = summary.Display;
         var key = summary.Display.Key;
 
+        // The author-detail page is cached so returning from a child page is
+        // instant. When that cached instance is later reused for a different
+        // author, never leave the previous author's post content visible while
+        // the new scan is running.
+        Posts.Clear();
+        PostGroups.Clear();
+        PostCount = 0;
+        UnassignedImages.Clear();
+        UnassignedImageCount = 0;
+
         Scenes.Clear();
         foreach (var card in _galleryViewModel.Cards)
         {

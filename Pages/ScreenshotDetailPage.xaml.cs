@@ -41,6 +41,7 @@ public sealed partial class ScreenshotDetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
+            if (!ReferenceEquals(Frame?.Content, this)) return;
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -56,7 +57,27 @@ public sealed partial class ScreenshotDetailPage : Page
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (Frame.CanGoBack) Frame.GoBack();
+            // A reload can complete after navigation from an author/post image.
+            // Keep the detail page if its card still exists; an unconditional
+            // GoBack makes that navigation appear to have been ignored.
+            if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
+                return;
+
+            var refreshed = App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").Cards
+                .FirstOrDefault(card => string.Equals(
+                    card.FilePath,
+                    current.FilePath,
+                    StringComparison.OrdinalIgnoreCase));
+            if (refreshed is null)
+            {
+                if (Frame.CanGoBack) Frame.GoBack();
+                return;
+            }
+
+            if (!ReferenceEquals(refreshed, current))
+                ShowCard(refreshed);
+            else
+                UpdateNavigationButtons();
         });
     }
 
