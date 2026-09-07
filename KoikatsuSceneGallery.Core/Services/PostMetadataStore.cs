@@ -4,6 +4,22 @@ using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Services;
 
+internal sealed record SidecarWriteReceipt(
+    string SidecarFilePath,
+    string ProviderId,
+    string ArtworkId,
+    IReadOnlyList<string> NewlyAddedFileNames,
+    bool SidecarCreatedByThisImport,
+    bool WasWritten);
+
+internal enum SidecarUnbindResult
+{
+    SidecarNotFound,
+    FileNameNotFound,
+    FileNameRemoved,
+    SidecarDeleted,
+}
+
 /// <summary>
 /// Stores fetched artwork metadata next to its author folder.  The sidecar is
 /// deliberately outside the app cache so it travels with an imported library.
@@ -46,89 +62,65 @@ internal sealed class PostMetadataStore
         string authorDirectory,
         PostMetadataDocument document,
         CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-        Validate(document);
+        => (await WriteWithReceiptAsync(authorDirectory, document, cancellationToken)
+            .ConfigureAwait(false)).WasWritten;
 
-        var path = GetSidecarPath(
-            authorDirectory,
-            document.ProviderId,
-            document.ArtworkId);
+    /// <summary>
+    /// Writes or merges fetched metadata and reports the local file-name mutation made by this call.
+    /// </summary>
+    public Task<SidecarWriteReceipt> WriteWithReceiptAsync(
+        string authorDirectory,
+        PostMetadataDocument document,
+        CancellationToken cancellationToken = default)
+        => ExecuteWriteCoreAsync(authorDirectory, document, cancellationToken);
+
+    /// <summary>
+    /// Removes one local file-name association without changing fetched metadata.
+    /// </summary>
+    public async Task<SidecarUnbindResult> RemoveLocalFileNameAsync(
+        string authorDirectory,
+        string providerId,
+        string artworkId,
+        string fileName,
+        bool shouldDeleteIfEmpty,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        var path = GetSidecarPath(authorDirectory, providerId, artworkId);
         var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-        string? temporaryPath = null;
         try
         {
-            var existing = ReadFile(path);
-            if (existing is not null)
+            if (!File.Exists(path))
+                return SidecarUnbindResult.SidecarNotFound;
+
+            var document = ReadFile(path);
+            if (document is null)
+                return SidecarUnbindResult.SidecarNotFound;
+
+            var updatedFileNames = document.LocalFileNames
+                .Where(existing => !existing.Equals(fileName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (updatedFileNames.Count == document.LocalFileNames.Count)
+                return SidecarUnbindResult.FileNameNotFound;
+
+            if (updatedFileNames.Count == 0 && shouldDeleteIfEmpty)
             {
-                // Artwork pages can be imported at different times. Preserve
-                // every known local filename even when the cached metadata is
-                // newer than the incoming document.
-                var mergedFileNames = MergeLocalFileNames(
-                    existing.LocalFileNames,
-                    document.LocalFileNames);
-
-                if (existing.FetchedAt >= document.FetchedAt)
-                {
-                    if (mergedFileNames.Count == existing.LocalFileNames.Count)
-                        return false;
-
-                    document = existing with
-                    {
-                        SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
-                        LocalFileNames = mergedFileNames,
-                    };
-                }
-                else
-                {
-                    document = document with { LocalFileNames = mergedFileNames };
-                }
+                File.Delete(path);
+                return SidecarUnbindResult.SidecarDeleted;
             }
 
-            var metadataDirectory = Path.Combine(
-                Path.GetFullPath(authorDirectory),
-                MetadataDirectoryName);
-            var fetchedDataDirectory = Path.Combine(
-                metadataDirectory,
-                FetchedDataDirectoryName);
-            Directory.CreateDirectory(fetchedDataDirectory);
-            MarkHiddenOnWindows(metadataDirectory);
-
-            temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
-            await using (var stream = new FileStream(
-                temporaryPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 4096,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    document,
-                    JsonOptions,
-                    cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporaryPath, path, overwrite: true);
-            temporaryPath = null;
-            return true;
+            await WriteDocumentAtomicallyAsync(
+                path,
+                document with { LocalFileNames = updatedFileNames },
+                cancellationToken).ConfigureAwait(false);
+            return SidecarUnbindResult.FileNameRemoved;
         }
         finally
         {
-            try
-            {
-                if (temporaryPath is not null)
-                    File.Delete(temporaryPath);
-            }
-            finally
-            {
-                writeLock.Release();
-            }
+            writeLock.Release();
         }
     }
 
@@ -177,6 +169,123 @@ internal sealed class PostMetadataStore
         return true;
     }
 
+    private async Task<SidecarWriteReceipt> ExecuteWriteCoreAsync(
+        string authorDirectory,
+        PostMetadataDocument document,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        Validate(document);
+
+        var path = GetSidecarPath(
+            authorDirectory,
+            document.ProviderId,
+            document.ArtworkId);
+        var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
+        await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            var sidecarCreatedByThisImport = !File.Exists(path);
+            var existing = ReadFile(path);
+            var newlyAddedFileNames = existing is null
+                ? DistinctNonEmptyFileNames(document.LocalFileNames)
+                : GetNewlyAddedFileNames(existing.LocalFileNames, document.LocalFileNames);
+
+            if (existing is not null)
+            {
+                // Artwork pages can be imported at different times. Preserve
+                // every known local filename even when the cached metadata is
+                // newer than the incoming document.
+                var mergedFileNames = MergeLocalFileNames(
+                    existing.LocalFileNames,
+                    document.LocalFileNames);
+
+                if (existing.FetchedAt >= document.FetchedAt)
+                {
+                    if (mergedFileNames.Count == existing.LocalFileNames.Count)
+                    {
+                        return new SidecarWriteReceipt(
+                            path,
+                            document.ProviderId,
+                            document.ArtworkId,
+                            [],
+                            sidecarCreatedByThisImport,
+                            WasWritten: false);
+                    }
+
+                    document = existing with
+                    {
+                        SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
+                        LocalFileNames = mergedFileNames,
+                    };
+                }
+                else
+                {
+                    document = document with { LocalFileNames = mergedFileNames };
+                }
+            }
+
+            var metadataDirectory = Path.Combine(
+                Path.GetFullPath(authorDirectory),
+                MetadataDirectoryName);
+            var fetchedDataDirectory = Path.Combine(
+                metadataDirectory,
+                FetchedDataDirectoryName);
+            Directory.CreateDirectory(fetchedDataDirectory);
+            MarkHiddenOnWindows(metadataDirectory);
+
+            await WriteDocumentAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
+            return new SidecarWriteReceipt(
+                path,
+                document.ProviderId,
+                document.ArtworkId,
+                newlyAddedFileNames,
+                sidecarCreatedByThisImport,
+                WasWritten: true);
+        }
+        finally
+        {
+            writeLock.Release();
+        }
+    }
+
+    private static async Task WriteDocumentAtomicallyAsync(
+        string path,
+        PostMetadataDocument document,
+        CancellationToken cancellationToken)
+    {
+        string? temporaryPath = null;
+        try
+        {
+            temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
+            await using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 4096,
+                FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await JsonSerializer.SerializeAsync(
+                    stream,
+                    document,
+                    JsonOptions,
+                    cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                stream.Flush(flushToDisk: true);
+            }
+
+            File.Move(temporaryPath, path, overwrite: true);
+            temporaryPath = null;
+        }
+        finally
+        {
+            if (temporaryPath is not null)
+                File.Delete(temporaryPath);
+        }
+    }
+
     private static PostMetadataDocument? ReadFile(string path)
     {
         if (!File.Exists(path))
@@ -221,6 +330,21 @@ internal sealed class PostMetadataStore
         }
 
         return merged;
+    }
+
+    private static IReadOnlyList<string> GetNewlyAddedFileNames(
+        IReadOnlyList<string> existing,
+        IReadOnlyList<string> incoming)
+    {
+        var known = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+        return DistinctNonEmptyFileNames(incoming.Where(known.Add));
+    }
+
+    private static IReadOnlyList<string> DistinctNonEmptyFileNames(IEnumerable<string> fileNames)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return [.. fileNames.Where(fileName =>
+            !string.IsNullOrWhiteSpace(fileName) && seen.Add(fileName))];
     }
 
     private static bool IsValid(PostMetadataDocument document)

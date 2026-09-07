@@ -61,6 +61,137 @@ public sealed class PostMetadataStoreTests
     }
 
     [Fact]
+    public async Task Write_PreservesNewerMetadataWhileMergingNewLocalFileNames()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var newer = CreateDocument("newer") with
+        {
+            FetchedAt = FetchedAt.AddMinutes(1),
+            LocalFileNames = ["card_existing.png"],
+            Tags = [new PostMetadataTag("newer-tag", null)],
+        };
+        var olderWithNewFile = CreateDocument("older") with
+        {
+            LocalFileNames = ["card_new.png"],
+            Tags = [new PostMetadataTag("older-tag", null)],
+        };
+        var olderWithNoNewFiles = CreateDocument("older") with
+        {
+            LocalFileNames = ["card_existing.png"],
+            Tags = [new PostMetadataTag("older-tag", null)],
+        };
+
+        Assert.True(await store.WriteAsync(directory.Path, newer));
+        Assert.True(await store.WriteAsync(directory.Path, olderWithNewFile));
+
+        var merged = store.Read(directory.Path, newer.ProviderId, newer.ArtworkId);
+        Assert.NotNull(merged);
+        Assert.Equal(newer.FetchedAt, merged!.FetchedAt);
+        Assert.Equal(newer.Tags, merged.Tags);
+        Assert.Equal(["card_existing.png", "card_new.png"], merged.LocalFileNames);
+
+        Assert.False(await store.WriteAsync(directory.Path, olderWithNoNewFiles));
+    }
+
+    [Fact]
+    public async Task WriteWithReceipt_ReportsCreatedSidecarAndNewFileNames()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument("title") with
+        {
+            LocalFileNames = ["card1.png"],
+        };
+
+        var receipt = await store.WriteWithReceiptAsync(directory.Path, document);
+
+        Assert.True(receipt.SidecarCreatedByThisImport);
+        Assert.True(receipt.WasWritten);
+        Assert.Equal(document.ProviderId, receipt.ProviderId);
+        Assert.Equal(document.ArtworkId, receipt.ArtworkId);
+        Assert.Equal(["card1.png"], receipt.NewlyAddedFileNames);
+        Assert.Equal(store.GetSidecarPath(directory.Path, document.ProviderId, document.ArtworkId), receipt.SidecarFilePath);
+    }
+
+    [Fact]
+    public async Task WriteWithReceipt_ConcurrentWritesPreserveAllLocalFileNames()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var writes = Enumerable.Range(1, 10)
+            .Select(index => store.WriteWithReceiptAsync(
+                directory.Path,
+                CreateDocument("title") with { LocalFileNames = [$"parallel_{index}.png"] }))
+            .ToArray();
+
+        var receipts = await Task.WhenAll(writes);
+
+        Assert.Single(receipts, receipt => receipt.SidecarCreatedByThisImport);
+        var document = store.Read(directory.Path, "pixiv", "12345");
+        Assert.NotNull(document);
+        Assert.Equal(
+            Enumerable.Range(1, 10).Select(index => $"parallel_{index}.png").Order(),
+            document!.LocalFileNames.Order());
+    }
+
+    [Fact]
+    public async Task RemoveLocalFileName_PreservesMetadataAndOtherFileNames()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument("title") with
+        {
+            LocalFileNames = ["a.png", "b.png"],
+            Tags = [new PostMetadataTag("keep", null)],
+        };
+        await store.WriteAsync(directory.Path, document);
+
+        var result = await store.RemoveLocalFileNameAsync(
+            directory.Path,
+            document.ProviderId,
+            document.ArtworkId,
+            "a.png",
+            shouldDeleteIfEmpty: true);
+
+        Assert.Equal(SidecarUnbindResult.FileNameRemoved, result);
+        var remaining = store.Read(directory.Path, document.ProviderId, document.ArtworkId);
+        Assert.NotNull(remaining);
+        Assert.Equal(document.FetchedAt, remaining!.FetchedAt);
+        Assert.Equal(document.Tags, remaining.Tags);
+        Assert.Equal(["b.png"], remaining.LocalFileNames);
+    }
+
+    [Fact]
+    public async Task RemoveLocalFileName_HandlesEmptyAndMissingSidecars()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument("title") with { LocalFileNames = ["a.png"] };
+
+        Assert.Equal(
+            SidecarUnbindResult.SidecarNotFound,
+            await store.RemoveLocalFileNameAsync(directory.Path, "pixiv", "12345", "a.png", true));
+
+        await store.WriteAsync(directory.Path, document);
+        Assert.Equal(
+            SidecarUnbindResult.FileNameNotFound,
+            await store.RemoveLocalFileNameAsync(directory.Path, "pixiv", "12345", "missing.png", true));
+        Assert.Equal(
+            SidecarUnbindResult.FileNameRemoved,
+            await store.RemoveLocalFileNameAsync(directory.Path, "pixiv", "12345", "a.png", false));
+        Assert.Empty(store.Read(directory.Path, "pixiv", "12345")!.LocalFileNames);
+
+        await store.WriteAsync(
+            directory.Path,
+            document with { FetchedAt = document.FetchedAt.AddMinutes(1) });
+        Assert.Equal(
+            SidecarUnbindResult.SidecarDeleted,
+            await store.RemoveLocalFileNameAsync(directory.Path, "pixiv", "12345", "a.png", true));
+        Assert.False(File.Exists(store.GetSidecarPath(directory.Path, "pixiv", "12345")));
+    }
+
+    [Fact]
     public async Task ReadAll_IgnoresUnsupportedSchema()
     {
         using var directory = new TestDirectory();

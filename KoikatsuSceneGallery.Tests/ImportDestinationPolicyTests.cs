@@ -97,11 +97,86 @@ public sealed class ImportDestinationPolicyTests
     }
 
     [Fact]
+    public async Task LibraryFileCache_ReusesIndexAndRegistersCommittedFiles()
+    {
+        using var directory = new TestDirectory();
+        var libraryRoot = Path.Combine(directory.Path, "Library");
+        var existing = Path.Combine(libraryRoot, "existing.png");
+        var committed = Path.Combine(libraryRoot, "nested", "committed.png");
+        var buildCount = 0;
+        var cache = new LibraryFileCache();
+
+        Dictionary<string, List<string>> BuildIndex(CancellationToken _)
+        {
+            buildCount++;
+            return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["existing.png"] = [existing],
+            };
+        }
+
+        var first = await cache.GetOrBuildAsync([libraryRoot], BuildIndex, CancellationToken.None);
+        var second = await cache.GetOrBuildAsync([libraryRoot], BuildIndex, CancellationToken.None);
+
+        Assert.True(first.WasRebuilt);
+        Assert.False(second.WasRebuilt);
+        Assert.Equal(1, buildCount);
+
+        cache.RegisterCommittedFiles([committed]);
+        var afterCommit = await cache.GetOrBuildAsync([libraryRoot], BuildIndex, CancellationToken.None);
+
+        Assert.False(afterCommit.WasRebuilt);
+        Assert.Equal(1, buildCount);
+        Assert.Contains(committed, afterCommit.FilesByName["committed.png"]);
+    }
+
+    [Fact]
+    public async Task LibraryFileCache_RebuildsWhenRootsChangeOrItIsInvalidated()
+    {
+        using var directory = new TestDirectory();
+        var firstRoot = Path.Combine(directory.Path, "First");
+        var secondRoot = Path.Combine(directory.Path, "Second");
+        var buildCount = 0;
+        var cache = new LibraryFileCache();
+
+        Dictionary<string, List<string>> BuildIndex(CancellationToken _)
+        {
+            buildCount++;
+            return [];
+        }
+
+        await cache.GetOrBuildAsync([firstRoot], BuildIndex, CancellationToken.None);
+        var rootsChanged = await cache.GetOrBuildAsync([secondRoot], BuildIndex, CancellationToken.None);
+        cache.Invalidate();
+        var invalidated = await cache.GetOrBuildAsync([secondRoot], BuildIndex, CancellationToken.None);
+
+        Assert.True(rootsChanged.WasRebuilt);
+        Assert.True(invalidated.WasRebuilt);
+        Assert.Equal(3, buildCount);
+    }
+
+    [Fact]
     public void DuplicateDetector_RejectsDifferentSyntheticCards()
     {
         using var directory = new TestDirectory();
         var source = directory.Write("source.png", TestFiles.Png(320, 180));
         var destination = directory.Write("destination.png", TestFiles.Png(1600, 900));
+
+        Assert.False(ImportDuplicateDetector.AreFilesIdentical(source, destination));
+    }
+
+    [Fact]
+    public void DuplicateDetector_RejectsSameLengthFilesWithDifferentContent()
+    {
+        using var directory = new TestDirectory();
+        var sourceBytes = new byte[20 * 1024];
+        sourceBytes[0] = 1;
+        sourceBytes[^1] = 2;
+        var destinationBytes = (byte[])sourceBytes.Clone();
+        destinationBytes[^1] = 3;
+
+        var source = directory.Write("source.png", sourceBytes);
+        var destination = directory.Write("destination.png", destinationBytes);
 
         Assert.False(ImportDuplicateDetector.AreFilesIdentical(source, destination));
     }
