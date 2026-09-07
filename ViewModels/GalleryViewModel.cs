@@ -476,9 +476,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         if (!ShowR18Content && card.IsR18Content) return false;
 
-        foreach (var kw in _searchKeywords)
-            if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
-                return false;
+        if (!GallerySearch.Matches(card.FilePath, card.Author?.Name, _searchKeywords))
+            return false;
 
         if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
             && !_allowedResolutions.Contains(card.Resolution))

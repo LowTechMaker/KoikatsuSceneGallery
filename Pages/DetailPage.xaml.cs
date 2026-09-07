@@ -14,6 +14,7 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class DetailPage : Page
 {
+    private readonly ViewerChrome _viewer;
     public DetailViewModel ViewModel { get; } = new(
         App.Services.GetRequiredService<AuthorInfoService>(),
         App.Services.GetRequiredService<GalleryViewModel>());
@@ -21,22 +22,40 @@ public sealed partial class DetailPage : Page
     public DetailPage()
     {
         InitializeComponent();
+        _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((SceneCard)card));
     }
 
     private AuthorKey? _authorScope;
+    private HashSet<string>? _groupScope;
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _viewer.SetContext(BrowseContexts.From(e.Parameter));
         App.Services.GetRequiredService<GalleryViewModel>().CardRemovedNotification += OnCardRemoved;
         App.Services.GetRequiredService<GalleryViewModel>().CardsReloaded += OnCardsReloaded;
         switch (e.Parameter)
         {
+            case BrowseNavigation navigation:
+                _groupScope = navigation.Context.ShowRelatedImages ? navigation.Context.Cards.Select(c => c.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase) : null;
+                ViewModel.GroupScope = _groupScope;
+                ShowCard((SceneCard)navigation.Card);
+                break;
+            case GroupScopedSceneNavigationParameter group:
+                _authorScope = null;
+                _groupScope = group.Cards.Select(c => c.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                ViewModel.GroupScope = _groupScope;
+                ShowCard(group.Card);
+                break;
             case AuthorScopedSceneNavigationParameter scoped:
+                _groupScope = null;
+                ViewModel.GroupScope = null;
                 _authorScope = scoped.AuthorKey;
                 ShowCard(scoped.Card);
                 break;
             case SceneCard card:
+                _groupScope = null;
+                ViewModel.GroupScope = null;
                 _authorScope = null;
                 ShowCard(card);
                 break;
@@ -55,10 +74,19 @@ public sealed partial class DetailPage : Page
         DispatcherQueue.TryEnqueue(() =>
         {
             if (!ReferenceEquals(Frame?.Content, this)) return;
+            if (_groupScope is not null)
+            {
+                ViewModel.RefreshSiblingCards();
+                UpdateNavigationButtons();
+            }
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            var next = DetailNavigationHelper.FindAdjacentOnRemoval(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
+            if (_viewer.RecoverIfMissing()) return;
+            var scoped = GetScopedCards();
+            var next = scoped is null
+                ? DetailNavigationHelper.FindAdjacentOnRemoval(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
+                : scoped.FirstOrDefault();
             if (next != null)
                 ShowCard(next);
             else if (Frame.CanGoBack)
@@ -91,7 +119,10 @@ public sealed partial class DetailPage : Page
             if (!ReferenceEquals(refreshed, current))
                 ShowCard(refreshed);
             else
+            {
+                if (_groupScope is not null) ViewModel.RefreshSiblingCards();
                 UpdateNavigationButtons();
+            }
         });
     }
 
@@ -106,6 +137,7 @@ public sealed partial class DetailPage : Page
 
     private void UpdateNavigationButtons()
     {
+        if (_viewer.Update()) return;
         var scopedCards = GetScopedCards();
         var (hasPrev, hasNext) = scopedCards is null
             ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
@@ -116,6 +148,7 @@ public sealed partial class DetailPage : Page
 
     private void Navigate(int direction)
     {
+        if (_viewer.Navigate(direction)) return;
         var scopedCards = GetScopedCards();
         var next = scopedCards is null
             ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction)
@@ -129,6 +162,7 @@ public sealed partial class DetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_viewer.Navigate(0, true)) return;
         var scopedCards = GetScopedCards();
         var card = scopedCards is null
             ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
@@ -136,21 +170,23 @@ public sealed partial class DetailPage : Page
         if (card != null) ShowCard(card);
     }
 
-    private List<SceneCard>? GetScopedCards() => _authorScope is not { } author
-        ? null
-        : App.Services.GetRequiredService<GalleryViewModel>().CardsView
-            .OfType<SceneCard>()
-            .Where(card => card.Author?.Key == author)
-            .ToList();
+    private List<SceneCard>? GetScopedCards()
+    {
+        var cards = App.Services.GetRequiredService<GalleryViewModel>().CardsView.OfType<SceneCard>();
+        if (_groupScope is { } group) return cards.Where(c => group.Contains(c.FilePath)).ToList();
+        return _authorScope is { } author ? cards.Where(c => c.Author?.Key == author).ToList() : null;
+    }
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }

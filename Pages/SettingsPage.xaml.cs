@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -53,6 +54,19 @@ public sealed partial class SettingsPage : Page
     public ObservableCollection<PluginListItem> PluginItems { get; } = [];
 
     public bool HasNoPlugins => PluginItems.Count == 0;
+
+    public string GetResolutionFilterSummary(bool enabled, int count)
+        => !enabled ? ResLoader.GetString("Settings_FilterDisabled")
+            : count == 0 ? ResLoader.GetString("Settings_FilterEmpty")
+            : string.Format(ResLoader.GetString("Settings_FilterActive"), count);
+
+    public static string GetRemoveResolutionLabel(string resolution)
+        => string.Format(ResLoader.GetString("Settings_RemoveSizeLabel"), resolution);
+
+    public string GetPluginAnalysisSummary(bool enabled)
+        => ResLoader.GetString(enabled ? "Settings_AnalysisEnabled" : "Settings_AnalysisDisabled");
+
+    public bool CanScanMetadata(bool enabled, bool idle) => enabled && idle;
 
     public SettingsPage()
     {
@@ -320,6 +334,7 @@ public sealed partial class SettingsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        if (e.Parameter is "filters") SettingsCategories.SelectedIndex = 2;
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.Navigate", ViewModel.LoadAsync);
     }
 
@@ -348,12 +363,43 @@ public sealed partial class SettingsPage : Page
 
     private async Task TryAddResolution()
     {
-        var input = ResolutionInput.Text.Trim();
-        if (!string.IsNullOrEmpty(input))
+        await TryAddResolutionAsync(ResolutionInput, ResolutionError, ViewModel.AllowedResolutions,
+            input => ViewModel.AddResolutionCommand.ExecuteAsync(input));
+    }
+
+    private void ResolutionInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is not TextBox editor)
+            return;
+        var error = editor == ResolutionInput ? ResolutionError
+            : editor == CharacterResolutionInput ? CharacterResolutionError
+            : editor == CoordinateResolutionInput ? CoordinateResolutionError : null;
+        if (error is not null)
+            error.Visibility = Visibility.Collapsed;
+    }
+
+    private static async Task TryAddResolutionAsync(TextBox editor, TextBlock error,
+        ObservableCollection<string> resolutions, Func<string, Task> add)
+    {
+        var input = editor.Text.Trim().Replace('X', 'x').Replace('×', 'x');
+        var parsed = ResolutionOption.TryParse(input);
+        if (parsed is null || parsed.Width <= 0 || parsed.Height <= 0)
         {
-            await ViewModel.AddResolutionCommand.ExecuteAsync(input);
-            ResolutionInput.Text = string.Empty;
+            error.Text = ResLoader.GetString("Settings_ResolutionInvalid");
+            error.Visibility = Visibility.Visible;
+            return;
         }
+        if (resolutions.Contains(parsed.ToString()))
+        {
+            error.Text = ResLoader.GetString("Settings_ResolutionDuplicate");
+            error.Visibility = Visibility.Visible;
+            return;
+        }
+
+        await add(parsed.ToString());
+        error.Visibility = Visibility.Collapsed;
+        editor.Text = string.Empty;
+        editor.Focus(FocusState.Programmatic);
     }
 
     private void RemoveResolution_Click(object sender, RoutedEventArgs e)
@@ -374,12 +420,8 @@ public sealed partial class SettingsPage : Page
 
     private async Task TryAddCharacterResolution()
     {
-        var input = CharacterResolutionInput.Text.Trim();
-        if (!string.IsNullOrEmpty(input))
-        {
-            await ViewModel.AddCharacterResolutionCommand.ExecuteAsync(input);
-            CharacterResolutionInput.Text = string.Empty;
-        }
+        await TryAddResolutionAsync(CharacterResolutionInput, CharacterResolutionError, ViewModel.CharacterAllowedResolutions,
+            input => ViewModel.AddCharacterResolutionCommand.ExecuteAsync(input));
     }
 
     private void RemoveCoordinateFolder_Click(object sender, RoutedEventArgs e)
@@ -407,12 +449,8 @@ public sealed partial class SettingsPage : Page
 
     private async Task TryAddCoordinateResolution()
     {
-        var input = CoordinateResolutionInput.Text.Trim();
-        if (!string.IsNullOrEmpty(input))
-        {
-            await ViewModel.AddCoordinateResolutionCommand.ExecuteAsync(input);
-            CoordinateResolutionInput.Text = string.Empty;
-        }
+        await TryAddResolutionAsync(CoordinateResolutionInput, CoordinateResolutionError, ViewModel.CoordinateAllowedResolutions,
+            input => ViewModel.AddCoordinateResolutionCommand.ExecuteAsync(input));
     }
 
     private void RemoveCoordinateResolution_Click(object sender, RoutedEventArgs e)

@@ -114,57 +114,24 @@
                 </Pivot.HeaderTemplate>
                 <Pivot.ItemTemplate>
                     <DataTemplate x:DataType="viewModels:AuthorProviderTabViewModel">
-                        <ListView
-                            x:Name="GroupListView"
-                            Padding="0"
-                            Background="Transparent"
-                            IsItemClickEnabled="False"
-                            ItemsSource="{x:Bind Groups, Mode=OneWay}"
-                            SelectionMode="None">
-                            <ListView.ItemContainerTransitions>
-                                <TransitionCollection />
-                            </ListView.ItemContainerTransitions>
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0" />
-                                    <Setter Property="MinHeight" Value="0" />
+                        <Grid>
+                            <GridView x:Name="AuthorsGrid" ItemsSource="{x:Bind GroupedAuthors.View}"
+                                      IsItemClickEnabled="True" ItemClick="AuthorsGrid_ItemClick" SelectionMode="None">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" GroupHeaderPlacement="Top" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
+                                <GridView.ItemContainerStyle><Style TargetType="GridViewItem">
+                                    <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
-                            <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
-                                        <StackPanel Margin="0,0,0,4" Spacing="8">
-                                            <StackPanel Orientation="Horizontal" Spacing="8" Padding="0,0,8,0" MinHeight="28"
-                                                         Margin="0,8,0,0"
-                                                         Visibility="{x:Bind ShowHeader, Mode=OneWay}">
-                                                <TextBlock
-                                                    Style="{StaticResource SubtitleTextBlockStyle}"
-                                                    Text="{x:Bind Header}" />
-                                                <TextBlock
-                                                    VerticalAlignment="Center"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Style="{StaticResource CaptionTextBlockStyle}"
-                                                    Text="{x:Bind CountText, Mode=OneWay}" />
-                                            </StackPanel>
-
-                                            <GridView
-                                                IsItemClickEnabled="True"
-                                                ItemClick="AuthorsGrid_ItemClick"
-                                                ItemsSource="{x:Bind Authors, Mode=OneWay}"
-                                                SelectionMode="None">
-                                                <GridView.ItemContainerTransitions>
-                                                    <TransitionCollection />
-                                                </GridView.ItemContainerTransitions>
-                                                <GridView.ItemContainerStyle>
-                                                    <Style TargetType="GridViewItem">
-                                                        <Setter Property="Margin" Value="0" />
-                                                        <Setter Property="Padding" Value="0" />
-                                                        <Setter Property="MinHeight" Value="0" />
-                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                    </Style>
-                                                </GridView.ItemContainerStyle>
-                                                <GridView.ItemTemplate>
+                                </Style></GridView.ItemContainerStyle>
+                                <GridView.GroupStyle><GroupStyle HidesIfEmpty="True">
+                                    <GroupStyle.HeaderTemplate><DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,12,0,8" Visibility="{x:Bind ShowHeader}">
+                                            <TextBlock Text="{x:Bind Header}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                            <TextBlock Text="{x:Bind CountText, Mode=OneWay}" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate></GroupStyle.HeaderTemplate>
+                                </GroupStyle></GridView.GroupStyle>
+                                <GridView.ItemTemplate>
                                                     <DataTemplate x:DataType="services:AuthorSummary">
                                                         <Grid Margin="4"
                                                               ToolTipService.ToolTip="{x:Bind Display.ProfileUrl}">
@@ -192,11 +159,13 @@
                                                         </Grid>
                                                     </DataTemplate>
                                                 </GridView.ItemTemplate>
-                                            </GridView>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                            </GridView>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Visibility="{x:Bind IsEmpty, Mode=OneWay}">
+                                <FontIcon Glyph="&#xE721;" FontSize="32" />
+                                <TextBlock x:Uid="Authors_NoResults" />
+                                <Button x:Uid="SceneGallery_ResetSearch" Click="ClearSearch_Click" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
                     </DataTemplate>
                 </Pivot.ItemTemplate>
             </Pivot>

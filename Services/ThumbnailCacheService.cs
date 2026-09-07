@@ -111,19 +111,17 @@ public class ThumbnailCacheService
         }
     }
 
-    public async Task ClearCacheAsync(CancellationToken cancellationToken = default)
+    public Task<ThumbnailCacheUsage> GetCacheUsageAsync(CancellationToken cancellationToken = default)
     {
         var folder = _cacheFolder;
-        await Task.Run(() =>
-        {
-            if (!Directory.Exists(folder)) return;
-            foreach (var file in Directory.EnumerateFiles(folder, "*.jpg"))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try { File.Delete(file); }
-                catch (Exception ex) { _logger.LogError("Thumbnail.Delete", ex, file); }
-            }
-        }, cancellationToken);
+        return Task.Run(() => ThumbnailCacheMaintenance.Measure(folder, cancellationToken), cancellationToken);
+    }
+
+    public Task<ThumbnailCacheClearResult> ClearCacheAsync(CancellationToken cancellationToken = default)
+    {
+        var folder = _cacheFolder;
+        return Task.Run(() => ThumbnailCacheMaintenance.Clear(folder,
+            (ex, file) => _logger.LogError("Thumbnail.Delete", ex, file), cancellationToken), cancellationToken);
     }
 
     private static string ComputeCacheKey(string filePath, DateTime dateModified)

@@ -56,7 +56,11 @@ public partial class AuthorProviderTabViewModel : ObservableObject
     {
         ProviderId = provider.ProviderId;
         DisplayName = provider.DisplayName;
+        GroupedAuthors = new Microsoft.UI.Xaml.Data.CollectionViewSource
+        { Source = Groups, IsSourceGrouped = true, ItemsPath = new Microsoft.UI.Xaml.PropertyPath(nameof(AuthorGroupViewModel.Authors)) };
     }
+
+    public Microsoft.UI.Xaml.Data.CollectionViewSource GroupedAuthors { get; }
 
     public string ProviderId { get; }
 

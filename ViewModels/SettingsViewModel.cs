@@ -11,12 +11,34 @@ namespace KoikatsuSceneGallery.ViewModels;
 
 public partial class SettingsViewModel : ObservableObject
 {
+    private static readonly Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResLoader = new();
     private readonly SettingsService _settingsService;
     private readonly IAppLogger _logger;
     private readonly ThumbnailCacheService _thumbnailCacheService;
     private readonly Func<MainWindow?> _getMainWindow;
     private readonly Func<GalleryViewModel?> _getGalleryViewModel;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
+
+    [ObservableProperty]
+    public partial bool HasSaveError { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanManageCache))]
+    public partial bool IsCacheBusy { get; set; }
+
+    public bool CanManageCache => !IsCacheBusy;
+
+    [ObservableProperty]
+    public partial string CacheUsageText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CacheResultMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasCacheResult { get; set; }
+
+    [ObservableProperty]
+    public partial Microsoft.UI.Xaml.Controls.InfoBarSeverity CacheResultSeverity { get; set; }
 
     public ObservableCollection<string> FolderPaths { get; } = [];
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
@@ -47,13 +69,10 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
     [ObservableProperty]
-    public partial double ThumbnailWidth { get; set; } = 240;
-
-    [ObservableProperty]
     public partial double CacheLength { get; set; } = 4;
 
     [ObservableProperty]
-    public partial bool SizeSelectorEnabled { get; set; } = false;
+    public partial ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;
 
     [ObservableProperty]
     public partial bool PluginAnalysisEnabled { get; set; }
@@ -66,6 +85,32 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string SelectedLanguage { get; set; } = string.Empty;
+
+    // Match the language picker order. An empty language code means system default;
+    // binding an empty ComboBoxItem.Tag through SelectedValue can leave no selection.
+    public int SelectedLanguageIndex
+    {
+        get => SelectedLanguage switch
+        {
+            "en-US" => 1,
+            "zh-Hans" => 2,
+            "zh-Hant" => 3,
+            _ => 0
+        };
+        set
+        {
+            // Ignore the transient deselection while WinUI initializes the items.
+            if (value is < 0 or > 3)
+                return;
+            SelectedLanguage = value switch
+            {
+                1 => "en-US",
+                2 => "zh-Hans",
+                3 => "zh-Hant",
+                _ => string.Empty
+            };
+        }
+    }
 
     [ObservableProperty]
     public partial bool ShowRestartHint { get; set; }
@@ -92,7 +137,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool AuthorLiveTilesEnabled { get; set; } = true;
 
-    // ── OCD ─────────────────────────────────────────────────────
+    // ── Experimental ────────────────────────────────────────────
     [ObservableProperty]
     public partial bool UseVisualSimilarity { get; set; }
 
@@ -132,6 +177,7 @@ public partial class SettingsViewModel : ObservableObject
     public event Action<bool, HashSet<string>>? CoordinateResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
+    public event Action<ThumbnailSizePreference>? ThumbnailSizeChanged;
     public event Action? SceneFolderPathsChanged;
     public event Action? CharacterFolderPathsChanged;
     public event Action? CoordinateFolderPathsChanged;
@@ -227,11 +273,13 @@ public partial class SettingsViewModel : ObservableObject
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
-    partial void OnSizeSelectorEnabledChanged(bool value)
+    partial void OnThumbnailSizeChanged(ThumbnailSizePreference value)
     {
         if (_isLoading)
             return;
+
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        ThumbnailSizeChanged?.Invoke(value);
     }
 
     partial void OnPluginAnalysisEnabledChanged(bool value)
@@ -247,11 +295,18 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnSelectedLanguageChanged(string value)
     {
+        OnPropertyChanged(nameof(SelectedLanguageIndex));
         if (_isLoading)
             return;
 
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         ShowRestartHint = true;
+    }
+
+    partial void OnUseVisualSimilarityChanged(bool value)
+    {
+        if (!_isLoading)
+            SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
     partial void OnImportSubfolderChanged(string value)
@@ -337,8 +392,13 @@ public partial class SettingsViewModel : ObservableObject
 
     public async Task LoadAsync()
     {
-        var config = await _settingsService.LoadConfigAsync();
-        Load(config);
+        // Keep unsaved edits available for retry when revisiting this page.
+        if (!HasSaveError)
+        {
+            var config = await _settingsService.LoadConfigAsync();
+            Load(config);
+        }
+        await RefreshCacheUsageAsync();
     }
 
     public void Load(SettingsService.ConfigData config)
@@ -379,7 +439,6 @@ public partial class SettingsViewModel : ObservableObject
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             ShowFileNames = config.ShowFileNames;
             ScrollToTopOnSort = config.ScrollToTopOnSort;
-            ThumbnailWidth = config.ThumbnailWidth;
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
@@ -399,7 +458,7 @@ public partial class SettingsViewModel : ObservableObject
             PluginAnalysisEnabled = config.PluginAnalysisEnabled;
             SelectedLanguage = config.Language;
             CacheLength = config.CacheLength;
-            SizeSelectorEnabled = config.SizeSelectorEnabled;
+            ThumbnailSize = config.ThumbnailSize;
             SauceNaoApiKey = config.SauceNaoApiKey;
 
             var hidden = config.HiddenNavItems;
@@ -537,6 +596,8 @@ public partial class SettingsViewModel : ObservableObject
             _thumbnailCacheService.SetCacheFolder(folder.Path);
             OnPropertyChanged(nameof(CacheFolderDisplay));
             await SaveConfigAsync();
+            HasCacheResult = false;
+            await RefreshCacheUsageAsync();
         }
     }
 
@@ -547,12 +608,67 @@ public partial class SettingsViewModel : ObservableObject
         _thumbnailCacheService.SetCacheFolder(string.Empty);
         OnPropertyChanged(nameof(CacheFolderDisplay));
         await SaveConfigAsync();
+        HasCacheResult = false;
+        await RefreshCacheUsageAsync();
     }
 
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        await _thumbnailCacheService.ClearCacheAsync();
+        if (IsCacheBusy) return;
+        IsCacheBusy = true;
+        HasCacheResult = false;
+        try
+        {
+            var result = await _thumbnailCacheService.ClearCacheAsync();
+            CacheResultSeverity = result.FailedCount == 0
+                ? Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success
+                : Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning;
+            CacheResultMessage = result.FailedCount == 0
+                ? string.Format(ResLoader.GetString("Settings_CacheCleared"), result.DeletedCount)
+                : string.Format(ResLoader.GetString("Settings_CachePartiallyCleared"), result.DeletedCount, result.FailedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Settings.ClearCache", ex);
+            CacheResultSeverity = Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error;
+            CacheResultMessage = ResLoader.GetString("Settings_CacheClearFailed");
+        }
+        finally
+        {
+            HasCacheResult = true;
+            await UpdateCacheUsageAsync();
+            IsCacheBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshCacheUsageAsync()
+    {
+        if (IsCacheBusy) return;
+        IsCacheBusy = true;
+        try { await UpdateCacheUsageAsync(); }
+        finally { IsCacheBusy = false; }
+    }
+
+    private async Task UpdateCacheUsageAsync()
+    {
+        CacheUsageText = ResLoader.GetString("Settings_CacheCalculating");
+        try
+        {
+            var usage = await _thumbnailCacheService.GetCacheUsageAsync();
+            string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
+            double size = usage.Bytes;
+            int unit = 0;
+            while (size >= 1024 && unit < units.Length - 1) { size /= 1024; unit++; }
+            CacheUsageText = string.Format(ResLoader.GetString("Settings_CacheUsage"),
+                $"{size:0.##} {units[unit]}", usage.FileCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Settings.MeasureCache", ex);
+            CacheUsageText = ResLoader.GetString("Settings_CacheUsageFailed");
+        }
     }
 
     [RelayCommand]
@@ -621,17 +737,7 @@ public partial class SettingsViewModel : ObservableObject
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
-    /// <summary>
-    /// Persists a new gallery thumbnail width (set via Ctrl+wheel in the
-    /// gallery). Called debounced so rapid wheel ticks don't rewrite the file
-    /// on every step.
-    /// </summary>
-    public async Task SaveThumbnailWidthAsync(double width)
-    {
-        ThumbnailWidth = width;
-        await SaveConfigAsync();
-    }
-
+    [RelayCommand]
     private async Task SaveConfigAsync()
     {
         await _saveLock.WaitAsync();
@@ -651,9 +757,8 @@ public partial class SettingsViewModel : ObservableObject
                 ScreenshotFolderPaths = [.. ScreenshotFolderPaths],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
-                ThumbnailWidth = ThumbnailWidth,
                 CacheLength = CacheLength,
-                SizeSelectorEnabled = SizeSelectorEnabled,
+                ThumbnailSize = ThumbnailSize,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
                 CacheFolderPath = CacheFolderPath,
                 SauceNaoApiKey = SauceNaoApiKey,
@@ -673,8 +778,13 @@ public partial class SettingsViewModel : ObservableObject
                 R18GFolderName = R18GFolderName
             };
             await _settingsService.SaveConfigAsync(config);
+            HasSaveError = false;
         }
-        catch (Exception ex) { _logger.LogError("Settings.SaveConfig", ex); }
+        catch (Exception ex)
+        {
+            _logger.LogError("Settings.SaveConfig", ex);
+            HasSaveError = true;
+        }
         finally
         {
             _saveLock.Release();

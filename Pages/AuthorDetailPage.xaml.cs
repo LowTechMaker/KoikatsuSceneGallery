@@ -45,6 +45,26 @@ public sealed partial class AuthorDetailPage : Page
     private readonly HashSet<CharacterCard> _requestedCharacterThumbnails = [];
     private readonly HashSet<CoordinateCard> _requestedCoordinateThumbnails = [];
 
+    private GridView ScenesGrid => ScenesBrowser.ItemsGrid;
+    private GridView CharactersGrid => CharactersBrowser.ItemsGrid;
+    private GridView CoordinatesGrid => CoordinatesBrowser.ItemsGrid;
+    private bool _browsersInitialized;
+    private void InitializeBrowsers()
+    {
+        if (_browsersInitialized) return;
+        _browsersInitialized = true;
+        ScenesBrowser.Initialize(LibraryKind.Scenes, ViewModel.Scenes, ViewModel.Author?.Name);
+        CharactersBrowser.Initialize(LibraryKind.Characters, ViewModel.Characters, ViewModel.Author?.Name);
+        CoordinatesBrowser.Initialize(LibraryKind.Coordinates, ViewModel.Coordinates, ViewModel.Author?.Name);
+        foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
+        {
+            if (_navigationParameter?.BrowserStates.TryGetValue(index, out var saved) == true) browser.RestoreState(saved);
+            browser.OpeningDetail += () => SetRestoreSelectedTabOnBack(index);
+            browser.Loaded += (_, _) => browser.Activate(Frame);
+            browser.Unloaded += (_, _) => browser.Deactivate();
+        }
+    }
+
     public AuthorDetailPage()
     {
         InitializeComponent();
@@ -73,6 +93,7 @@ public sealed partial class AuthorDetailPage : Page
             {
                 UpdateTabPresence();
             }
+            InitializeBrowsers();
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts
                 && (!restoringSameAuthor
@@ -85,23 +106,22 @@ public sealed partial class AuthorDetailPage : Page
             }
         }
 
-        ScenesGrid.SizeChanged += Grid_SizeChanged;
-        CharactersGrid.SizeChanged += Grid_SizeChanged;
-        CoordinatesGrid.SizeChanged += Grid_SizeChanged;
+
 
         DispatcherQueue.TryEnqueue(() =>
         {
             ViewModel.SetOverviewPreviewWidth(OverviewContent.ActualWidth);
             RequestOverviewThumbnails();
-            ApplyLayout(ScenesGrid, SceneImageRatio);
-            ApplyLayout(CharactersGrid, CharaImageRatio);
-            ApplyLayout(CoordinatesGrid, CharaImageRatio);
+
         });
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        if (_navigationParameter is not null && _browsersInitialized)
+            foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
+                _navigationParameter.BrowserStates[index] = browser.SaveState();
         ReleaseRequestedThumbnails();
         _postsCts?.Cancel();
         _postsCts?.Dispose();

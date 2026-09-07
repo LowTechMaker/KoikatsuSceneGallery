@@ -14,6 +14,7 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class CharacterDetailPage : Page
 {
+    private readonly ViewerChrome _viewer;
     public CharacterDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
@@ -23,17 +24,22 @@ public sealed partial class CharacterDetailPage : Page
     public CharacterDetailPage()
     {
         InitializeComponent();
+        _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((CharacterCard)card));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _viewer.SetContext(BrowseContexts.From(e.Parameter));
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         galleryViewModel.ActivateThumbnailRequests();
         galleryViewModel.VersionIndexChanged += OnVersionIndexChanged;
         galleryViewModel.CardsReloaded += OnCardsReloaded;
         switch (e.Parameter)
         {
+            case BrowseNavigation navigation:
+                ShowCard((CharacterCard)navigation.Card);
+                break;
             case AuthorScopedCharacterNavigationParameter scoped:
                 _authorScope = scoped.AuthorKey;
                 ShowCard(scoped.Card);
@@ -62,6 +68,7 @@ public sealed partial class CharacterDetailPage : Page
         DispatcherQueue.TryEnqueue(() =>
         {
             if (!ReferenceEquals(Frame?.Content, this)) return;
+            if (_viewer.RecoverIfMissing()) return;
             if (ViewModel.Card == null || !ViewModel.MetadataLoaded) return;
             if (!string.Equals(ViewModel.FullName, characterName, StringComparison.Ordinal)) return;
 
@@ -191,6 +198,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
+        if (_viewer.Update()) return;
         var scopedCards = GetScopedCards();
         var (hasPrev, hasNext) = scopedCards is null
             ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card)
@@ -201,6 +209,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void Navigate(int direction)
     {
+        if (_viewer.Navigate(direction)) return;
         var scopedCards = GetScopedCards();
         var next = scopedCards is null
             ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card, direction)
@@ -214,6 +223,7 @@ public sealed partial class CharacterDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_viewer.Navigate(0, true)) return;
         var scopedCards = GetScopedCards();
         var card = scopedCards is null
             ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card)
@@ -230,12 +240,14 @@ public sealed partial class CharacterDetailPage : Page
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }

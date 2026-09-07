@@ -10,6 +10,7 @@ public sealed class AuthorDetailNavigationParameter
     }
 
     public AuthorSummary Summary { get; }
+    public Dictionary<int, KoikatsuSceneGallery.Models.BrowserState> BrowserStates { get; } = [];
 
     public int? RestoreSelectedTabOnBack { get; set; }
 }

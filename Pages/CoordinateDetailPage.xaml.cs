@@ -14,6 +14,7 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class CoordinateDetailPage : Page
 {
+    private readonly ViewerChrome _viewer;
     public CoordinateDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
@@ -23,14 +24,19 @@ public sealed partial class CoordinateDetailPage : Page
     public CoordinateDetailPage()
     {
         InitializeComponent();
+        _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((CoordinateCard)card));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _viewer.SetContext(BrowseContexts.From(e.Parameter));
         App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded += OnCardsReloaded;
         switch (e.Parameter)
         {
+            case BrowseNavigation navigation:
+                ShowCard((CoordinateCard)navigation.Card);
+                break;
             case AuthorScopedCoordinateNavigationParameter scoped:
                 _authorScope = scoped.AuthorKey;
                 ShowCard(scoped.Card);
@@ -113,6 +119,7 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
+        if (_viewer.Update()) return;
         var scopedCards = GetScopedCards();
         var (hasPrev, hasNext) = scopedCards is null
             ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card)
@@ -123,6 +130,7 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void Navigate(int direction)
     {
+        if (_viewer.Navigate(direction)) return;
         var scopedCards = GetScopedCards();
         var next = scopedCards is null
             ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card, direction)
@@ -136,6 +144,7 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_viewer.Navigate(0, true)) return;
         var scopedCards = GetScopedCards();
         var card = scopedCards is null
             ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card)
@@ -152,12 +161,14 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }

@@ -24,6 +24,9 @@ public sealed partial class PostDetailPage : Page
     public PostDetailPage()
     {
         InitializeComponent();
+        NavigationCacheMode = NavigationCacheMode.Required;
+        ContentGrid.SizeChanged += (_, _) => UpdateLayoutForWidth();
+        SizeChanged += (_, _) => UpdateLayoutForWidth();
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
     }
 
@@ -38,7 +41,7 @@ public sealed partial class PostDetailPage : Page
         };
         if (post is not null)
         {
-            ViewModel.Load(post);
+            if (ViewModel.Post != post) ViewModel.Load(post);
             RenderDescription();
             if (!post.IsDetailLoaded && App.Services.GetService<AuthorPostService>() is { } postService)
             {
@@ -74,16 +77,22 @@ public sealed partial class PostDetailPage : Page
 
     private void OpenLocalImage(LocalImagePreview preview)
     {
+        var live = Enum.GetValues<LibraryKind>().SelectMany(k => new LibraryAdapter(k).Cards)
+            .DistinctBy(c => c.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(c => c.FilePath, StringComparer.OrdinalIgnoreCase);
+        var cards = ViewModel.LocalImages.Where(p => live.ContainsKey(p.FilePath)).Select(p => live[p.FilePath]).ToArray();
+        if (live.TryGetValue(preview.FilePath, out var selected))
+            new BrowseContext(ViewModel.DisplayTitle, cards, true).Open(Frame, selected);
+    }
 
-        var path = preview.FilePath;
-        var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (scene is not null) { Frame.Navigate(typeof(DetailPage), CreateScopedParameter(scene)); return; }
-
-        var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (character is not null) { Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(character)); return; }
-
-        var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (coordinate is not null) { Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
+    private void UpdateLayoutForWidth()
+    {
+        MainImageFrame.MaxHeight = Math.Clamp(ActualHeight - 270, 200, 640);
+        bool wide = ContentGrid.ActualWidth >= 900 && ViewModel.HasLocalImages;
+        ContentGrid.ColumnDefinitions[1].Width = wide ? new GridLength(340) : new GridLength(0);
+        Grid.SetColumn(PostInfoPanel, wide ? 1 : 0);
+        Grid.SetRow(PostInfoPanel, wide ? 0 : 1);
+        ContentGrid.ColumnSpacing = wide ? 24 : 0;
     }
 
     public static BitmapImage? CreateMainImage(LocalImagePreview? preview) => preview is null
@@ -132,6 +141,7 @@ public sealed partial class PostDetailPage : Page
     {
         if (e.PropertyName == nameof(PostDetailViewModel.Description))
             RenderDescription();
+        if (e.PropertyName == nameof(PostDetailViewModel.HasLocalImages)) UpdateLayoutForWidth();
     }
 
     private void LocalImagesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)

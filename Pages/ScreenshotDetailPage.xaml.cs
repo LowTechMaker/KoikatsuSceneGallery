@@ -12,6 +12,7 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class ScreenshotDetailPage : Page
 {
+    private readonly ViewerChrome _viewer;
     public MediaDetailViewModel ViewModel { get; } = new();
 
     private int _rotationDegrees;
@@ -19,14 +20,17 @@ public sealed partial class ScreenshotDetailPage : Page
     public ScreenshotDetailPage()
     {
         InitializeComponent();
+        _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((MediaCard)card));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _viewer.SetContext(BrowseContexts.From(e.Parameter));
         App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardRemovedNotification += OnCardRemoved;
         App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsReloaded += OnCardsReloaded;
-        if (e.Parameter is MediaCard card)
+        if (e.Parameter is BrowseNavigation navigation) ShowCard((MediaCard)navigation.Card);
+        else if (e.Parameter is MediaCard card)
             ShowCard(card);
     }
 
@@ -42,6 +46,7 @@ public sealed partial class ScreenshotDetailPage : Page
         DispatcherQueue.TryEnqueue(() =>
         {
             if (!ReferenceEquals(Frame?.Content, this)) return;
+            if (_viewer.RecoverIfMissing()) return;
             if (ViewModel.Card == null || !string.Equals(ViewModel.Card.FilePath, path, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -94,6 +99,7 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
+        if (_viewer.Update()) return;
         var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
@@ -101,6 +107,7 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void Navigate(int direction)
     {
+        if (_viewer.Navigate(direction)) return;
         var next = DetailNavigationHelper.Navigate(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
@@ -111,6 +118,7 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_viewer.Navigate(0, true)) return;
         var card = DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
@@ -126,12 +134,14 @@ public sealed partial class ScreenshotDetailPage : Page
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }
