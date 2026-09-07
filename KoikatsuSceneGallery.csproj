@@ -21,6 +21,11 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;PluginSdk\**;PluginCommon\**;PluginCommon.Secrets\**;eng\PackageValidation\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
   </PropertyGroup>
 
+  <!-- Keep local debugging independent of a machine-wide Windows App Runtime installation. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
