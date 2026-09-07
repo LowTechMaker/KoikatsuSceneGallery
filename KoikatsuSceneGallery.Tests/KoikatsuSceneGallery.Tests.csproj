@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KoikatsuSceneGallery.Core\KoikatsuSceneGallery.Core.csproj" />
+    <Compile Include="..\Services\ThumbnailPriorityScheduler.cs" Link="Services\ThumbnailPriorityScheduler.cs" />
   </ItemGroup>
 
 </Project>
