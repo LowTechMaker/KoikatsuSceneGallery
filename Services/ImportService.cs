@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Dispatching;
@@ -59,6 +60,8 @@ public sealed class ImportService
     private readonly IAppLogger _logger;
     private readonly ImportFileExecutor _fileExecutor;
     private readonly PostMetadataStore _postMetadataStore = new();
+    private readonly LibraryFileCache _libraryFileCache = new();
+    private long _destinationResolutionGeneration;
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
@@ -107,6 +110,22 @@ public sealed class ImportService
                 item.ColorHistogram = fp.Value.Histogram;
             }
         }).ConfigureAwait(false);
+    }
+
+    public ArtworkId? ResolveReviewArtworkInput(string input, string? preferredProviderId)
+    {
+        var value = input.Trim();
+        if (string.IsNullOrEmpty(value)) return null;
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+            return _importProviders.Select(p => p.TryParseUrl(value)).FirstOrDefault(id => id is not null);
+
+        if (value.Contains("://", StringComparison.Ordinal) || value.Any(char.IsWhiteSpace)) return null;
+        var candidates = _importProviders.Select(p => p.TryParseFilename(value))
+            .Where(id => id is not null).DistinctBy(id => (id!.ProviderId, id.Id)).ToList();
+        var source = ImportSourceSelection.Resolve(preferredProviderId,
+            _importProviders.Select(p => p.ProviderId).ToArray(), candidates.Select(id => id!.ProviderId));
+        return source is null ? null : candidates.FirstOrDefault(id => string.Equals(id!.ProviderId, source, StringComparison.OrdinalIgnoreCase))
+            ?? new ArtworkId(source, value);
     }
 
     public ArtworkId CreateManualArtworkId(string id)
@@ -299,10 +318,15 @@ public sealed class ImportService
         // so visual similarity falls back to count threshold here — a second
         // ReResolveAsync call after ComputeFingerprintsAsync corrects this)
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
+        var libraryIndex = await BuildLibraryIndexAsync(
             config, validItems, ct).ConfigureAwait(false);
-        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, identicalSourcePaths, folderIndex,
-            config.ArtworkSubfolderThreshold, config.UseVisualSimilarity));
+        dispatcher.TryEnqueue(() => ResolveDestinations(
+            items,
+            config,
+            libraryIndex.IdenticalSourcePaths,
+            libraryIndex.FolderIndex,
+            config.ArtworkSubfolderThreshold,
+            config.UseVisualSimilarity));
 
         return rejectedCount;
     }
@@ -382,14 +406,81 @@ public sealed class ImportService
         int? artworkSubfolderThreshold = null,
         bool? useVisualSimilarity = null)
     {
-        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
+        _ = await ReResolveWithDetailedDiagnosticsAsync(
+            items,
+            dispatcher,
+            ct,
+            artworkSubfolderThreshold,
+            useVisualSimilarity).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Re-resolves destinations and reports the background, UI-queue, directory-I/O,
+    /// and property-notification costs of the pass. The collection is snapshotted by
+    /// the caller's UI thread before any background work begins.
+    /// </summary>
+    public async Task<ResolveDiagnosticResult> ReResolveWithDetailedDiagnosticsAsync(
+        ObservableCollection<ImportItem> items,
+        DispatcherQueue dispatcher,
+        CancellationToken ct,
+        int? artworkSubfolderThreshold = null,
+        bool? useVisualSimilarity = null)
+    {
+        var generation = Interlocked.Increment(ref _destinationResolutionGeneration);
         var itemSnapshot = items.ToList();
-        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
+        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
+
+        var backgroundStopwatch = Stopwatch.StartNew();
+        var libraryIndex = await BuildLibraryIndexAsync(
             config, itemSnapshot, ct).ConfigureAwait(false);
+        backgroundStopwatch.Stop();
+
         int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
         bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
-        dispatcher.TryEnqueue(() => ResolveDestinations(
-            items, config, identicalSourcePaths, folderIndex, threshold, visual));
+        var completion = new TaskCompletionSource<ResolveDiagnosticResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellationRegistration = ct.Register(
+            static state => ((TaskCompletionSource<ResolveDiagnosticResult>)state!).TrySetCanceled(),
+            completion);
+        var queueStopwatch = Stopwatch.StartNew();
+
+        if (!dispatcher.TryEnqueue(() =>
+            {
+                if (ct.IsCancellationRequested
+                    || generation != Volatile.Read(ref _destinationResolutionGeneration))
+                {
+                    completion.TrySetCanceled();
+                    return;
+                }
+
+                try
+                {
+                    queueStopwatch.Stop();
+                    var diagnostics = new ResolveDiagnosticCollector();
+                    ResolveDestinations(
+                        items,
+                        config,
+                        libraryIndex.IdenticalSourcePaths,
+                        libraryIndex.FolderIndex,
+                        threshold,
+                        visual,
+                        diagnostics);
+                    completion.TrySetResult(diagnostics.ToResult(
+                        backgroundStopwatch.ElapsedMilliseconds,
+                        queueStopwatch.ElapsedMilliseconds,
+                        libraryIndex));
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+            }))
+        {
+            completion.TrySetException(new InvalidOperationException(
+                "The UI dispatcher rejected destination resolution."));
+        }
+
+        return await completion.Task.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -414,13 +505,26 @@ public sealed class ImportService
             SaveFetchedMetadataAsync);
     }
 
+    /// <summary>
+    /// Registers files committed by the transaction executor, avoiding a full
+    /// library scan the next time an import workspace is re-resolved.
+    /// </summary>
+    public void RegisterCommittedLibraryFiles(IEnumerable<string> destinationPaths)
+        => _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+
+    /// <summary>
+    /// Causes the following resolution to rebuild its filename index from disk.
+    /// </summary>
+    public void InvalidateLibraryFileCache() => _libraryFileCache.Invalidate();
+
     private void ResolveDestinations(
         ObservableCollection<ImportItem> items,
         SettingsService.ConfigData config,
         IReadOnlySet<string> identicalSourcePaths,
         Dictionary<string, Dictionary<string, string>> folderIndex,
         int artworkThreshold = 1,
-        bool useVisualSimilarity = false)
+        bool useVisualSimilarity = false,
+        ResolveDiagnosticCollector? diagnostics = null)
     {
         var subfolder = config.ImportSubfolder.Trim();
 
@@ -429,10 +533,10 @@ public sealed class ImportService
             if (item.Status != ImportItemStatus.ReadyToImport || item.CardType == CardType.NotACard)
                 continue;
 
-            item.AuthorDirectoryPath = null;
+            SetAuthorDirectoryPath(item, null, diagnostics);
             if (identicalSourcePaths.Contains(item.SourceFilePath))
             {
-                item.Status = ImportItemStatus.AlreadyInLibrary;
+                SetStatus(item, ImportItemStatus.AlreadyInLibrary, diagnostics);
                 continue;
             }
 
@@ -521,15 +625,15 @@ public sealed class ImportService
             }
 
             targetFolder ??= BuildTargetBase(roots[0], subfolder, config.UnknownFolderName, gameVersionFolder, "", null);
-            item.AuthorDirectoryPath = item.ArtworkId is not null ? targetFolder : null;
+            SetAuthorDirectoryPath(item, item.ArtworkId is not null ? targetFolder : null, diagnostics);
 
             if (useUnrecognizedSubfolder)
                 targetFolder = Path.Combine(targetFolder, UnrecognizedFolderName);
 
-            item.DestinationPath = Path.Combine(targetFolder, item.FileName);
+            SetDestinationPath(item, Path.Combine(targetFolder, item.FileName), diagnostics);
         }
 
-        ResolveArtworkDestinations(items, config, artworkThreshold, useVisualSimilarity);
+        ResolveArtworkDestinations(items, config, artworkThreshold, useVisualSimilarity, diagnostics);
     }
 
     private Task<List<ImportItem>> PrepareArtworkPromotionsAsync(
@@ -641,7 +745,8 @@ public sealed class ImportService
         IReadOnlyList<ImportItem> items,
         SettingsService.ConfigData config,
         int artworkThreshold,
-        bool useVisualSimilarity)
+        bool useVisualSimilarity,
+        ResolveDiagnosticCollector? diagnostics = null)
     {
         var artworkGroups = items
             .Where(item => item.Status == ImportItemStatus.ReadyToImport
@@ -663,11 +768,15 @@ public sealed class ImportService
 
             try
             {
-                var existingArtworkDirectory = FindArtworkDirectory(authorDirectory, artworkId);
-                var existingRootFiles = FindRootArtworkFiles(
-                    authorDirectory,
-                    artworkId,
-                    CancellationToken.None);
+                var existingArtworkDirectory = MeasureArtworkDirectoryLookup(
+                    diagnostics,
+                    () => FindArtworkDirectory(authorDirectory, artworkId));
+                var existingRootFiles = MeasureArtworkDirectoryLookup(
+                    diagnostics,
+                    () => FindRootArtworkFiles(
+                        authorDirectory,
+                        artworkId,
+                        CancellationToken.None));
 
                 bool shouldUseArtworkDirectory;
                 if (existingArtworkDirectory is not null)
@@ -702,7 +811,7 @@ public sealed class ImportService
                         authorDirectory,
                         FormatArtworkFolder(config, first.Title, artworkId.Id));
                 foreach (var item in artworkItems)
-                    item.DestinationPath = Path.Combine(artworkDirectory, item.FileName);
+                    SetDestinationPath(item, Path.Combine(artworkDirectory, item.FileName), diagnostics);
             }
             catch (Exception ex)
             {
@@ -710,6 +819,136 @@ public sealed class ImportService
             }
         }
     }
+
+    private static T MeasureArtworkDirectoryLookup<T>(
+        ResolveDiagnosticCollector? diagnostics,
+        Func<T> operation)
+        => diagnostics is null
+            ? operation()
+            : diagnostics.MeasureArtworkDirectoryLookup(operation);
+
+    private static void SetAuthorDirectoryPath(
+        ImportItem item,
+        string? value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (string.Equals(item.AuthorDirectoryPath, value, StringComparison.Ordinal))
+            return;
+
+        if (diagnostics is null)
+        {
+            item.AuthorDirectoryPath = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.AuthorDirectoryPath = value);
+    }
+
+    private static void SetDestinationPath(
+        ImportItem item,
+        string? value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (string.Equals(item.DestinationPath, value, StringComparison.Ordinal))
+            return;
+
+        if (diagnostics is null)
+        {
+            item.DestinationPath = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.DestinationPath = value);
+        diagnostics.DestinationPathAssignments++;
+    }
+
+    private static void SetStatus(
+        ImportItem item,
+        ImportItemStatus value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (item.Status == value)
+            return;
+
+        if (diagnostics is null)
+        {
+            item.Status = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.Status = value);
+        if (value == ImportItemStatus.AlreadyInLibrary)
+            diagnostics.StatusTransitionsToAlreadyInLibrary++;
+    }
+
+    private sealed class ResolveDiagnosticCollector
+    {
+        private long _artworkDirectoryLookupElapsedTicks;
+        private long _propertyAssignmentElapsedTicks;
+
+        public int DestinationPathAssignments { get; set; }
+        public int StatusTransitionsToAlreadyInLibrary { get; set; }
+
+        public T MeasureArtworkDirectoryLookup<T>(Func<T> operation)
+        {
+            var startedAt = Stopwatch.GetTimestamp();
+            try
+            {
+                return operation();
+            }
+            finally
+            {
+                _artworkDirectoryLookupElapsedTicks += Stopwatch.GetTimestamp() - startedAt;
+            }
+        }
+
+        public void MeasurePropertyAssignment(Action operation)
+        {
+            var startedAt = Stopwatch.GetTimestamp();
+            try
+            {
+                operation();
+            }
+            finally
+            {
+                _propertyAssignmentElapsedTicks += Stopwatch.GetTimestamp() - startedAt;
+            }
+        }
+
+        public ResolveDiagnosticResult ToResult(
+            long backgroundIndexElapsedMs,
+            long uiQueueDelayMs,
+            LibraryIndexResult libraryIndex)
+            => new(
+                backgroundIndexElapsedMs,
+                libraryIndex.LibraryScanAndCandidateIndexElapsedMs,
+                libraryIndex.ByteComparisonElapsedMs,
+                libraryIndex.FolderIndexElapsedMs,
+                libraryIndex.TotalCandidatesCompared,
+                libraryIndex.ActualIdenticalDuplicates,
+                libraryIndex.ActualContentMismatches,
+                uiQueueDelayMs,
+                (long)Stopwatch.GetElapsedTime(0, _artworkDirectoryLookupElapsedTicks).TotalMilliseconds,
+                (long)Stopwatch.GetElapsedTime(0, _propertyAssignmentElapsedTicks).TotalMilliseconds,
+                DestinationPathAssignments,
+                StatusTransitionsToAlreadyInLibrary);
+    }
+
+    private sealed record LibraryIndexResult(
+        HashSet<string> IdenticalSourcePaths,
+        Dictionary<string, Dictionary<string, string>> FolderIndex,
+        long LibraryScanAndCandidateIndexElapsedMs,
+        long ByteComparisonElapsedMs,
+        long FolderIndexElapsedMs,
+        int TotalCandidatesCompared,
+        int ActualIdenticalDuplicates,
+        int ActualContentMismatches);
+
+    private sealed record DuplicateDetectionResult(
+        HashSet<string> IdenticalSourcePaths,
+        int TotalCandidatesCompared,
+        int ActualIdenticalDuplicates,
+        int ActualContentMismatches);
 
     private string? FindArtworkDirectory(string authorDirectory, ArtworkId artworkId)
     {
@@ -801,31 +1040,53 @@ public sealed class ImportService
             authorName);
     }
 
-    private Task<(HashSet<string> IdenticalSourcePaths, Dictionary<string, Dictionary<string, string>> FolderIndex)>
+    private Task<LibraryIndexResult>
         BuildLibraryIndexAsync(
             SettingsService.ConfigData config,
             IReadOnlyList<ImportItem> items,
             CancellationToken cancellationToken)
-        => Task.Run(() =>
+        => Task.Run(async () =>
         {
-            var filesByName = BuildExistingFileIndex(config, cancellationToken);
-            var identicalSourcePaths = FindIdenticalSourcePaths(
-                items, filesByName, cancellationToken);
+            var roots = GetLibraryRoots(config);
+            var cachedIndex = await _libraryFileCache.GetOrBuildAsync(
+                roots,
+                token => BuildExistingFileIndex(roots, token),
+                cancellationToken).ConfigureAwait(false);
+
+            var byteComparisonStopwatch = Stopwatch.StartNew();
+            var duplicateDetection = FindIdenticalSourcePaths(
+                items, cachedIndex.FilesByName, cancellationToken);
+            byteComparisonStopwatch.Stop();
+
+            var folderIndexStopwatch = Stopwatch.StartNew();
             var folders = BuildFolderIndex(config, cancellationToken);
-            return (identicalSourcePaths, folders);
+            folderIndexStopwatch.Stop();
+
+            return new LibraryIndexResult(
+                duplicateDetection.IdenticalSourcePaths,
+                folders,
+                cachedIndex.ScanElapsedMilliseconds,
+                byteComparisonStopwatch.ElapsedMilliseconds,
+                folderIndexStopwatch.ElapsedMilliseconds,
+                duplicateDetection.TotalCandidatesCompared,
+                duplicateDetection.ActualIdenticalDuplicates,
+                duplicateDetection.ActualContentMismatches);
         }, cancellationToken);
 
+    private static IReadOnlyList<string> GetLibraryRoots(SettingsService.ConfigData config)
+        => config.FolderPaths
+            .Concat(config.CharacterFolderPaths)
+            .Concat(config.CoordinateFolderPaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
     private Dictionary<string, List<string>> BuildExistingFileIndex(
-        SettingsService.ConfigData config,
+        IReadOnlyList<string> roots,
         CancellationToken cancellationToken)
     {
         var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        var allRoots = config.FolderPaths
-            .Concat(config.CharacterFolderPaths)
-            .Concat(config.CoordinateFolderPaths)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var root in allRoots)
+        foreach (var root in roots)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) continue;
@@ -850,12 +1111,15 @@ public sealed class ImportService
         return index;
     }
 
-    private HashSet<string> FindIdenticalSourcePaths(
+    private DuplicateDetectionResult FindIdenticalSourcePaths(
         IReadOnlyList<ImportItem> items,
-        IReadOnlyDictionary<string, List<string>> existingFilesByName,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> existingFilesByName,
         CancellationToken cancellationToken)
     {
         var identicalSourcePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var totalCandidatesCompared = 0;
+        var actualIdenticalDuplicates = 0;
+        var actualContentMismatches = 0;
 
         foreach (var item in items)
         {
@@ -871,16 +1135,18 @@ public sealed class ImportService
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    if (!ImportDuplicateDetector.AreFilesIdentical(
+                    totalCandidatesCompared++;
+                    if (ImportDuplicateDetector.AreFilesIdentical(
                             item.SourceFilePath,
                             candidate,
                             cancellationToken))
                     {
-                        continue;
+                        actualIdenticalDuplicates++;
+                        identicalSourcePaths.Add(item.SourceFilePath);
+                        break;
                     }
 
-                    identicalSourcePaths.Add(item.SourceFilePath);
-                    break;
+                    actualContentMismatches++;
                 }
                 catch (OperationCanceledException)
                 {
@@ -896,7 +1162,11 @@ public sealed class ImportService
             }
         }
 
-        return identicalSourcePaths;
+        return new DuplicateDetectionResult(
+            identicalSourcePaths,
+            totalCandidatesCompared,
+            actualIdenticalDuplicates,
+            actualContentMismatches);
     }
 
     private Dictionary<string, Dictionary<string, string>> BuildFolderIndex(

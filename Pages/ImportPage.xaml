@@ -5,6 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:KoikatsuSceneGallery.Converters"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls"
     xmlns:models="using:KoikatsuSceneGallery.Models"
     xmlns:vm="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d"
@@ -13,28 +15,109 @@
     Drop="Page_Drop">
 
     <Page.Resources>
+        <converters:PhaseToCancelButtonVisibilityConverter x:Key="PhaseToCancelButtonVisibilityConverter" />
         <DataTemplate x:Key="AuthorPickerItemTemplate" x:DataType="vm:SelectableAuthor">
             <Grid Padding="4,6" ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <FontIcon FontSize="14" Glyph="&#xE77B;"
-                          VerticalAlignment="Center"
+                <FontIcon FontSize="14" Glyph="&#xE77B;" VerticalAlignment="Center"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Name}"
-                               Style="{StaticResource BodyTextBlockStyle}"
+                    <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyTextBlockStyle}"
                                TextTrimming="CharacterEllipsis" MaxLines="1" />
-                    <TextBlock Text="{x:Bind Id}"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    <TextBlock Text="{x:Bind Id}" Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                Style="{StaticResource CaptionTextBlockStyle}" />
                 </StackPanel>
             </Grid>
         </DataTemplate>
+
+        <DataTemplate x:Key="ReviewFileTemplate" x:DataType="models:ImportItem">
+            <Grid Padding="8" ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Width="92" Height="69" CornerRadius="{StaticResource ControlCornerRadius}"
+                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                    <Image Stretch="UniformToFill">
+                        <Image.Source>
+                            <BitmapImage DecodePixelWidth="160" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                        </Image.Source>
+                    </Image>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind FileName}" Style="{StaticResource BodyTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" MaxLines="1" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="5,1"
+                                Background="{ThemeResource ControlFillColorDefaultBrush}">
+                            <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
+                        </Border>
+                        <controls:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" />
+                    </StackPanel>
+                    <StackPanel x:Uid="Import_RatingTooltip" Orientation="Horizontal" Spacing="4">
+                        <ToggleButton Content="G" MinWidth="38" IsChecked="{x:Bind IsAllAgesRating, Mode=TwoWay}" />
+                        <ToggleButton Content="R-18" MinWidth="52" IsChecked="{x:Bind IsR18Rating, Mode=TwoWay}" />
+                        <ToggleButton Content="R-18G" MinWidth="60" IsChecked="{x:Bind IsR18GRating, Mode=TwoWay}" />
+                    </StackPanel>
+                </StackPanel>
+                <Grid Grid.Column="2" VerticalAlignment="Center">
+                    <ProgressRing Width="14" Height="14" IsActive="True"
+                                  Visibility="{x:Bind ShowStatusRing, Mode=OneWay}" />
+                    <FontIcon FontSize="14" Glyph="{x:Bind StatusGlyph, Mode=OneWay}"
+                              Visibility="{x:Bind ShowStatusGlyph, Mode=OneWay}" />
+                </Grid>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ResolvedFileTemplate" x:DataType="models:ImportItem">
+            <Grid Padding="8" ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border Width="76" Height="57" CornerRadius="{StaticResource ControlCornerRadius}"
+                        Background="{ThemeResource ControlFillColorDefaultBrush}">
+                    <Image Stretch="UniformToFill">
+                        <Image.Source>
+                            <BitmapImage DecodePixelWidth="128" UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
+                        </Image.Source>
+                    </Image>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{x:Bind FileName}" Style="{StaticResource BodyTextBlockStyle}"
+                                   TextTrimming="CharacterEllipsis" MaxLines="1" />
+                        <controls:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" />
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind DestinationPath, Mode=OneWay}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" MaxLines="1"
+                               Visibility="{x:Bind HasDestination, Mode=OneWay}" />
+                </StackPanel>
+                <Grid Grid.Column="2" VerticalAlignment="Center">
+                    <ProgressRing Width="14" Height="14" IsActive="True"
+                                  Visibility="{x:Bind ShowStatusRing, Mode=OneWay}" />
+                    <FontIcon FontSize="14" Glyph="{x:Bind StatusGlyph, Mode=OneWay}"
+                              Visibility="{x:Bind ShowStatusGlyph, Mode=OneWay}" />
+                </Grid>
+            </Grid>
+        </DataTemplate>
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="16">
+    <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+    <ContentControl x:Name="ImportWorkspace"
+                    IsEnabled="{x:Bind ViewModel.IsReviewWorkspaceEnabled, Mode=OneWay}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
+    <Grid Padding="24,16,24,0" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -42,888 +125,401 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Title + cookie setup -->
-        <Grid>
+        <Grid ColumnSpacing="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock
-                x:Uid="Import_Title"
-                Style="{StaticResource TitleTextBlockStyle}" />
-            <Button
-                x:Name="CookieSetupButton"
-                AutomationProperties.AutomationId="ImportCookieSetupButton"
-                Grid.Column="2"
-                VerticalAlignment="Center"
-                Click="CookieSetup_Click"
-                Visibility="Collapsed">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE8C7;" />
-                    <TextBlock x:Uid="Import_CookieSetup" />
+            <StackPanel Spacing="2">
+                <TextBlock x:Uid="Import_Title" Style="{StaticResource TitleTextBlockStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.ReviewSummaryText, Mode=OneWay}"
+                           Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12" Margin="0,6,0,0"
+                                    Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+                    <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:RatingBadge Text="G" />
+                    <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}" VerticalAlignment="Center"
+                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                 </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:RatingBadge Text="R-18" />
+                    <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}" VerticalAlignment="Center"
+                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <controls:RatingBadge Text="R-18G" />
+                    <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}" VerticalAlignment="Center"
+                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
+                </StackPanel>
+                </controls:WrapPanel>
+            </StackPanel>
+            <Button Grid.Column="1" x:Uid="Import_Options" VerticalAlignment="Center">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <StackPanel Width="280" Spacing="12">
+                            <TextBlock x:Uid="Import_OptionsTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <Button AutomationProperties.AutomationId="ImportRefreshLibraryIndexButton"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{x:Bind ViewModel.RefreshLibraryIndexCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                    <TextBlock x:Uid="Import_RefreshLibraryIndex" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CookieSetupButton" AutomationProperties.AutomationId="ImportCookieSetupButton"
+                                    HorizontalAlignment="Stretch" Click="CookieSetup_Click" Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="14" Glyph="&#xE8C7;" />
+                                    <TextBlock x:Uid="Import_CookieSetup" />
+                                </StackPanel>
+                            </Button>
+                            <NumberBox x:Uid="Import_SubfolderThreshold" Minimum="-1" Maximum="99"
+                                       SmallChange="1" SpinButtonPlacementMode="Compact"
+                                       IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
+                                       Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
             </Button>
         </Grid>
 
-        <!-- Rejected files warning -->
-        <InfoBar
-            x:Name="RejectedWarningBar"
-            Grid.Row="1"
-            IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
-            Severity="Warning"
-            IsClosable="True" />
+        <InfoBar x:Name="RejectedWarningBar" Grid.Row="1"
+                 IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
+                 Severity="Warning" IsClosable="True" />
 
-        <!-- Drop zone (shown when empty) -->
-        <Border
-            x:Name="DropZone"
-            Grid.Row="2"
-            CornerRadius="16"
-            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-            BorderThickness="2"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
+        <Border x:Name="DropZone" Grid.Row="2" CornerRadius="16" Margin="0,0,0,16"
+                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="2"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
             <Grid>
-                <!-- Idle: drop hint -->
-                <StackPanel
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="16"
-                    Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                    <FontIcon
-                        FontSize="48"
-                        Glyph="&#xE896;"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        HorizontalAlignment="Center" />
-                    <TextBlock
-                        x:Uid="Import_DropZoneTitle"
-                        Style="{StaticResource SubtitleTextBlockStyle}"
-                        HorizontalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock
-                        x:Uid="Import_DropZoneHint"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        HorizontalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
+                            Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
+                    <FontIcon FontSize="48" Glyph="&#xE896;" HorizontalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Uid="Import_DropZoneTitle" Style="{StaticResource SubtitleTextBlockStyle}"
+                               HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <Button x:Uid="Import_ChooseFiles" HorizontalAlignment="Center" Click="PickFiles_Click" Style="{StaticResource AccentButtonStyle}" />
+                    <TextBlock x:Uid="Import_DropZoneHint" Style="{StaticResource CaptionTextBlockStyle}"
+                               HorizontalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
-
-                <!-- Scanning: progress animation -->
-                <StackPanel
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="16"
-                    Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}">
-                    <ProgressRing
-                        Width="56" Height="56"
-                        IsActive="True"
-                        HorizontalAlignment="Center" />
-                    <TextBlock
-                        x:Uid="Import_ScanningHint"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        HorizontalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
+                            Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}">
+                    <ProgressRing Width="56" Height="56" IsActive="True" HorizontalAlignment="Center" />
+                    <TextBlock Text="{x:Bind ViewModel.AnalysisStatusText, Mode=OneWay}"
+                               Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Tab view (shown when items exist) -->
-        <TabView
-            Grid.Row="2"
-            IsAddTabButtonVisible="False"
-            TabWidthMode="SizeToContent"
-            Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
-
-            <!-- matched tab -->
-            <TabViewItem x:Uid="Import_Tab_Matched" IsClosable="False">
-                <ScrollViewer Padding="0,8,0,0">
-                    <StackPanel Spacing="4" Padding="0,0,0,8">
-
-                        <!-- Analyzing section: items waiting for metadata -->
-                        <Expander
-                            IsExpanded="True"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch"
-                            Visibility="{x:Bind ViewModel.HasAnalyzingItems, Mode=OneWay}">
-                            <Expander.Header>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <ProgressRing Width="14" Height="14" IsActive="True" />
-                                    <TextBlock x:Uid="Import_Analyzing"
-                                               Style="{StaticResource BodyStrongTextBlockStyle}" />
+        <Grid Grid.Row="2" Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+                        <Border Padding="12" CornerRadius="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <Grid RowSpacing="8">
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8"
+                                            Visibility="{x:Bind ViewModel.AnalysisLoadingVisibility, Mode=OneWay}">
+                                    <ProgressRing Width="16" Height="16" IsActive="True" HorizontalAlignment="Center" />
+                                    <TextBlock x:Uid="Import_ReviewLoading" Style="{StaticResource BodyTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind ViewModel.AnalysisStatusText, Mode=OneWay}"
+                                               HorizontalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                 </StackPanel>
-                            </Expander.Header>
-                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.AnalyzingItems}" Margin="24,4,0,4">
-                                <ItemsRepeater.Layout>
-                                    <StackLayout Spacing="2" />
-                                </ItemsRepeater.Layout>
-                                <ItemsRepeater.ItemTemplate>
-                                    <DataTemplate x:DataType="models:ImportItem">
-                                        <Grid Padding="4,4" ColumnSpacing="10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
-                                                    Background="{ThemeResource ControlFillColorDefaultBrush}">
-                                                <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
-                                            </Border>
-                                            <TextBlock Grid.Column="1" Text="{x:Bind FileName}"
-                                                       Style="{StaticResource BodyTextBlockStyle}"
-                                                       TextTrimming="CharacterEllipsis" MaxLines="1"
-                                                       VerticalAlignment="Center" />
-                                            <ProgressRing Grid.Column="2" Width="14" Height="14" IsActive="True"
-                                                          VerticalAlignment="Center" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsRepeater.ItemTemplate>
-                            </ItemsRepeater>
-                        </Expander>
 
-                        <!-- Fetch-failed: artwork ID recognized but fetch returned null -->
-                        <Expander
-                            IsExpanded="True"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch"
-                            Visibility="{x:Bind ViewModel.HasFetchFailedItems, Mode=OneWay}">
-                            <Expander.Header>
-                                <TextBlock x:Uid="Import_FetchFailed"
-                                           Style="{StaticResource BodyStrongTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </Expander.Header>
-                            <StackPanel Spacing="8" Margin="24,4,0,4">
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" MaxWidth="180" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" MaxWidth="440"
+                                            Visibility="{x:Bind ViewModel.EmptyReviewWorkspaceVisibility, Mode=OneWay}">
+                                    <TextBlock Text="{x:Bind ViewModel.ReviewEmptyTitle, Mode=OneWay}"
+                                               Style="{StaticResource SubtitleTextBlockStyle}"
+                                               HorizontalAlignment="Center" TextAlignment="Center" />
+                                    <TextBlock Text="{x:Bind ViewModel.ReviewEmptyDescription, Mode=OneWay}"
+                                               Style="{StaticResource BodyTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                                </StackPanel>
 
-                                    <Button
-                                        x:Uid="Import_SelectAllFetchFailed"
-                                        Command="{x:Bind ViewModel.ToggleAllFetchFailedSelectionCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                                            <TextBlock x:Uid="Import_SelectAllFetchFailedLabel" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <StackPanel
-                                        Grid.Column="1"
-                                        x:Uid="Import_BatchRatingTooltip"
-                                        Orientation="Horizontal"
-                                        Spacing="4"
-                                        VerticalAlignment="Center">
-                                        <Button MinWidth="48" Content="G"
-                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
-                                                Click="SetBatchRatingFetchFailed_AllAges" />
-                                        <Button MinWidth="64" Content="R-18"
-                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
-                                                Click="SetBatchRatingFetchFailed_R18" />
-                                        <Button MinWidth="72" Content="R-18G"
-                                                IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}"
-                                                Click="SetBatchRatingFetchFailed_R18G" />
+                                <Grid x:Name="ReviewContentGrid" Grid.Row="1"
+                                      Visibility="{x:Bind ViewModel.FlatReviewWorkspaceVisibility, Mode=OneWay}" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Spacing="10">
+                                        <controls:WrapPanel Spacing="8">
+                                            <TextBox x:Name="ReviewArtworkInput" x:Uid="Import_LookupInput" Width="300"
+                                                     Text="{x:Bind ViewModel.ReviewArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     KeyDown="ReviewArtworkInput_KeyDown" />
+                                            <ComboBox x:Uid="Import_LookupProvider" Width="150"
+                                                      ItemsSource="{x:Bind ViewModel.ReviewArtworkProviderIds}"
+                                                      SelectedItem="{x:Bind ViewModel.ReviewArtworkProviderId, Mode=TwoWay}" />
+                                            <Button x:Uid="Import_LookupFetch" Command="{x:Bind ViewModel.FetchReviewArtworkCommand}"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                            <Button x:Uid="Import_SearchSelected" Click="SearchSelected_Click"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                        </controls:WrapPanel>
+                                        <controls:WrapPanel Spacing="8">
+                                            <ComboBox x:Uid="Import_Review_Rating" MinWidth="130"
+                                                      SelectedIndex="{x:Bind ViewModel.ReviewRatingOverrideIndex, Mode=TwoWay}">
+                                                <ComboBoxItem x:Uid="Import_Review_KeepUnchanged" />
+                                                <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
+                                            </ComboBox>
+                                            <Button x:Uid="Import_ApplyRating" Command="{x:Bind ViewModel.ApplyReviewRatingCommand}"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                            <Button x:Name="ReviewAuthorButton" x:Uid="Import_AssignAuthor"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}">
+                                                <Button.Flyout>
+                                                    <Flyout x:Name="ReviewAuthorFlyout" Placement="BottomEdgeAlignedLeft">
+                                                        <StackPanel Width="280" Spacing="10">
+                                                            <Button x:Uid="Import_SelectAuthor" Click="PickReviewAuthor_Click" HorizontalAlignment="Stretch">
+                                                                <TextBlock x:Uid="Import_PickKnownAuthor" />
+                                                            </Button>
+                                                            <ComboBox x:Uid="Import_Review_AuthorProvider" HorizontalAlignment="Stretch"
+                                                                      ItemsSource="{x:Bind ViewModel.ReviewAuthorProviderIds}"
+                                                                      SelectedItem="{x:Bind ViewModel.ReviewAuthorProviderId, Mode=TwoWay}" />
+                                                            <TextBox x:Uid="Import_Review_AuthorId"
+                                                                     Text="{x:Bind ViewModel.ReviewAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <Button x:Uid="Import_AssignAuthor" HorizontalAlignment="Stretch"
+                                                                    Command="{x:Bind ViewModel.ApplyReviewAuthorCommand}" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                            <TextBlock Text="{x:Bind ViewModel.ReviewSelectionText, Mode=OneWay}"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </controls:WrapPanel>
+                                        <TextBlock Text="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                                                   Visibility="{x:Bind ViewModel.ReviewBatchStatusVisibility, Mode=OneWay}"
+                                                   AutomationProperties.LiveSetting="Polite"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <controls:WrapPanel Spacing="12">
+                                            <CheckBox x:Uid="Import_SelectVisibleCompact" MinWidth="0"
+                                                      IsChecked="{x:Bind ViewModel.IsAllReviewSelected, Mode=TwoWay}" />
+                                            <ComboBox x:Uid="Import_RatingFilter" MinWidth="120"
+                                                      SelectedIndex="{x:Bind ViewModel.ReviewFilterIndex, Mode=TwoWay}">
+                                                <ComboBoxItem x:Uid="Import_AllRatings" />
+                                                <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
+                                            </ComboBox>
+                                            <Button x:Uid="Import_RemoveSelected" Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                            <Button x:Uid="Import_Review_ShowAll"
+                                                    Visibility="{x:Bind ViewModel.ClearReviewRatingFilterVisibility, Mode=OneWay}"
+                                                    Command="{x:Bind ViewModel.SetReviewFilterCommand}" CommandParameter="All" />
+                                        </controls:WrapPanel>
                                     </StackPanel>
 
-                                    <TextBox
-                                        Grid.Column="2"
-                                        x:Uid="Import_AuthorId"
-                                        Text="{x:Bind ViewModel.BatchFetchFailedAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                    <Button
-                                        Grid.Column="3"
-                                        x:Uid="Import_SelectAuthor"
-                                        Click="PickAuthorForFetchFailedBatch_Click"
-                                        IsEnabled="{x:Bind ViewModel.HasSelectedFetchFailedGroups, Mode=OneWay}">
-                                        <FontIcon FontSize="14" Glyph="&#xE716;" />
-                                    </Button>
-
-                                    <Button
-                                        Grid.Column="4"
-                                        Command="{x:Bind ViewModel.AssignBatchAuthorIdToFetchFailedCommand}">
-                                        <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                                    </Button>
-                                </Grid>
-
-                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.FetchFailedGroups}">
-                                <ItemsRepeater.Layout>
-                                    <StackLayout Spacing="6" />
-                                </ItemsRepeater.Layout>
-                                <ItemsRepeater.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ImportArtworkGroup">
-                                        <Expander
-                                            IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch">
-                                            <Expander.Header>
-                                                <Grid ColumnSpacing="8"
-                                                      MinHeight="32"
-                                                      VerticalAlignment="Top">
+                                    <Grid Grid.Row="1" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <ListView x:Name="ReviewListHost"
+                                              ItemsSource="{x:Bind ViewModel.ReviewRows}"
+                                              SizeChanged="ReviewListHost_SizeChanged"
+                                              x:Uid="Import_Mixed_Workspace"
+                                              SelectionMode="None" IsItemClickEnabled="False"
+                                              HorizontalContentAlignment="Stretch"
+                                              ScrollViewer.HorizontalScrollMode="Disabled"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListView.ItemsPanel>
+                                            <ItemsPanelTemplate><ItemsStackPanel Orientation="Vertical" /></ItemsPanelTemplate>
+                                        </ListView.ItemsPanel>
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem">
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="IsTabStop" Value="False" />
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
+                                        <ListView.Resources>
+                                            <DataTemplate x:Key="ReviewListItemTemplate" x:DataType="vm:ImportItemReviewState">
+                                                <Grid Padding="8,10" ColumnSpacing="12">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="24" />
+                                                        <ColumnDefinition Width="72" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" MaxWidth="180" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-
-                                                    <CheckBox
-                                                        IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
-                                                        VerticalAlignment="Center" />
-
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{x:Bind HeaderText}"
-                                                               VerticalAlignment="Center"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                               Style="{StaticResource BodyTextBlockStyle}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               MaxLines="1" />
-
-                                                    <Border Grid.Column="2" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2"
-                                                            VerticalAlignment="Center"
+                                                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" IsEnabled="{x:Bind CanSelect, Mode=OneWay}"
+                                                              VerticalAlignment="Center" MinWidth="0" Padding="0"
+                                                              AutomationProperties.Name="{x:Bind Item.FileName}" />
+                                                    <Border Grid.Column="1" Width="72" Height="54" CornerRadius="4"
                                                             Background="{ThemeResource ControlFillColorDefaultBrush}">
-                                                        <TextBlock FontSize="11" Text="{x:Bind FileCount}" />
+                                                        <Image Stretch="Uniform">
+                                                            <Image.Source>
+                                                                <BitmapImage DecodePixelWidth="144"
+                                                                             UriSource="{x:Bind Item.ThumbnailUri, Mode=OneWay}" />
+                                                            </Image.Source>
+                                                        </Image>
                                                     </Border>
-
-                                                    <TextBox
-                                                        Grid.Column="4"
-                                                        x:Uid="Import_AuthorId"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        Text="{x:Bind ManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                                    <Button
-                                                        Grid.Column="3"
-                                                        x:Uid="Import_SearchSauceNao"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="SearchSauceNaoForFetchFailed_Click">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon FontSize="14" Glyph="&#xE721;" />
-                                                            <TextBlock Text="SauceNao" />
-                                                        </StackPanel>
-                                                    </Button>
-
-                                                    <Button
-                                                        Grid.Column="5"
-                                                        x:Uid="Import_SelectAuthor"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="PickAuthor_Click">
-                                                        <FontIcon FontSize="14" Glyph="&#xE716;" />
-                                                    </Button>
-
-                                                    <Button
-                                                        Grid.Column="6"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        IsEnabled="{x:Bind CanAssignAuthor, Mode=OneWay}"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="AssignAuthor_Click">
-                                                        <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                                                    </Button>
-                                                </Grid>
-                                            </Expander.Header>
-
-                                            <ItemsRepeater ItemsSource="{x:Bind Files}" Margin="24,6,0,4">
-                                                <ItemsRepeater.Layout>
-                                                    <StackLayout Spacing="6" />
-                                                </ItemsRepeater.Layout>
-                                                <ItemsRepeater.ItemTemplate>
-                                                    <DataTemplate x:DataType="models:ImportItem">
-                                                        <Grid Padding="4,4" ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-
-                                                            <Border Width="144" Height="108"
-                                                                    CornerRadius="{StaticResource ControlCornerRadius}"
-                                                                    Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                                                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                                                                    BorderThickness="1">
-                                                                <Image Stretch="UniformToFill">
-                                                                    <Image.Source>
-                                                                        <BitmapImage DecodePixelWidth="200"
-                                                                                     UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                                                    </Image.Source>
-                                                                </Image>
-                                                            </Border>
-
-                                                            <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                    <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
-                                                                            Background="{ThemeResource ControlFillColorDefaultBrush}">
-                                                                        <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
-                                                                    </Border>
-                                                                    <TextBlock Text="{x:Bind FileName}"
-                                                                               Style="{StaticResource BodyTextBlockStyle}"
-                                                                               TextTrimming="CharacterEllipsis"
-                                                                               MaxLines="1"
-                                                                               VerticalAlignment="Center" />
-                                                                </StackPanel>
-
-                                                                <StackPanel
-                                                                    x:Uid="Import_RatingTooltip"
-                                                                    Orientation="Horizontal"
-                                                                    Spacing="4">
-                                                                    <ToggleButton
-                                                                        MinWidth="48"
-                                                                        Content="G"
-                                                                        IsChecked="{x:Bind IsAllAgesRating, Mode=TwoWay}" />
-                                                                    <ToggleButton
-                                                                        MinWidth="64"
-                                                                        Content="R-18"
-                                                                        IsChecked="{x:Bind IsR18Rating, Mode=TwoWay}" />
-                                                                    <ToggleButton
-                                                                        MinWidth="72"
-                                                                        Content="R-18G"
-                                                                        IsChecked="{x:Bind IsR18GRating, Mode=TwoWay}" />
-                                                                </StackPanel>
-                                                            </StackPanel>
-
-                                                            <Grid Grid.Column="2" VerticalAlignment="Center">
-                                                                <ProgressRing Width="14" Height="14" IsActive="True"
-                                                                              Visibility="{x:Bind ShowStatusRing, Mode=OneWay}" />
-                                                                <FontIcon FontSize="14"
-                                                                          Glyph="{x:Bind StatusGlyph, Mode=OneWay}"
-                                                                          Visibility="{x:Bind ShowStatusGlyph, Mode=OneWay}" />
-                                                            </Grid>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsRepeater.ItemTemplate>
-                                            </ItemsRepeater>
-                                        </Expander>
-                                    </DataTemplate>
-                                </ItemsRepeater.ItemTemplate>
-                            </ItemsRepeater>
-                            </StackPanel>
-                        </Expander>
-
-                        <!-- Resolved tree: rating → author → artwork → files -->
-                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.MatchedGroups, Mode=OneWay}">
-                            <ItemsRepeater.Layout>
-                                <StackLayout Spacing="4" />
-                            </ItemsRepeater.Layout>
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ImportRatingGroup">
-                                    <Expander
-                                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch">
-                                        <Expander.Header>
-                                            <TextBlock Text="{x:Bind Label}"
-                                                       Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                        </Expander.Header>
-
-                                        <!-- Author groups -->
-                                        <ItemsRepeater ItemsSource="{x:Bind Authors}" Margin="24,4,0,4">
-                                            <ItemsRepeater.Layout>
-                                                <StackLayout Spacing="4" />
-                                            </ItemsRepeater.Layout>
-                                            <ItemsRepeater.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:ImportAuthorGroup">
-                                                    <Expander
-                                                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
-                                                        HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Stretch">
-                                                        <Expander.Header>
-                                                            <TextBlock Text="{x:Bind HeaderText}"
-                                                                       Style="{StaticResource BodyTextBlockStyle}" />
-                                                        </Expander.Header>
-
-                                                        <!-- Artwork groups -->
-                                                        <ItemsRepeater ItemsSource="{x:Bind Artworks}" Margin="24,4,0,4">
-                                                            <ItemsRepeater.Layout>
-                                                                <StackLayout Spacing="4" />
-                                                            </ItemsRepeater.Layout>
-                                                            <ItemsRepeater.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:ImportArtworkGroup">
-                                                                    <Expander
-                                                                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
-                                                                        HorizontalAlignment="Stretch"
-                                                                        HorizontalContentAlignment="Stretch">
-                                                                        <Expander.Header>
-                                                                            <TextBlock Text="{x:Bind HeaderText}"
-                                                                                       Style="{StaticResource BodyTextBlockStyle}"
-                                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                                        </Expander.Header>
-
-                                                                        <!-- File rows -->
-                                                                        <ItemsRepeater ItemsSource="{x:Bind Files}" Margin="24,4,0,4">
-                                                                            <ItemsRepeater.Layout>
-                                                                                <StackLayout Spacing="2" />
-                                                                            </ItemsRepeater.Layout>
-                                                                            <ItemsRepeater.ItemTemplate>
-                                                                                <DataTemplate x:DataType="models:ImportItem">
-                                                                                    <Grid Padding="4,4" ColumnSpacing="10">
-                                                                                        <Grid.ColumnDefinitions>
-                                                                                            <ColumnDefinition Width="Auto" />
-                                                                                            <ColumnDefinition Width="*" />
-                                                                                            <ColumnDefinition Width="Auto" />
-                                                                                            <ColumnDefinition Width="Auto" />
-                                                                                        </Grid.ColumnDefinitions>
-
-                                                                                        <!-- Card type badge -->
-                                                                                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
-                                                                                                Background="{ThemeResource ControlFillColorDefaultBrush}">
-                                                                                            <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
-                                                                                        </Border>
-
-                                                                                        <!-- File name + destination -->
-                                                                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                                                                            <TextBlock Text="{x:Bind FileName}"
-                                                                                                       Style="{StaticResource BodyTextBlockStyle}"
-                                                                                                       TextTrimming="CharacterEllipsis" MaxLines="1" />
-                                                                                            <TextBlock Text="{x:Bind DestinationPath, Mode=OneWay}"
-                                                                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                                                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                                                                                       TextTrimming="CharacterEllipsis" MaxLines="1"
-                                                                                                       Visibility="{x:Bind HasDestination, Mode=OneWay}" />
-                                                                                        </StackPanel>
-
-                                                                                        <!-- R-18 badge -->
-                                                                                        <Border Grid.Column="2" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
-                                                                                                Background="{ThemeResource RatingR18BadgeBrush}"
-                                                                                                Visibility="{x:Bind IsR18OrAbove, Mode=OneWay}">
-                                                                                            <TextBlock Text="{x:Bind RatingText, Mode=OneWay}"
-                                                                                                       Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
-                                                                                        </Border>
-
-                                                                                        <!-- Status -->
-                                                                                        <Grid Grid.Column="3" VerticalAlignment="Center">
-                                                                                            <ProgressRing Width="14" Height="14" IsActive="True"
-                                                                                                          Visibility="{x:Bind ShowStatusRing, Mode=OneWay}" />
-                                                                                            <FontIcon FontSize="14"
-                                                                                                      Glyph="{x:Bind StatusGlyph, Mode=OneWay}"
-                                                                                                      Visibility="{x:Bind ShowStatusGlyph, Mode=OneWay}" />
-                                                                                        </Grid>
-                                                                                    </Grid>
-                                                                                </DataTemplate>
-                                                                            </ItemsRepeater.ItemTemplate>
-                                                                        </ItemsRepeater>
-
-                                                                    </Expander>
-                                                                </DataTemplate>
-                                                            </ItemsRepeater.ItemTemplate>
-                                                        </ItemsRepeater>
-
-                                                    </Expander>
-                                                </DataTemplate>
-                                            </ItemsRepeater.ItemTemplate>
-                                        </ItemsRepeater>
-
-                                    </Expander>
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
-
-                    </StackPanel>
-                </ScrollViewer>
-            </TabViewItem>
-
-            <!-- Unknown / unrecognized tab -->
-            <TabViewItem x:Uid="Import_Tab_Unknown" IsClosable="False"
-                         Visibility="{x:Bind ViewModel.HasUnknownItems, Mode=OneWay}">
-                <Grid RowSpacing="8" Padding="0,8,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <InfoBar
-                        IsOpen="True"
-                        IsClosable="False"
-                        Severity="Informational"
-                        x:Uid="Import_UnknownHint" />
-                    <Grid Grid.Row="1" ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" MaxWidth="180" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" MaxWidth="180" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <Button
-                            x:Uid="Import_SelectAllUnknown"
-                            Command="{x:Bind ViewModel.ToggleAllUnknownSelectionCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                                <TextBlock x:Uid="Import_SelectAllUnknownLabel" />
-                            </StackPanel>
-                        </Button>
-
-                        <StackPanel
-                            Grid.Column="1"
-                            x:Uid="Import_BatchRatingTooltip"
-                            Orientation="Horizontal"
-                            Spacing="4"
-                            VerticalAlignment="Center">
-                            <Button MinWidth="48" Content="G"
-                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
-                                    Click="SetBatchRatingUnknown_AllAges" />
-                            <Button MinWidth="64" Content="R-18"
-                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
-                                    Click="SetBatchRatingUnknown_R18" />
-                            <Button MinWidth="72" Content="R-18G"
-                                    IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}"
-                                    Click="SetBatchRatingUnknown_R18G" />
-                        </StackPanel>
-
-                        <TextBox
-                            Grid.Column="2"
-                            x:Uid="Import_ArtworkId"
-                            Text="{x:Bind ViewModel.BatchManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                        <Button
-                            Grid.Column="3"
-                            x:Uid="Import_ResolveSelectedArtwork"
-                            Command="{x:Bind ViewModel.AssignBatchArtworkIdToUnknownCommand}">
-                            <FontIcon FontSize="14" Glyph="&#xE721;" />
-                        </Button>
-
-                        <TextBox
-                            Grid.Column="4"
-                            x:Uid="Import_AuthorId"
-                            Text="{x:Bind ViewModel.BatchManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                        <Button
-                            Grid.Column="5"
-                            x:Uid="Import_SelectAuthor"
-                            Click="PickAuthorForUnknownBatch_Click"
-                            IsEnabled="{x:Bind ViewModel.HasSelectedUnknownItems, Mode=OneWay}">
-                            <FontIcon FontSize="14" Glyph="&#xE716;" />
-                        </Button>
-
-                        <Button
-                            Grid.Column="6"
-                            Command="{x:Bind ViewModel.AssignBatchAuthorIdToUnknownCommand}">
-                            <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                        </Button>
-                    </Grid>
-                    <ScrollViewer Grid.Row="2">
-                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.UnknownGroups}">
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ImportUnknownGroup">
-                                    <Expander
-                                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch"
-                                        Margin="0,0,0,4">
-                                        <Expander.Header>
-                                            <Grid ColumnSpacing="8"
-                                                  MinHeight="32"
-                                                  VerticalAlignment="Top">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
-                                                          MinWidth="0"
-                                                          VerticalAlignment="Top" />
-
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{x:Bind HeaderText, Mode=OneWay}"
-                                                           Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                           VerticalAlignment="Center"
-                                                           MaxLines="1"
-                                                           TextWrapping="NoWrap"
-                                                           TextTrimming="CharacterEllipsis" />
-
-                                                <TextBox Grid.Column="2"
-                                                         x:Uid="Import_ArtworkId"
-                                                         Height="32"
-                                                         Width="240"
-                                                         MinWidth="140"
-                                                         MaxWidth="240"
-                                                         VerticalAlignment="Top"
-                                                         Text="{x:Bind ManualArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                                <Button Grid.Column="3"
-                                                        x:Uid="Import_ResolveArtwork"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        IsEnabled="{x:Bind CanAssignArtworkId, Mode=OneWay}"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="AssignArtworkIdToUnknownGroup_Click">
-                                                    <FontIcon FontSize="14" Glyph="&#xE721;" />
-                                                </Button>
-
-                                                <TextBox Grid.Column="4"
-                                                         x:Uid="Import_AuthorId"
-                                                         Height="32"
-                                                         Width="140"
-                                                         MinWidth="140"
-                                                         MaxWidth="140"
-                                                         VerticalAlignment="Top"
-                                                         Text="{x:Bind ManualAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                                                <Button Grid.Column="5"
-                                                        x:Uid="Import_SelectAuthor"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="PickAuthorForUnknownGroup_Click">
-                                                    <FontIcon FontSize="14" Glyph="&#xE716;" />
-                                                </Button>
-
-                                                <Button Grid.Column="6"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        IsEnabled="{x:Bind CanAssignAuthor, Mode=OneWay}"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="AssignAuthorToUnknownGroup_Click">
-                                                    <FontIcon FontSize="14" Glyph="&#xE8FB;" />
-                                                </Button>
-
-                                                <Button Grid.Column="7"
-                                                        x:Uid="Import_SearchSauceNao"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="SearchSauceNaoForUnknown_Click">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon FontSize="14" Glyph="&#xE721;" />
-                                                        <TextBlock Text="SauceNao" />
+                                                    <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                                                        <TextBlock Text="{x:Bind Item.FileName}" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Item.SourceFilePath}"
+                                                                   TextTrimming="CharacterEllipsis" MaxLines="1" />
+                                                        <TextBlock TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                            <Run Text="{x:Bind DisplayAuthorName, Mode=OneWay}" />
+                                                            <Run Text=" · " />
+                                                            <Run Text="{x:Bind DisplayArtworkKey, Mode=OneWay}" />
+                                                            <Run Text=" · " />
+                                                            <Run Text="{x:Bind Item.CardTypeText, Mode=OneWay}" />
+                                                            <Run Text=" · " /><Run Text="{x:Bind StatusText, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                        <TextBlock Text="{x:Bind DestinationText, Mode=OneWay}"
+                                                                   ToolTipService.ToolTip="{x:Bind Item.DestinationPath, Mode=OneWay}"
+                                                                   TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                                     </StackPanel>
-                                                </Button>
+                                                    <controls:RatingBadge Grid.Column="3" VerticalAlignment="Center"
+                                                                          Text="{x:Bind Item.RatingText, Mode=OneWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                            <DataTemplate x:Key="ReviewSectionTemplate" x:DataType="vm:ImportReviewRow">
+                                                <StackPanel Padding="8,16,8,8" Spacing="4">
+                                                    <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"
+                                                               AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{x:Bind Description, Mode=OneWay}" TextWrapping="Wrap"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                            <DataTemplate x:Key="ReviewGroupTemplate" x:DataType="vm:ImportReviewRow">
+                                                <Grid Padding="8,8,8,4" ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="14" FontWeight="SemiBold"
+                                                               AutomationProperties.HeadingLevel="Level3" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}" />
+                                                    <Button Grid.Column="1" x:Uid="Import_SelectGroup" Click="SelectMixedReviewGroup_Click" Tag="{x:Bind}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                            <DataTemplate x:Key="ReviewAttentionTemplate" x:DataType="vm:ImportReviewRow">
+                                                <ContentControl Content="{x:Bind Item, Mode=OneWay}"
+                                                                HorizontalContentAlignment="Stretch" IsTabStop="False"
+                                                                ContentTemplate="{StaticResource ReviewListItemTemplate}" />
+                                            </DataTemplate>
+                                            <DataTemplate x:Key="ReviewGridRowTemplate" x:DataType="vm:ImportReviewRow">
+                                                <!-- Only this viewport row's bounded number of tiles is realized. -->
+                                                <ItemsControl ItemsSource="{x:Bind Items, Mode=OneWay}" Padding="8,4,0,8" IsTabStop="False">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12" /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ImportItemReviewState">
+                                                            <ToggleButton Width="{x:Bind TileWidth, Mode=OneWay}" Padding="8" Height="226"
+                                                                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                                                          IsChecked="{x:Bind IsSelected, Mode=TwoWay}" IsEnabled="{x:Bind CanSelect, Mode=OneWay}"
+                                                                          AutomationProperties.Name="{x:Bind Item.FileName}"
+                                                                          AutomationProperties.HelpText="{x:Bind StatusText, Mode=OneWay}"
+                                                                          ToolTipService.ToolTip="{x:Bind Item.SourceFilePath}">
+                                                                <Grid RowSpacing="6">
+                                                                    <Grid.RowDefinitions><RowDefinition Height="120" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                                                    <Border Background="{ThemeResource ControlFillColorDefaultBrush}" CornerRadius="4">
+                                                                        <Image Stretch="Uniform">
+                                                                            <Image.Source><BitmapImage DecodePixelWidth="400" UriSource="{x:Bind Item.ThumbnailUri, Mode=OneWay}" /></Image.Source>
+                                                                        </Image>
+                                                                    </Border>
+                                                                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=OneWay}" IsHitTestVisible="False" IsTabStop="False"
+                                                                              AutomationProperties.AccessibilityView="Raw" Margin="4" MinWidth="0" MinHeight="24"
+                                                                              HorizontalAlignment="Left" VerticalAlignment="Top" />
+                                                                    <controls:RatingBadge Text="{x:Bind Item.RatingText, Mode=OneWay}" Margin="4"
+                                                                                          HorizontalAlignment="Right" VerticalAlignment="Top" />
+                                                                    <TextBlock Grid.Row="1" Text="{x:Bind Item.FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Grid.Row="2" Text="{x:Bind DisplayAuthorName, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                                                               Style="{StaticResource CaptionTextBlockStyle}" />
+                                                                    <TextBlock Grid.Row="3" Text="{x:Bind StatusText, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                                                               ToolTipService.ToolTip="{x:Bind DestinationText, Mode=OneWay}"
+                                                                               Style="{StaticResource CaptionTextBlockStyle}" />
+                                                                </Grid>
+                                                            </ToggleButton>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </DataTemplate>
+                                        </ListView.Resources>
+                                        <ListView.ItemTemplateSelector>
+                                            <controls:ImportReviewTemplateSelector SectionTemplate="{StaticResource ReviewSectionTemplate}"
+                                                GroupTemplate="{StaticResource ReviewGroupTemplate}" ListTemplate="{StaticResource ReviewAttentionTemplate}"
+                                                GridTemplate="{StaticResource ReviewGridRowTemplate}" />
+                                        </ListView.ItemTemplateSelector>
+                                    </ListView>
+                                    <StackPanel Grid.Column="1" MinWidth="124" MaxWidth="180" VerticalAlignment="Top" Spacing="8" Margin="0,16,0,0">
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="36"
+                                                Content="{x:Bind ViewModel.UnidentifiedNavigationText, Mode=OneWay}"
+                                                Tag="Unidentified" Click="JumpToReviewSection_Click" />
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="36"
+                                                Content="{x:Bind ViewModel.UnavailableNavigationText, Mode=OneWay}"
+                                                Tag="Unavailable" Click="JumpToReviewSection_Click" />
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="36"
+                                                Content="{x:Bind ViewModel.IdentifiedNavigationText, Mode=OneWay}"
+                                                Tag="Identified" Click="JumpToReviewSection_Click" />
+                                    </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Border>
 
-                                                <Button Grid.Column="8"
-                                                        x:Uid="Import_RemoveGroup"
-                                                        Height="32"
-                                                        VerticalAlignment="Top"
-                                                        CommandParameter="{x:Bind}"
-                                                        Click="RemoveUnknownGroup_Click">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                                </Button>
-                                            </Grid>
-                                        </Expander.Header>
+        </Grid>
 
-                                        <ItemsRepeater ItemsSource="{x:Bind Files}">
-                                            <ItemsRepeater.ItemTemplate>
-                                                <DataTemplate x:DataType="models:ImportItem">
-                                                    <Grid Padding="8,8" ColumnSpacing="12">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto" />
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <Border Width="144" Height="108"
-                                                                CornerRadius="{StaticResource ControlCornerRadius}"
-                                                                Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                                                                BorderThickness="1">
-                                                            <Image Stretch="UniformToFill">
-                                                                <Image.Source>
-                                                                    <BitmapImage DecodePixelWidth="200"
-                                                                                 UriSource="{x:Bind ThumbnailUri, Mode=OneWay}" />
-                                                                </Image.Source>
-                                                            </Image>
-                                                        </Border>
-
-                                                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2" VerticalAlignment="Center"
-                                                                        Background="{ThemeResource ControlFillColorDefaultBrush}">
-                                                                    <TextBlock FontSize="11" Text="{x:Bind CardTypeText, Mode=OneWay}" />
-                                                                </Border>
-                                                                <TextBlock Text="{x:Bind FileName}"
-                                                                           Style="{StaticResource BodyTextBlockStyle}"
-                                                                           TextTrimming="CharacterEllipsis"
-                                                                           MaxLines="1"
-                                                                           VerticalAlignment="Center" />
-                                                            </StackPanel>
-
-                                                            <StackPanel
-                                                                x:Uid="Import_RatingTooltip"
-                                                                Orientation="Horizontal"
-                                                                Spacing="4">
-                                                                <ToggleButton MinWidth="48" Content="G"
-                                                                              IsChecked="{x:Bind IsAllAgesRating, Mode=TwoWay}" />
-                                                                <ToggleButton MinWidth="64" Content="R-18"
-                                                                              IsChecked="{x:Bind IsR18Rating, Mode=TwoWay}" />
-                                                                <ToggleButton MinWidth="72" Content="R-18G"
-                                                                              IsChecked="{x:Bind IsR18GRating, Mode=TwoWay}" />
-                                                            </StackPanel>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Column="2" VerticalAlignment="Top"
-                                                                x:Uid="Import_RemoveItem"
-                                                                CommandParameter="{x:Bind}"
-                                                                Click="RemoveUnknownItem_Click">
-                                                            <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                                        </Button>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsRepeater.ItemTemplate>
-                                        </ItemsRepeater>
-                                    </Expander>
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
-                    </ScrollViewer>
-                </Grid>
-            </TabViewItem>
-
-        </TabView>
-
-        <!-- Action bar -->
-        <Grid
-            Grid.Row="3"
-            Padding="0,8,0,16"
-            ColumnSpacing="12"
-            Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+        <Grid Grid.Row="3" Padding="0,8,0,16" ColumnSpacing="12"
+              Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
-            <Button
-                Style="{StaticResource AccentButtonStyle}"
-                Command="{x:Bind ViewModel.ImportAllCommand}"
-                IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE896;" />
-                    <TextBlock x:Uid="Import_ImportAllLabel" />
-                </StackPanel>
+            <Button Command="{x:Bind ViewModel.ClearCommand}" IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
+                <TextBlock x:Uid="Import_ClearLabel" />
             </Button>
-
-            <Button
-                Grid.Column="1"
-                Command="{x:Bind ViewModel.ClearCommand}"
-                IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                    <TextBlock x:Uid="Import_ClearLabel" />
-                </StackPanel>
-            </Button>
-
-            <Button
-                Grid.Column="2"
-                Command="{x:Bind ViewModel.UndoManualAssignmentCommand}"
-                IsEnabled="{x:Bind ViewModel.CanUndoManualAssignment, Mode=OneWay}">
+            <Button Grid.Column="1" Command="{x:Bind ViewModel.UndoManualAssignmentCommand}"
+                    Visibility="{x:Bind ViewModel.CanUndoManualAssignment, Mode=OneWay}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon FontSize="14" Glyph="&#xE7A7;" />
                     <TextBlock x:Uid="Import_UndoLabel" />
                 </StackPanel>
             </Button>
-
-            <NumberBox
-                Grid.Column="3"
-                x:Uid="Import_SubfolderThreshold"
-                Minimum="-1"
-                Maximum="99"
-                SmallChange="1"
-                SpinButtonPlacementMode="Compact"
-                MinWidth="120"
-                VerticalAlignment="Center"
-                Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
-
-            <StackPanel
-                Grid.Column="5"
-                Orientation="Horizontal"
-                VerticalAlignment="Center"
-                Spacing="12"
-                Margin="8,0,0,0">
-
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="{ThemeResource RatingR18GBadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
-                        <TextBlock Text="R-18G" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
-                    </Border>
-                    <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}"
-                               VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
+            <Button Grid.Column="2" x:Uid="Import_AddFiles" HorizontalAlignment="Left" Click="PickFiles_Click" />
+            <TextBlock Grid.Column="2" Visibility="Collapsed" x:Uid="Import_KeepDropping" VerticalAlignment="Center"
+                       Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="3" Style="{StaticResource AccentButtonStyle}"
+                    Command="{x:Bind ViewModel.ConfirmImportCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon FontSize="14" Glyph="&#xE896;" />
+                    <TextBlock Text="{x:Bind ViewModel.ImportActionText, Mode=OneWay}" />
                 </StackPanel>
-
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="{ThemeResource RatingR18BadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
-                        <TextBlock Text="R-18" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
-                    </Border>
-                    <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}"
-                               VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Border Background="{ThemeResource RatingAllAgesBadgeBrush}" CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,2">
-                        <TextBlock x:Uid="Import_AllAges" Foreground="{ThemeResource RatingBadgeForegroundBrush}" FontSize="11" FontWeight="SemiBold" />
-                    </Border>
-                    <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}"
-                               VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
-                </StackPanel>
-
-                <TextBlock Text="|" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <FontIcon FontSize="12" Glyph="&#xE8B9;" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.SceneCount, Mode=OneWay}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <FontIcon FontSize="12" Glyph="&#xE77B;" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.CharaCount, Mode=OneWay}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <FontIcon FontSize="12" Glyph="&#xE78A;" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{x:Bind ViewModel.CoordCount, Mode=OneWay}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Style="{StaticResource CaptionTextBlockStyle}" />
-                </StackPanel>
-
-                <ProgressRing
-                    Width="14" Height="14"
-                    IsActive="True"
-                    Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}" />
-            </StackPanel>
-
-            <StackPanel
-                Grid.Column="6"
-                Orientation="Horizontal"
-                Spacing="8"
-                VerticalAlignment="Center"
-                Visibility="{x:Bind ViewModel.IsImporting, Mode=OneWay}">
-                <ProgressRing Width="16" Height="16" IsActive="True" />
-                <TextBlock
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource CaptionTextBlockStyle}">
-                    <Run Text="{x:Bind ViewModel.CompletedCount, Mode=OneWay}" />
-                    <Run Text="/" />
-                    <Run Text="{x:Bind ViewModel.Items.Count, Mode=OneWay}" />
-                </TextBlock>
-            </StackPanel>
+            </Button>
         </Grid>
+    </Grid>
+    </ContentControl>
+    <Grid x:Name="TransactionProgressOverlay" Grid.Row="1" Padding="24,16"
+          Background="{ThemeResource LayerFillColorDefaultBrush}"
+          Visibility="{x:Bind ViewModel.IsImporting, Mode=OneWay}">
+        <StackPanel MaxWidth="720" Spacing="8"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
 
+            <TextBlock Text="{x:Bind ViewModel.TransactionStatusText, Mode=OneWay}"
+                       Style="{ThemeResource SubtitleTextBlockStyle}"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <ProgressBar Minimum="0"
+                         Maximum="{x:Bind ViewModel.ExecutionProgress.TotalCount, Mode=OneWay}"
+                         Value="{x:Bind ViewModel.ExecutionProgress.CompletedCount, Mode=OneWay}"
+                         Height="4" HorizontalAlignment="Stretch" />
+            <TextBlock Text="{x:Bind ViewModel.TransactionProgressCountsText, Mode=OneWay}"
+                       HorizontalAlignment="Center"
+                       Style="{ThemeResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button x:Uid="Import_CancelButton"
+                    HorizontalAlignment="Center"
+                    Style="{ThemeResource AccentButtonStyle}"
+                    Command="{x:Bind ViewModel.CancelImportCommand}"
+                    Visibility="{x:Bind ViewModel.ExecutionProgress.Phase, Mode=OneWay, Converter={StaticResource PhaseToCancelButtonVisibilityConverter}}" />
+        </StackPanel>
+    </Grid>
     </Grid>
 </Page>

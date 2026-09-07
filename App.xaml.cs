@@ -165,6 +165,7 @@ public partial class App : Application
         AuthorPostService? authorPostService = null;
         if (_pluginService.ImportProviders.Count > 0)
         {
+            var postMetadataStore = new PostMetadataStore();
             importService = new ImportService(
                 _pluginService.ImportProviders,
                 _pluginService.AuthorProviders,
@@ -173,6 +174,7 @@ public partial class App : Application
                 _logger);
             importViewModel = new ImportViewModel(
                 importService,
+                postMetadataStore,
                 _settingsService,
                 _pluginService,
                 dispatcherQueue,

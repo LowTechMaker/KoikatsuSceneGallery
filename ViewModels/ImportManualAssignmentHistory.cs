@@ -7,6 +7,7 @@ internal enum ManualAssignmentSource
 {
     Unknown,
     FetchFailed,
+    FlatReview,
 }
 
 internal sealed record ManualImportItemState(
@@ -22,7 +23,8 @@ internal sealed record ManualImportItemState(
     string? ErrorMessage,
     string? ManualAuthorId,
     string? ManualArtworkId,
-    string? DestinationPath);
+    string? DestinationPath,
+    ArtworkInfo? FetchedArtworkInfo);
 
 internal sealed record ManualAssignmentUndo(
     ManualAssignmentSource Source,
@@ -39,7 +41,8 @@ internal sealed class ImportManualAssignmentHistory
     public void Capture(ManualAssignmentSource source, IReadOnlyList<ImportItem> items)
         => _lastAssignment = new ManualAssignmentUndo(
             source,
-            items.Select(item => _baselines.GetValueOrDefault(item, CreateState(item))).ToList());
+            items.Select(item => source == ManualAssignmentSource.FlatReview
+                ? CreateState(item) : _baselines.GetValueOrDefault(item, CreateState(item))).ToList());
 
     public ManualAssignmentUndo? TakeUndo()
     {
@@ -68,6 +71,7 @@ internal sealed class ImportManualAssignmentHistory
         state.Item.ManualAuthorId = state.ManualAuthorId;
         state.Item.ManualArtworkId = state.ManualArtworkId;
         state.Item.DestinationPath = state.DestinationPath;
+        state.Item.FetchedArtworkInfo = state.FetchedArtworkInfo;
     }
 
     private static ManualImportItemState CreateState(ImportItem item)
@@ -84,5 +88,6 @@ internal sealed class ImportManualAssignmentHistory
             item.ErrorMessage,
             item.ManualAuthorId,
             item.ManualArtworkId,
-            item.DestinationPath);
+            item.DestinationPath,
+            item.FetchedArtworkInfo);
 }
