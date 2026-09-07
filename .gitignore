@@ -64,6 +64,12 @@ compare/
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 
-# Local diagnostic and manual validation notes.
-/docs/crash-2026-09-06.md
-/docs/ui-redesign-validation.md
+# Local AI tooling, collaboration instructions and work notes.
+/.ignore
+/.mcp.json
+/opencode.json
+/AGENTS.md
+/CLAUDE.md
+/.agents/
+/.codex/
+/docs/
