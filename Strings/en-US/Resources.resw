@@ -78,7 +78,7 @@
   <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search by path or filename...</value>
   </data>
-  <data name="Gallery_SearchHint.Text" xml:space="preserve">
+  <data name="Gallery_SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Separate multiple keywords with commas for AND search, e.g.: author,filename</value>
   </data>
   <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
@@ -105,32 +105,14 @@
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Toggle sort direction</value>
   </data>
-  <data name="Gallery_SizeSmall.Content" xml:space="preserve">
-    <value>S</value>
-  </data>
-  <data name="Gallery_SizeSmall.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Small thumbnails</value>
-  </data>
-  <data name="Gallery_SizeMedium.Content" xml:space="preserve">
-    <value>M</value>
-  </data>
-  <data name="Gallery_SizeMedium.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Medium thumbnails</value>
-  </data>
-  <data name="Gallery_SizeLarge.Content" xml:space="preserve">
-    <value>L</value>
-  </data>
-  <data name="Gallery_SizeLarge.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Large thumbnails</value>
-  </data>
   <data name="Gallery_Empty.Text" xml:space="preserve">
     <value>No scene cards found. Add folders in Settings.</value>
   </data>
   <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
     <value>Generating thumbnails…</value>
   </data>
-  <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
-    <value>Game:</value>
+  <data name="Gallery_GameFilter.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Filter by game version</value>
   </data>
   <data name="Gallery_FilterAll.Content" xml:space="preserve">
     <value>All</value>
@@ -319,10 +301,10 @@
     <value>Filters</value>
   </data>
   <data name="Settings_TabAdvanced.Header" xml:space="preserve">
-    <value>Advanced</value>
+    <value>Performance</value>
   </data>
   <data name="Settings_TabOcd.Header" xml:space="preserve">
-    <value>OCD</value>
+    <value>Experimental</value>
   </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
     <value>Scene Cards</value>
@@ -403,7 +385,7 @@
     <value>Plugin Analysis</value>
   </data>
   <data name="Settings_PluginDesc.Text" xml:space="preserve">
-    <value>Read embedded plugin data to tag scenes by environment (Madevil / Non-Madevil) and Timeline usage, enabling the gallery filters. Disable to skip all scanning and hide the filters.</value>
+    <value>Read embedded scene data to identify Madevil environments and Timeline tags. Enable analysis to scan missing data or reanalyze all scenes.</value>
   </data>
   <data name="Settings_PluginToggle.Header" xml:space="preserve">
     <value>Analyze scene plugins</value>
@@ -469,16 +451,7 @@
     <value>Fine-tuning</value>
   </data>
   <data name="Settings_OcdDesc.Message" xml:space="preserve">
-    <value>This option is designed for OCD (Obsessive-Compulsive Disorder), and its features are not guaranteed to be updated or fixed in a timely manner.</value>
-  </data>
-  <data name="Settings_SizeSelector.Header" xml:space="preserve">
-    <value>Thumbnail size buttons</value>
-  </data>
-  <data name="Settings_SizeSelector.OnContent" xml:space="preserve">
-    <value>On</value>
-  </data>
-  <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
-    <value>Off</value>
+    <value>These features are experimental and may change or stop receiving updates. Enable them as needed.</value>
   </data>
   <data name="Settings_VisualSimilarity.Header" xml:space="preserve">
     <value>Visual similarity detection</value>
@@ -719,6 +692,36 @@
   <data name="Import_Title.Text" xml:space="preserve">
     <value>Import</value>
   </data>
+  <data name="Import_ReviewWorkspace.Text" xml:space="preserve">
+    <value>Review workspace</value>
+  </data>
+  <data name="Import_ReviewHeading.Text" xml:space="preserve">
+    <value>Review before importing</value>
+  </data>
+  <data name="Import_ReviewDescription.Text" xml:space="preserve">
+    <value>Resolve cards that need attention, then review ratings, sources, and planned destinations at full width.</value>
+  </data>
+  <data name="Import_FetchFailedWorkspaceHint.Text" xml:space="preserve">
+    <value>Assign a library author or look up a match to finish these cards.</value>
+  </data>
+  <data name="Import_UnknownWorkspaceTitle.Text" xml:space="preserve">
+    <value>Needs identification</value>
+  </data>
+  <data name="Import_UnknownWorkspaceHint.Text" xml:space="preserve">
+    <value>Set an artwork or author, or use reverse image search.</value>
+  </data>
+  <data name="Import_ReviewFiles.Text" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="Import_ResolvedWorkspaceTitle.Text" xml:space="preserve">
+    <value>Ready to import</value>
+  </data>
+  <data name="Import_ResolvedWorkspaceHint.Text" xml:space="preserve">
+    <value>Grouped by rating, author, and artwork. Each file shows its planned destination.</value>
+  </data>
+  <data name="Import_Importing.Text" xml:space="preserve">
+    <value>Importing…</value>
+  </data>
   <data name="Import_DropZoneTitle.Text" xml:space="preserve">
     <value>Drop Koikatsu cards here</value>
   </data>
@@ -746,8 +749,11 @@
   <data name="Import_CookieSetup.Text" xml:space="preserve">
     <value>Setup cookies</value>
   </data>
+  <data name="Import_RefreshLibraryIndex.Text" xml:space="preserve">
+    <value>Rescan library</value>
+  </data>
   <data name="Import_Tab_Matched.Header" xml:space="preserve">
-    <value>Matched</value>
+    <value>Recognized</value>
   </data>
   <data name="Import_Tab_Unknown.Header" xml:space="preserve">
     <value>Unrecognized</value>
@@ -963,16 +969,338 @@
   <data name="SC_CacheBuffer.Description" xml:space="preserve">
     <value>Off-screen render buffer as a multiple of the visible area. Higher values keep more thumbnails ready for smooth scrolling</value>
   </data>
-  <data name="SC_SizeSelector.Header" xml:space="preserve">
-    <value>Thumbnail size buttons</value>
-  </data>
-  <data name="SC_SizeSelector.Description" xml:space="preserve">
-    <value>Show small/medium/large size toggle buttons in the gallery toolbar</value>
-  </data>
   <data name="SC_VisualSimilarity.Header" xml:space="preserve">
     <value>Visual similarity detection</value>
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>Detect and group visually similar images in the gallery</value>
   </data>
+  <data name="Import_Phase_Preparing" xml:space="preserve">
+    <value>Preparing import execution plan...</value>
+  </data>
+  <data name="Import_Phase_Executing" xml:space="preserve">
+    <value>Importing assets: {0} / {1} items processed...</value>
+  </data>
+  <data name="Import_Phase_RollingBack" xml:space="preserve">
+    <value>Conflict or cancellation detected. Rolling back the batch and safely unbinding metadata...</value>
+  </data>
+  <data name="Import_Phase_Completed" xml:space="preserve">
+    <value>Import process completed.</value>
+  </data>
+  <data name="Import_CancelButton.Content" xml:space="preserve">
+    <value>Cancel Import</value>
+  </data>
+  <data name="Import_Summary_Success" xml:space="preserve">
+    <value>Import successful! Safely added {0} cards to the gallery.</value>
+  </data>
+  <data name="Import_Summary_Failed" xml:space="preserve">
+    <value>Import did not complete. Safely rolled back: {0} | Failed: {1} | Warnings: {2} | Manual recovery required: {3}</value>
+  </data>
+  <data name="Import_Summary_NoEligible" xml:space="preserve">
+    <value>No cards are ready to import.</value>
+  </data>
+  <data name="Import_Summary_UnexpectedError" xml:space="preserve">
+    <value>The import transaction encountered an unexpected error.</value>
+  </data>
+  <data name="Import_Progress_Counters" xml:space="preserve">
+    <value>Committed: {0} | Failed: {1} | Warnings: {2}</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeComboBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Thumbnail size</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeSmall.Content" xml:space="preserve">
+    <value>Thumbnails: Small</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeMedium.Content" xml:space="preserve">
+    <value>Thumbnails: Medium</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeLarge.Content" xml:space="preserve">
+    <value>Thumbnails: Large</value>
+  </data>
+  <data name="Gallery_OpenFileLocation.Text" xml:space="preserve">
+    <value>Open file location</value>
+  </data>
+  <data name="Import_Review_Unassigned" xml:space="preserve"><value>Unassigned</value></data>
+  <data name="Import_Review_IdentityPairRequired" xml:space="preserve"><value>Choose both a provider and ID for each identity update.</value></data>
+  <data name="Import_Review_NoChanges" xml:space="preserve"><value>Select at least one change to apply.</value></data>
+  <data name="Import_Review_MetadataCleared" xml:space="preserve"><value>Metadata could not be refreshed; stale metadata was cleared.</value></data>
+  <data name="Import_Review_BatchApplied" xml:space="preserve"><value>Batch changes applied.</value></data>
+  <data name="Import_ReviewLoading.Text" xml:space="preserve"><value>Building the library organization plan…</value></data>
+  <data name="Import_Review_SelectAll.Content" xml:space="preserve"><value>Select current view</value></data>
+  <data name="Import_Review_FilterAll.Content" xml:space="preserve"><value>All</value></data>
+  <data name="Import_Review_FlatHint.Text" xml:space="preserve"><value>Select files to batch-edit their author, artwork, or rating.</value></data>
+  <data name="Import_Review_InspectorTitle.Text" xml:space="preserve"><value>Batch edit</value></data>
+  <data name="Import_Review_AuthorProvider.PlaceholderText" xml:space="preserve"><value>Keep author source unchanged</value></data>
+  <data name="Import_Review_AuthorId.PlaceholderText" xml:space="preserve"><value>Keep author ID unchanged</value></data>
+  <data name="Import_Review_ArtworkProvider.PlaceholderText" xml:space="preserve"><value>Keep artwork source unchanged</value></data>
+  <data name="Import_Review_ArtworkId.PlaceholderText" xml:space="preserve"><value>Keep artwork ID unchanged</value></data>
+  <data name="Import_Review_Rating.PlaceholderText" xml:space="preserve"><value>Keep rating unchanged</value></data>
+  <data name="Import_Review_KeepUnchanged.Content" xml:space="preserve"><value>Keep unchanged</value></data>
+  <data name="Import_Review_Apply.Content" xml:space="preserve"><value>Apply selected changes</value></data>
+  <data name="Import_ReviewEmpty_Title" xml:space="preserve"><value>Nothing is ready to import</value></data>
+  <data name="Import_ReviewEmpty_Description" xml:space="preserve"><value>Resolve the warning above or switch to Unrecognized. Cards with a planned destination will appear here.</value></data>
+  <data name="Import_ReviewSelection_Title.Text" xml:space="preserve"><value>Select cards to edit</value></data>
+  <data name="Import_ReviewSelection_Description.Text" xml:space="preserve"><value>Select one or more visible cards to edit their author, artwork, or rating together.</value></data>
+  <data name="Import_Review_FileHeader.Text" xml:space="preserve"><value>File</value></data>
+  <data name="Import_Review_AuthorHeader.Text" xml:space="preserve"><value>Author</value></data>
+  <data name="Import_Review_ArtworkHeader.Text" xml:space="preserve"><value>Artwork</value></data>
+  <data name="Import_Review_RatingHeader.Text" xml:space="preserve"><value>Rating</value></data>
+  <data name="Import_Review_DestinationHeader.Text" xml:space="preserve"><value>Import destination</value></data>
+  <data name="Import_Review_NoDestination_Title" xml:space="preserve"><value>Import destinations are still needed</value></data>
+  <data name="Import_Review_NoDestination_Description" xml:space="preserve"><value>{0} processed cards are waiting for their final destination calculation.</value></data>
+  <data name="Import_Review_Summary" xml:space="preserve"><value>{0} cards total · {1} ready to import</value></data>
+  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>Showing {0} images · Actions apply to {1} selected</value></data>
+  <data name="Import_Review_FilterEmpty.Text" xml:space="preserve"><value>No images in this tab match the selected rating</value></data>
+  <data name="Import_Review_ShowAll.Content" xml:space="preserve"><value>Show all ratings in this tab</value></data>
+  <data name="Import_UnknownEmpty_Title.Text" xml:space="preserve"><value>No cards need identification</value></data>
+  <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>Switch to Matched to review the import list, or drop more PNG cards here.</value></data>
+  <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>These cards are already in your library</value></data>
+  <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>There is no need to import them again. Clear the list or drop more PNG cards here.</value></data>
+  <data name="Import_Options.Content" xml:space="preserve"><value>Import options</value></data>
+  <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>Import options</value></data>
+  <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>Select all</value></data>
+  <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>Select the current list</value></data>
+  <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>Filter by rating</value></data>
+  <data name="Import_AllRatings.Content" xml:space="preserve"><value>All ratings</value></data>
+  <data name="Import_EditSelected.Content" xml:space="preserve"><value>Edit selected</value></data>
+  <data name="Import_KeepDropping.Text" xml:space="preserve"><value>Drop more PNG cards to add them</value></data>
+  <data name="Import_ActionCount" xml:space="preserve"><value>Import {0} cards</value></data>
+  <data name="Settings_Subtitle.Text" xml:space="preserve">
+    <value>Customize browsing, library sources, and plugins. Changes are saved automatically.</value>
+  </data>
+  <data name="Settings_FoldersIntro.Text" xml:space="preserve">
+    <value>Manage source folders for each library. Subfolders are scanned automatically. Removing a source from this list keeps the original files.</value>
+  </data>
+  <data name="Settings_FiltersIntro.Text" xml:space="preserve">
+    <value>Show cards matching the sizes you choose. Turning a filter off keeps its saved sizes. These filters do not apply to screenshots.</value>
+  </data>
+  <data name="Settings_ResolutionInvalid" xml:space="preserve">
+    <value>Enter a valid width and height, such as 1920x1080. Both must be greater than 0.</value>
+  </data>
+  <data name="Settings_ResolutionDuplicate" xml:space="preserve">
+    <value>This resolution is already in the list.</value>
+  </data>
+  <data name="Plugins_InstallHelp.Header" xml:space="preserve">
+    <value>How to install plugins</value>
+  </data>
+  <data name="Settings_SizeFiltersHeader.Text" xml:space="preserve">
+    <value>Image dimensions</value>
+  </data>
+  <data name="Settings_FilterDisabled" xml:space="preserve">
+    <value>Off · Show all cards</value>
+  </data>
+  <data name="Settings_FilterEmpty" xml:space="preserve">
+    <value>No sizes added · Showing all cards</value>
+  </data>
+  <data name="Settings_FilterActive" xml:space="preserve">
+    <value>On · Show cards matching these {0} sizes</value>
+  </data>
+  <data name="Settings_RemoveSizeLabel" xml:space="preserve">
+    <value>Remove size {0}</value>
+  </data>
+  <data name="Settings_AddSize.Content" xml:space="preserve">
+    <value>Add size</value>
+  </data>
+  <data name="Settings_SceneFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable scene card size filter</value>
+  </data>
+  <data name="Settings_CharaFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable character card size filter</value>
+  </data>
+  <data name="Settings_CoordFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable outfit card size filter</value>
+  </data>
+  <data name="Settings_PluginAnalysisToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable scene plugin analysis</value>
+  </data>
+  <data name="Settings_SceneTagsHeader.Text" xml:space="preserve">
+    <value>Scene tags and analysis</value>
+  </data>
+  <data name="Settings_AnalysisDisabled" xml:space="preserve">
+    <value>Off · Plugin data is not scanned and related filters are hidden</value>
+  </data>
+  <data name="Settings_AnalysisEnabled" xml:space="preserve">
+    <value>On · Filter scenes using plugin tags</value>
+  </data>
+  <data name="Settings_SaveError.Title" xml:space="preserve">
+    <value>Settings not saved</value>
+  </data>
+  <data name="Settings_SaveError.Message" xml:space="preserve">
+    <value>Could not write the settings file. Your changes are kept in this session. Check that the save location is writable, then retry.</value>
+  </data>
+  <data name="Settings_RetrySave.Content" xml:space="preserve">
+    <value>Retry save</value>
+  </data>
+  <data name="SC_CacheUsage.Header" xml:space="preserve">
+    <value>Cache usage</value>
+  </data>
+  <data name="SC_CacheUsage.Description" xml:space="preserve">
+    <value>Thumbnail cache in the current folder. Thumbnails are rebuilt as you browse.</value>
+  </data>
+  <data name="Settings_RefreshCache.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Settings_CacheUsage" xml:space="preserve">
+    <value>{0} · {1:N0} files</value>
+  </data>
+  <data name="Settings_CacheCalculating" xml:space="preserve">
+    <value>Calculating cache usage…</value>
+  </data>
+  <data name="Settings_CacheUsageFailed" xml:space="preserve">
+    <value>Could not read cache usage. Check folder permissions, then refresh.</value>
+  </data>
+  <data name="Settings_CacheCleared" xml:space="preserve">
+    <value>Cleared {0:N0} thumbnail cache files. Thumbnails will be rebuilt as needed.</value>
+  </data>
+  <data name="Settings_CachePartiallyCleared" xml:space="preserve">
+    <value>Cleared {0:N0} files; {1:N0} could not be cleared. They may be in use. Try again later.</value>
+  </data>
+  <data name="Settings_CacheClearFailed" xml:space="preserve">
+    <value>Could not finish clearing the cache. Check folder permissions, then retry.</value>
+  </data>
+  <data name="SceneGallery_TotalCount" xml:space="preserve">
+    <value>{0:N0} cards</value>
+  </data>
+  <data name="SceneGallery_FilteredCount" xml:space="preserve">
+    <value>{0:N0} of {1:N0} cards</value>
+  </data>
+  <data name="SceneGallery_Filters" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="SceneGallery_ActiveFilters" xml:space="preserve">
+    <value>Filters · {0}</value>
+  </data>
+  <data name="SceneGallery_FilterHeading.Text" xml:space="preserve">
+    <value>Show content</value>
+  </data>
+  <data name="SceneGallery_FilterButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Filter content and environment</value>
+  </data>
+  <data name="SceneGallery_Rating.Header" xml:space="preserve">
+    <value>Show R-18 content</value>
+  </data>
+  <data name="SceneGallery_Environment.Header" xml:space="preserve">
+    <value>Game environment</value>
+  </data>
+  <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
+    <value>Manage resolution filters and plugin analysis in Settings.</value>
+  </data>
+  <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
+    <value>Open library settings</value>
+  </data>
+  <data name="SceneGallery_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="SceneGallery_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="SceneGallery_Search.PlaceholderText" xml:space="preserve">
+    <value>Search filename, author, or path…</value>
+  </data>
+  <data name="SceneGallery_Search.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Search scene cards</value>
+  </data>
+  <data name="SceneGallery_Search.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Ctrl+F to search. Combine keywords with commas, e.g. author,beach. Enter searches immediately.</value>
+  </data>
+  <data name="SceneGallery_RandomLabel.Text" xml:space="preserve">
+    <value>Explore</value>
+  </data>
+  <data name="SceneGallery_UnknownAuthor" xml:space="preserve">
+    <value>Unknown author</value>
+  </data>
+  <data name="SceneGallery_NoLibraryTitle" xml:space="preserve">
+    <value>Start your collection</value>
+  </data>
+  <data name="SceneGallery_NoLibraryDescription" xml:space="preserve">
+    <value>Add a scene card folder in library settings. Scanned cards will appear here.</value>
+  </data>
+  <data name="SceneGallery_NoResultsTitle" xml:space="preserve">
+    <value>No matching scene cards</value>
+  </data>
+  <data name="SceneGallery_NoResultsDescription" xml:space="preserve">
+    <value>Try different keywords, adjust content and environment filters, or check resolution filters in Settings.</value>
+  </data>
+  <data name="SceneGallery_ResetSearch.Content" xml:space="preserve">
+    <value>Clear search and environment filter</value>
+  </data>
+  <data name="SceneGallery_GroupBack.Content" xml:space="preserve">
+    <value>← All images</value>
+  </data>
+  <data name="SceneGallery_GroupCount" xml:space="preserve">
+    <value>{0:N0} images</value>
+  </data>
+  <data name="SceneGallery_GroupEmpty.Text" xml:space="preserve">
+    <value>No images in this group match the current search or filters.</value>
+  </data>
+  <data name="Browser_Versions" xml:space="preserve"><value>{0} versions</value></data>
+  <data name="Browser_GroupSearch" xml:space="preserve"><value>Search this group…</value></data>
+  <data name="Browser_ClearGroupSearch" xml:space="preserve"><value>Clear group search</value></data>
+  <data name="Browser_Loading" xml:space="preserve"><value>Loading library…</value></data>
+  <data name="Browser_Source" xml:space="preserve"><value>Card source</value></data>
+  <data name="Viewer_Fit" xml:space="preserve"><value>Fit to window</value></data>
+  <data name="Viewer_Original" xml:space="preserve"><value>Actual size</value></data>
+  <data name="Viewer_Info" xml:space="preserve"><value>Show file information</value></data>
+  <data name="Viewer_Position" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="Browser_AllImages" xml:space="preserve"><value>All images</value></data>
+  <data name="PostDetail_OpenLocal.ToolTipService.ToolTip" xml:space="preserve"><value>Open image in viewer</value></data>
+  <data name="PostDetail_TagsExpander.Header" xml:space="preserve"><value>Tags</value></data>
+  <data name="Authors_NoResults.Text" xml:space="preserve"><value>No authors match this search</value></data>
+  <data name="Import_StatusFilter.Header" xml:space="preserve"><value>Status</value></data>
+  <data name="Import_StatusAll.Content" xml:space="preserve"><value>All items</value></data>
+  <data name="Import_StatusReady.Content" xml:space="preserve"><value>Ready to review</value></data>
+  <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>Needs information</value></data>
+  <data name="Import_StatusFailed.Content" xml:space="preserve"><value>Could not retrieve</value></data>
+  <data name="Import_StatusExisting.Content" xml:space="preserve"><value>Already in library</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>Ready to review</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>Needs information</value></data>
+  <data name="Import_Status_Failed" xml:space="preserve"><value>Could not retrieve</value></data>
+  <data name="Import_Status_Existing" xml:space="preserve"><value>Already in library</value></data>
+  <data name="Import_Status_Analyzing" xml:space="preserve"><value>Analyzing</value></data>
+  <data name="Import_Status_Completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="Import_SearchSelected.Content" xml:space="preserve"><value>Search selected images</value></data>
+  <data name="Import_RemoveSelected.Content" xml:space="preserve"><value>Remove from this workspace</value></data>
+  <data name="PostDetail_Saved" xml:space="preserve"><value>Details saved locally</value></data>
+  <data name="PostDetail_Unsaved" xml:space="preserve"><value>Details not saved</value></data>
+  <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} local images</value></data>
+  <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>Choose files</value></data>
+  <data name="Import_AddFiles.Content" xml:space="preserve"><value>Add files</value></data>
+  <data name="Import_IdentifiedCount" xml:space="preserve"><value>Identified ({0})</value></data>
+  <data name="Import_UnidentifiedCount" xml:space="preserve"><value>Unidentified ({0})</value></data>
+  <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>Post URL or artwork ID</value></data>
+  <data name="Import_LookupInput.AutomationProperties.Name" xml:space="preserve"><value>Post URL or artwork ID</value></data>
+  <data name="Import_LookupProvider.PlaceholderText" xml:space="preserve"><value>Source: automatic</value></data>
+  <data name="Import_LookupProvider.AutomationProperties.Name" xml:space="preserve"><value>Artwork source; URLs are detected automatically</value></data>
+  <data name="Import_LookupFetch.Content" xml:space="preserve"><value>Get metadata</value></data>
+  <data name="Import_ApplyRating.Content" xml:space="preserve"><value>Apply rating</value></data>
+  <data name="Import_AssignAuthor.Content" xml:space="preserve"><value>Assign author</value></data>
+  <data name="Import_PickKnownAuthor.Text" xml:space="preserve"><value>Choose existing author</value></data>
+  <data name="Import_SelectGroup.Content" xml:space="preserve"><value>Toggle group selection</value></data>
+  <data name="Import_Review_GroupTitle" xml:space="preserve"><value>{0} · {1} images</value></data>
+  <data name="Import_Review_Working" xml:space="preserve"><value>Getting metadata…</value></data>
+  <data name="Import_Review_InputUnresolved" xml:space="preserve"><value>Source not recognized. Check that an installed plugin supports this URL, or choose a source for a plain ID and try again.</value></data>
+  <data name="Import_Review_FetchUnchanged" xml:space="preserve"><value>No metadata returned. Check the URL/ID or plugin sign-in and retry. Existing metadata was preserved.</value></data>
+  <data name="Import_Review_ActionFailed" xml:space="preserve"><value>The action could not be completed. Retry, or use Undo to revert any changes.</value></data>
+  <data name="Import_ReverseSelectionContext" xml:space="preserve"><value>Search image: {0}. This image will be used for reverse search. After confirmation, the result will apply to the {1} selected images.</value></data>
+  <data name="Import_ReverseConfirmTitle" xml:space="preserve"><value>Confirm search image</value></data>
+  <data name="Import_ReverseStart" xml:space="preserve"><value>Start search</value></data>
+  <data name="Import_IdentifiedEmpty" xml:space="preserve"><value>No identified images yet. Get metadata or assign an author in Unidentified.</value></data>
+  <data name="Import_UnidentifiedEmpty" xml:space="preserve"><value>All images have been identified.</value></data>
+  <data name="Import_Review_Rating.AutomationProperties.Name" xml:space="preserve"><value>Rating to apply</value></data>
+  <data name="Import_Review_Undone" xml:space="preserve"><value>The last edit was undone.</value></data>
+  <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>Batch ratings</value></data>
+  <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>Counts ready and completed images across this batch, regardless of the current tab or filter.</value></data>
+  <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>Unidentified ({0})</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>Identified ({0})</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>Select images needing details, then fetch metadata, reverse search, or assign an author above.</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>Review images, authors, and ratings before importing. Batch actions support selections across both sections.</value></data>
+  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>No images need attention under the current filter.</value></data>
+  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>No identified images match the current filter.</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Import images: unidentified list, unavailable posts list, then identified image grid</value></data>
+  <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>Unavailable posts ({0})</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>A post URL or ID was detected, but its details could not be retrieved. Retry fetching, reverse search, or assign an author.</value></data>
+  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>No unavailable posts match the current filter.</value></data>
+  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>Unknown · {0}</value></data>
+  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>Unavailable · {0}</value></data>
+  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>Identified · {0}</value></data>
 </root>
