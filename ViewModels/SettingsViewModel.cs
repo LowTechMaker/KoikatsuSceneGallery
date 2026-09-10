@@ -119,6 +119,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial string ImportSubfolder { get; set; } = "Organized";
 
     [ObservableProperty]
+    public partial string LocalFolderName { get; set; } = "Local";
+
+    [ObservableProperty]
     public partial double ArtworkSubfolderThreshold { get; set; } = 1;
 
     // ── Navigation visibility ──────────────────────────────────
@@ -317,6 +320,14 @@ public partial class SettingsViewModel : ObservableObject
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
+    partial void OnLocalFolderNameChanged(string value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
     partial void OnArtworkSubfolderThresholdChanged(double value)
     {
         if (_isLoading)
@@ -442,6 +453,7 @@ public partial class SettingsViewModel : ObservableObject
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
+            LocalFolderName = config.LocalFolderName;
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
             AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
@@ -764,6 +776,7 @@ public partial class SettingsViewModel : ObservableObject
                 SauceNaoApiKey = SauceNaoApiKey,
                 Language = SelectedLanguage,
                 ImportSubfolder = ImportSubfolder,
+                LocalFolderName = LocalFolderName,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,

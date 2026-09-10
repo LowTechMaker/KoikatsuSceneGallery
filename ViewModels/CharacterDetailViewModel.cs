@@ -18,7 +18,7 @@ public partial class CharacterDetailViewModel : ObservableObject
     public partial CharacterCard? Card { get; set; }
 
     partial void OnCardChanged(CharacterCard? value) =>
-        _linkInfo = FilenameLinkParser.Parse(value?.FilePath);
+        _linkInfo = CardOrigin.LinksFor(value);
 
     /// <summary>True once the opened card's metadata has been parsed.</summary>
     [ObservableProperty]
@@ -53,6 +53,17 @@ public partial class CharacterDetailViewModel : ObservableObject
 
     [ObservableProperty]
     public partial int TotalVersions { get; set; }
+
+    /// <summary>The character this card is filed under, when it is not its own name.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGroupOverride))]
+    [NotifyPropertyChangedFor(nameof(GroupOverrideText))]
+    public partial string? GroupOverride { get; set; }
+
+    public bool HasGroupOverride => !string.IsNullOrWhiteSpace(GroupOverride);
+
+    public string GroupOverrideText =>
+        HasGroupOverride ? UiText.Format("Detail_GroupOverride", GroupOverride!) : string.Empty;
 
     public string? PixivArtworkId => _linkInfo.PixivArtworkId;
     public string? PixivUrl => _linkInfo.PixivUrl;

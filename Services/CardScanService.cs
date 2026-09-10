@@ -133,7 +133,31 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             watcher.EnableRaisingEvents = true;
 
             _watchers.Add(watcher);
+            _watchers.Add(WatchDirectoryRenames(folder));
         }
+    }
+
+    /// <summary>
+    /// A second watcher, for renamed folders rather than renamed files.
+    /// </summary>
+    /// <remarks>
+    /// The card watcher filters by extension, and a folder name does not match
+    /// it, so a renamed folder reaches nothing there. Renaming a local source
+    /// renames its folder, which changes the path of every card inside, so
+    /// missing this would leave the galleries pointing at files that no longer
+    /// exist for the rest of the session.
+    /// </remarks>
+    private FileSystemWatcher WatchDirectoryRenames(string folder)
+    {
+        var watcher = new FileSystemWatcher(folder)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.DirectoryName,
+        };
+
+        watcher.Renamed += (_, e) => QueueDirectoryRename(e.OldFullPath, e.FullPath);
+        watcher.EnableRaisingEvents = true;
+        return watcher;
     }
 
     public void StopWatching()
@@ -168,6 +192,16 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
     private void OnFileRenamed(object sender, RenamedEventArgs e)
     {
+        // A renamed directory raises one event for the directory itself, not
+        // one per file inside it. Left as a single change, TryCreateCard would
+        // be handed a directory path and the cards under it would keep their
+        // old paths for the rest of the session.
+        if (Directory.Exists(e.FullPath))
+        {
+            QueueDirectoryRename(e.OldFullPath, e.FullPath);
+            return;
+        }
+
         lock (_lock)
         {
             _pendingChanges.Add($"-{e.OldFullPath}");
@@ -176,6 +210,46 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             _debounceTimer.Start();
         }
     }
+
+    /// <summary>
+    /// Turns a directory rename into the per-card changes the galleries
+    /// understand: every card gone from the old path, and the same card
+    /// arriving at the new one.
+    /// </summary>
+    /// <remarks>
+    /// Enumerated off the watcher thread. A blocked handler is how a
+    /// FileSystemWatcher overflows its buffer and starts dropping events,
+    /// and a renamed folder can hold any number of cards.
+    /// </remarks>
+    private void QueueDirectoryRename(string oldDirectory, string newDirectory)
+        => Task.Run(() =>
+        {
+            List<string> files;
+            try
+            {
+                files = [.. EnumerateCardFiles(newDirectory).Select(static file => file.FullName)];
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            if (files.Count == 0)
+                return;
+
+            lock (_lock)
+            {
+                foreach (var file in files)
+                {
+                    _pendingChanges.Add($"+{file}");
+                    _pendingChanges.Add(
+                        $"-{Path.Combine(oldDirectory, Path.GetRelativePath(newDirectory, file))}");
+                }
+
+                _debounceTimer.Stop();
+                _debounceTimer.Start();
+            }
+        });
 
     private void FlushPendingChanges()
     {

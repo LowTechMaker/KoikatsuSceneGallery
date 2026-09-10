@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -21,13 +21,12 @@ public partial class ImportViewModel : ObservableObject
     private static readonly ResourceLoader ResLoader = new();
 
     private readonly ImportService _importService;
-    private readonly PostMetadataStore _metadataStore;
+    private readonly ImportArtworkAssignment _artworkAssignment;
+    private readonly ImportReviewEditService _reviewEditService;
+    private readonly ImportExecutionCoordinator _executionCoordinator;
     private readonly PluginService _pluginService;
     private readonly DispatcherQueue _dispatcher;
-    private readonly HashSet<CancellationTokenSource> _analysisCts = [];
-    private CancellationTokenSource? _importCts;
-    private long _transactionGeneration;
-    private int _activeAnalysisCount;
+    private readonly ImportAnalysisTracker _analysisTracker = new();
 
     // Flat collection used by ImportService (source of truth for all items)
     public ObservableCollection<ImportItem> Items { get; } = [];
@@ -45,7 +44,7 @@ public partial class ImportViewModel : ObservableObject
 
     // Flattened, UI-only projection of all workspace items. This deliberately does
     // not replace the legacy groups used by the manual-assignment workflows.
-    public ObservableCollection<ImportItemReviewState> ReviewStates { get; } = [];
+    public ObservableCollection<ImportItemReviewState> ReviewStates => _reviewWorkspace.States;
     public AdvancedCollectionView ReviewedItemsView { get; }
     public ObservableCollection<string> ReviewAuthorProviderIds { get; } = [];
     public ObservableCollection<string> ReviewArtworkProviderIds { get; } = [];
@@ -55,15 +54,13 @@ public partial class ImportViewModel : ObservableObject
     public ObservableCollection<SelectableAuthor> LibraryAuthors { get; } = [];
     private bool _authorsLoaded;
 
-    private readonly HashSet<ImportItem> _subscribedItems = [];
-    private readonly HashSet<ImportArtworkGroup> _subscribedFetchFailedGroups = [];
+    private readonly CollectionItemObserver<ImportItem> _itemsObserver;
+    private readonly CollectionItemObserver<ImportArtworkGroup> _fetchFailedObserver;
     private readonly List<ImportItem> _pendingUnknownItems = [];
-    private readonly HashSet<ImportUnknownGroup> _subscribedUnknownGroups = [];
+    private readonly CollectionItemObserver<ImportUnknownGroup> _unknownObserver;
     private readonly ImportManualAssignmentHistory _manualHistory = new();
-    private readonly HashSet<string> _currentAnalysisPaths = new(StringComparer.OrdinalIgnoreCase);
-    private int _currentRejectedAnalysisCount;
     private int _unknownGroupCounter;
-    private bool _updatingReviewSelection;
+    private readonly ImportReviewWorkspace _reviewWorkspace;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanConfirmImport))]
@@ -116,17 +113,13 @@ public partial class ImportViewModel : ObservableObject
         get => SelectedReviewFilter switch { "AllAges" => 1, "R18" => 2, "R18G" => 3, _ => 0 };
         set => SelectedReviewFilter = value switch { 1 => "AllAges", 2 => "R18", 3 => "R18G", _ => "All" };
     }
-    public ObservableCollection<ImportReviewRow> ReviewRows { get; } = [];
+    public ObservableCollection<ImportReviewRow> ReviewRows => _reviewWorkspace.Rows;
     public string UnidentifiedNavigationText => ReviewNavigationText("Unidentified", "Import_Mixed_JumpUnidentified");
     public string UnavailableNavigationText => ReviewNavigationText("Unavailable", "Import_Mixed_JumpUnavailable");
     public string IdentifiedNavigationText => ReviewNavigationText("Identified", "Import_Mixed_JumpIdentified");
     private string ReviewNavigationText(string section, string resource)
         => string.Format(GetLocalizedString(resource), ReviewRows.FirstOrDefault(r => r.Key == section + ":")?.Items.Count ?? 0);
-    private int _reviewColumns = 4;
-    private double _reviewTileWidth = 208;
-    private bool _reviewGroupsRefreshQueued;
-    public IReadOnlyList<ImportItem> SelectedVisibleReviewItems => ReviewedItemsView.OfType<ImportItemReviewState>()
-        .Where(s => s.IsSelected && s.CanSelect).Select(s => s.Item).ToList();
+    public IReadOnlyList<ImportItem> SelectedVisibleReviewItems => _reviewWorkspace.SelectedItems;
 
     public string ReviewSummaryText => string.Format(GetLocalizedString("Import_Review_Summary"), Items.Count, ImportableCount);
     public string ReviewSelectionText => string.Format(GetLocalizedString("Import_Review_SelectionCount"), ReviewedItemsView.Count, SelectedReviewCount);
@@ -146,17 +139,18 @@ public partial class ImportViewModel : ObservableObject
         : GetLocalizedString(Items.Count > 0 && Items.All(item => item.IsAlreadyInLibrary)
             ? "Import_Review_AlreadyInLibrary_Description" : "Import_ReviewEmpty_Description");
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelectedReviewItems), nameof(ReviewSelectionEditorVisibility), nameof(ReviewSelectionPromptVisibility), nameof(ReviewSelectionText))]
-    public partial int SelectedReviewCount { get; set; }
-
+    public int SelectedReviewCount => _reviewWorkspace.SelectedCount;
     public bool HasSelectedReviewItems => SelectedReviewCount > 0;
-
-    [ObservableProperty]
-    public partial bool? IsAllReviewSelected { get; set; } = false;
-
-    [ObservableProperty]
-    public partial string SelectedReviewFilter { get; set; } = "All";
+    public bool? IsAllReviewSelected
+    {
+        get => _reviewWorkspace.AllSelected;
+        set { if (_reviewWorkspace.AllSelected != value) _reviewWorkspace.SelectAll(value); }
+    }
+    public string SelectedReviewFilter
+    {
+        get => _reviewWorkspace.Filter;
+        set { if (_reviewWorkspace.Filter != value) _reviewWorkspace.SetFilter(value); }
+    }
 
     [ObservableProperty]
     public partial string? ReviewAuthorProviderId { get; set; }
@@ -279,22 +273,25 @@ public partial class ImportViewModel : ObservableObject
     private DispatcherTimer? _warningTimer;
     private readonly SettingsService _settingsService;
     private readonly IAppLogger _logger;
-    private CancellationTokenSource? _resolveCts;
     private Task _settingsLoaded;
 
-    internal ImportViewModel(ImportService importService, PostMetadataStore metadataStore, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher, IAppLogger logger)
+    internal ImportViewModel(ImportService importService, ImportExecutionCoordinator executionCoordinator, SettingsService settingsService, PluginService pluginService, DispatcherQueue dispatcher, IAppLogger logger)
     {
         _importService = importService;
-        _metadataStore = metadataStore;
+        _artworkAssignment = new ImportArtworkAssignment(importService.FetchArtworkInfoAsync);
+        _reviewEditService = new ImportReviewEditService(importService.ResolveReviewArtworkInput,
+            importService.FetchArtworkInfoAsync, (id, provider) => ResolveAuthor(id, provider).Name);
+        _executionCoordinator = executionCoordinator;
         _settingsService = settingsService;
         _pluginService = pluginService;
         _dispatcher = dispatcher;
         _logger = logger;
 
-        ReviewedItemsView = new AdvancedCollectionView(ReviewStates, true)
-        {
-            Filter = item => item is ImportItemReviewState state && ReviewStatePassesFilter(state)
-        };
+        _reviewWorkspace = new ImportReviewWorkspace(GetLocalizedString,
+            action => _dispatcher.TryEnqueue(() => action()));
+        ReviewedItemsView = new AdvancedCollectionView(_reviewWorkspace.VisibleItems, false);
+        _reviewWorkspace.Changed += OnReviewWorkspaceChanged;
+        _reviewWorkspace.RowsChanged += OnReviewRowsChanged;
         foreach (var id in _pluginService.AuthorProviders.Select(p => p.ProviderId).Distinct(StringComparer.OrdinalIgnoreCase))
             ReviewAuthorProviderIds.Add(id);
         foreach (var id in _pluginService.ImportProviders.Select(p => p.ProviderId).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -302,10 +299,10 @@ public partial class ImportViewModel : ObservableObject
 
         _settingsLoaded = LoadSettingsAsync();
 
-        Items.CollectionChanged += OnItemsCollectionChanged;
+        _itemsObserver = new(Items, OnItemPropertyChanged, e => OnItemsCollectionChanged(Items, e));
         AnalyzingItems.CollectionChanged += OnAnalyzingItemsCollectionChanged;
-        FetchFailedGroups.CollectionChanged += OnFetchFailedGroupsCollectionChanged;
-        UnknownGroups.CollectionChanged += OnUnknownGroupsCollectionChanged;
+        _fetchFailedObserver = new(FetchFailedGroups, OnFetchFailedGroupPropertyChanged, OnFetchFailedGroupsChanged);
+        _unknownObserver = new(UnknownGroups, OnUnknownGroupPropertyChanged, OnUnknownGroupsChanged);
     }
 
     private void OnAnalyzingItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -314,32 +311,8 @@ public partial class ImportViewModel : ObservableObject
         OnPropertyChanged(nameof(AnalysisPendingCount));
     }
 
-    private void OnFetchFailedGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnFetchFailedGroupsChanged()
     {
-        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
-        {
-            foreach (ImportArtworkGroup group in e.NewItems)
-            {
-                _subscribedFetchFailedGroups.Add(group);
-                group.PropertyChanged += OnFetchFailedGroupPropertyChanged;
-            }
-        }
-        else if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace
-                 && e.OldItems is not null)
-        {
-            foreach (ImportArtworkGroup group in e.OldItems)
-            {
-                _subscribedFetchFailedGroups.Remove(group);
-                group.PropertyChanged -= OnFetchFailedGroupPropertyChanged;
-            }
-        }
-        else if (e.Action == NotifyCollectionChangedAction.Reset)
-        {
-            foreach (var group in _subscribedFetchFailedGroups)
-                group.PropertyChanged -= OnFetchFailedGroupPropertyChanged;
-            _subscribedFetchFailedGroups.Clear();
-        }
-
         HasFetchFailedItems = FetchFailedGroups.Count > 0;
         UpdateSelectedFetchFailedCount();
     }
@@ -353,32 +326,8 @@ public partial class ImportViewModel : ObservableObject
     private void UpdateSelectedFetchFailedCount() =>
         SelectedFetchFailedCount = FetchFailedGroups.Count(g => g.IsSelected);
 
-    private void OnUnknownGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnUnknownGroupsChanged()
     {
-        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
-        {
-            foreach (ImportUnknownGroup group in e.NewItems)
-            {
-                _subscribedUnknownGroups.Add(group);
-                group.PropertyChanged += OnUnknownGroupPropertyChanged;
-            }
-        }
-        else if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace
-                 && e.OldItems is not null)
-        {
-            foreach (ImportUnknownGroup group in e.OldItems)
-            {
-                _subscribedUnknownGroups.Remove(group);
-                group.PropertyChanged -= OnUnknownGroupPropertyChanged;
-            }
-        }
-        else if (e.Action == NotifyCollectionChangedAction.Reset)
-        {
-            foreach (var group in _subscribedUnknownGroups)
-                group.PropertyChanged -= OnUnknownGroupPropertyChanged;
-            _subscribedUnknownGroups.Clear();
-        }
-
         HasUnknownItems = UnknownGroups.Count > 0;
         UpdateSelectedUnknownCount();
     }
@@ -438,28 +387,17 @@ public partial class ImportViewModel : ObservableObject
         {
             foreach (ImportItem item in e.NewItems)
             {
-                _subscribedItems.Add(item);
-                item.PropertyChanged += OnItemPropertyChanged;
                 PlaceNewItem(item);
             }
         }
         else if (e.Action == NotifyCollectionChangedAction.Reset)
         {
-            foreach (var item in _subscribedItems)
-                item.PropertyChanged -= OnItemPropertyChanged;
-            _subscribedItems.Clear();
             AnalyzingItems.Clear();
             FetchFailedGroups.Clear();
             UnknownGroups.Clear();
             MatchedGroups.Clear();
             BatchAuthors.Clear();
             LibraryAuthors.Clear();
-            foreach (var group in _subscribedFetchFailedGroups)
-                group.PropertyChanged -= OnFetchFailedGroupPropertyChanged;
-            _subscribedFetchFailedGroups.Clear();
-            foreach (var group in _subscribedUnknownGroups)
-                group.PropertyChanged -= OnUnknownGroupPropertyChanged;
-            _subscribedUnknownGroups.Clear();
             _pendingUnknownItems.Clear();
             _unknownGroupCounter = 0;
             SelectedUnknownCount = 0;
@@ -470,8 +408,7 @@ public partial class ImportViewModel : ObservableObject
             BatchManualAuthorProviderId = null;
             BatchFetchFailedAuthorProviderId = null;
             _manualHistory.Clear();
-            _currentAnalysisPaths.Clear();
-            _currentRejectedAnalysisCount = 0;
+            _analysisTracker.ResetProgress();
             AnalysisTotalCount = 0;
             AnalysisCompletedCount = 0;
             CanUndoManualAssignment = false;
@@ -667,6 +604,14 @@ public partial class ImportViewModel : ObservableObject
         if (files.Count == 0)
             return null;
 
+        // Reverse image search uploads the file, so it must never run on a
+        // locally collected card. Nothing in this workspace sets a local
+        // provider id any more — local import lives on its own page, which
+        // offers no reverse search at all — so this is defence in depth
+        // against a future path that does.
+        if (files.All(f => LocalSourceIdentity.IsLocal(f.AuthorProviderId)))
+            return null;
+
         var apiKey = GetReverseImageSearchApiKey();
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("SauceNao API key is not set.");
@@ -722,20 +667,7 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.FetchFailed, files);
 
         foreach (var item in files)
-        {
-            if (result.ArtworkId is not null)
-                item.ArtworkId = result.ArtworkId;
-
-            item.AuthorName = result.AuthorName;
-            item.AuthorId = result.AuthorId;
-            item.AuthorProviderId = result.ArtworkId?.ProviderId;
-            item.Title = result.Title;
-            item.Rating = rating;
-            item.Tags = [];
-            item.ManualAuthorId = result.AuthorId;
-            item.ErrorMessage = null;
-            item.Status = ImportItemStatus.ReadyToImport;
-        }
+            ImportSearchResultAssignment.Apply(item, result, rating, ImportSearchResultAssignmentMode.FetchFailed);
 
         FetchFailedGroups.Remove(group);
 
@@ -760,23 +692,7 @@ public partial class ImportViewModel : ObservableObject
         CaptureUndo(ManualAssignmentSource.Unknown, files);
 
         foreach (var item in files)
-        {
-            if (result.ArtworkId is not null)
-            {
-                item.ArtworkId = result.ArtworkId;
-                item.ManualArtworkId = result.ArtworkId.Id;
-            }
-
-            item.AuthorName = result.AuthorName;
-            item.AuthorId = result.AuthorId;
-            item.AuthorProviderId = result.ArtworkId?.ProviderId;
-            item.Title = result.Title;
-            item.Rating = rating;
-            item.Tags = [];
-            item.ManualAuthorId = result.AuthorId;
-            item.ErrorMessage = null;
-            item.Status = ImportItemStatus.ReadyToImport;
-        }
+            ImportSearchResultAssignment.Apply(item, result, rating, ImportSearchResultAssignmentMode.Unknown);
 
         UnknownGroups.Remove(group);
 
@@ -851,13 +767,7 @@ public partial class ImportViewModel : ObservableObject
         var id = group.ManualAuthorId.Trim();
         var author = ResolveAuthor(id, group.ManualAuthorProviderId);
 
-        foreach (var item in files)
-        {
-            item.ManualAuthorId = id;
-            item.AuthorName = author.Name;
-            item.AuthorId = id;
-            item.AuthorProviderId = author.ProviderId;
-        }
+        ImportAuthorAssignment.Apply(files, id, author.Name, author.ProviderId, ImportAuthorAssignmentMode.Unknown);
 
         UnknownGroups.Remove(group);
         foreach (var item in files)
@@ -879,33 +789,7 @@ public partial class ImportViewModel : ObservableObject
 
         var artworkId = _importService.CreateManualArtworkId(group.ManualArtworkId);
 
-        foreach (var item in files)
-        {
-            item.ArtworkId = artworkId;
-            item.AuthorName = null;
-            item.AuthorId = null;
-            item.AuthorProviderId = null;
-            item.Title = null;
-            item.Tags = null;
-            item.ErrorMessage = null;
-            item.Status = ImportItemStatus.Analyzing;
-            AnalyzingItems.Add(item);
-        }
-
-        var info = await _importService.FetchArtworkInfoAsync(artworkId, CancellationToken.None);
-        foreach (var item in files)
-        {
-            if (info is not null)
-            {
-                item.AuthorName = info.AuthorName;
-                item.AuthorId = info.AuthorId;
-                item.AuthorProviderId = artworkId.ProviderId;
-                item.Title = info.Title;
-                item.Rating = info.Rating;
-                item.Tags = info.Tags;
-            }
-            item.Status = ImportItemStatus.ReadyToImport;
-        }
+        await _artworkAssignment.ApplyAsync(files, artworkId, AnalyzingItems.Add, CancellationToken.None);
 
         await ReResolveDestinationsAsync();
         UpdateCounts();
@@ -927,13 +811,7 @@ public partial class ImportViewModel : ObservableObject
         var id = BatchManualAuthorId.Trim();
         var author = ResolveAuthor(id, BatchManualAuthorProviderId);
 
-        foreach (var item in files)
-        {
-            item.ManualAuthorId = id;
-            item.AuthorName = author.Name;
-            item.AuthorId = id;
-            item.AuthorProviderId = author.ProviderId;
-        }
+        ImportAuthorAssignment.Apply(files, id, author.Name, author.ProviderId, ImportAuthorAssignmentMode.Unknown);
 
         foreach (var group in groups)
             UnknownGroups.Remove(group);
@@ -966,33 +844,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var group in groups)
             UnknownGroups.Remove(group);
 
-        foreach (var item in files)
-        {
-            item.ArtworkId = artworkId;
-            item.AuthorName = null;
-            item.AuthorId = null;
-            item.AuthorProviderId = null;
-            item.Title = null;
-            item.Tags = null;
-            item.ErrorMessage = null;
-            item.Status = ImportItemStatus.Analyzing;
-            AnalyzingItems.Add(item);
-        }
-
-        var info = await _importService.FetchArtworkInfoAsync(artworkId, CancellationToken.None);
-        foreach (var item in files)
-        {
-            if (info is not null)
-            {
-                item.AuthorName = info.AuthorName;
-                item.AuthorId = info.AuthorId;
-                item.AuthorProviderId = artworkId.ProviderId;
-                item.Title = info.Title;
-                item.Rating = info.Rating;
-                item.Tags = info.Tags;
-            }
-            item.Status = ImportItemStatus.ReadyToImport;
-        }
+        await _artworkAssignment.ApplyAsync(files, artworkId, AnalyzingItems.Add, CancellationToken.None);
 
         BatchManualArtworkId = null;
 
@@ -1032,25 +884,27 @@ public partial class ImportViewModel : ObservableObject
         var newPaths = filePaths
             .Where(p => Path.GetExtension(p).Equals(".png", StringComparison.OrdinalIgnoreCase))
             .Where(p => Items.All(existing => !string.Equals(existing.SourceFilePath, p, StringComparison.OrdinalIgnoreCase)))
-            .Where(p => !_currentAnalysisPaths.Contains(p))
+            .Where(p => !_analysisTracker.ContainsPath(p))
             .ToList();
 
         if (newPaths.Count == 0) return;
 
-        var cts = BeginAnalysisOperation(newPaths);
+        var batch = _analysisTracker.Begin(newPaths);
+        UpdateAnalysisProgress();
         var rejected = 0;
 
         try
         {
             await _settingsLoaded;
 
-            rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, cts.Token);
-            AddRejectedAnalysisCount(rejected);
+            rejected = await _importService.AnalyzeAsync(newPaths, Items, _dispatcher, batch.Token);
+            batch.AddRejectedCount(rejected);
+            UpdateAnalysisProgress();
 
             // Compute fingerprints for subfolder decisions and optional unknown visual grouping.
             var newPathSet = new HashSet<string>(newPaths, StringComparer.OrdinalIgnoreCase);
             var newItems = Items.Where(i => newPathSet.Contains(i.SourceFilePath)).ToList();
-            await _importService.ComputeFingerprintsAsync(newItems, cts.Token);
+            await _importService.ComputeFingerprintsAsync(newItems, batch.Token);
 
             // Flush buffered unknowns into groups (fingerprints already computed above)
             FlushPendingUnknowns();
@@ -1058,7 +912,7 @@ public partial class ImportViewModel : ObservableObject
             // Re-resolve destinations after publishing unknown groups. Destination
             // resolution can involve library I/O; it must not delay or suppress the
             // cards that already need manual identification.
-            await ReResolveDestinationsAsync(cts.Token);
+            await ReResolveDestinationsAsync(batch.Token);
 
             if (rejected > 0)
                 ShowRejectedFiles(rejected);
@@ -1066,7 +920,8 @@ public partial class ImportViewModel : ObservableObject
         catch (OperationCanceledException ex) { _logger.LogError("Import.AnalysisCanceled", ex); }
         finally
         {
-            EndAnalysisOperation(cts, newPaths, rejected);
+            batch.Dispose();
+            UpdateAnalysisProgress();
             UpdateCounts();
         }
     }
@@ -1098,19 +953,10 @@ public partial class ImportViewModel : ObservableObject
         TransactionStatusText = GetLocalizedString("Import_Phase_Preparing");
         IsImporting = true;
 
-        var generation = Interlocked.Increment(ref _transactionGeneration);
-        _importCts?.Cancel();
-        _importCts?.Dispose();
-        var transactionCts = new CancellationTokenSource();
-        _importCts = transactionCts;
-
-        var progress = new Progress<ImportExecutionProgressSnapshot>(snapshot =>
+        try
         {
-            _dispatcher.TryEnqueue(() =>
+            var result = await _executionCoordinator.ExecuteAsync(plans, snapshot =>
             {
-                if (generation != Interlocked.Read(ref _transactionGeneration))
-                    return;
-
                 ExecutionProgress = snapshot;
                 TransactionStatusText = snapshot.Phase switch
                 {
@@ -1123,26 +969,10 @@ public partial class ImportViewModel : ObservableObject
                     _ => TransactionStatusText,
                 };
             });
-        });
 
-        try
-        {
-            var executor = new ImportTransactionExecutor(_metadataStore);
-            var receipt = await executor.ExecuteTransactionAsync(
-                plans,
-                progress,
-                transactionCts.Token);
-
-            if (generation != Interlocked.Read(ref _transactionGeneration))
-                return;
-
-            Interlocked.Increment(ref _transactionGeneration);
-            if (receipt.IsFullySuccessful)
+            if (result.Receipt.IsFullySuccessful)
             {
-                _importService.RegisterCommittedLibraryFiles(
-                    receipt.ItemReceipts
-                        .Where(item => item.FinalState == TransactionItemState.SidecarCommitted)
-                        .Select(item => item.TargetFilePath));
+                _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
                 ResetWorkspaceAfterCommittedTransaction();
                 TransactionStatusText = string.Format(
                     GetLocalizedString("Import_Summary_Success"),
@@ -1150,41 +980,27 @@ public partial class ImportViewModel : ObservableObject
             }
             else
             {
-                var failures = receipt.ItemReceipts.Count(item =>
-                    item.FailureType != TransactionFailureType.None);
-                var safelyRolledBack = receipt.ItemReceipts.Count(item =>
-                    item.FinalState == TransactionItemState.Prepared
-                    && item.FailureType != TransactionFailureType.None
-                    && !item.RequiresManualRecovery);
-                var manualRecovery = receipt.ItemReceipts.Count(item => item.RequiresManualRecovery);
                 TransactionStatusText = string.Format(
                     GetLocalizedString("Import_Summary_Failed"),
-                    safelyRolledBack,
-                    failures,
-                    receipt.Warnings.Count,
-                    manualRecovery);
+                    result.SafelyRolledBackCount,
+                    result.FailedCount,
+                    result.WarningCount,
+                    result.ManualRecoveryCount);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Import.Transaction", ex);
-            if (generation == Interlocked.Read(ref _transactionGeneration))
-                TransactionStatusText = GetLocalizedString("Import_Summary_UnexpectedError");
+            TransactionStatusText = GetLocalizedString("Import_Summary_UnexpectedError");
         }
         finally
         {
-            var ownsTransaction = ReferenceEquals(_importCts, transactionCts);
-            if (ownsTransaction)
-                _importCts = null;
-            transactionCts.Dispose();
-
-            if (ownsTransaction)
-                IsImporting = false;
+            IsImporting = false;
         }
     }
 
     [RelayCommand]
-    private void CancelImport() => _importCts?.Cancel();
+    private void CancelImport() => _executionCoordinator.Cancel();
 
     [RelayCommand(CanExecute = nameof(IsIdle))]
     private async Task RefreshLibraryIndexAsync()
@@ -1249,12 +1065,7 @@ public partial class ImportViewModel : ObservableObject
         var authorId = group.ManualAuthorId.Trim();
         var author = ResolveAuthor(authorId, group.ManualAuthorProviderId);
 
-        foreach (var item in files)
-        {
-            item.AuthorName = author.Name;
-            item.AuthorId = authorId;
-            item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
-        }
+        ImportAuthorAssignment.Apply(files, authorId, author.Name, author.ProviderId, ImportAuthorAssignmentMode.FetchFailedSingle);
 
         FetchFailedGroups.Remove(group);
 
@@ -1284,13 +1095,7 @@ public partial class ImportViewModel : ObservableObject
         var authorId = BatchFetchFailedAuthorId.Trim();
         var author = ResolveAuthor(authorId, BatchFetchFailedAuthorProviderId);
 
-        foreach (var item in files)
-        {
-            item.ManualAuthorId = authorId;
-            item.AuthorName = author.Name;
-            item.AuthorId = authorId;
-            item.AuthorProviderId = author.ProviderId ?? item.ArtworkId?.ProviderId;
-        }
+        ImportAuthorAssignment.Apply(files, authorId, author.Name, author.ProviderId, ImportAuthorAssignmentMode.FetchFailedBatch);
 
         foreach (var group in groups)
             FetchFailedGroups.Remove(group);
@@ -1351,9 +1156,9 @@ public partial class ImportViewModel : ObservableObject
     [RelayCommand]
     private void Clear()
     {
-        foreach (var cts in _analysisCts.ToList())
-            cts.Cancel();
-        _importCts?.Cancel();
+        _analysisTracker.CancelAll();
+        _importService.CancelPendingResolution();
+        _executionCoordinator.Cancel();
         _manualHistory.Clear();
         CanUndoManualAssignment = false;
         Items.Clear();
@@ -1423,24 +1228,22 @@ public partial class ImportViewModel : ObservableObject
 
     private async Task DebouncedReResolveAsync()
     {
-        _resolveCts?.Cancel();
-        var cts = _resolveCts = new CancellationTokenSource();
         try
         {
-            await Task.Delay(150, cts.Token);
-            await ReResolveDestinationsAsync(cts.Token);
+            await ReResolveDestinationsAsync(debounce: true);
         }
         catch (OperationCanceledException ex) { _logger.LogError("Import.DebouncedResolveCanceled", ex); }
     }
 
-    private async Task ReResolveDestinationsAsync(CancellationToken ct = default)
+    private async Task ReResolveDestinationsAsync(CancellationToken ct = default, bool debounce = false)
     {
         var diagnostics = await _importService.ReResolveWithDetailedDiagnosticsAsync(
             Items,
             _dispatcher,
             ct,
             (int)ArtworkSubfolderThreshold,
-            UseVisualSimilarity);
+            UseVisualSimilarity,
+            debounce);
         Debug.WriteLine(
             $"Import.ResolveDiagnostics: bg={diagnostics.BackgroundIndexElapsedMs}ms, "
             + $"library-scan-index={diagnostics.BgLibraryScanAndCandidateIndexElapsedMs}ms, "
@@ -1457,84 +1260,14 @@ public partial class ImportViewModel : ObservableObject
         ReconcileReviewStatesIfVisible();
     }
 
-    private CancellationTokenSource BeginAnalysisOperation(IReadOnlyList<string> filePaths)
-    {
-        var cts = new CancellationTokenSource();
-        _analysisCts.Add(cts);
-        _activeAnalysisCount++;
-        IsAnalyzing = true;
-        BeginAnalysisProgress(filePaths);
-        return cts;
-    }
-
-    private void EndAnalysisOperation(
-        CancellationTokenSource cts,
-        IReadOnlyList<string> filePaths,
-        int rejectedCount)
-    {
-        if (_analysisCts.Remove(cts))
-            _activeAnalysisCount = Math.Max(0, _activeAnalysisCount - 1);
-
-        cts.Dispose();
-        EndAnalysisProgress(filePaths, rejectedCount);
-        IsAnalyzing = _activeAnalysisCount > 0;
-    }
-
-    private void BeginAnalysisProgress(IReadOnlyList<string> filePaths)
-    {
-        foreach (var path in filePaths)
-        {
-            if (_currentAnalysisPaths.Add(path))
-                AnalysisTotalCount++;
-        }
-
-        UpdateAnalysisProgress();
-    }
-
-    private void AddRejectedAnalysisCount(int rejectedCount)
-    {
-        if (rejectedCount <= 0)
-            return;
-
-        _currentRejectedAnalysisCount += rejectedCount;
-        UpdateAnalysisProgress();
-    }
-
-    private void EndAnalysisProgress(IReadOnlyList<string> filePaths, int rejectedCount)
-    {
-        foreach (var path in filePaths)
-        {
-            if (_currentAnalysisPaths.Remove(path))
-                AnalysisTotalCount = Math.Max(0, AnalysisTotalCount - 1);
-        }
-
-        if (rejectedCount > 0)
-            _currentRejectedAnalysisCount = Math.Max(0, _currentRejectedAnalysisCount - rejectedCount);
-
-        if (AnalysisTotalCount == 0)
-        {
-            _currentAnalysisPaths.Clear();
-            _currentRejectedAnalysisCount = 0;
-            AnalysisCompletedCount = 0;
-            return;
-        }
-
-        UpdateAnalysisProgress();
-    }
-
     private void UpdateAnalysisProgress()
     {
-        if (AnalysisTotalCount <= 0 || _currentAnalysisPaths.Count == 0)
-            return;
-
-        var completedItems = Items.Count(i =>
-            _currentAnalysisPaths.Contains(i.SourceFilePath) &&
-            i.Status != ImportItemStatus.Analyzing);
-
-        AnalysisCompletedCount = Math.Clamp(
-            completedItems + _currentRejectedAnalysisCount,
-            0,
-            AnalysisTotalCount);
+        var progress = _analysisTracker.GetProgress(Items
+            .Where(item => item.Status != ImportItemStatus.Analyzing)
+            .Select(item => item.SourceFilePath));
+        AnalysisTotalCount = progress.TotalCount;
+        AnalysisCompletedCount = progress.CompletedCount;
+        IsAnalyzing = progress.IsAnalyzing;
     }
 
     partial void OnIsAnalyzingChanged(bool value)
@@ -1548,41 +1281,8 @@ public partial class ImportViewModel : ObservableObject
             NotifyReviewWorkspaceState();
     }
 
-    partial void OnSelectedReviewFilterChanged(string value)
-    {
-        foreach (var state in ReviewStates) state.IsSelected = false;
-        OnPropertyChanged(nameof(ReviewFilterIndex));
-        ReviewedItemsView.RefreshFilter();
-        UpdateReviewSelection();
-        NotifyReviewWorkspaceState();
-    }
-
-    partial void OnIsAllReviewSelectedChanged(bool? value)
-    {
-        if (_updatingReviewSelection || value is null)
-            return;
-
-        foreach (var reviewState in ReviewedItemsView.OfType<ImportItemReviewState>().Where(s => s.CanSelect))
-            reviewState.IsSelected = value.Value;
-        UpdateReviewSelection();
-    }
-
-    private bool ReviewStatePassesFilter(ImportItemReviewState state) => SelectedReviewFilter switch
-    {
-        "AllAges" => state.Item.Rating == ContentRating.AllAges,
-        "R18" => state.Item.Rating == ContentRating.R18,
-        "R18G" => state.Item.Rating == ContentRating.R18G,
-        _ => true,
-    };
-
     [RelayCommand]
-    private void SetReviewFilter(string filter)
-    {
-        if (SelectedReviewFilter == filter)
-            OnSelectedReviewFilterChanged(filter);
-        else
-            SelectedReviewFilter = filter;
-    }
+    private void SetReviewFilter(string filter) => _reviewWorkspace.SetFilter(filter);
 
     [RelayCommand]
     private void RemoveReviewSelection()
@@ -1604,11 +1304,7 @@ public partial class ImportViewModel : ObservableObject
         foreach (var item in current)
         {
             RemoveItemFromManualContainers(item);
-            item.ArtworkId = result.ArtworkId; item.ManualArtworkId = result.ArtworkId?.Id;
-            item.AuthorName = result.AuthorName; item.AuthorId = result.AuthorId;
-            item.AuthorProviderId = result.ArtworkId?.ProviderId; item.ManualAuthorId = result.AuthorId;
-            item.Title = result.Title; item.Rating = rating; item.Tags = [];
-            item.ErrorMessage = null; item.Status = ImportItemStatus.ReadyToImport;
+            ImportSearchResultAssignment.Apply(item, result, rating, ImportSearchResultAssignmentMode.FlatReview);
             PlaceItemInTree(item);
         }
         await ReResolveDestinationsAsync(); UpdateCounts();
@@ -1619,60 +1315,39 @@ public partial class ImportViewModel : ObservableObject
         ReconcileReviewStates();
     }
 
-    private void ReconcileReviewStates()
-    {
-        var eligible = Items.ToList();
-        var eligibleSet = eligible.ToHashSet();
-
-        foreach (var stale in ReviewStates.Where(state => !eligibleSet.Contains(state.Item)).ToList())
-        {
-            stale.PropertyChanged -= OnReviewStatePropertyChanged;
-            stale.Dispose();
-            ReviewStates.Remove(stale);
-        }
-
-        foreach (var item in eligible)
-        {
-            if (ReviewStates.Any(state => ReferenceEquals(state.Item, item)))
-                continue;
-
-            var state = new ImportItemReviewState(item, GetLocalizedString("Import_Review_Unassigned"));
-            state.PropertyChanged += OnReviewStatePropertyChanged;
-            ReviewStates.Add(state);
-        }
-
-        ReviewedItemsView.RefreshFilter();
-        UpdateReviewSelection();
-        // Publish after the projection is populated. Notifying before this point
-        // leaves x:Bind showing the previous empty state after analysis finishes.
-        NotifyReviewWorkspaceState();
-    }
+    private void ReconcileReviewStates() => _reviewWorkspace.Reconcile(Items);
 
     private void ClearReviewStates()
     {
-        foreach (var state in ReviewStates)
-        {
-            state.PropertyChanged -= OnReviewStatePropertyChanged;
-            state.Dispose();
-        }
-        ReviewStates.Clear();
-        ReviewRows.Clear();
-        SelectedReviewCount = 0;
-        IsAllReviewSelected = false;
-        SelectedReviewFilter = "All";
+        _reviewWorkspace.Clear();
         ReviewBatchStatusText = string.Empty;
         NotifyReviewWorkspaceState();
+    }
+
+    private void OnReviewWorkspaceChanged()
+    {
+        OnPropertyChanged(nameof(SelectedReviewFilter));
+        OnPropertyChanged(nameof(ReviewFilterIndex));
+        OnPropertyChanged(nameof(SelectedReviewCount));
+        OnPropertyChanged(nameof(IsAllReviewSelected));
+        OnPropertyChanged(nameof(HasSelectedReviewItems));
+        OnPropertyChanged(nameof(SelectedVisibleReviewItems));
+        OnPropertyChanged(nameof(ReviewSelectionEditorVisibility));
+        OnPropertyChanged(nameof(ReviewSelectionPromptVisibility));
+        NotifyReviewWorkspaceState();
+    }
+
+    private void OnReviewRowsChanged()
+    {
+        OnPropertyChanged(nameof(UnidentifiedNavigationText));
+        OnPropertyChanged(nameof(UnavailableNavigationText));
+        OnPropertyChanged(nameof(IdentifiedNavigationText));
     }
 
     private void NotifyReviewWorkspaceState()
     {
         OnPropertyChanged(nameof(ReviewFilterEmptyText));
         OnPropertyChanged(nameof(ClearReviewRatingFilterVisibility));
-        if (!_reviewGroupsRefreshQueued)
-        {
-            _reviewGroupsRefreshQueued = true;
-            _dispatcher.TryEnqueue(() => { _reviewGroupsRefreshQueued = false; RefreshReviewGroups(); });
-        }
         OnPropertyChanged(nameof(FlatReviewWorkspaceVisibility));
         OnPropertyChanged(nameof(EmptyReviewWorkspaceVisibility));
         OnPropertyChanged(nameof(FilteredReviewEmptyVisibility));
@@ -1687,88 +1362,16 @@ public partial class ImportViewModel : ObservableObject
         OnPropertyChanged(nameof(ReviewEmptyDescription));
     }
 
-    private void OnReviewStatePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ImportItemReviewState.Category)) { ReviewedItemsView.RefreshFilter(); UpdateReviewSelection(); NotifyReviewWorkspaceState(); }
-        if (e.PropertyName == nameof(ImportItemReviewState.IsSelected))
-            UpdateReviewSelection();
-    }
-
-    private void UpdateReviewSelection()
-    {
-        var visible = ReviewedItemsView.OfType<ImportItemReviewState>().Where(s => s.CanSelect).ToList();
-        SelectedReviewCount = visible.Count(state => state.IsSelected);
-
-        _updatingReviewSelection = true;
-        IsAllReviewSelected = visible.Count == 0
-            ? false
-            : visible.All(state => state.IsSelected)
-                ? true
-                : visible.Any(state => state.IsSelected) ? null : false;
-        _updatingReviewSelection = false;
-    }
-
-    private void RefreshReviewGroups()
-    {
-        var visible = ReviewedItemsView.OfType<ImportItemReviewState>().ToArray();
-        foreach (var state in visible) state.TileWidth = _reviewTileWidth;
-        var desired = Helpers.ImportReviewLayout.Build(visible, s => s.Section, s => s.GroupKey, _reviewColumns);
-        var keys = desired.Select(r => r.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var stale in ReviewRows.Where(r => !keys.Contains(r.Key)).ToArray()) ReviewRows.Remove(stale);
-        var existing = ReviewRows.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
-        for (var index = 0; index < desired.Count; index++)
-        {
-            var source = desired[index];
-            var found = existing.TryGetValue(source.Key, out var row);
-            row ??= new ImportReviewRow(source.Key, source.Kind);
-            if (!row.Items.SequenceEqual(source.Items)) row.Items = source.Items;
-            if (source.Kind == Helpers.ImportReviewRowKind.Section)
-            {
-                var resourcePrefix = source.Section switch
-                {
-                    Helpers.ImportReviewSection.Identified => "Import_Mixed_Identified",
-                    Helpers.ImportReviewSection.Unavailable => "Import_Mixed_Unavailable",
-                    _ => "Import_Mixed_Attention"
-                };
-                row.Title = string.Format(GetLocalizedString(resourcePrefix + "Count"), source.Items.Count);
-                row.Description = GetLocalizedString(resourcePrefix + (source.Items.Count == 0 ? "Empty" : "Hint"));
-            }
-            else if (source.Kind == Helpers.ImportReviewRowKind.Group)
-                row.Title = string.Format(GetLocalizedString("Import_Review_GroupTitle"), source.Items[0].GroupTitle, source.Items.Count);
-            if (!found) ReviewRows.Insert(index, row);
-            else if (!ReferenceEquals(ReviewRows[index], row)) ReviewRows.Move(ReviewRows.IndexOf(row), index);
-        }
-        OnPropertyChanged(nameof(UnidentifiedNavigationText));
-        OnPropertyChanged(nameof(UnavailableNavigationText));
-        OnPropertyChanged(nameof(IdentifiedNavigationText));
-    }
-
-    public void SetReviewViewportWidth(double width)
-    {
-        if (!double.IsFinite(width) || width <= 32) return;
-        var available = width - 32; // item padding plus the vertical scrollbar
-        var columns = Helpers.ImportReviewLayout.ColumnsForWidth(available);
-        var tileWidth = Math.Floor((available - (columns - 1) * 12) / columns);
-        if (columns == _reviewColumns && Math.Abs(tileWidth - _reviewTileWidth) < 1) return;
-        _reviewColumns = columns;
-        _reviewTileWidth = tileWidth;
-        NotifyReviewWorkspaceState();
-    }
+    public void SetReviewViewportWidth(double width) => _reviewWorkspace.SetReviewViewportWidth(width);
 
     public void ToggleReviewRow(ImportReviewRow row)
     {
-        if (!IsReviewWorkspaceEnabled) return;
-        var selectable = row.Items.Where(s => s.CanSelect).ToArray();
-        var select = !selectable.All(s => s.IsSelected);
-        foreach (var state in selectable) state.IsSelected = select;
+        if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(row.Items);
     }
 
     public void ToggleReviewGroup(ImportReviewGroup group)
     {
-        if (!IsReviewWorkspaceEnabled) return;
-        var selectable = group.Where(s => s.CanSelect).ToArray();
-        var select = !selectable.All(s => s.IsSelected);
-        foreach (var state in selectable) state.IsSelected = select;
+        if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(group);
     }
 
     [RelayCommand] private Task FetchReviewArtworkAsync() => ApplyReviewChangesAsync(true, false, false);
@@ -1782,28 +1385,15 @@ public partial class ImportViewModel : ObservableObject
     {
         if (!IsReviewWorkspaceEnabled) return;
         var selected = SelectedVisibleReviewItems;
-        if (selected.Count == 0)
-            return;
+        if (selected.Count == 0) return;
 
-        bool hasAuthorProvider = applyAuthor && !string.IsNullOrWhiteSpace(ReviewAuthorProviderId);
-        bool hasAuthorId = applyAuthor && !string.IsNullOrWhiteSpace(ReviewAuthorId);
-        bool hasArtworkId = applyArtwork && !string.IsNullOrWhiteSpace(ReviewArtworkId);
-        if (hasAuthorProvider != hasAuthorId)
+        var request = new ImportReviewEditRequest(applyArtwork, applyAuthor, applyRating,
+            ReviewArtworkId, ReviewArtworkProviderId, ReviewAuthorId, ReviewAuthorProviderId,
+            ReviewRatingOverrideIndex);
+        var validation = ImportReviewEditService.Validate(request);
+        if (validation != ImportReviewEditStatus.Ready)
         {
-            ReviewBatchStatusText = GetLocalizedString("Import_Review_IdentityPairRequired");
-            return;
-        }
-
-        ContentRating? ratingOverride = (applyRating ? ReviewRatingOverrideIndex : 0) switch
-        {
-            1 => ContentRating.AllAges,
-            2 => ContentRating.R18,
-            3 => ContentRating.R18G,
-            _ => null,
-        };
-        if (!hasAuthorId && !hasArtworkId && ratingOverride is null)
-        {
-            ReviewBatchStatusText = GetLocalizedString("Import_Review_NoChanges");
+            ReviewBatchStatusText = ReviewEditStatusText(validation);
             return;
         }
 
@@ -1811,87 +1401,34 @@ public partial class ImportViewModel : ObservableObject
         ReviewBatchStatusText = GetLocalizedString("Import_Review_Working");
         try
         {
-        ArtworkInfo? artworkInfo = null;
-        ArtworkId? artworkId = null;
-        if (hasArtworkId)
-        {
-            artworkId = _importService.ResolveReviewArtworkInput(ReviewArtworkId!, ReviewArtworkProviderId);
-            if (artworkId is null)
+            var result = await _reviewEditService.PrepareAsync(request, CancellationToken.None);
+            if (result.Status != ImportReviewEditStatus.Ready)
             {
-                ReviewBatchStatusText = GetLocalizedString("Import_Review_InputUnresolved");
+                ReviewBatchStatusText = ReviewEditStatusText(result.Status);
                 return;
             }
-            artworkInfo = await _importService.FetchArtworkInfoAsync(artworkId, CancellationToken.None);
-            if (artworkInfo is null)
-            {
-                ReviewBatchStatusText = GetLocalizedString("Import_Review_FetchUnchanged");
-                return;
-            }
-        }
 
-        CaptureUndo(ManualAssignmentSource.FlatReview, selected);
-        var author = hasAuthorId
-            ? ResolveAuthor(ReviewAuthorId!, ReviewAuthorProviderId)
-            : default;
-
-        foreach (var item in selected)
-        {
-            if (artworkId is not null)
+            CaptureUndo(ManualAssignmentSource.FlatReview, selected);
+            foreach (var item in selected)
             {
-                item.ArtworkId = artworkId;
-                item.ManualArtworkId = artworkId.Id;
-                item.FetchedArtworkInfo = artworkInfo;
-                if (artworkInfo is null)
+                if (result.Edit!.Apply(item))
                 {
-                    item.Title = null;
-                    item.Tags = null;
-                    if (!hasAuthorId)
-                    {
-                        item.AuthorName = null;
-                        item.AuthorId = null;
-                        item.AuthorProviderId = null;
-                    }
-                }
-                else
-                {
-                    item.AuthorName = artworkInfo.AuthorName;
-                    item.AuthorId = artworkInfo.AuthorId;
-                    item.AuthorProviderId = artworkId.ProviderId;
-                    item.Title = artworkInfo.Title;
-                    item.Tags = artworkInfo.Tags;
-                    item.Rating = artworkInfo.Rating;
+                    RemoveItemFromManualContainers(item);
+                    item.ErrorMessage = null;
+                    item.Status = ImportItemStatus.ReadyToImport;
+                    PlaceItemInTree(item);
                 }
             }
 
-            if (hasAuthorId)
-            {
-                item.ManualAuthorId = ReviewAuthorId!.Trim();
-                item.AuthorName = author.Name;
-                item.AuthorId = ReviewAuthorId!.Trim();
-                item.AuthorProviderId = ReviewAuthorProviderId!.Trim();
-            }
-
-            if (ratingOverride is not null)
-                item.Rating = ratingOverride.Value;
-            if ((hasAuthorId || artworkInfo is not null) && !string.IsNullOrWhiteSpace(item.AuthorId))
-            {
-                RemoveItemFromManualContainers(item);
-                item.ErrorMessage = null; item.Status = ImportItemStatus.ReadyToImport;
-                PlaceItemInTree(item);
-            }
-        }
-
-        await ReResolveDestinationsAsync();
-        UpdateCounts();
-        foreach (var state in ReviewStates.Where(state => state.IsSelected))
-            state.IsSelected = false;
-        if (applyAuthor) { ReviewAuthorProviderId = null; ReviewAuthorId = null; }
-        if (applyArtwork) { ReviewArtworkProviderId = null; ReviewArtworkId = null; }
-        if (applyRating) ReviewRatingOverrideIndex = 0;
-        ReviewBatchStatusText = artworkId is not null && artworkInfo is null
-            ? GetLocalizedString("Import_Review_MetadataCleared")
-            : GetLocalizedString("Import_Review_BatchApplied");
-        ReconcileReviewStatesIfVisible();
+            await ReResolveDestinationsAsync();
+            UpdateCounts();
+            foreach (var state in ReviewStates.Where(state => state.IsSelected))
+                state.IsSelected = false;
+            if (applyAuthor) { ReviewAuthorProviderId = null; ReviewAuthorId = null; }
+            if (applyArtwork) { ReviewArtworkProviderId = null; ReviewArtworkId = null; }
+            if (applyRating) ReviewRatingOverrideIndex = 0;
+            ReviewBatchStatusText = GetLocalizedString("Import_Review_BatchApplied");
+            ReconcileReviewStatesIfVisible();
         }
         catch (Exception ex)
         {
@@ -1900,6 +1437,15 @@ public partial class ImportViewModel : ObservableObject
         }
         finally { IsResolvingReview = false; }
     }
+
+    private static string ReviewEditStatusText(ImportReviewEditStatus status) => GetLocalizedString(status switch
+    {
+        ImportReviewEditStatus.IdentityPairRequired => "Import_Review_IdentityPairRequired",
+        ImportReviewEditStatus.NoChanges => "Import_Review_NoChanges",
+        ImportReviewEditStatus.InputUnresolved => "Import_Review_InputUnresolved",
+        ImportReviewEditStatus.FetchUnchanged => "Import_Review_FetchUnchanged",
+        _ => throw new ArgumentOutOfRangeException(nameof(status))
+    });
 
     private void UpdateCounts()
     {

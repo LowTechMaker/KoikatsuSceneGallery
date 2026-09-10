@@ -1,0 +1,118 @@
+﻿<Page
+    x:Class="KoikatsuSceneGallery.Pages.RandomDiscoveryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls"
+    xmlns:models="using:KoikatsuSceneGallery.Models">
+    <Page.KeyboardAccelerators>
+        <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
+        <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="Top_Invoked" />
+    </Page.KeyboardAccelerators>
+    <Grid Padding="24,16,24,0" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Spacing="4">
+            <TextBlock x:Uid="Discovery_Title" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock x:Uid="Discovery_Description" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+        <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="8" RowSpacing="8" SizeChanged="Toolbar_SizeChanged">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+            <AutoSuggestBox x:Name="SearchBox" x:Uid="SceneGallery_Search" QueryIcon="Find"
+                            TextChanged="Search_Changed" QuerySubmitted="Search_Submitted"
+                            AutomationProperties.AutomationId="DiscoverySearchBox" />
+            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="FilterButton" x:Uid="Discovery_Filters" MinHeight="36">
+                    <Button.Flyout>
+                        <Flyout>
+                            <StackPanel Width="260" Spacing="16">
+                                <ToggleSwitch x:Name="RatingFilter" x:Uid="SceneGallery_Rating" Toggled="Filter_Changed" />
+                                <ComboBox x:Name="GameFilter" x:Uid="SceneGallery_Environment"
+                                          HorizontalAlignment="Stretch" SelectionChanged="Game_Changed" />
+                                <ToggleSwitch x:Name="ResolutionFilter" x:Uid="Discovery_Resolution" Toggled="Filter_Changed" />
+                                <TextBlock x:Uid="Discovery_FilterHint" TextWrapping="Wrap"
+                                           Style="{StaticResource CaptionTextBlockStyle}" />
+                                <Button x:Uid="Discovery_Clear" Click="Clear_Click" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="ResetButton" x:Uid="Discovery_Reset" Click="Reset_Click" MinHeight="36" />
+            </StackPanel>
+        </Grid>
+        <StackPanel Grid.Row="2" Spacing="8">
+            <TextBlock x:Name="ProgressText" Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+            <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
+                <ProgressRing x:Name="BusyRing" Width="16" Height="16" IsActive="False" />
+                <TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}" />
+            </StackPanel>
+            <InfoBar x:Name="ErrorBar" x:Uid="Discovery_Error" Severity="Error" IsOpen="False" IsClosable="False">
+                <InfoBar.ActionButton><Button x:Uid="Discovery_Retry" Click="Retry_Click" /></InfoBar.ActionButton>
+            </InfoBar>
+        </StackPanel>
+        <GridView x:Name="DiscoveryGrid" Grid.Row="3" SelectionMode="None" IsItemClickEnabled="True"
+                  ItemClick="Item_Click" ContainerContentChanging="Container_Changing"
+                  CanDragItems="True" DragItemsStarting="Drag_Starting"
+                  IncrementalLoadingThreshold="2" DataFetchSize="2"
+                  ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  AutomationProperties.AutomationId="DiscoveryGrid">
+            <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
+            <GridView.ItemsPanel>
+                <ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="2" /></ItemsPanelTemplate>
+            </GridView.ItemsPanel>
+            <GridView.ItemContainerStyle>
+                <Style TargetType="GridViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </GridView.ItemContainerStyle>
+            <GridView.ItemTemplate>
+                <DataTemplate x:DataType="models:DiscoveryItem">
+                    <Grid Margin="4" Padding="5" CornerRadius="8" BorderThickness="1"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                          ToolTipService.ToolTip="{x:Bind Card.FileName}">
+                        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <Image x:Phase="1" Stretch="Uniform"
+                                   Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
+                        </Border>
+                        <StackPanel Grid.Row="1" Padding="8,6" Spacing="2">
+                            <TextBlock Text="{x:Bind Card.FileName}" TextTrimming="CharacterEllipsis" MaxLines="1" />
+                            <TextBlock Text="{x:Bind Card.Author.Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </GridView.ItemTemplate>
+            <GridView.Footer>
+                <StackPanel x:Name="RoundFooter" Padding="16,24" Spacing="12" Visibility="Collapsed"
+                            HorizontalAlignment="Center" MaxWidth="480">
+                    <TextBlock x:Name="RoundEndText" TextWrapping="Wrap" TextAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite" />
+                    <Button x:Name="ContinueButton" x:Uid="Discovery_Continue" Click="Continue_Click"
+                            Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" MinHeight="36" />
+                </StackPanel>
+            </GridView.Footer>
+        </GridView>
+        <StackPanel x:Name="EmptyPanel" Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="420" Padding="16" Spacing="12" Visibility="Collapsed">
+            <TextBlock x:Name="EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" />
+            <TextBlock x:Name="EmptyDescription" TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button x:Name="ClearButton" x:Uid="Discovery_Clear" Click="Clear_Click" HorizontalAlignment="Center" />
+            <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</Page>

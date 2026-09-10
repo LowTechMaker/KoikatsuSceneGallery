@@ -12,6 +12,7 @@ namespace KoikatsuSceneGallery.ViewModels;
 public sealed partial class ImportItemReviewState : ObservableObject, IDisposable
 {
     private readonly string _unassignedText;
+    private readonly Func<string, string> _text;
 
     public ImportItem Item { get; }
 
@@ -36,8 +37,8 @@ public sealed partial class ImportItemReviewState : ObservableObject, IDisposabl
             ? folder : Item.SourceFolder;
     public string Category => Services.ImportReviewPolicy.Category(Item.Status, Item.DestinationPath,
         !string.IsNullOrWhiteSpace(Item.AuthorId), Item.ArtworkId is not null);
-    public string StatusText => Helpers.UiText.Get("Import_Status_" + Category);
-    public string DestinationText => Item.ErrorMessage ?? (!IsIdentified ? StatusText : Item.DestinationPath) ?? Helpers.UiText.Get("Import_Status_NeedsInfo");
+    public string StatusText => _text("Import_Status_" + Category);
+    public string DestinationText => Item.ErrorMessage ?? (!IsIdentified ? StatusText : Item.DestinationPath) ?? _text("Import_Status_NeedsInfo");
 
     public string DisplayAuthorName => string.IsNullOrWhiteSpace(Item.AuthorName)
         ? _unassignedText
@@ -47,10 +48,11 @@ public sealed partial class ImportItemReviewState : ObservableObject, IDisposabl
         ? _unassignedText
         : $"{Item.ArtworkId.ProviderId}:{Item.ArtworkId.Id}";
 
-    public ImportItemReviewState(ImportItem item, string unassignedText)
+    public ImportItemReviewState(ImportItem item, string unassignedText, Func<string, string> text)
     {
         Item = item;
         _unassignedText = unassignedText;
+        _text = text;
         Item.PropertyChanged += OnItemPropertyChanged;
     }
 

@@ -52,16 +52,41 @@ internal sealed class ViewerChrome
         foreach (var text in header.Children.OfType<TextBlock>().Where(t => t != _breadcrumb)) { text.TextTrimming = TextTrimming.CharacterEllipsis; text.MaxLines = 1; }
         _body.SizeChanged += (_, _) => { bool wide = _body.ActualWidth >= 900; if (wide != _wide) { _wide = wide; _info.IsChecked = wide; } Layout(); };
         _scroll.SizeChanged += (_, _) => { if (_fit) Fit(); };
-        page.Loaded += (_, _) => { foreach (var kind in Enum.GetValues<LibraryKind>()) ((System.Collections.Specialized.INotifyCollectionChanged)new LibraryAdapter(kind).Cards).CollectionChanged += CardsChanged; };
-        page.Unloaded += (_, _) => { foreach (var kind in Enum.GetValues<LibraryKind>()) ((System.Collections.Specialized.INotifyCollectionChanged)new LibraryAdapter(kind).Cards).CollectionChanged -= CardsChanged; };
+        var libraries = App.Services.GetRequiredService<KoikatsuSceneGallery.Services.LibraryRegistry>().All;
+        page.Loaded += (_, _) => { foreach (var library in libraries) library.CardsChanged += CardsChanged; };
+        page.Unloaded += (_, _) => { foreach (var library in libraries) library.CardsChanged -= CardsChanged; };
         page.Loaded += (_, _) => { _wide = _body.ActualWidth >= 900; _info.IsChecked = _wide; Layout(); Fit(); };
     }
     public void SetContext(BrowseContext context) { Context = context; _breadcrumb.Text = context.Title; }
+    /// <summary>
+    /// Position to show when the card on screen is not in the browse list, as
+    /// a one-based index and a total. Null to show nothing.
+    /// </summary>
+    /// <remarks>
+    /// A character occupies one gallery tile however many cards it has, so
+    /// opening a sibling version from the detail page lands on a card the list
+    /// the user came from does not contain. That used to print "0 / 2".
+    /// </remarks>
+    public Func<(int Index, int Total)?>? FallbackPosition { get; set; }
+
     public bool Update()
     {
         if (Context is null) return false;
         var cards = Context.CurrentCards(); var index = Index(cards);
-        _position.Text = UiText.Format("Viewer_Position", Math.Max(0, index + 1), cards.Count);
+        if (index < 0)
+        {
+            // Off the list: report where the page says we are, and hand
+            // navigation back to it — walking this list cannot get us out.
+            var fallback = FallbackPosition?.Invoke();
+            _position.Text = fallback is { Index: > 0 } position
+                ? UiText.Format("Viewer_Position", position.Index, position.Total)
+                : "";
+            if (_current() is { } offList) Context.ReturnPath = offList.FilePath;
+            _page.DispatcherQueue.TryEnqueue(() => { if (_fit) Fit(); });
+            return false;
+        }
+
+        _position.Text = UiText.Format("Viewer_Position", index + 1, cards.Count);
         _previous.IsEnabled = index > 0; _next.IsEnabled = index >= 0 && index < cards.Count - 1;
         if (_current() is { } card) Context.ReturnPath = card.FilePath;
         _page.DispatcherQueue.TryEnqueue(() => { if (_fit) Fit(); });
@@ -76,6 +101,9 @@ internal sealed class ViewerChrome
     {
         if (Context is null) return false;
         var cards = Context.CurrentCards(); var index = Index(cards);
+        // Same reason as in Update: the page owns navigation for a card that is
+        // not in this list.
+        if (index < 0 && !random) return false;
         var next = index + direction;
         if (random && cards.Count > 0)
         { next = cards.Count == 1 ? 0 : (Math.Max(0, index) + 1 + Random.Shared.Next(cards.Count - 1)) % cards.Count; }

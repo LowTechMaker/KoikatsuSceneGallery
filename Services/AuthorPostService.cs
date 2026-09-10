@@ -58,8 +58,17 @@ public sealed class AuthorPostService
     private IFolderAuthorProvider? FindAuthorProvider(string providerId)
         => _authorProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Whether this author's cards can be reconciled against remote posts.
+    /// </summary>
+    /// <remarks>
+    /// False for a local source. It implements both provider interfaces, so
+    /// the checks below pass, but it has no posts by design: its cards are
+    /// grouped by folder and nothing about them is resolved remotely.
+    /// </remarks>
     public bool CanScanPosts(AuthorKey authorKey)
-        => FindAuthorProvider(authorKey.ProviderId) is not null
+        => !LocalSourceIdentity.IsLocal(authorKey.ProviderId)
+           && FindAuthorProvider(authorKey.ProviderId) is not null
            && FindProvider(authorKey.ProviderId) is not null;
 
     /// <summary>
@@ -576,23 +585,18 @@ public sealed class AuthorPostService
     private static string BuildPostKey(string providerId, string artworkId)
         => $"{providerId}\u001F{artworkId}";
 
-    private static string? FindArtworkDirectory(
+    internal static string? FindArtworkDirectory(
         string authorDirectory,
         ICardImportProvider provider,
         ArtworkId artwork)
     {
-        foreach (var directory in Directory.EnumerateDirectories(authorDirectory))
-        {
-            var parsed = provider.TryParseArtworkFolderName(Path.GetFileName(directory));
-            if (parsed is not null
-                && parsed.ProviderId.Equals(artwork.ProviderId, StringComparison.OrdinalIgnoreCase)
-                && parsed.Id.Equals(artwork.Id, StringComparison.OrdinalIgnoreCase))
+        return ArtworkDirectoryLookup.FindFirst(
+            Directory.EnumerateDirectories(authorDirectory), artwork.ProviderId, artwork.Id,
+            name =>
             {
-                return directory;
-            }
-        }
-
-        return null;
+                var parsed = provider.TryParseArtworkFolderName(name);
+                return parsed is null ? null : (parsed.ProviderId, parsed.Id);
+            });
     }
 
     private static bool IsWithinDirectory(string path, string directory)

@@ -50,6 +50,10 @@
                         <FontIcon Glyph="&#xE8B9;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Name="DiscoveryNavItem" x:Uid="Nav_Discovery"
+                                    Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B1;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem
                     x:Name="ScreenshotsNavItem"
                     x:Uid="Nav_Screenshots"
@@ -70,6 +74,16 @@
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE716;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem
+                    x:Name="LocalSourcesNavItem"
+                    x:Uid="Nav_LocalSources"
+                    AutomationProperties.AutomationId="LocalSourcesNavItem"
+                    Tag="localsources"
+                    ToolTipService.ToolTip="{x:Null}">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F4;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>

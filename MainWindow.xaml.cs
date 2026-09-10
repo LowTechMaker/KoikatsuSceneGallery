@@ -23,7 +23,9 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/AppIcon.ico");
 
-        if (App.Services.GetRequiredService<AuthorInfoService>().IsAvailable)
+        // Not AuthorInfoService.IsAvailable: the built-in local provider makes
+        // that permanently true, and this page no longer shows local sources.
+        if (App.Services.GetRequiredService<AuthorsViewModel>().HasProviderTabs)
             AuthorsNavItem.Visibility = Visibility.Visible;
 
         if (App.Services.GetService<ImportViewModel>() is { } importViewModel)
@@ -210,6 +212,12 @@ public sealed partial class MainWindow : Window
 
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
+        if (e.SourcePageType == typeof(RandomDiscoveryPage))
+            NavView.SelectedItem = DiscoveryNavItem;
+        // Both pages navigate to AuthorDetailPage, so returning from one has to
+        // restore the item the user actually came from.
+        else if (e.SourcePageType == typeof(LocalSourcesPage))
+            NavView.SelectedItem = LocalSourcesNavItem;
         var isLibraryPage = IsLibraryPage(e.SourcePageType);
         LibrarySelectorBar.Visibility = isLibraryPage
             ? Visibility.Visible
@@ -250,14 +258,22 @@ public sealed partial class MainWindow : Window
         {
             switch (item.Tag)
             {
+                case "discovery":
+                    if (NavFrame.CurrentSourcePageType != typeof(RandomDiscoveryPage))
+                        NavFrame.Navigate(typeof(RandomDiscoveryPage));
+                    break;
                 case "library":
                     NavigateToSelectedLibraryPage();
                     break;
                 case "screenshots":
                     NavFrame.Navigate(typeof(ScreenshotGalleryPage));
                     break;
-                case "authors" when App.Services.GetRequiredService<AuthorInfoService>().IsAvailable:
+                case "authors" when App.Services.GetRequiredService<AuthorsViewModel>().HasProviderTabs:
                     NavFrame.Navigate(typeof(AuthorsPage));
+                    break;
+                case "localsources":
+                    if (NavFrame.CurrentSourcePageType != typeof(LocalSourcesPage))
+                        NavFrame.Navigate(typeof(LocalSourcesPage));
                     break;
                 case "import" when App.Services.GetService<ImportViewModel>() is not null:
                     NavFrame.Navigate(typeof(ImportPage));

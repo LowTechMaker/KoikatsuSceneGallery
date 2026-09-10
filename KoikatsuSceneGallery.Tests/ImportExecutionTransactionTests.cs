@@ -221,6 +221,78 @@ public sealed class ImportExecutionTransactionTests
         Assert.Equal(TransactionFailureType.DestinationContentMismatch, receipt.ItemReceipts[1].FailureType);
     }
 
+    // A local batch is read out of a folder the user keeps, so its plans ask
+    // for a duplicate source to be left alone rather than consumed.
+    [Fact]
+    public async Task ExecuteTransactionAsync_KeepsADuplicateSourceWhenThePlanSaysSo()
+    {
+        using var source = new TestDirectory();
+        using var destination = new TestDirectory();
+        var store = new PostMetadataStore();
+        var executor = new ImportTransactionExecutor(store);
+        var duplicate = source.Write("same.png", "same"u8);
+        var fresh = source.Write("fresh.png", "fresh"u8);
+        var authorDirectory = Path.Combine(destination.Path, "author");
+        Directory.CreateDirectory(authorDirectory);
+        var duplicateTarget = Path.Combine(authorDirectory, "same.png");
+        await File.WriteAllTextAsync(duplicateTarget, "same");
+
+        var receipt = await executor.ExecuteTransactionAsync(
+            [
+                CreatePlan(duplicate, duplicateTarget, authorDirectory, "local", "local-k7f3q9", "Dup")
+                    with { KeepDuplicateSource = true },
+                CreatePlan(
+                    fresh,
+                    Path.Combine(authorDirectory, "fresh.png"),
+                    authorDirectory,
+                    "local",
+                    "local-k7f3q9",
+                    "Fresh") with { KeepDuplicateSource = true },
+            ]);
+
+        Assert.True(receipt.IsFullySuccessful);
+        Assert.True(File.Exists(duplicate));
+        Assert.Equal("same", await File.ReadAllTextAsync(duplicateTarget));
+        Assert.Equal(
+            TransactionItemState.DuplicateSourceKept,
+            receipt.ItemReceipts[0].FinalState);
+        Assert.Empty(receipt.Warnings);
+
+        // The rest of the batch still lands.
+        Assert.False(File.Exists(fresh));
+        Assert.True(File.Exists(Path.Combine(authorDirectory, "fresh.png")));
+    }
+
+    // A kept duplicate never moved anything, so undoing the transaction must
+    // not try to put it back.
+    [Fact]
+    public async Task AKeptDuplicateNeedsNoRecoveryWhenTheTransactionIsRolledBack()
+    {
+        using var source = new TestDirectory();
+        using var destination = new TestDirectory();
+        var store = new PostMetadataStore();
+        var executor = new ImportTransactionExecutor(store);
+        var duplicate = source.Write("same.png", "same"u8);
+        var authorDirectory = Path.Combine(destination.Path, "author");
+        Directory.CreateDirectory(authorDirectory);
+        var duplicateTarget = Path.Combine(authorDirectory, "same.png");
+        await File.WriteAllTextAsync(duplicateTarget, "same");
+
+        var forward = await executor.ExecuteTransactionAsync(
+            [
+                CreatePlan(duplicate, duplicateTarget, authorDirectory, "local", "local-k7f3q9", "Dup")
+                    with { KeepDuplicateSource = true },
+            ]);
+
+        var rollback = await executor.RollbackTransactionAsync(forward, null);
+
+        Assert.True(File.Exists(duplicate));
+        Assert.Equal("same", await File.ReadAllTextAsync(duplicateTarget));
+        Assert.All(
+            rollback.ItemReceipts,
+            item => Assert.False(item.RequiresManualRecovery));
+    }
+
     [Fact]
     public async Task ExecuteTransactionAsync_DuplicateSourceIsNotDeletedWhenLaterItemFails()
     {

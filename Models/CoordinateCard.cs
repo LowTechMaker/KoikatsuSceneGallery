@@ -10,6 +10,9 @@ public partial class CoordinateCard : CardBase, IAuthorOwner
     public partial bool MetadataLoaded { get; set; }
 
     [ObservableProperty]
+    public partial CardMetadataSummary? MetadataSummary { get; set; }
+
+    [ObservableProperty]
     public partial string CoordinateName { get; set; } = string.Empty;
 
     [ObservableProperty]

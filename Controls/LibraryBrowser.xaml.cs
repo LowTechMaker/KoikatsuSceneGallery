@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.WinUI.Collections;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
@@ -17,7 +17,7 @@ namespace KoikatsuSceneGallery.Controls;
 
 public sealed partial class LibraryBrowser : UserControl
 {
-    private LibraryAdapter? _adapter;
+    private ILibrary? _adapter;
     private IReadOnlyList<CardBase>? _scope;
     private string? _scopeTitle;
     private string _localQuery = "";
@@ -57,9 +57,18 @@ public sealed partial class LibraryBrowser : UserControl
     public void Initialize(LibraryKind kind, IReadOnlyList<CardBase>? scope = null, string? title = null)
     {
         _scope = scope; _scopeTitle = title;
-        _adapter = new(kind);
+        _adapter = App.Services.GetRequiredService<LibraryRegistry>().Get(kind);
         _layout = new(_adapter.ImageRatio, GalleryGrid, DispatcherQueue, count => { if (_scope is null) VM.SetShuffleDisplayCount(count); }, _settings, 58);
-        if (_scope is not null) { RootLayout.Padding = new Thickness(0,12,0,0); FilterButton.Visibility = Visibility.Collapsed; return; }
+        if (_scope is not null)
+        {
+            RootLayout.Padding = new Thickness(0,12,0,0);
+            if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel)
+            {
+                BuildFilters();
+            }
+            else FilterButton.Visibility = Visibility.Collapsed;
+            return;
+        }
         VM.CardsView.VectorChanged += (_, _) => QueueRefresh();
         VM.ViewRefreshed += QueueRefresh;
         VM.CardsReloaded += () => { _keys.Clear(); QueueRefresh(); };
@@ -70,7 +79,9 @@ public sealed partial class LibraryBrowser : UserControl
     }
     public void Activate(Frame frame)
     {
-        _frame = frame; _active = true; if (_scope is null) VM.Activate();
+        _frame = frame; _active = true;
+        SetScopedMetadataSubscriptions(true);
+        if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.Activate();
         _syncing = true; SortBox.SelectedIndex = (int)(_scope is null ? VM.SelectedSort : _localSort); _syncing = false;
         UpdateSize(_settings.ThumbnailSize);
         SetSearchText(_groupKey is null ? MainQuery : _groupSearch);
@@ -80,7 +91,9 @@ public sealed partial class LibraryBrowser : UserControl
     }
     public void Deactivate()
     {
-        ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); if (_scope is null) VM.CancelPendingWork();
+        ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); _metadataOptionsTimer?.Stop();
+        SetScopedMetadataSubscriptions(false);
+        if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.CancelPendingWork();
         foreach (var item in _items) { _adapter?.Thumbnail(item.Card, true); item.Dispose(); }
         _entriesDetached = true;
     }
@@ -120,7 +133,7 @@ public sealed partial class LibraryBrowser : UserControl
         if (_groupKey is not null)
         {
             var keywords = _groupSearch.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0).ToArray();
-            visible = visible.Where(c => GallerySearch.Matches(c.FilePath, (c as IAuthorOwner)?.Author?.Name, keywords)).ToArray();
+            visible = visible.Where(c => VM.MatchesBrowseCard(c, keywords)).ToArray();
         }
         var groups = _groupKey is null && _adapter.GroupingEnabled ? GalleryGrouping.Create(visible, Key)
             : visible.Select(c => new GalleryGroup<CardBase>(Key(c), [c])).ToArray();
@@ -141,9 +154,20 @@ public sealed partial class LibraryBrowser : UserControl
         ResultCount.Text = UiText.Format(visible.Length == (_groupKey is null ? (_scope?.Count ?? _adapter.Cards.Count) : groupTotal)
             ? "SceneGallery_TotalCount" : "SceneGallery_FilteredCount", visible.Length, _groupKey is null ? _adapter.Cards.Count : groupTotal);
         SearchBox.PlaceholderText = UiText.Get(_groupKey is null ? "SceneGallery_Search.PlaceholderText" : "Browser_GroupSearch");
+        if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) SearchBox.PlaceholderText = UiText.Get("Metadata_SearchHint");
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
-        int filterCount = VM switch { GalleryViewModel vm => (vm.ShowR18Content ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 };
+        int filterCount = VM switch { GalleryViewModel vm => (vm.ShowR18Content ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
+            + (VM.OriginFilter == CardOriginFilter.All ? 0 : 1);
         FilterLabel.Text = filterCount == 0 ? UiText.Get("SceneGallery_Filters") : UiText.Format("SceneGallery_ActiveFilters", filterCount);
+        if (_sourceFilterCombo is not null && VM is CharacterGalleryViewModel characterFilters)
+            _sourceFilterCombo.SelectedIndex = (int)characterFilters.SourceFilter;
+        if (_originFilterCombo is not null) _originFilterCombo.SelectedIndex = (int)VM.OriginFilter;
+        var metadataFilters = GetMetadataFilters();
+        if (metadataFilters is not null)
+        {
+            filterCount += metadataFilters.ActiveCount;
+            FilterLabel.Text = filterCount == 0 ? UiText.Get("SceneGallery_Filters") : UiText.Format("SceneGallery_ActiveFilters", filterCount);
+        }
         RandomButton.IsEnabled = visible.Length > 0;
         DirectionButton.IsEnabled = _scope is null ? !VM.IsShuffleMode : _localSort != SortOption.Shuffle;
         DirectionButton.IsChecked = !(_scope is null ? VM.SortAscending : _localAscending);
@@ -162,7 +186,7 @@ public sealed partial class LibraryBrowser : UserControl
     private CardBase[] ScopedCards()
     {
         var keywords = _localQuery.Split(',').Select(k => k.Trim()).Where(k => k.Length > 0).ToArray();
-        var cards = _scope!.Where(c => GallerySearch.Matches(c.FilePath, (c as IAuthorOwner)?.Author?.Name, keywords));
+        var cards = _scope!.Where(c => VM.MatchesBrowseCard(c, keywords));
         foreach (var card in _scope!) if (!_shuffleOrder.ContainsKey(card)) _shuffleOrder[card] = Random.Shared.Next();
         IEnumerable<CardBase> ordered = _localSort switch
         {
@@ -183,6 +207,7 @@ public sealed partial class LibraryBrowser : UserControl
     }
     private void BuildFilters()
     {
+        BuildOriginFilter();
         if (VM is GalleryViewModel scene)
         {
             var rating = new ToggleSwitch { Header = UiText.Get("SceneGallery_Rating.Header"), IsOn = scene.ShowR18Content, Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed };
@@ -202,9 +227,28 @@ public sealed partial class LibraryBrowser : UserControl
             foreach (var s in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu Sunshine", "Koikatsu HF", "Madevil", UiText.Get("Gallery_EnvUnknown.Content") }) source.Items.Add(s);
             source.SelectedIndex = (int)character.SourceFilter;
             source.SelectionChanged += (_, _) => { if (source.SelectedIndex >= 0) character.SourceFilter = (CardSourceFilterOption)source.SelectedIndex; };
-            character.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(character.SourceFilter)) source.SelectedIndex = (int)character.SourceFilter; };
+            _sourceFilterCombo = source;
             SpecificFilters.Children.Add(source);
         }
+        BuildMetadataFilters();
+    }
+    /// <summary>
+    /// Origin applies to every gallery whose cards can carry an author, so it
+    /// is built once here rather than repeated in each type's branch. Media
+    /// cards have no author, hence no origin to filter on.
+    /// </summary>
+    private void BuildOriginFilter()
+    {
+        if (VM is MediaGalleryViewModel) return;
+
+        var origin = new ComboBox { Header = UiText.Get("Browser_Origin.Header"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (var key in new[] { "Browser_Origin_All.Content", "Browser_Origin_ExcludeLocal.Content", "Browser_Origin_LocalOnly.Content" })
+            origin.Items.Add(UiText.Get(key));
+        origin.SelectedIndex = (int)VM.OriginFilter;
+        origin.SelectionChanged += (_, _) => { if (origin.SelectedIndex >= 0) VM.OriginFilter = (CardOriginFilter)origin.SelectedIndex; };
+        VM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(VM.OriginFilter)) origin.SelectedIndex = (int)VM.OriginFilter; };
+        _originFilterCombo = origin;
+        SpecificFilters.Children.Add(origin);
     }
     private void SetSearchText(string text) { _syncing = true; SearchBox.Text = text; _syncing = false; }
     private void Search_Changed(AutoSuggestBox s, AutoSuggestBoxTextChangedEventArgs e) { if (_syncing) return; _search.Stop(); _search.Start(); }
@@ -220,7 +264,11 @@ public sealed partial class LibraryBrowser : UserControl
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
         SetSearchText("");
-        if (_scope is null && _groupKey is null) { if (VM is GalleryViewModel s) s.GameFilter = GameFilterOption.All; if (VM is CharacterGalleryViewModel c) c.SourceFilter = CardSourceFilterOption.All; }
+        if (_groupKey is null && GetMetadataFilters() is { } metadata)
+        {
+            metadata.Sex = null; metadata.Personality = null; metadata.PluginGuid = null;
+        }
+        if (_scope is null && _groupKey is null) { VM.OriginFilter = CardOriginFilter.All; if (VM is GalleryViewModel s) s.GameFilter = GameFilterOption.All; if (VM is CharacterGalleryViewModel c) c.SourceFilter = CardSourceFilterOption.All; }
         ApplySearch(); SearchBox.Focus(FocusState.Keyboard);
     }
     private void Item_Click(object sender, ItemClickEventArgs e)
@@ -293,14 +341,6 @@ public sealed partial class LibraryBrowser : UserControl
         { var folder = Path.GetDirectoryName(entry.Card.FilePath); if (folder is not null) await Launcher.LaunchFolderPathAsync(folder); });
     }
     private void Drag_Starting(object sender, DragItemsStartingEventArgs e)
-    {
-        var paths = e.Items.OfType<GalleryEntry>().SelectMany(i => i.Members).Select(c => c.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
-        {
-            var deferral = request.GetDeferral();
-            try { var files = new List<IStorageItem>(); foreach (var path in paths) { try { files.Add(await StorageFile.GetFileFromPathAsync(path)); } catch (Exception ex) { App.Services.GetRequiredService<IAppLogger>().LogError("Browser.Drag", ex, path); } } request.SetData(files); }
-            finally { deferral.Complete(); }
-        });
-    }
+        => DragFilePayload.Attach(e, "Browser.Drag",
+            e.Items.OfType<GalleryEntry>().SelectMany(entry => entry.Members).Select(c => c.FilePath));
 }

@@ -11,6 +11,12 @@ internal enum TransactionItemState
     FileMoved,
     SidecarCommitted,
     DuplicateSourceDeleted,
+
+    /// <summary>
+    /// The library already held this card, and the plan asked for the source
+    /// file to stay where it is rather than be deleted.
+    /// </summary>
+    DuplicateSourceKept,
     Failed,
 }
 
@@ -61,7 +67,20 @@ internal sealed record ImportItemPlan(
     string SourceFilePath,
     string IdealDestinationPath,
     string? AuthorDirectoryPath,
-    PostMetadataDocument? Document);
+    PostMetadataDocument? Document)
+{
+    /// <summary>
+    /// Whether the source file stays put when the library already holds an
+    /// identical card, instead of being deleted as a consumed duplicate.
+    /// </summary>
+    /// <remarks>
+    /// Per plan rather than per executor because both import pages share one
+    /// execution coordinator, and they want opposite things: an online import
+    /// is moving files out of a download folder the user wants emptied, while a
+    /// local import reads a friend folder the user keeps.
+    /// </remarks>
+    public bool KeepDuplicateSource { get; init; }
+}
 
 /// <summary>
 /// UI-neutral execution progress. During <see cref="ImportExecutionPhase.RollingBack"/>,
@@ -143,7 +162,9 @@ internal static class ImportTransactionRollbackPlanner
 
         return receipt.LastDurableState switch
         {
-            TransactionItemState.Prepared or TransactionItemState.DuplicateSourceDeleted =>
+            TransactionItemState.Prepared
+                or TransactionItemState.DuplicateSourceDeleted
+                or TransactionItemState.DuplicateSourceKept =>
                 new(TransactionRollbackAction.None, DeleteSidecarIfEmpty: false),
 
             TransactionItemState.FileMoved =>

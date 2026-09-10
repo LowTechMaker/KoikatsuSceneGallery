@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
@@ -294,7 +294,18 @@ public sealed class AuthorInfoService
     private AuthorDisplay? ResolveDirectory(string directory)
     {
         if (_directoryCache.TryGetValue(directory, out var cached))
+        {
+            // A collection Reset prunes displays that lost every card, but the
+            // directory cache keeps pointing at them. Without re-registering,
+            // the reloaded cards would carry an author badge that never shows
+            // up in GetSummaries, so the Authors page loses them entirely.
+            if (cached is not null)
+            {
+                cached = RegisterDisplay(cached);
+                _directoryCache[directory] = cached;
+            }
             return cached;
+        }
 
         AuthorDisplay? result = null;
         if (IsAtOrBelowRoot(directory))
@@ -336,6 +347,20 @@ public sealed class AuthorInfoService
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Makes sure a display reachable from the directory cache is also the one
+    /// tracked in <see cref="_displays"/>, returning the live instance so every
+    /// card of an author keeps sharing a single object.
+    /// </summary>
+    private AuthorDisplay RegisterDisplay(AuthorDisplay display)
+    {
+        if (_displays.TryGetValue(display.Key, out var live))
+            return live;
+
+        _displays[display.Key] = display;
+        return display;
     }
 
     private AuthorDisplay GetOrCreateDisplay(IFolderAuthorProvider provider, ParsedAuthor parsed)

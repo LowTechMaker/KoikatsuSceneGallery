@@ -161,14 +161,14 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        if (ViewerChrome.IsEditing(XamlRoot)) return;
+        if (ViewerChrome.IsEditing(XamlRoot) || KoikatsuSceneGallery.Controls.MetadataPanel.ContainsFocus(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        if (ViewerChrome.IsEditing(XamlRoot)) return;
+        if (ViewerChrome.IsEditing(XamlRoot) || KoikatsuSceneGallery.Controls.MetadataPanel.ContainsFocus(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }

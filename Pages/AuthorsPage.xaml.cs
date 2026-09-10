@@ -77,12 +77,28 @@ public sealed partial class AuthorsPage : Page
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.OpenProfile", async () =>
         {
-            if (sender is FrameworkElement { Tag: AuthorSummary summary })
+            // A local source has no profile, and the menu item is hidden for
+            // one; guarded here as well so no path can launch an empty Uri.
+            if (sender is FrameworkElement { Tag: AuthorSummary summary }
+                && summary.Display.HasProfileUrl)
+            {
                 await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+            }
         });
 
     private void OpenAuthorDetail(AuthorSummary summary)
         => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+
+    private void EditLocal_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: AuthorSummary summary })
+            return;
+
+        UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "Authors.EditLocal",
+            () => LocalSourceEditing.RunAsync(XamlRoot, summary.Display.Key.Id));
+    }
 
     private void RefreshOne_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.RefreshOne", async () =>

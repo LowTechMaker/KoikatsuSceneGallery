@@ -7,9 +7,14 @@
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:KoikatsuSceneGallery.Controls"
+    xmlns:converters="using:KoikatsuSceneGallery.Converters"
     xmlns:services="using:KoikatsuSceneGallery.Services"
     xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Page.Resources>
 
     <Grid Padding="24,16,24,0" RowSpacing="12">
         <Grid.RowDefinitions>
@@ -141,7 +146,8 @@
                                                                     <MenuFlyoutItem
                                                                         x:Uid="Authors_OpenProfile"
                                                                         Click="OpenProfile_Click"
-                                                                        Tag="{x:Bind}">
+                                                                        Tag="{x:Bind}"
+                                                                        Visibility="{x:Bind Display.HasProfileUrl, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE774;" />
                                                                         </MenuFlyoutItem.Icon>
@@ -152,6 +158,15 @@
                                                                         Tag="{x:Bind}">
                                                                         <MenuFlyoutItem.Icon>
                                                                             <FontIcon Glyph="&#xE72C;" />
+                                                                        </MenuFlyoutItem.Icon>
+                                                                    </MenuFlyoutItem>
+                                                                    <MenuFlyoutItem
+                                                                        x:Uid="Authors_EditLocal"
+                                                                        Click="EditLocal_Click"
+                                                                        Tag="{x:Bind}"
+                                                                        Visibility="{x:Bind Display.IsLocalSource, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <MenuFlyoutItem.Icon>
+                                                                            <FontIcon Glyph="&#xE70F;" />
                                                                         </MenuFlyoutItem.Icon>
                                                                     </MenuFlyoutItem>
                                                                 </MenuFlyout>

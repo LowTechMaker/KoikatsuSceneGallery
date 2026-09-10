@@ -60,7 +60,17 @@ public partial class AuthorDetailViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProfileUrl))]
+    [NotifyPropertyChangedFor(nameof(IsLocalSource))]
     public partial AuthorDisplay? Author { get; set; }
+
+    public bool HasProfileUrl => Author?.HasProfileUrl == true;
+
+    /// <summary>
+    /// Whether this page is showing a locally collected source, which is the
+    /// only kind of author the user can rename or give a picture to.
+    /// </summary>
+    public bool IsLocalSource => Author?.IsLocalSource == true;
 
     public ObservableCollection<SceneCard> Scenes { get; } = [];
     public ObservableCollection<CharacterCard> Characters { get; } = [];

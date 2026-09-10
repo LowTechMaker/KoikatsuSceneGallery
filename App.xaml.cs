@@ -16,7 +16,8 @@ public partial class App : Application
     private readonly IAppLogger _logger = new CrashLogLogger();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
-    private readonly CharacterCardService _characterCardService = new();
+    private readonly CharacterAnnotationStore _characterAnnotations = new();
+    private readonly CharacterCardService _characterCardService;
     private readonly CoordinateCardService _coordinateCardService = new();
     private readonly SceneCardCacheService _sceneCardCacheService;
     private readonly SceneMetadataService _sceneMetadataService;
@@ -25,11 +26,13 @@ public partial class App : Application
     private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"]);
     private readonly ThumbnailPriorityScheduler _thumbnailScheduler = new();
     private readonly PluginService _pluginService;
+    private readonly LocalSourceRegistry _localSourceRegistry;
     private ThumbnailCacheService _thumbnailCacheService = null!;
     private MainWindow? _mainWindow;
 
     public App()
     {
+        _characterCardService = new CharacterCardService(_characterAnnotations);
         _sceneCardCacheService = new SceneCardCacheService(_logger);
         _sceneMetadataService = new SceneMetadataService(_logger);
         _characterMetadataService = new CharacterMetadataService(_logger);
@@ -37,6 +40,7 @@ public partial class App : Application
         _pluginService = new PluginService(
             _logger,
             Path.Combine(AppPaths.LocalFolder, "Plugins"));
+        _localSourceRegistry = new LocalSourceRegistry(_logger);
         InitializeComponent();
 
         // No debugger is attached in a packaged-zip test build, so route every
@@ -92,6 +96,10 @@ public partial class App : Application
         {
             _logger.LogError("Plugins", ex);
         }
+
+        // After LoadPlugins so an installed plugin keeps first place in the
+        // provider lists, and before AuthorInfoService, which snapshots them.
+        _pluginService.RegisterBuiltInProvider(new LocalSourceProvider(_localSourceRegistry));
 
         Task.Run(async () =>
         {
@@ -160,21 +168,32 @@ public partial class App : Application
             _thumbnailScheduler,
             _logger);
 
+        // Shared by the online import page and the local collection page: one
+        // library scan between them, and one execution coordinator, which
+        // serializes transactions so two of them never move files into the
+        // same author folder at once.
+        var postMetadataStore = new PostMetadataStore();
+        var libraryFileCache = new LibraryFileCache();
+        var executionCoordinator = new ImportExecutionCoordinator(
+            new ImportTransactionExecutor(postMetadataStore).ExecuteTransactionAsync,
+            action => dispatcherQueue.TryEnqueue(() => action()));
+
         ImportService? importService = null;
         ImportViewModel? importViewModel = null;
         AuthorPostService? authorPostService = null;
         if (_pluginService.ImportProviders.Count > 0)
         {
-            var postMetadataStore = new PostMetadataStore();
             importService = new ImportService(
                 _pluginService.ImportProviders,
                 _pluginService.AuthorProviders,
                 _pluginService.ReverseImageSearchProvider,
-                _settingsService,
-                _logger);
+                _settingsService.LoadConfigAsync,
+                _logger,
+                postMetadataStore,
+                libraryFileCache);
             importViewModel = new ImportViewModel(
                 importService,
-                postMetadataStore,
+                executionCoordinator,
                 _settingsService,
                 _pluginService,
                 dispatcherQueue,
@@ -190,6 +209,26 @@ public partial class App : Application
             }
         }
 
+        // Local import works with no online import plugin installed, so it is
+        // built unconditionally, on its own ImportService instance. Sharing one
+        // would let the two pages' destination resolutions replace each other:
+        // ImportResolutionCoordinator keeps a single pending request.
+        var localImportViewModel = new LocalImportViewModel(
+            new ImportService(
+                _pluginService.ImportProviders,
+                _pluginService.AuthorProviders,
+                reverseImageSearchProvider: null,
+                _settingsService.LoadConfigAsync,
+                _logger,
+                postMetadataStore,
+                libraryFileCache),
+            executionCoordinator,
+            _localSourceRegistry,
+            authorInfoService,
+            _thumbnailCacheService,
+            dispatcherQueue,
+            _logger);
+
         var authorsViewModel = new AuthorsViewModel(
             authorInfoService,
             dispatcherQueue,
@@ -199,6 +238,7 @@ public partial class App : Application
             characterGalleryViewModel,
             coordinateGalleryViewModel);
         var authorSourceCoordinator = new AuthorSourceCoordinator(
+            _localSourceRegistry,
             authorInfoService,
             settingsViewModel,
             galleryViewModel,
@@ -214,14 +254,46 @@ public partial class App : Application
             coordinateGalleryViewModel,
             screenshotGalleryViewModel,
             authorsViewModel,
+            localImportViewModel,
             authorSourceCoordinator,
             importService,
             importViewModel,
             authorPostService);
 
         _mainWindow = new MainWindow();
+        var metadataShutdown = new ShutdownCoordinator(
+        [
+            new(() => Task.WhenAll(characterGalleryViewModel.StopMetadataAsync(), _characterMetadataService.StopAsync()),
+                _characterMetadataService.DisposePersistence),
+            new(() => Task.WhenAll(coordinateGalleryViewModel.StopMetadataAsync(), _coordinateMetadataService.StopAsync()),
+                _coordinateMetadataService.DisposePersistence),
+            new(_sceneCardCacheService.StopAsync, _sceneCardCacheService.Dispose)
+        ], ex => _logger.LogError("App.MetadataShutdown", ex));
+        var closing = false;
+        var closeAllowed = false;
+        _mainWindow.AppWindow.Closing += async (_, args) =>
+        {
+            if (closeAllowed) return;
+            args.Cancel = true;
+            if (closing) return;
+            closing = true;
+            try
+            {
+                if (!await metadataShutdown.WaitAsync(TimeSpan.FromSeconds(5)))
+                    _logger.LogError("App.MetadataShutdownTimeout", new TimeoutException());
+            }
+            catch (Exception ex) { _logger.LogError("App.MetadataShutdown", ex); }
+            finally
+            {
+                closeAllowed = true;
+                _mainWindow.Close();
+            }
+        };
         _mainWindow.Closed += (_, _) =>
         {
+            // Programmatic destruction can bypass AppWindow.Closing. Start the same
+            // cleanup without claiming that an exiting process will await it.
+            metadataShutdown.Start().Observe(_logger, "App.MetadataShutdown");
             _thumbnailScheduler.Dispose();
             _pluginService.Shutdown();
         };
@@ -241,6 +313,7 @@ public partial class App : Application
         CoordinateGalleryViewModel coordinateGalleryViewModel,
         MediaGalleryViewModel screenshotGalleryViewModel,
         AuthorsViewModel authorsViewModel,
+        LocalImportViewModel localImportViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
         ImportService? importService,
         ImportViewModel? importViewModel,
@@ -256,16 +329,21 @@ public partial class App : Application
         Services.Add(_sceneCardCacheService);
         Services.Add(_sceneMetadataService);
         Services.Add(_characterMetadataService);
+        Services.Add(_characterAnnotations);
         Services.Add(_coordinateMetadataService);
         Services.Add(_screenshotCardService, "screenshots");
         Services.Add(_pluginService);
+        Services.Add(_localSourceRegistry);
         Services.Add(authorInfoService);
         Services.Add(settingsViewModel);
         Services.Add(galleryViewModel);
         Services.Add(characterGalleryViewModel);
         Services.Add(coordinateGalleryViewModel);
         Services.Add(screenshotGalleryViewModel, "screenshots");
+        Services.Add(LibraryRegistry.Create(settingsViewModel, galleryViewModel,
+            characterGalleryViewModel, coordinateGalleryViewModel, screenshotGalleryViewModel));
         Services.Add(authorsViewModel);
+        Services.Add(localImportViewModel);
         Services.Add(authorSourceCoordinator);
         if (importService is not null) Services.Add(importService);
         if (importViewModel is not null) Services.Add(importViewModel);

@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.0.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
@@ -21,6 +22,18 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KoikatsuSceneGallery.Core\KoikatsuSceneGallery.Core.csproj" />
+    <ProjectReference Include="..\PluginSdk\SceneGallery.PluginSdk.csproj" />
+    <Compile Include="..\Models\ImportItem.cs" Link="Models\ImportItem.cs" />
+    <Compile Include="..\ViewModels\ImportAuthorAssignment.cs" Link="ViewModels\ImportAuthorAssignment.cs" />
+    <Compile Include="..\ViewModels\ImportSearchResultAssignment.cs" Link="ViewModels\ImportSearchResultAssignment.cs" />
+    <Compile Include="..\ViewModels\ImportArtworkAssignment.cs" Link="ViewModels\ImportArtworkAssignment.cs" />
+    <Compile Include="..\ViewModels\ImportReviewEditService.cs" Link="ViewModels\ImportReviewEditService.cs" />
+    <Compile Include="..\Services\PostMetadataMapper.cs" Link="Services\PostMetadataMapper.cs" />
+    <Compile Include="..\ViewModels\ImportManualAssignmentHistory.cs" Link="ViewModels\ImportManualAssignmentHistory.cs" />
+    <Compile Include="..\ViewModels\ImportItemReviewState.cs" Link="ViewModels\ImportItemReviewState.cs" />
+    <Compile Include="..\ViewModels\ImportReviewWorkspace.cs" Link="ViewModels\ImportReviewWorkspace.cs" />
+    <Compile Include="..\ViewModels\ImportReviewRow.cs" Link="ViewModels\ImportReviewRow.cs" />
+    <Compile Include="..\ViewModels\ImportReviewGroup.cs" Link="ViewModels\ImportReviewGroup.cs" />
     <Compile Include="..\Services\ThumbnailPriorityScheduler.cs" Link="Services\ThumbnailPriorityScheduler.cs" />
   </ItemGroup>
 

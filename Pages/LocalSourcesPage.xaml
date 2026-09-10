@@ -1,0 +1,254 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.LocalSourcesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls"
+    xmlns:converters="using:KoikatsuSceneGallery.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:KoikatsuSceneGallery.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+
+        <DataTemplate x:Key="StagedCardTemplate" x:DataType="models:StagedCard">
+            <Border
+                Width="64"
+                Height="64"
+                Margin="0,0,6,0"
+                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                CornerRadius="6"
+                ToolTipService.ToolTip="{x:Bind FileName}">
+                <Image
+                    Source="{x:Bind ThumbnailPath, Mode=OneWay}"
+                    Stretch="UniformToFill" />
+            </Border>
+        </DataTemplate>
+
+        <!--  Drop target: the root grid carries the tile via Tag, matching the authors page.  -->
+        <DataTemplate x:Key="LocalSourceTileTemplate" x:DataType="models:LocalSourceTile">
+            <Grid
+                Margin="4"
+                AllowDrop="True"
+                DragEnter="SourceTile_DragEnter"
+                DragLeave="SourceTile_DragLeave"
+                DragOver="SourceTile_DragOver"
+                Drop="SourceTile_Drop"
+                Tag="{x:Bind}">
+                <Grid.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem x:Uid="LocalSources_EditSource" Click="EditSource_Click" Tag="{x:Bind}">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE70F;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
+                <controls:AuthorLiveTileControl Summary="{x:Bind Summary}" />
+                <Border
+                    x:Name="DropHighlight"
+                    BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                    BorderThickness="3"
+                    CornerRadius="6"
+                    IsHitTestVisible="False"
+                    Opacity="0" />
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="AddLocalSourceTileTemplate" x:DataType="models:AddLocalSourceTile">
+            <Grid
+                Width="280"
+                Height="160"
+                Margin="4"
+                AllowDrop="True"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="2"
+                CornerRadius="6"
+                DragEnter="SourceTile_DragEnter"
+                DragLeave="SourceTile_DragLeave"
+                DragOver="SourceTile_DragOver"
+                Drop="SourceTile_Drop"
+                Tag="{x:Bind}">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8">
+                    <FontIcon
+                        HorizontalAlignment="Center"
+                        FontSize="28"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="&#xE710;" />
+                    <TextBlock
+                        x:Uid="LocalSources_AddSource"
+                        HorizontalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <Border
+                    x:Name="DropHighlight"
+                    BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                    BorderThickness="3"
+                    CornerRadius="6"
+                    IsHitTestVisible="False"
+                    Opacity="0" />
+            </Grid>
+        </DataTemplate>
+
+        <controls:LocalSourceTileTemplateSelector
+            x:Key="LocalSourceTileTemplateSelector"
+            AddTemplate="{StaticResource AddLocalSourceTileTemplate}"
+            SourceTemplate="{StaticResource LocalSourceTileTemplate}" />
+    </Page.Resources>
+
+    <Grid Padding="24,16,24,0" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Uid="LocalSources_Title" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <!--  Staging. Files arrive here before a source is chosen, so nothing is analyzed yet.  -->
+        <Border
+            x:Name="DropZone"
+            Grid.Row="1"
+            Padding="20"
+            AllowDrop="True"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="2"
+            CornerRadius="12"
+            DragEnter="DropZone_DragEnter"
+            DragLeave="DropZone_DragLeave"
+            DragOver="DropZone_DragOver"
+            Drop="DropZone_Drop">
+            <StackPanel Spacing="12">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Spacing="6"
+                    Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock
+                        x:Uid="LocalSources_DropZoneTitle"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock
+                        x:Uid="LocalSources_DropZoneHint"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <Button
+                        x:Uid="LocalSources_ChooseFiles"
+                        HorizontalAlignment="Center"
+                        Click="PickFiles_Click" />
+                </StackPanel>
+
+                <StackPanel
+                    Spacing="12"
+                    Visibility="{x:Bind ViewModel.HasStagedCards, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel
+                        x:Name="StagedStrip"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal">
+                        <ItemsControl
+                            x:Name="StagedStripItems"
+                            ItemTemplate="{StaticResource StagedCardTemplate}"
+                            ItemsSource="{x:Bind ViewModel.VisibleStagedCards}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Border
+                            Width="64"
+                            Height="64"
+                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            CornerRadius="6"
+                            Visibility="{x:Bind ViewModel.HasHiddenThumbnails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{x:Bind ViewModel.HiddenThumbnailText, Mode=OneWay}" />
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Text="{x:Bind ViewModel.PendingCountText, Mode=OneWay}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            Text="{x:Bind ViewModel.RejectedText, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.HasRejected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <HyperlinkButton x:Uid="LocalSources_ClearStaging" Click="ClearStaging_Click" />
+                    </StackPanel>
+
+                    <!--  The gesture: grab this, drop it on a source below.  -->
+                    <Border
+                        x:Name="DragFolder"
+                        Width="96"
+                        Height="96"
+                        HorizontalAlignment="Center"
+                        AllowDrop="False"
+                        Background="{ThemeResource AccentFillColorDefaultBrush}"
+                        CanDrag="True"
+                        CornerRadius="12"
+                        DragStarting="DragFolder_DragStarting"
+                        DropCompleted="DragFolder_DropCompleted"
+                        IsTabStop="True"
+                        UseSystemFocusVisuals="True">
+                        <Border.ContextFlyout>
+                            <MenuFlyout x:Name="ImportToFlyout" Opening="ImportToFlyout_Opening" />
+                        </Border.ContextFlyout>
+                        <FontIcon
+                            FontSize="44"
+                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Glyph="&#xE8B7;" />
+                    </Border>
+
+                    <TextBlock
+                        x:Uid="LocalSources_DragFolderHint"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <GridView
+                x:Name="SourcesGrid"
+                IsItemClickEnabled="True"
+                ItemClick="SourcesGrid_ItemClick"
+                ItemTemplateSelector="{StaticResource LocalSourceTileTemplateSelector}"
+                ItemsSource="{x:Bind ViewModel.Tiles}"
+                SelectionMode="None">
+                <GridView.ItemContainerStyle>
+                    <Style TargetType="GridViewItem">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                    </Style>
+                </GridView.ItemContainerStyle>
+                <GridView.ItemContainerTransitions>
+                    <TransitionCollection />
+                </GridView.ItemContainerTransitions>
+            </GridView>
+        </Grid>
+    </Grid>
+</Page>

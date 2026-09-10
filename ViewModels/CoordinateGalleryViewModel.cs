@@ -18,6 +18,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     private readonly IAppLogger _logger;
 
     public ObservableCollection<CoordinateCard> Cards { get; }
+    public MetadataFilterState MetadataFilters { get; } = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParsingMetadata))]
@@ -32,9 +33,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
 
     private readonly Dictionary<string, CoordinateCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
 
-    private CancellationTokenSource? _metadataCts;
-    private const int MetadataParseConcurrency = 4;
-    private DispatcherQueueTimer? _metadataRefreshTimer;
+    private readonly MetadataScanCoordinator<CoordinateCard, CoordinateMetadata> _metadataScan;
+    private readonly GalleryMetadataRefresh _metadataRefresh;
 
     public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
         : base(new ObservableCollection<CoordinateCard>(), thumbnailScheduler)
@@ -46,6 +46,22 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
         _logger = logger;
+        _metadataRefresh = new(_dispatcherQueue, RefreshMetadataFilter);
+        _metadataScan = new(
+            card => card.MetadataLoaded,
+            _metadataService.TryGetCached,
+            _metadataService.ParseAndCache,
+            ApplyMetadata,
+            action => _dispatcherQueue.TryEnqueue(() => action()),
+            (card, error) => _logger.LogError(
+                error is OperationCanceledException ? "CoordinateGallery.ParseMetadataCanceled" : "CoordinateGallery.ParseMetadata",
+                error, card.FilePath));
+        _metadataScan.PendingCountChanged += count => PendingMetadataCount = count;
+        MetadataFilters.PropertyChanged += (_, _) =>
+        {
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+            ApplyFilter();
+        };
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
@@ -58,15 +74,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         card is CoordinateCard cc && BaseFilterPasses(cc);
 
     [RelayCommand]
-    private async Task LoadCardsAsync()
-    {
-        var cancellationToken = BeginLoad();
-        _metadataCts?.Cancel();
-        ResetThumbnailState();
-
-        IsLoading = true;
-        var viewRefreshDeferral = DeferCardsViewRefresh();
-        try
+    private Task LoadCardsAsync()
+        => RunLoadAsync(async cancellationToken =>
         {
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
@@ -81,189 +90,64 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             await _cardService.ScanFoldersAsync(paths, batch =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var processed = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                PublishScannedBatch(() =>
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    foreach (var card in batch)
                     {
-                        processed.TrySetResult();
-                        return;
+                        if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
+                        Cards.Add(card);
                     }
-                    using (CardsView.DeferRefresh())
-                    {
-                        foreach (var card in batch)
-                        {
-                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                            Cards.Add(card);
-                        }
-                    }
-                    processed.TrySetResult();
-                });
-                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
-                    .GetAwaiter().GetResult();
+                }, cancellationToken);
             }, cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
-        }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("CoordinateGallery.LoadCanceled", ex);
-        }
-        finally
-        {
-            viewRefreshDeferral.Dispose();
-            if (_loadCts?.Token == cancellationToken)
-                IsLoading = false;
-            RaiseCardsReloaded();
-        }
+        }, _logger, "CoordinateGallery.LoadCanceled", () => _metadataScan.Cancel());
+
+    private bool _metadataStopping;
+
+    internal Task StopMetadataAsync()
+    {
+        _metadataStopping = true;
+        _metadataRefresh.Stop();
+        return _metadataScan.StopAsync(CancellationToken.None);
     }
 
     private void StartMetadataScan()
     {
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        PendingMetadataCount = 0;
-
-        var pending = new List<CoordinateCard>();
-        foreach (var card in Cards)
-        {
-            if (card.MetadataLoaded) continue;
-            if (_metadataService.TryGetCached(card, out var meta))
-                ApplyMetadata(card, meta);
-            else
-                pending.Add(card);
-        }
-
-        if (pending.Count == 0)
-        {
-            ApplyFilter();
-            return;
-        }
-
-        PendingMetadataCount = pending.Count;
-        StartMetadataRefreshTimer();
-        BoundedAsyncPipeline.ForEachAsync(
-                pending,
-                MetadataParseConcurrency,
-                (card, cancellationToken) => new ValueTask(ParseMetadataAsync(card, cancellationToken)),
-                token)
+        if (_metadataStopping) return;
+        _metadataScan.Start(
+                Cards,
+                ApplyFilter,
+                StartMetadataRefreshTimer,
+                OnMetadataScanCompleted)
             .Observe(_logger, "CoordinateGallery.ParseMetadata");
-    }
-
-    private async Task ParseMetadataAsync(CoordinateCard card, CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var meta = _metadataService.ParseAndCache(card, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
-                _dispatcherQueue.TryEnqueue(() => ApplyMetadata(card, meta));
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("CoordinateGallery.ParseMetadataCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("CoordinateGallery.ParseMetadata", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-                if (PendingMetadataCount > 0) PendingMetadataCount--;
-                if (PendingMetadataCount == 0) OnMetadataScanCompleted();
-            });
-        }
     }
 
     private static void ApplyMetadata(CoordinateCard card, CoordinateMetadata meta)
     {
+        card.MetadataSummary = meta.Details;
         card.CoordinateName = meta.CoordinateName ?? string.Empty;
         card.MetadataLoaded = true;
     }
 
-    private void StartMetadataRefreshTimer()
-    {
-        _metadataRefreshTimer ??= _dispatcherQueue.CreateTimer();
-        _metadataRefreshTimer.Interval = TimeSpan.FromMilliseconds(750);
-        _metadataRefreshTimer.IsRepeating = true;
-        _metadataRefreshTimer.Tick -= OnMetadataRefreshTick;
-        _metadataRefreshTimer.Tick += OnMetadataRefreshTick;
-        _metadataRefreshTimer.Start();
-    }
+    private void StartMetadataRefreshTimer() => _metadataRefresh.Start();
 
-    private void OnMetadataRefreshTick(DispatcherQueueTimer sender, object args)
-    {
-        CardsView.RefreshFilter();
-        OnPropertyChanged(nameof(IsEmpty));
-    }
-
-    private void OnMetadataScanCompleted()
-    {
-        _metadataRefreshTimer?.Stop();
-        CardsView.RefreshFilter();
-        OnPropertyChanged(nameof(IsEmpty));
-    }
+    private void OnMetadataScanCompleted() => _metadataRefresh.Complete();
 
     public void RequestThumbnail(
         CoordinateCard card,
         ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
-    {
-        if (card.HasThumbnail) return;
-        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
-        {
-            card.ThumbnailPath = cached;
-            return;
-        }
-
-        var diskCached = _thumbnailCacheService.TryGetCachedPath(card.FilePath, card.DateModified);
-        if (diskCached is not null)
-        {
-            _thumbnailPathCache[card.FilePath] = diskCached;
-            card.ThumbnailPath = diskCached;
-            return;
-        }
-
-        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
-        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
-    }
+        => RequestThumbnailCore(
+            card, priority,
+            item => _thumbnailCacheService.TryGetCachedPath(item.FilePath, item.DateModified),
+            (item, token) => _thumbnailCacheService.EnsureThumbnailAsync(item.FilePath, item.DateModified, token),
+            _logger, "CoordinateGallery");
 
     public void ReleaseThumbnail(CoordinateCard card)
     {
         ReleaseThumbnailRequest(card.FilePath);
-    }
-
-    private async Task GenerateOneAsync(
-        CoordinateCard card,
-        ThumbnailRequest request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (card.HasThumbnail) return;
-            var thumbnailPath = await _thumbnailCacheService
-                .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
-                .ConfigureAwait(false);
-            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-            {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                    card.ThumbnailPath = thumbnailPath;
-                });
-            }
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("CoordinateGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("CoordinateGallery.GenerateThumbnail", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                CompleteThumbnailRequest(request);
-            });
-        }
     }
 
     private void OnCoordinateResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
@@ -283,15 +167,16 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         return CardsView[Random.Shared.Next(CardsView.Count)] as CoordinateCard;
     }
 
-    private bool BaseFilterPasses(CoordinateCard card)
+    public override bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
+        => card is CoordinateCard coordinate && BaseFilterPasses(coordinate, keywords);
+
+    private bool BaseFilterPasses(CoordinateCard card, IReadOnlyList<string>? keywords = null)
     {
-        foreach (var kw in _searchKeywords)
-        {
-            bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
-            bool inName = card.MetadataLoaded
-                && card.CoordinateName.Contains(kw, StringComparison.OrdinalIgnoreCase);
-            if (!inPath && !inName) return false;
-        }
+        if (!OriginPasses(card)) return false;
+
+        if (!CardMetadataQuery.MatchesText(card.MetadataSummary, card.FilePath, card.Author?.Name,
+            card.MetadataLoaded ? card.CoordinateName : null, keywords ?? _searchKeywords)
+            || !MetadataFilters.Matches(card.MetadataLoaded ? card.MetadataSummary : null)) return false;
 
         if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
             && !_allowedResolutions.Contains(card.Resolution))
@@ -307,7 +192,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         var hasSearch = _searchKeywords.Length > 0;
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
-        if (!hasSearch && !filterRes)
+        if (!hasSearch && !filterRes && !HasOriginFilter && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = null!;
         }
@@ -335,25 +220,15 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
 
     private void QueueMetadata(CoordinateCard card)
     {
-        if (card.MetadataLoaded) return;
-        if (_metadataService.TryGetCached(card, out var meta))
-        {
-            ApplyMetadata(card, meta);
-            CardsView.RefreshFilter();
-            OnPropertyChanged(nameof(IsEmpty));
-            return;
-        }
-
-        _metadataCts ??= new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        if (token.IsCancellationRequested) return;
-        PendingMetadataCount++;
-        BoundedAsyncPipeline.ForEachAsync(
-                [card],
-                MetadataParseConcurrency,
-                (item, cancellationToken) => new ValueTask(ParseMetadataAsync(item, cancellationToken)),
-                token)
+        if (_metadataStopping) return;
+        _metadataScan.Queue(card, RefreshMetadataFilter, OnMetadataScanCompleted)
             .Observe(_logger, "CoordinateGallery.ParseAddedCardMetadata");
+    }
+
+    private void RefreshMetadataFilter()
+    {
+        CardsView.RefreshFilter();
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private void OnCardRemoved(string path)
@@ -371,9 +246,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _loadCts?.Dispose();
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataRefreshTimer?.Stop();
+        _metadataScan.Dispose();
+        _metadataRefresh.Dispose();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
@@ -391,8 +265,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     public override void CancelPendingWork()
     {
         base.CancelPendingWork();
-        _metadataCts?.Cancel();
-        _metadataRefreshTimer?.Stop();
-        PendingMetadataCount = 0;
+        _metadataScan.Cancel(resetCount: true);
+        _metadataRefresh.Stop();
     }
 }

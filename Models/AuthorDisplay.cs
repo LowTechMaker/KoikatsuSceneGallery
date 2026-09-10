@@ -23,6 +23,13 @@ public partial class AuthorDisplay : ObservableObject
 
     public string ProfileUrl { get; }
 
+    /// <summary>
+    /// Whether this author has a page worth opening. False for a local source,
+    /// which is resolved entirely from disk, so callers must gate their "open
+    /// profile" affordance on it rather than launching an empty Uri.
+    /// </summary>
+    public bool HasProfileUrl => !string.IsNullOrWhiteSpace(ProfileUrl);
+
     /// <summary>Folder-derived name at first, replaced by the fetched profile name.</summary>
     [ObservableProperty]
     public partial string Name { get; set; }
@@ -33,6 +40,13 @@ public partial class AuthorDisplay : ObservableObject
     public partial string? AvatarPath { get; set; }
 
     public bool HasAvatar => AvatarPath != null;
+
+    /// <summary>
+    /// Whether this author is a locally collected source rather than a remote
+    /// provider. Gates the affordances only a local source has, such as
+    /// editing its name and picture.
+    /// </summary>
+    public bool IsLocalSource => LocalSourceIdentity.IsLocal(Key.ProviderId);
 
     private BitmapImage? _avatarSource;
     /// <summary>

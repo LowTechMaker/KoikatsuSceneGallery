@@ -27,6 +27,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private readonly IAppLogger _logger;
 
     public ObservableCollection<CharacterCard> Cards { get; }
+    public MetadataFilterState MetadataFilters { get; } = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParsingMetadata))]
@@ -44,11 +45,13 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CharacterCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<CharacterCard>> _versionIndex = new();
+    // Case-insensitive to match _cardIndex above; safe only because removal
+    // now reads CharacterCard.IndexedVersionKey rather than re-deriving the key.
+    private readonly Dictionary<string, List<CharacterCard>> _versionIndex =
+        new(StringComparer.OrdinalIgnoreCase);
 
-    private CancellationTokenSource? _metadataCts;
-    private const int MetadataParseConcurrency = 4;
-    private DispatcherQueueTimer? _metadataRefreshTimer;
+    private readonly MetadataScanCoordinator<CharacterCard, CharacterMetadata> _metadataScan;
+    private readonly GalleryMetadataRefresh _metadataRefresh;
 
     public event Action<string>? VersionIndexChanged;
 
@@ -62,6 +65,22 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
         _logger = logger;
+        _metadataRefresh = new(_dispatcherQueue, RefreshMetadataFilter);
+        _metadataScan = new(
+            card => card.MetadataLoaded,
+            _metadataService.TryGetCached,
+            _metadataService.ParseAndCache,
+            (card, meta) => { ApplyMetadata(card, meta); UpdateVersionIndex(card); },
+            action => _dispatcherQueue.TryEnqueue(() => action()),
+            (card, error) => _logger.LogError(
+                error is OperationCanceledException ? "CharacterGallery.ParseMetadataCanceled" : "CharacterGallery.ParseMetadata",
+                error, card.FilePath));
+        _metadataScan.PendingCountChanged += count => PendingMetadataCount = count;
+        MetadataFilters.PropertyChanged += (_, _) =>
+        {
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+            ApplyFilter();
+        };
 
         _cardService.CardAdded += OnCardAdded;
         _cardService.CardRemoved += OnCardRemoved;
@@ -80,15 +99,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     }
 
     [RelayCommand]
-    private async Task LoadCardsAsync()
-    {
-        var cancellationToken = BeginLoad();
-        _metadataCts?.Cancel();
-        ResetThumbnailState();
-
-        IsLoading = true;
-        var viewRefreshDeferral = DeferCardsViewRefresh();
-        try
+    private Task LoadCardsAsync()
+        => RunLoadAsync(async cancellationToken =>
         {
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
@@ -97,6 +109,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             _allowedResolutions = [.. config.CharacterAllowedResolutions];
 
             var paths = config.CharacterFolderPaths;
+            // A reload is the moment an edit made outside the app should show up.
+            App.Services.GetService<CharacterAnnotationStore>()?.ClearCache();
             Cards.Clear();
             _cardIndex.Clear();
             _versionIndex.Clear();
@@ -104,111 +118,44 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             await _cardService.ScanFoldersAsync(paths, batch =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var processed = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                PublishScannedBatch(() =>
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    foreach (var card in batch)
                     {
-                        processed.TrySetResult();
-                        return;
+                        if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
+                        Cards.Add(card);
                     }
-                    using (CardsView.DeferRefresh())
-                    {
-                        foreach (var card in batch)
-                        {
-                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                            Cards.Add(card);
-                        }
-                    }
-                    processed.TrySetResult();
-                });
-                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
-                    .GetAwaiter().GetResult();
+                }, cancellationToken);
             }, cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
-        }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("CharacterGallery.LoadCanceled", ex);
-        }
-        finally
-        {
-            viewRefreshDeferral.Dispose();
-            if (_loadCts?.Token == cancellationToken)
-                IsLoading = false;
-            RaiseCardsReloaded();
-        }
+        }, _logger, "CharacterGallery.LoadCanceled", () => _metadataScan.Cancel());
+
+    private bool _metadataStopping;
+
+    internal Task StopMetadataAsync()
+    {
+        _metadataStopping = true;
+        _metadataRefresh.Stop();
+        return _metadataScan.StopAsync(CancellationToken.None);
     }
 
     private void StartMetadataScan()
     {
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        PendingMetadataCount = 0;
-
-        var pending = new List<CharacterCard>();
-        foreach (var card in Cards)
-        {
-            if (card.MetadataLoaded) continue;
-            if (_metadataService.TryGetCached(card, out var meta))
-            {
-                ApplyMetadata(card, meta);
-                UpdateVersionIndex(card);
-            }
-            else
-                pending.Add(card);
-        }
-
-        if (pending.Count == 0)
-        {
-            ApplyFilter();
-            return;
-        }
-
-        PendingMetadataCount = pending.Count;
-        StartMetadataRefreshTimer();
-        BoundedAsyncPipeline.ForEachAsync(
-                pending,
-                MetadataParseConcurrency,
-                (card, cancellationToken) => new ValueTask(ParseMetadataAsync(card, cancellationToken)),
-                token)
+        if (_metadataStopping) return;
+        _metadataScan.Start(
+                Cards,
+                ApplyFilter,
+                StartMetadataRefreshTimer,
+                OnMetadataScanCompleted)
             .Observe(_logger, "CharacterGallery.ParseMetadata");
-    }
-
-    private async Task ParseMetadataAsync(CharacterCard card, CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var meta = _metadataService.ParseAndCache(card, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    ApplyMetadata(card, meta);
-                    UpdateVersionIndex(card);
-                });
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("CharacterGallery.ParseMetadataCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("CharacterGallery.ParseMetadata", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-                if (PendingMetadataCount > 0) PendingMetadataCount--;
-                if (PendingMetadataCount == 0) OnMetadataScanCompleted();
-            });
-        }
     }
 
     private static void ApplyMetadata(CharacterCard card, CharacterMetadata meta)
     {
+        card.MetadataSummary = meta.Details;
         card.CharacterName = meta.FullName;
         card.Game = meta.Game;
         card.IsMadevil = meta.IsMadevil;
@@ -216,142 +163,170 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         card.MetadataLoaded = true;
     }
 
+    /// <summary>
+    /// The character a card is filed under: its own name, unless the user
+    /// attached it to another character.
+    /// </summary>
+    private static string? EffectiveVersionKey(CharacterCard card)
+        => card.CharacterGroupKey is { Length: > 0 } group
+            ? group
+            : (string.IsNullOrWhiteSpace(card.CharacterName) ? null : card.CharacterName);
+
     private void UpdateVersionIndex(CharacterCard card)
     {
-        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
+        var key = EffectiveVersionKey(card);
+        if (key is null) return;
 
-        if (!_versionIndex.TryGetValue(card.CharacterName, out var group))
+        // The key can change under a card: metadata may re-parse, or the user
+        // may attach it to a different character. Leave the old group first.
+        if (card.IndexedVersionKey is { } previous
+            && !string.Equals(previous, key, StringComparison.OrdinalIgnoreCase))
+        {
+            RemoveFromVersionIndex(card);
+        }
+
+        if (!_versionIndex.TryGetValue(key, out var group))
         {
             group = [];
-            _versionIndex[card.CharacterName] = group;
+            _versionIndex[key] = group;
         }
         if (!group.Contains(card))
             group.Add(card);
 
-        group.Sort((a, b) => b.FileTimestamp.CompareTo(a.FileTimestamp));
+        // Store the key as looked up rather than hunting for the dictionary's
+        // own spelling: the index compares case-insensitively, so this finds
+        // the same group, and searching the key set would be O(characters) on
+        // every card of every scan.
+        card.IndexedVersionKey = key;
 
-        var count = group.Count;
-        for (int i = 0; i < count; i++)
+        RankGroup(group);
+
+        VersionIndexChanged?.Invoke(card.IndexedVersionKey);
+    }
+
+    /// <summary>
+    /// Reorders one character's cards, marks the one that represents it, and
+    /// tells every card how many live what-if versions the character has.
+    /// </summary>
+    private static void RankGroup(List<CharacterCard> group)
+    {
+        var primary = CharacterVersionRanker.SortAndFindPrimary(
+            group,
+            card => card.FileTimestamp,
+            card => card.VersionKind,
+            card => card.IsSuperseded);
+
+        var alternates = group.Count(card =>
+            CharacterVersionRanker.CountsAsLiveAlternate(card.VersionKind, card.IsSuperseded));
+
+        for (var i = 0; i < group.Count; i++)
         {
-            group[i].VersionCount = count;
-            group[i].IsLatestVersion = i == 0;
+            group[i].VersionCount = group.Count;
+            group[i].IsLatestVersion = i == primary;
+            group[i].AlternateVersionCount = alternates;
         }
-
-        VersionIndexChanged?.Invoke(card.CharacterName);
     }
 
     private void RemoveFromVersionIndex(CharacterCard card)
     {
-        if (string.IsNullOrWhiteSpace(card.CharacterName)) return;
-        if (!_versionIndex.TryGetValue(card.CharacterName, out var group)) return;
+        if (card.IndexedVersionKey is not { } key) return;
+        if (!_versionIndex.TryGetValue(key, out var group)) return;
 
         group.Remove(card);
+        card.IndexedVersionKey = null;
+
         if (group.Count == 0)
         {
-            _versionIndex.Remove(card.CharacterName);
-            VersionIndexChanged?.Invoke(card.CharacterName);
+            _versionIndex.Remove(key);
+            VersionIndexChanged?.Invoke(key);
             return;
         }
 
-        var count = group.Count;
-        for (int i = 0; i < count; i++)
-        {
-            group[i].VersionCount = count;
-            group[i].IsLatestVersion = i == 0;
-        }
+        RankGroup(group);
 
-        VersionIndexChanged?.Invoke(card.CharacterName);
+        VersionIndexChanged?.Invoke(key);
     }
 
+    /// <summary>
+    /// The cards filed under one character, or null when there is only one.
+    /// A copy: the index's own list is reordered as cards arrive.
+    /// </summary>
     public List<CharacterCard>? GetVersions(string characterName)
     {
         if (string.IsNullOrWhiteSpace(characterName)) return null;
         return _versionIndex.TryGetValue(characterName, out var group) && group.Count > 1
-            ? group
+            ? [.. group]
             : null;
     }
 
-    private void StartMetadataRefreshTimer()
+    /// <summary>
+    /// Records the user's annotation for one card and re-files it.
+    /// </summary>
+    /// <remarks>
+    /// One card in, one card out: the index is adjusted in place rather than
+    /// rebuilt, so annotating a card never rescans the library.
+    /// </remarks>
+    public async Task ApplyAnnotationAsync(
+        CharacterCard card,
+        CharacterVersionKind kind,
+        bool superseded,
+        string? note,
+        string? groupKey)
     {
-        _metadataRefreshTimer ??= _dispatcherQueue.CreateTimer();
-        _metadataRefreshTimer.Interval = TimeSpan.FromMilliseconds(750);
-        _metadataRefreshTimer.IsRepeating = true;
-        _metadataRefreshTimer.Tick -= OnMetadataRefreshTick;
-        _metadataRefreshTimer.Tick += OnMetadataRefreshTick;
-        _metadataRefreshTimer.Start();
+        ArgumentNullException.ThrowIfNull(card);
+
+        var store = App.Services.GetService<CharacterAnnotationStore>();
+        if (store is not null)
+            await store.UpdateAsync(card.FilePath, kind, superseded, note, groupKey).ConfigureAwait(true);
+
+        RemoveFromVersionIndex(card);
+        card.VersionKind = kind;
+        card.IsSuperseded = superseded;
+        card.VersionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        card.CharacterGroupKey = string.IsNullOrWhiteSpace(groupKey) ? null : groupKey.Trim();
+        UpdateVersionIndex(card);
+
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
     }
 
-    private void OnMetadataRefreshTick(DispatcherQueueTimer sender, object args)
-    {
-        CardsView.RefreshFilter();
-        OnPropertyChanged(nameof(IsEmpty));
-    }
+    /// <summary>The key a card is filed under, for callers that follow the index.</summary>
+    public string? GetVersionKey(CharacterCard card) => card.IndexedVersionKey;
 
-    private void OnMetadataScanCompleted()
-    {
-        _metadataRefreshTimer?.Stop();
-        CardsView.RefreshFilter();
-        OnPropertyChanged(nameof(IsEmpty));
-    }
+    /// <summary>
+    /// Every character in the index with its card count, each flagged with
+    /// whether it belongs to <paramref name="author"/>.
+    /// </summary>
+    /// <remarks>
+    /// The flag rather than a filter: versions of a character come from the
+    /// same author, so the picker leads with those, but a card can legitimately
+    /// be a variant of someone else's character, so the rest stay reachable.
+    /// </remarks>
+    public List<(string Key, int Count, bool SameAuthor)> GetVersionGroupKeys(AuthorDisplay? author = null)
+        => [.. _versionIndex
+            .Select(pair => (
+                pair.Key,
+                pair.Value.Count,
+                SameAuthor: author is not null
+                            && pair.Value.Any(card => card.Author?.Key == author.Key)))
+            .OrderBy(entry => entry.Key, StringComparer.CurrentCulture)];
+
+    private void StartMetadataRefreshTimer() => _metadataRefresh.Start();
+
+    private void OnMetadataScanCompleted() => _metadataRefresh.Complete();
 
     public void RequestThumbnail(
         CharacterCard card,
         ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
-    {
-        if (card.HasThumbnail) return;
-        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
-        {
-            card.ThumbnailPath = cached;
-            return;
-        }
-
-        var diskCached = _thumbnailCacheService.TryGetCachedPath(card.FilePath, card.DateModified);
-        if (diskCached is not null)
-        {
-            _thumbnailPathCache[card.FilePath] = diskCached;
-            card.ThumbnailPath = diskCached;
-            return;
-        }
-
-        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
-        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
-    }
+        => RequestThumbnailCore(
+            card, priority,
+            item => _thumbnailCacheService.TryGetCachedPath(item.FilePath, item.DateModified),
+            (item, token) => _thumbnailCacheService.EnsureThumbnailAsync(item.FilePath, item.DateModified, token),
+            _logger, "CharacterGallery");
 
     public void ReleaseThumbnail(CharacterCard card)
     {
         ReleaseThumbnailRequest(card.FilePath);
-    }
-
-    private async Task GenerateOneAsync(
-        CharacterCard card,
-        ThumbnailRequest request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (card.HasThumbnail) return;
-            var thumbnailPath = await _thumbnailCacheService
-                .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
-                .ConfigureAwait(false);
-            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-            {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                    card.ThumbnailPath = thumbnailPath;
-                });
-            }
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("CharacterGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("CharacterGallery.GenerateThumbnail", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                CompleteThumbnailRequest(request);
-            });
-        }
     }
 
     private void OnCharacterResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
@@ -371,17 +346,29 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         return CardsView[Random.Shared.Next(CardsView.Count)] as CharacterCard;
     }
 
-    private bool BaseFilterPasses(CharacterCard card)
-    {
-        if (!card.IsLatestVersion) return false;
+    public override bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
+        => card is CharacterCard character && BaseFilterPasses(character, keywords);
 
-        foreach (var kw in _searchKeywords)
+    private bool BaseFilterPasses(CharacterCard card, IReadOnlyList<string>? keywords = null)
+    {
+        var terms = keywords ?? _searchKeywords;
+
+        // One character, one tile: only the card that represents it appears.
+        // Marking a card is information, not a way to add tiles — a character
+        // whose versions were each given a tile ended up scattered across the
+        // gallery by filename order, which is worse than not marking at all.
+        // The one exception is a search: a note written on a hidden version is
+        // useful only if searching for it can surface that version.
+        if (!(card.IsLatestVersion
+              || CardMetadataQuery.NoteMatches(card.VersionNote, terms))
+            || !OriginPasses(card))
         {
-            bool inPath = card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase);
-            bool inName = card.MetadataLoaded
-                && card.CharacterName.Contains(kw, StringComparison.OrdinalIgnoreCase);
-            if (!inPath && !inName) return false;
+            return false;
         }
+
+        if (!CardMetadataQuery.MatchesText(card.MetadataSummary, card.FilePath, card.Author?.Name,
+            card.MetadataLoaded ? card.CharacterName : null, terms, card.VersionNote)
+            || !MetadataFilters.Matches(card.MetadataLoaded ? card.MetadataSummary : null)) return false;
 
         if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
             && !_allowedResolutions.Contains(card.Resolution))
@@ -411,7 +398,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
         var hasSourceFilter = SourceFilter != CardSourceFilterOption.All;
 
-        if (!hasSearch && !filterRes && !hasSourceFilter)
+        if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter
+            && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = item =>
             {
@@ -443,26 +431,15 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     private void QueueMetadata(CharacterCard card)
     {
-        if (card.MetadataLoaded) return;
-        if (_metadataService.TryGetCached(card, out var meta))
-        {
-            ApplyMetadata(card, meta);
-            UpdateVersionIndex(card);
-            CardsView.RefreshFilter();
-            OnPropertyChanged(nameof(IsEmpty));
-            return;
-        }
-
-        _metadataCts ??= new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        if (token.IsCancellationRequested) return;
-        PendingMetadataCount++;
-        BoundedAsyncPipeline.ForEachAsync(
-                [card],
-                MetadataParseConcurrency,
-                (item, cancellationToken) => new ValueTask(ParseMetadataAsync(item, cancellationToken)),
-                token)
+        if (_metadataStopping) return;
+        _metadataScan.Queue(card, RefreshMetadataFilter, OnMetadataScanCompleted)
             .Observe(_logger, "CharacterGallery.ParseAddedCardMetadata");
+    }
+
+    private void RefreshMetadataFilter()
+    {
+        CardsView.RefreshFilter();
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private void OnCardRemoved(string path)
@@ -483,9 +460,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _loadCts?.Dispose();
         _thumbnailCts?.Cancel();
         _thumbnailCts?.Dispose();
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataRefreshTimer?.Stop();
+        _metadataScan.Dispose();
+        _metadataRefresh.Dispose();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
@@ -503,8 +479,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     public override void CancelPendingWork()
     {
         base.CancelPendingWork();
-        _metadataCts?.Cancel();
-        _metadataRefreshTimer?.Stop();
-        PendingMetadataCount = 0;
+        _metadataScan.Cancel(resetCount: true);
+        _metadataRefresh.Stop();
     }
 }

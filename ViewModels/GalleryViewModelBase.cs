@@ -77,6 +77,9 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     protected abstract bool CardPassesFilter(object card);
     protected abstract void ApplyFilter();
 
+    public virtual bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
+        => GallerySearch.Matches(card.FilePath, (card as IAuthorOwner)?.Author?.Name, keywords);
+
     protected GalleryViewModelBase(IList cardsSource, ThumbnailPriorityScheduler thumbnailScheduler)
     {
         _cardsSource = cardsSource;
@@ -86,6 +89,25 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         if (cardsSource is INotifyCollectionChanged observable)
             observable.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
         ApplySort();
+    }
+
+    /// <summary>
+    /// Where a card came from, as opposed to what it contains. Shared by every
+    /// gallery whose cards can carry an author, and session-only like the other
+    /// browser filters.
+    /// </summary>
+    [ObservableProperty]
+    public partial CardOriginFilter OriginFilter { get; set; }
+
+    protected bool HasOriginFilter => OriginFilter != CardOriginFilter.All;
+
+    protected bool OriginPasses(object? card)
+        => !HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter);
+
+    partial void OnOriginFilterChanged(CardOriginFilter value)
+    {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value)
@@ -235,6 +257,77 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         return true;
     }
 
+    /// <summary>
+    /// Requests a thumbnail using the existing per-card request lifecycle. Call on the UI thread.
+    /// The generator receives the request-owned cancellation token. onGenerated runs only for
+    /// a non-null generated path before UI dispatch (never for cache hits); its exceptions use
+    /// the same logging and completion path as generation failures.
+    /// </summary>
+    protected void RequestThumbnailCore<TCard>(
+        TCard card,
+        ThumbnailWorkPriority priority,
+        Func<TCard, string?> tryGetCachedPath,
+        Func<TCard, CancellationToken, Task<string?>> generateAsync,
+        IAppLogger logger,
+        string logPrefix,
+        Action<TCard, string>? onGenerated = null) where TCard : CardBase
+    {
+        if (card.HasThumbnail) return;
+        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
+        {
+            card.ThumbnailPath = cached;
+            return;
+        }
+
+        var diskCached = tryGetCachedPath(card);
+        if (diskCached is not null)
+        {
+            _thumbnailPathCache[card.FilePath] = diskCached;
+            card.ThumbnailPath = diskCached;
+            return;
+        }
+
+        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
+        _ = ScheduleThumbnailRequest(request, token => GenerateThumbnailAsync(
+            card, request, token, generateAsync, logger, logPrefix, onGenerated));
+    }
+
+    private async Task GenerateThumbnailAsync<TCard>(
+        TCard card,
+        ThumbnailRequest request,
+        CancellationToken cancellationToken,
+        Func<TCard, CancellationToken, Task<string?>> generateAsync,
+        IAppLogger logger,
+        string logPrefix,
+        Action<TCard, string>? onGenerated) where TCard : CardBase
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (card.HasThumbnail) return;
+            var thumbnailPath = await generateAsync(card, cancellationToken)
+                .ConfigureAwait(false);
+            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
+            {
+                onGenerated?.Invoke(card, thumbnailPath);
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                    card.ThumbnailPath = thumbnailPath;
+                });
+            }
+        }
+        catch (OperationCanceledException ex) { logger.LogError($"{logPrefix}.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { logger.LogError($"{logPrefix}.GenerateThumbnail", ex, card.FilePath); }
+        finally
+        {
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                CompleteThumbnailRequest(request);
+            });
+        }
+    }
+
     protected void ResetThumbnailState()
     {
         var previousCts = _thumbnailCts;
@@ -346,6 +439,34 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         return _loadCts.Token;
     }
 
+    protected async Task RunLoadAsync(Func<CancellationToken, Task> load,
+        IAppLogger logger, string cancellationOperation, Action? cancelMetadata = null)
+    {
+        var cancellationToken = BeginLoad();
+        var loadSource = _loadCts;
+        cancelMetadata?.Invoke();
+        ResetThumbnailState();
+
+        IsLoading = true;
+        var viewRefreshDeferral = DeferCardsViewRefresh();
+        try
+        {
+            await load(cancellationToken);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(cancellationOperation, ex);
+        }
+        finally
+        {
+            viewRefreshDeferral.Dispose();
+            // Dispose can run while load is awaiting; reading a disposed CTS.Token throws.
+            if (ReferenceEquals(_loadCts, loadSource))
+                IsLoading = false;
+            RaiseCardsReloaded();
+        }
+    }
+
     /// <summary>
     /// Holds view notifications while an initial folder scan is adding batches.
     /// Without this deferral, every partial, re-sorted batch can recycle the same
@@ -353,6 +474,13 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     /// visibly flash until the scan completes.
     /// </summary>
     protected IDisposable DeferCardsViewRefresh() => CardsView.DeferRefresh();
+
+    // ScanFoldersAsync invokes this synchronous producer callback on its worker.
+    protected void PublishScannedBatch(Action applyBatch, CancellationToken token)
+        => AwaitedUiPublication.InvokeBlocking(
+            action => _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => action()),
+            () => { using (CardsView.DeferRefresh()) applyBatch(); },
+            TimeSpan.FromSeconds(10), token);
 
     public virtual void Activate()
     {

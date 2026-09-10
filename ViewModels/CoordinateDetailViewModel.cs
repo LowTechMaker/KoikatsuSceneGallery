@@ -17,7 +17,7 @@ public partial class CoordinateDetailViewModel : ObservableObject
     public partial CoordinateCard? Card { get; set; }
 
     partial void OnCardChanged(CoordinateCard? value) =>
-        _linkInfo = FilenameLinkParser.Parse(value?.FilePath);
+        _linkInfo = CardOrigin.LinksFor(value);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParsing))]

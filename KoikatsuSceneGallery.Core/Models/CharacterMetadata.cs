@@ -6,8 +6,7 @@ namespace KoikatsuSceneGallery.Models;
 /// Character-card fields parsed from the embedded data: the character's name,
 /// sex, game version (shared <see cref="GameVersion"/> with scenes) and whether
 /// the card carries Madevil repack plugin data (same "madevil." GUID-prefix
-/// signature used for scenes). Phase 2a surfaces these in the detail view only;
-/// classification/filtering comes later.
+/// signature used for scenes). Details holds the optional v2 searchable summary.
 /// </summary>
 public sealed record CharacterMetadata(
     string? LastName,
@@ -17,6 +16,7 @@ public sealed record CharacterMetadata(
     GameVersion Game,
     bool IsMadevil)
 {
+    public CardMetadataSummary? Details { get; init; }
     public const int SexMale = 0;
     public const int SexFemale = 1;
 

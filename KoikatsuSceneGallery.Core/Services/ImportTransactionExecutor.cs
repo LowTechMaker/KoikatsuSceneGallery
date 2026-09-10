@@ -23,7 +23,7 @@ internal sealed class ImportTransactionExecutor
         ArgumentNullException.ThrowIfNull(plans);
 
         var receipts = new List<ImportItemTransactionReceipt>(plans.Count);
-        var duplicateReceiptIndexes = new List<int>();
+        var duplicateReceiptIndexes = new List<(int Index, bool Keep)>();
         var createdDestinationDirectories = new HashSet<string>(PathComparer);
         var warnings = new List<ImportExecutionWarning>();
         var sourceDirectories = new HashSet<string>(PathComparer);
@@ -90,7 +90,7 @@ internal sealed class ImportTransactionExecutor
                 if (conflict == ImportFileConflict.Duplicate)
                 {
                     receipts.Add(receipt);
-                    duplicateReceiptIndexes.Add(receipts.Count - 1);
+                    duplicateReceiptIndexes.Add((receipts.Count - 1, plan.KeepDuplicateSource));
                     completedCount++;
                     successCount++;
                     Report(progress, ImportExecutionPhase.Executing, completedCount, plans.Count,
@@ -126,7 +126,7 @@ internal sealed class ImportTransactionExecutor
                     if (raceConflict == ImportFileConflict.Duplicate)
                     {
                         receipts.Add(receipt);
-                        duplicateReceiptIndexes.Add(receipts.Count - 1);
+                        duplicateReceiptIndexes.Add((receipts.Count - 1, plan.KeepDuplicateSource));
                         completedCount++;
                         successCount++;
                         Report(progress, ImportExecutionPhase.Executing, completedCount, plans.Count,
@@ -237,9 +237,20 @@ internal sealed class ImportTransactionExecutor
             };
         }
 
-        foreach (var receiptIndex in duplicateReceiptIndexes)
+        foreach (var (receiptIndex, keep) in duplicateReceiptIndexes)
         {
             var receipt = receipts[receiptIndex];
+            if (keep)
+            {
+                // Recorded, not deleted, so the caller can tell the user which
+                // files it left behind and where they are.
+                receipts[receiptIndex] = receipt with
+                {
+                    FinalState = TransactionItemState.DuplicateSourceKept,
+                };
+                continue;
+            }
+
             try
             {
                 File.Delete(receipt.SourceFilePath);

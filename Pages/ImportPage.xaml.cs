@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -85,19 +85,26 @@ public sealed partial class ImportPage : Page
             else if (item is Windows.Storage.StorageFolder folder && !string.IsNullOrEmpty(folder.Path))
             {
                 var folderPath = folder.Path;
-                await Task.Run(() =>
+                // Returned rather than appended from the background thread, and
+                // unreadable subdirectories are skipped so one of them cannot
+                // discard everything already enumerated.
+                paths.AddRange(await Task.Run(() =>
                 {
                     try
                     {
-                        foreach (var p in Directory.EnumerateFiles(folderPath, "*.png", SearchOption.AllDirectories))
-                            paths.Add(p);
+                        return Directory.EnumerateFiles(folderPath, "*.png", new EnumerationOptions
+                        {
+                            RecurseSubdirectories = true,
+                            IgnoreInaccessible = true,
+                        }).ToArray();
                     }
                     catch (Exception ex)
                     {
                         App.Services.GetRequiredService<IAppLogger>()
                             .LogError("Import.EnumerateDroppedFolder", ex, folderPath);
+                        return [];
                     }
-                });
+                }));
             }
         }
 

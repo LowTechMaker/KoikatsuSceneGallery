@@ -218,6 +218,13 @@
     <value>随机一张</value>
   </data>
   <data name="Detail_VersionHistory.Text" xml:space="preserve">
+  <data name="Detail_RevealVersion.Text" xml:space="preserve"><value>在文件资源管理器中显示</value></data>
+  <data name="Detail_DeleteVersion.Text" xml:space="preserve"><value>删除这个版本…</value></data>
+  <data name="Detail_DeleteVersion_Title" xml:space="preserve"><value>要删除这个版本吗？</value></data>
+  <data name="Detail_DeleteVersion_Body" xml:space="preserve"><value>{0}&#10;&#10;文件会移到回收站，可以从那里还原。删除后这个角色还有 {1} 个版本。</value></data>
+  <data name="Detail_DeleteVersion_Confirm" xml:space="preserve"><value>移到回收站</value></data>
+  <data name="Detail_DeleteVersion_FailedTitle" xml:space="preserve"><value>删除失败</value></data>
+  <data name="Detail_DeleteVersion_Failed" xml:space="preserve"><value>删不掉“{0}”，通常是有程序正在读这个文件。关掉之后再试一次。</value></data>
     <value>其他版本</value>
   </data>
   <data name="Detail_FileInfo.Text" xml:space="preserve">
@@ -1303,4 +1310,165 @@
   <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>未识别 · {0}</value></data>
   <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>无法获取 · {0}</value></data>
   <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>已识别 · {0}</value></data>
+  <data name="Nav_Discovery.Content" xml:space="preserve"><value>随机探索</value></data>
+  <data name="Discovery_Title.Text" xml:space="preserve"><value>随机探索</value></data>
+  <data name="Discovery_Description.Text" xml:space="preserve"><value>换个顺序探索场景。持续向下滚动，每轮不重复。</value></data>
+  <data name="Discovery_Filters.Content" xml:space="preserve"><value>筛选</value></data>
+  <data name="Discovery_Reset.Content" xml:space="preserve"><value>重新洗牌</value></data>
+  <data name="Discovery_Reset.ToolTipService.ToolTip" xml:space="preserve"><value>重新生成随机顺序，并回到顶部。</value></data>
+  <data name="Discovery_Resolution.Header" xml:space="preserve"><value>应用分辨率筛选</value></data>
+  <data name="Discovery_FilterHint.Text" xml:space="preserve"><value>使用设置中的分辨率列表。更改条件会开始新一轮，普通图库的筛选不受影响。</value></data>
+  <data name="Discovery_Clear.Content" xml:space="preserve"><value>清除条件</value></data>
+  <data name="Discovery_Progress" xml:space="preserve"><value>第 {0} 轮 · 已加入 {1:N0}／{2:N0} 张场景</value></data>
+  <data name="Discovery_RoundEnd" xml:space="preserve"><value>第 {0} 轮已全部展示。继续后会在下方接上新的随机顺序，上方内容仍可回看。</value></data>
+  <data name="Discovery_Continue.Content" xml:space="preserve"><value>继续下一轮</value></data>
+  <data name="Discovery_Error.Title" xml:space="preserve"><value>无法加载场景</value></data>
+  <data name="Discovery_Error.Message" xml:space="preserve"><value>请重试，或前往设置检查场景文件夹。</value></data>
+  <data name="Discovery_Retry.Content" xml:space="preserve"><value>重试</value></data>
+  <data name="Metadata_Title" xml:space="preserve">
+    <value>卡片详细资料</value>
+  </data>
+  <data name="Metadata_Loading" xml:space="preserve">
+    <value>正在读取详细资料…</value>
+  </data>
+  <data name="Metadata_Failed" xml:space="preserve">
+    <value>无法读取详细资料，可重试重新读取文件。</value>
+  </data>
+  <data name="Metadata_Partial" xml:space="preserve">
+    <value>部分区块无法展开，以下显示可读资料。</value>
+  </data>
+  <data name="Metadata_Complete" xml:space="preserve">
+    <value>详细资料已加载。</value>
+  </data>
+  <data name="Metadata_ExportJson" xml:space="preserve">
+    <value>导出资料 JSON</value>
+  </data>
+  <data name="Metadata_ExportPartialJson" xml:space="preserve">
+    <value>导出部分资料 JSON</value>
+  </data>
+  <data name="Metadata_ExportCsv" xml:space="preserve">
+    <value>导出 KKManager CSV</value>
+  </data>
+  <data name="Metadata_CsvNote" xml:space="preserve">
+    <value>CSV 包含摘要字段；未检查模组依赖，缺失模组字段留空。</value>
+  </data>
+  <data name="Metadata_Retry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="Metadata_Version" xml:space="preserve">
+    <value>格式版本</value>
+  </data>
+  <data name="Metadata_Language" xml:space="preserve">
+    <value>语言 ID</value>
+  </data>
+  <data name="Metadata_Sex" xml:space="preserve">
+    <value>性别</value>
+  </data>
+  <data name="Metadata_Personality" xml:space="preserve">
+    <value>性格</value>
+  </data>
+  <data name="Metadata_PluginGuid" xml:space="preserve">
+    <value>插件 GUID</value>
+  </data>
+  <data name="Metadata_Extended" xml:space="preserve">
+    <value>扩展资料</value>
+  </data>
+  <data name="Metadata_Unavailable" xml:space="preserve">
+    <value>无法读取</value>
+  </data>
+  <data name="Metadata_More" xml:space="preserve">
+    <value>更多…</value>
+  </data>
+  <data name="Metadata_Exported" xml:space="preserve">
+    <value>导出完成。</value>
+  </data>
+  <data name="Metadata_ExportFailed" xml:space="preserve">
+    <value>导出失败，请重试或选择其他保存位置。</value>
+  </data>
+  <data name="Metadata_SearchHint" xml:space="preserve">
+    <value>搜索姓名、昵称、作者／资料 ID、插件 GUID 或路径</value>
+  </data>
+  <data name="Browser_Origin.Header" xml:space="preserve"><value>来源</value></data>
+  <data name="Browser_Origin_All.Content" xml:space="preserve"><value>全部来源</value></data>
+  <data name="Browser_Origin_ExcludeLocal.Content" xml:space="preserve"><value>排除本地</value></data>
+  <data name="Browser_Origin_LocalOnly.Content" xml:space="preserve"><value>仅本地</value></data>
+  <data name="Nav_LocalSources.Content" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="LocalSources_Title.Text" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="LocalSources_DropZoneTitle.Text" xml:space="preserve"><value>把私下获得的卡片拖到这里</value></data>
+  <data name="LocalSources_DropZoneHint.Text" xml:space="preserve"><value>放在这里的文件全程不会对外查询。</value></data>
+  <data name="LocalSources_ChooseFiles.Content" xml:space="preserve"><value>选择文件</value></data>
+  <data name="LocalSources_PendingCount" xml:space="preserve"><value>{0} 张待归档</value></data>
+  <data name="LocalSources_RejectedCount" xml:space="preserve"><value>{0} 个不是卡片，已跳过</value></data>
+  <data name="LocalSources_MoreThumbnails" xml:space="preserve"><value>+{0}</value></data>
+  <data name="LocalSources_ClearStaging.Content" xml:space="preserve"><value>清空</value></data>
+  <data name="LocalSources_DragFolderHint.Text" xml:space="preserve"><value>把这个文件夹拖到下方的来源上</value></data>
+  <data name="LocalSources_FolderAutomationName" xml:space="preserve"><value>待导入的卡片。拖到某个来源上，或打开快捷菜单选择来源。</value></data>
+  <data name="LocalSources_ImportToMenuHeader" xml:space="preserve"><value>导入到</value></data>
+  <data name="LocalSources_AddSource.Text" xml:space="preserve"><value>新增来源</value></data>
+  <data name="LocalSources_DropCaption" xml:space="preserve"><value>导入到 {0}</value></data>
+  <data name="LocalSources_ImportingTo" xml:space="preserve"><value>正在导入到 {0}…</value></data>
+  <data name="LocalSources_ImportSucceeded" xml:space="preserve"><value>已导入 {0} 张卡片到 {1}。</value></data>
+  <data name="LocalSources_ImportSucceededWithDuplicates" xml:space="preserve"><value>已导入 {0} 张卡片到 {1}；另有 {2} 张重复，保留在原处。</value></data>
+  <data name="LocalSources_Duplicates_Title" xml:space="preserve"><value>有 {0} 张卡片重复</value></data>
+  <data name="LocalSources_Duplicates_Body" xml:space="preserve"><value>图库里已经有内容完全相同的卡片，所以下面这些文件保留在原处，没有移动也没有删除：</value></data>
+  <data name="LocalSources_Duplicates_More" xml:space="preserve"><value>…等 {0} 张</value></data>
+  <data name="LocalSources_Duplicates_OpenFolder" xml:space="preserve"><value>打开文件所在文件夹</value></data>
+  <data name="LocalSources_ImportFailed" xml:space="preserve"><value>导入失败，{0} 张卡片保留在原处。</value></data>
+  <data name="LocalSources_ImportNothingEligible" xml:space="preserve"><value>这里没有可以导入的内容。</value></data>
+  <data name="LocalSources_ImportBusy" xml:space="preserve"><value>已经有一个导入正在进行，请等它完成后再试。</value></data>
+  <data name="LocalSources_Empty.Text" xml:space="preserve"><value>还没有本地来源。先拖入卡片，再把文件夹放到“新增来源”上。</value></data>
+  <data name="LocalSources_NewSourceTitle" xml:space="preserve"><value>新增本地来源</value></data>
+  <data name="LocalSources_NewSourceNamePlaceholder" xml:space="preserve"><value>名称，例如朋友的昵称</value></data>
+  <data name="LocalSources_NewSourceConfirm" xml:space="preserve"><value>创建</value></data>
+  <data name="LocalSources_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="LocalSources_ImportAlreadyInLibrary" xml:space="preserve"><value>这些卡片已经在图库里了。</value></data>
+  <data name="LocalSources_ImportNoDestination" xml:space="preserve"><value>算不出落地位置。请在设置里确认这种卡片类型有配置图库文件夹。</value></data>
+  <data name="LocalSources_EditSource.Text" xml:space="preserve"><value>编辑…</value></data>
+  <data name="Authors_EditLocal.Text" xml:space="preserve"><value>编辑本地来源…</value></data>
+  <data name="AuthorDetail_EditLocal.ToolTipService.ToolTip" xml:space="preserve"><value>编辑名称与头像</value></data>
+  <data name="LocalSources_Edit_Title" xml:space="preserve"><value>编辑本地来源</value></data>
+  <data name="LocalSources_Edit_NameLabel" xml:space="preserve"><value>名称</value></data>
+  <data name="LocalSources_Edit_PickFile" xml:space="preserve"><value>选择图片文件…</value></data>
+  <data name="LocalSources_Edit_PickCard" xml:space="preserve"><value>从卡片挑…</value></data>
+  <data name="LocalSources_Edit_PickAuthor" xml:space="preserve"><value>从在线作者挑…</value></data>
+  <data name="LocalSources_Edit_ClearAvatar" xml:space="preserve"><value>清除头像</value></data>
+  <data name="LocalSources_Edit_PickCardTitle" xml:space="preserve"><value>挑一张卡片当头像</value></data>
+  <data name="LocalSources_Edit_PickAuthorTitle" xml:space="preserve"><value>挑一位在线作者的头像</value></data>
+  <data name="LocalSources_Edit_Back" xml:space="preserve"><value>返回</value></data>
+  <data name="LocalSources_Edit_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="LocalSources_Edit_Close" xml:space="preserve"><value>知道了</value></data>
+  <data name="LocalSources_Edit_FolderNote" xml:space="preserve"><value>改名时会一并改掉磁盘上的文件夹名称，文件夹里的标识码保持不变。这批卡片的缩略图会重新生成。</value></data>
+  <data name="LocalSources_Edit_FolderKeptTitle" xml:space="preserve"><value>有文件夹没改到名字</value></data>
+  <data name="LocalSources_Edit_FolderKeptBody" xml:space="preserve"><value>来源已经改名为“{0}”，但下列文件夹改不动，通常是有程序正在读里面的文件。卡片与名称都不受影响，之后可以再改一次：&#10;{1}</value></data>
+  <data name="LocalSources_ImportFailedCards" xml:space="preserve"><value>导入失败：{0} — {1}。{2} 张卡片全部保留在原处。</value></data>
+  <data name="LocalSources_ImportFailedUnknown" xml:space="preserve"><value>导入失败，{0} 张卡片全部保留在原处。</value></data>
+  <data name="LocalSources_ImportFailedManual" xml:space="preserve"><value>导入失败，而且 {0} 已经被移到图库、无法还原，请手动处理。其余卡片保留在原处。</value></data>
+  <data name="LocalSources_FailedCardsMore" xml:space="preserve"><value>{0} 等 {1} 张</value></data>
+  <data name="LocalSources_NameSeparator" xml:space="preserve"><value>、</value></data>
+  <data name="LocalSources_Failure_ContentMismatch" xml:space="preserve"><value>图库里已经有同名但内容不同的卡片</value></data>
+  <data name="LocalSources_Failure_SourceMissing" xml:space="preserve"><value>找不到原始文件</value></data>
+  <data name="LocalSources_Failure_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="LocalSources_Failure_DiskFull" xml:space="preserve"><value>目标磁盘空间不足</value></data>
+  <data name="LocalSources_Failure_AccessDenied" xml:space="preserve"><value>没有权限写入目标文件夹</value></data>
+  <data name="LocalSources_Failure_NameExhausted" xml:space="preserve"><value>找不到可用的文件名</value></data>
+  <data name="LocalSources_Failure_Sidecar" xml:space="preserve"><value>无法写入卡片信息</value></data>
+  <data name="LocalSources_Failure_Unknown" xml:space="preserve"><value>未知的错误</value></data>
+  <data name="Browser_AlternateVersion" xml:space="preserve"><value>IF</value></data>
+  <data name="Detail_VersionAnnotation.Text" xml:space="preserve"><value>版本标记</value></data>
+  <data name="Detail_VersionNote.Header" xml:space="preserve"><value>备注</value></data>
+  <data name="Detail_VersionNote.PlaceholderText" xml:space="preserve"><value>例如：短发 IF</value></data>
+  <data name="Detail_AssignGroup.Content" xml:space="preserve"><value>归入其他角色…</value></data>
+  <data name="Detail_GroupDialog_Title" xml:space="preserve"><value>要归入哪个角色？</value></data>
+  <data name="Detail_GroupDialog_SearchPlaceholder" xml:space="preserve"><value>搜索角色名称</value></data>
+  <data name="Detail_GroupDialog_Clear" xml:space="preserve"><value>使用这张卡自己的名字</value></data>
+  <data name="Detail_GroupDialog_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Detail_GroupEntry" xml:space="preserve"><value>{0} · {1} 张</value></data>
+  <data name="Detail_GroupOverride" xml:space="preserve"><value>已归入：{0}</value></data>
+  <data name="Detail_GroupDialog_AllAuthors" xml:space="preserve"><value>显示所有作者的角色</value></data>
+  <data name="Character_VersionKind_Current" xml:space="preserve"><value>正式版</value></data>
+  <data name="Character_VersionKind_Alternate" xml:space="preserve"><value>IF 版</value></data>
+  <data name="Character_VersionSuperseded" xml:space="preserve"><value>{0}・已取代</value></data>
+  <data name="Detail_VersionKind_Current.Content" xml:space="preserve"><value>本尊</value></data>
+  <data name="Detail_VersionKind_Alternate.Content" xml:space="preserve"><value>IF 版</value></data>
+  <data name="Detail_VersionSuperseded.Content" xml:space="preserve"><value>已被更新的卡片取代</value></data>
 </root>

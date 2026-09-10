@@ -29,6 +29,11 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public string RatingText => Card is SceneCard ? (IsR18 ? "R-18" : "G") : string.Empty;
     public bool HasVersions => Card is CharacterCard { HasVersions: true };
     public string VersionText => Card is CharacterCard c ? UiText.Format("Browser_Versions", c.VersionCount) : "";
+    // The tile only ever shows the character's representative, so the marker
+    // says "this character has what-if versions" rather than "this card is one".
+    public bool HasAlternateVersions => Card is CharacterCard { HasAlternateVersions: true };
+    public string AlternateText => HasAlternateVersions ? UiText.Get("Browser_AlternateVersion") : "";
+    public bool HasVersionBadge => HasVersions || HasAlternateVersions;
     public string Title
     {
         get

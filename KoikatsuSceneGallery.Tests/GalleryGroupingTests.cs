@@ -1,4 +1,5 @@
-using KoikatsuSceneGallery.Helpers;
+﻿using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Tests;
 
@@ -64,9 +65,83 @@ public sealed class GalleryGroupingTests
     }
 
     [Fact]
+    public void UnrecognizedSinkFolderIsNeverGrouped()
+    {
+        var images = Enumerable.Range(0, 7).Select(i => $"C:/author (999)/!unrecognized/{i}.png").ToArray();
+        Assert.Equal(7, GalleryGrouping.Create(images, path => GalleryGrouping.GetKey(path)).Count);
+        Assert.Equal("post:pixiv:123456", GalleryGrouping.GetKey("C:/author (999)/!unrecognized/123456_p0.png"));
+    }
+
+    [Fact]
     public void WindowsFolderKeysAreCaseInsensitive()
     {
         var images = Enumerable.Range(0, 6).Select(i => $"C:/{(i % 2 == 0 ? "Folder" : "folder")}/{i}.png").ToArray();
         Assert.Single(GalleryGrouping.Create(images, path => GalleryGrouping.GetKey(path)));
+    }
+
+    // A privately shared file name can contain anything, including a digit run
+    // that the link parser would otherwise read as a remote post id.
+    [Fact]
+    public void LocalSourceFilenamesAreNeverReadAsRemotePosts()
+    {
+        const string folder = "C:/Organized/Local/阿明 (local-k7f3q9)";
+        var expected = "folder:" + Path.GetDirectoryName(folder + "/x.png");
+
+        Assert.Equal("post:pixiv:123456", GalleryGrouping.GetKey(folder + "/123456_p0.png"));
+        Assert.Equal("post:bepisdb:KKSCENE_42", GalleryGrouping.GetKey(folder + "/KKSCENE_42.png"));
+
+        Assert.Equal(
+            expected,
+            GalleryGrouping.GetKey(folder + "/123456_p0.png", LocalSourceIdentity.ProviderId));
+        Assert.Equal(
+            expected,
+            GalleryGrouping.GetKey(folder + "/KKSCENE_42.png", LocalSourceIdentity.ProviderId));
+    }
+
+    // Cards land directly in the source folder, so grouping by folder would
+    // collapse the entire source into one tile on its author page.
+    [Fact]
+    public void CardsDirectlyInTheirOwnSourceFolderAreNotGrouped()
+    {
+        var images = Enumerable.Range(0, 7)
+            .Select(i => $"C:/Organized/Local/阿明 (local-k7f3q9)/{i}23456_p0.png")
+            .ToArray();
+
+        var groups = GalleryGrouping.Create(
+            images,
+            path => GalleryGrouping.ResolveKey(
+                path, LocalSourceIdentity.ProviderId, null, null, "local-k7f3q9"));
+
+        Assert.Equal(7, groups.Count);
+        Assert.All(groups, group => Assert.Single(group.Members));
+    }
+
+    // A subfolder the user made inside a source is a real grouping again.
+    [Fact]
+    public void CardsInASubfolderOfTheirSourceStillGroup()
+    {
+        var images = Enumerable.Range(0, 7)
+            .Select(i => $"C:/Organized/Local/阿明 (local-k7f3q9)/某個系列/{i}.png")
+            .ToArray();
+
+        Assert.Single(GalleryGrouping.Create(
+            images,
+            path => GalleryGrouping.ResolveKey(
+                path, LocalSourceIdentity.ProviderId, null, null, "local-k7f3q9")));
+    }
+
+    // The exemption is keyed on the author it belongs to, not on any folder
+    // that merely looks like a source folder.
+    [Fact]
+    public void AnotherSourcesFolderIsStillGrouped()
+    {
+        var images = Enumerable.Range(0, 7)
+            .Select(i => $"C:/Organized/Local/別人 (local-aaabbb)/{i}.png")
+            .ToArray();
+
+        Assert.Single(GalleryGrouping.Create(
+            images,
+            path => GalleryGrouping.ResolveKey(
+                path, LocalSourceIdentity.ProviderId, null, null, "local-k7f3q9")));
     }
 }

@@ -1,4 +1,4 @@
-using KoikatsuSceneGallery.Helpers;
+﻿using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -341,7 +341,7 @@ public sealed partial class AuthorDetailPage : Page
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
         {
-            if (ViewModel.Author is { } author)
+            if (ViewModel.Author is { HasProfileUrl: true } author)
                 await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
         });
 
@@ -371,6 +371,20 @@ public sealed partial class AuthorDetailPage : Page
             Frame.Navigate(typeof(PostDetailPage),
                 CreatePostParameter(ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]));
         }
+    }
+
+    private void EditLocal_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Author is not { IsLocalSource: true } author)
+            return;
+
+        UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "AuthorDetail.EditLocal",
+            // The header binds to the AuthorDisplay instance, which the
+            // author refresh inside mutates in place, so nothing needs
+            // rebinding here.
+            () => LocalSourceEditing.RunAsync(XamlRoot, author.Key.Id));
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -578,43 +592,18 @@ public sealed partial class AuthorDetailPage : Page
         if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
     }
 
-    private void PostImages_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath));
+    private void OverviewScenes_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<SceneCard>().Select(c => c.FilePath));
 
-    private void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<SceneCard>().Select(c => c.FilePath));
+    private void OverviewCharacters_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<CharacterCard>().Select(c => c.FilePath));
 
-    private void CharactersGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<CharacterCard>().Select(c => c.FilePath));
+    private void OverviewCoordinates_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<CoordinateCard>().Select(c => c.FilePath));
 
-    private void CoordinatesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<CoordinateCard>().Select(c => c.FilePath));
-
-    private static void SetDragFiles(DragItemsStartingEventArgs e, IEnumerable<string> filePaths)
-    {
-        var paths = filePaths.ToList();
-        if (paths.Count == 0) return;
-        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
-        {
-            var deferral = request.GetDeferral();
-            try
-            {
-                var files = new List<IStorageItem>();
-                foreach (var path in paths)
-                {
-                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch (Exception ex)
-                    {
-                        App.Services.GetRequiredService<IAppLogger>()
-                            .LogError("AuthorDetail.PrepareDragFile", ex, path);
-                    }
-                }
-                request.SetData(files);
-            }
-            finally { deferral.Complete(); }
-        });
-    }
+    private void OverviewPosts_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag",
+            e.Items.OfType<PostImageGroupViewModel>().SelectMany(g => g.Images).Select(image => image.FilePath));
 
     private static bool TryGetNavigationParameter(object? parameter, out AuthorDetailNavigationParameter navigationParameter)
     {

@@ -114,6 +114,13 @@ public class SettingsService
         public string ImportSubfolder { get; set; } = "Organized";
 
         /// <summary>
+        /// Folder name the built-in local source provider claims below
+        /// <see cref="ImportSubfolder"/>. Locally collected cards land under it,
+        /// which is also what marks them as local when the library is scanned.
+        /// </summary>
+        public string LocalFolderName { get; set; } = "Local";
+
+        /// <summary>
         /// When the number of files from the same pixiv artwork in one import batch
         /// is strictly greater than this value, a subfolder named after the artwork
         /// title is created inside the author folder. 0 = always create; -1 = never.

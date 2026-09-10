@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
@@ -77,7 +77,7 @@ public sealed partial class PostDetailPage : Page
 
     private void OpenLocalImage(LocalImagePreview preview)
     {
-        var live = Enum.GetValues<LibraryKind>().SelectMany(k => new LibraryAdapter(k).Cards)
+        var live = App.Services.GetRequiredService<KoikatsuSceneGallery.Services.LibraryRegistry>().All.SelectMany(library => library.Cards)
             .DistinctBy(c => c.FilePath, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(c => c.FilePath, StringComparer.OrdinalIgnoreCase);
         var cards = ViewModel.LocalImages.Where(p => live.ContainsKey(p.FilePath)).Select(p => live[p.FilePath]).ToArray();
@@ -145,30 +145,7 @@ public sealed partial class PostDetailPage : Page
     }
 
     private void LocalImagesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-    {
-        var paths = e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath).ToList();
-        if (paths.Count == 0) return;
-        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
-        {
-            var deferral = request.GetDeferral();
-            try
-            {
-                var files = new List<IStorageItem>();
-                foreach (var path in paths)
-                {
-                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch (Exception ex)
-                    {
-                        App.Services.GetRequiredService<IAppLogger>()
-                            .LogError("PostDetail.PrepareDragFile", ex, path);
-                    }
-                }
-                request.SetData(files);
-            }
-            finally { deferral.Complete(); }
-        });
-    }
+        => DragFilePayload.Attach(e, "PostDetail.Drag", e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath));
 
     private void RenderDescription()
         => HtmlDescriptionRenderer.Render(DescriptionText, ViewModel.Description);

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="KoikatsuSceneGallery.Pages.ImportPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,6 +15,7 @@
     Drop="Page_Drop">
 
     <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:PhaseToCancelButtonVisibilityConverter x:Key="PhaseToCancelButtonVisibilityConverter" />
         <DataTemplate x:Key="AuthorPickerItemTemplate" x:DataType="vm:SelectableAuthor">
             <Grid Padding="4,6" ColumnSpacing="8">
@@ -204,6 +205,7 @@
                                HorizontalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <Button x:Uid="Import_ChooseFiles" HorizontalAlignment="Center" Click="PickFiles_Click" Style="{StaticResource AccentButtonStyle}" />
+
                     <TextBlock x:Uid="Import_DropZoneHint" Style="{StaticResource CaptionTextBlockStyle}"
                                HorizontalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />

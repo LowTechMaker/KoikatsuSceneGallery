@@ -1,4 +1,5 @@
 using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.Pages;
 using Microsoft.UI.Xaml.Controls;
 
@@ -12,7 +13,7 @@ public sealed class BrowseContext(string title, IEnumerable<CardBase> cards, boo
     public string? ReturnPath { get; set; }
     public IReadOnlyList<CardBase> CurrentCards()
     {
-        var live = Enum.GetValues<LibraryKind>().SelectMany(k => new LibraryAdapter(k).Cards)
+        var live = App.Services.GetRequiredService<LibraryRegistry>().All.SelectMany(library => library.Cards)
             .DistinctBy(c => c.FilePath, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(c => c.FilePath, c => c, StringComparer.OrdinalIgnoreCase);
         return Cards.Where(c => live.ContainsKey(c.FilePath)).Select(c => live[c.FilePath]).ToArray();

@@ -194,4 +194,26 @@ public sealed class ImportDestinationPolicyTests
         Assert.Throws<OperationCanceledException>(() =>
             ImportDuplicateDetector.AreFilesIdentical(source, destination, cts.Token));
     }
+
+    [Theory]
+    // The sink exists for files that have an author but no artwork identity.
+    [InlineData(false, true, "pixiv", true)]
+    [InlineData(false, true, null, true)]
+    // An artwork identity gets its own folder instead.
+    [InlineData(true, true, "pixiv", false)]
+    // Without an author there is no author folder to sink into.
+    [InlineData(false, false, "pixiv", false)]
+    [InlineData(true, false, "pixiv", false)]
+    // Local sources never have an artwork identity, so they must be exempt or
+    // every local card would land in the sink and lose its folder grouping.
+    [InlineData(false, true, "local", false)]
+    [InlineData(false, true, "LOCAL", false)]
+    public void UsesUnrecognizedSink_ExemptsLocalSources(
+        bool hasArtwork,
+        bool hasAuthor,
+        string? authorProviderId,
+        bool expected)
+        => Assert.Equal(
+            expected,
+            ImportDestinationPolicy.UsesUnrecognizedSink(hasArtwork, hasAuthor, authorProviderId));
 }

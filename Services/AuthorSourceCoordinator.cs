@@ -5,6 +5,7 @@ namespace KoikatsuSceneGallery.Services;
 
 public sealed class AuthorSourceCoordinator
 {
+    private readonly LocalSourceRegistry _localSourceRegistry;
     private readonly AuthorInfoService _authorInfoService;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly GalleryViewModel _galleryViewModel;
@@ -14,12 +15,14 @@ public sealed class AuthorSourceCoordinator
     private bool _hasEnsuredLoaded;
 
     public AuthorSourceCoordinator(
+        LocalSourceRegistry localSourceRegistry,
         AuthorInfoService authorInfoService,
         SettingsViewModel settingsViewModel,
         GalleryViewModel galleryViewModel,
         CharacterGalleryViewModel characterGalleryViewModel,
         CoordinateGalleryViewModel coordinateGalleryViewModel)
     {
+        _localSourceRegistry = localSourceRegistry;
         _authorInfoService = authorInfoService;
         _settingsViewModel = settingsViewModel;
         _galleryViewModel = galleryViewModel;
@@ -76,8 +79,23 @@ public sealed class AuthorSourceCoordinator
     private void OnFolderPathsChanged() => Refresh(reloadLoadedSources: true);
 
     private void ApplyLibraryRoots()
-        => _authorInfoService.UpdateRoots(
-            [.. _settingsViewModel.FolderPaths, .. _settingsViewModel.CharacterFolderPaths, .. _settingsViewModel.CoordinateFolderPaths]);
+    {
+        string[] roots =
+            [.. _settingsViewModel.FolderPaths,
+             .. _settingsViewModel.CharacterFolderPaths,
+             .. _settingsViewModel.CoordinateFolderPaths];
+
+        _authorInfoService.UpdateRoots(roots);
+
+        // Local sources are resolved from the same roots. The rescan is
+        // fire-and-forget: until it lands, a local card still shows the name
+        // encoded in its folder, which the description only refines.
+        _localSourceRegistry.UpdateConfiguration(
+            roots,
+            _settingsViewModel.ImportSubfolder,
+            _settingsViewModel.LocalFolderName);
+        _localSourceRegistry.BeginRescan();
+    }
 
     private async Task LoadAsync(bool forceReload = false)
     {

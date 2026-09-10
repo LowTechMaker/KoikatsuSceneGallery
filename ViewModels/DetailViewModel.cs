@@ -31,7 +31,7 @@ public partial class DetailViewModel : ObservableObject
 
     partial void OnCardChanged(SceneCard? value)
     {
-        _linkInfo = FilenameLinkParser.Parse(value?.FilePath);
+        _linkInfo = CardOrigin.LinksFor(value);
         RefreshSiblingCards();
     }
 

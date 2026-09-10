@@ -107,6 +107,13 @@ public partial class AuthorsViewModel : ObservableObject
 
     public ObservableCollection<AuthorProviderTabViewModel> ProviderTabs { get; } = [];
 
+    /// <summary>
+    /// Whether this page has anything to show. False when no online author
+    /// provider is installed, which is not the same as no provider at all: the
+    /// built-in local one is always registered but belongs to its own page.
+    /// </summary>
+    public bool HasProviderTabs => ProviderTabs.Count > 0;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool HasAuthors { get; set; }
@@ -151,8 +158,13 @@ public partial class AuthorsViewModel : ObservableObject
         _galleryViewModel = galleryViewModel;
         _characterGalleryViewModel = characterGalleryViewModel;
         _coordinateGalleryViewModel = coordinateGalleryViewModel;
-        foreach (var provider in _authorInfoService.ProviderInfos)
+        // Local sources have their own page, which is also where they can be
+        // imported into; a tab here would be a second, weaker entry point.
+        foreach (var provider in _authorInfoService.ProviderInfos
+                     .Where(provider => !LocalSourceIdentity.IsLocal(provider.ProviderId)))
+        {
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
+        }
 
         _rebuildTimer = dispatcher.CreateTimer();
         _rebuildTimer.Interval = RebuildDebounce;
