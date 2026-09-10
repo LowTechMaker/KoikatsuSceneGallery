@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="KoikatsuSceneGallery.Pages.AuthorsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -121,12 +121,14 @@
                     <DataTemplate x:DataType="viewModels:AuthorProviderTabViewModel">
                         <Grid>
                             <GridView x:Name="AuthorsGrid" ItemsSource="{x:Bind GroupedAuthors.View}"
-                                      IsItemClickEnabled="True" ItemClick="AuthorsGrid_ItemClick" SelectionMode="None">
+                                      IsItemClickEnabled="True" ItemClick="AuthorsGrid_ItemClick" SelectionMode="None"
+                                      Loaded="AuthorsGrid_Loaded" SizeChanged="AuthorsGrid_SizeChanged">
                                 <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" GroupHeaderPlacement="Top" /></ItemsPanelTemplate></GridView.ItemsPanel>
                                 <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
                                 <GridView.ItemContainerStyle><Style TargetType="GridViewItem">
                                     <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
                                 </Style></GridView.ItemContainerStyle>
                                 <GridView.GroupStyle><GroupStyle HidesIfEmpty="True">
                                     <GroupStyle.HeaderTemplate><DataTemplate x:DataType="viewModels:AuthorGroupViewModel">

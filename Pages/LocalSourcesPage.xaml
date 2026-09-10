@@ -60,8 +60,8 @@
 
         <DataTemplate x:Key="AddLocalSourceTileTemplate" x:DataType="models:AddLocalSourceTile">
             <Grid
-                Width="280"
-                Height="160"
+                MinWidth="260"
+                MinHeight="150"
                 Margin="4"
                 AllowDrop="True"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -233,10 +233,17 @@
             <GridView
                 x:Name="SourcesGrid"
                 IsItemClickEnabled="True"
+                SizeChanged="SourcesGrid_SizeChanged"
+                Loaded="SourcesGrid_Loaded"
                 ItemClick="SourcesGrid_ItemClick"
                 ItemTemplateSelector="{StaticResource LocalSourceTileTemplateSelector}"
                 ItemsSource="{x:Bind ViewModel.Tiles}"
                 SelectionMode="None">
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
                 <GridView.ItemContainerStyle>
                     <Style TargetType="GridViewItem">
                         <Setter Property="Margin" Value="0" />

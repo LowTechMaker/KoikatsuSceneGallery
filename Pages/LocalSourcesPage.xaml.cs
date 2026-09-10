@@ -1,3 +1,4 @@
+using System;
 using KoikatsuSceneGallery.Controls;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
@@ -43,6 +44,10 @@ public sealed partial class LocalSourcesPage : Page
         // model is a singleton, so hooking this up per navigation would report
         // one import several times over.
         ViewModel.DuplicatesKept += OnDuplicatesKept;
+
+        // The tile grid has no panel to size until its first container is
+        // realized, which can happen long after Loaded.
+        ViewModel.Tiles.CollectionChanged += (_, _) => AuthorTileLayout.Apply(SourcesGrid);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -445,6 +450,10 @@ public sealed partial class LocalSourcesPage : Page
             "LocalSources.EditSource",
             () => LocalSourceEditing.RunAsync(XamlRoot, tile.Entry.Id));
     }
+
+    private void SourcesGrid_SizeChanged(object sender, SizeChangedEventArgs e) => AuthorTileLayout.Apply(SourcesGrid);
+
+    private void SourcesGrid_Loaded(object sender, RoutedEventArgs e) => AuthorTileLayout.Apply(SourcesGrid);
 
     private void SourcesGrid_ItemClick(object sender, ItemClickEventArgs e)
     {

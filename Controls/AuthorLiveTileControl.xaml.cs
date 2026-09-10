@@ -85,7 +85,6 @@ public sealed partial class AuthorLiveTileControl : UserControl
             ThumbnailContainer.Visibility = Visibility.Visible;
             GradientOverlay.Visibility = Visibility.Visible;
             LiveOverlay.Visibility = Visibility.Visible;
-            RootGrid.Height = 160;
 
             ApplyAuthorInfo(summary);
 
@@ -315,7 +314,9 @@ public sealed partial class AuthorLiveTileControl : UserControl
     {
         if (_imageCache.TryGetValue(path, out var cached))
             return cached;
-        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 280 };
+        // Tiles flex with the window, so decode for the widest one rather
+        // than the old fixed 280.
+        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 400 };
         _imageCache[path] = img;
         return img;
     }

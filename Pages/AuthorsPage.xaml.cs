@@ -68,6 +68,20 @@ public sealed partial class AuthorsPage : Page
             JumpToGroup(group);
     }
 
+    // The grid lives in a Pivot item template, so it is reached through the
+    // sender rather than by name.
+    private void AuthorsGrid_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is GridView grid)
+            AuthorTileLayout.Apply(grid);
+    }
+
+    private void AuthorsGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is GridView grid)
+            AuthorTileLayout.Apply(grid);
+    }
+
     private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is AuthorSummary summary)
