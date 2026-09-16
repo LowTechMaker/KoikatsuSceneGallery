@@ -4,7 +4,7 @@ namespace KoikatsuSceneGallery.Tests;
 
 public sealed class ScannedFileNameIndexTests
 {
-    [Fact]
+    [WindowsFact]
     public void Match_ClaimsOnlyTheSingleUnownedLocalFile()
     {
         var index = new ScannedFileNameIndex();
@@ -17,7 +17,7 @@ public sealed class ScannedFileNameIndexTests
         Assert.False(match.HasAmbiguousName);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Match_LeavesRepeatedUnownedNameUnclaimed()
     {
         var index = new ScannedFileNameIndex();

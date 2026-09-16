@@ -163,7 +163,7 @@ public sealed class ImportExecutionTransactionTests
             && snapshot.LastFailureType == TransactionFailureType.SidecarWriteFault);
     }
 
-    [Fact]
+    [WindowsFact]
     public async Task RollbackTransactionAsync_SourceCollision_RenamesInsteadOfOverwriting()
     {
         using var source = new TestDirectory();

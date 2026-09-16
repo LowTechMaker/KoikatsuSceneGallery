@@ -31,6 +31,6 @@ public class PathComparisonTests
         var set = new HashSet<string>(PathComparison.Comparer) { @"C:\Cards\A.png" };
 
         Assert.Equal(OperatingSystem.IsWindows(), set.Contains(@"c:\cards\a.png"));
-        Assert.True(set.Contains(@"C:\Cards\A.png"));
+        Assert.Contains(@"C:\Cards\A.png", set);
     }
 }

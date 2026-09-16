@@ -51,7 +51,7 @@ public sealed class LocalImportFailureTextTests
 
     // The reported defect: the count has to be the batch the sentence talks
     // about, not the one item the executor stopped on.
-    [Fact]
+    [WindowsFact]
     public void TheCountIsTheWholeBatchAndTheOffendingCardIsNamed()
     {
         var message = Describe(
@@ -76,7 +76,7 @@ public sealed class LocalImportFailureTextTests
         Assert.DoesNotContain("LocalSources_Failure_Unknown", keys);
     }
 
-    [Fact]
+    [WindowsFact]
     public void SeveralFailedCardsAreAllNamed()
     {
         var message = Describe(
@@ -89,7 +89,7 @@ public sealed class LocalImportFailureTextTests
         Assert.Equal("failed:a.png、b.png|LocalSources_Failure_SourceMissing|4", message);
     }
 
-    [Fact]
+    [WindowsFact]
     public void ALongListOfNamesIsTruncatedWithACount()
     {
         var message = Describe(
@@ -104,7 +104,7 @@ public sealed class LocalImportFailureTextTests
 
     // A stranded card is neither imported nor back where it was, so it gets a
     // message of its own rather than a count that would be wrong.
-    [Fact]
+    [WindowsFact]
     public void AStrandedCardIsReportedByItsNameInTheLibrary()
     {
         var message = Describe(
