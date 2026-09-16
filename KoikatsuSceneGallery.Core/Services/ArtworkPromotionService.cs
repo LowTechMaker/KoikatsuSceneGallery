@@ -1,3 +1,5 @@
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 internal sealed record ArtworkPromotionResult(
@@ -28,7 +30,7 @@ internal static class ArtworkPromotionService
 
         var sources = existingRootFiles
             .Concat(incomingFiles)
-            .Distinct(PathComparer)
+            .Distinct(PathComparison.Comparer)
             .ToList();
         foreach (var source in sources)
         {
@@ -51,7 +53,7 @@ internal static class ArtworkPromotionService
 
             foreach (var source in sameNameFiles)
             {
-                if (PathComparer.Equals(source, comparisonPath))
+                if (PathComparison.Comparer.Equals(source, comparisonPath))
                     continue;
 
                 if (!ImportDuplicateDetector.AreFilesIdentical(
@@ -71,7 +73,7 @@ internal static class ArtworkPromotionService
         var duplicateRootFiles = new List<string>();
         try
         {
-            foreach (var source in existingRootFiles.Distinct(PathComparer))
+            foreach (var source in existingRootFiles.Distinct(PathComparison.Comparer))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var destination = Path.Combine(artworkDirectory, Path.GetFileName(source));
@@ -136,8 +138,4 @@ internal static class ArtworkPromotionService
         return ArtworkPromotionResult.Success;
     }
 
-    private static StringComparer PathComparer { get; } =
-        OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
 }

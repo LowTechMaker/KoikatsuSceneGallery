@@ -63,9 +63,7 @@ public sealed partial class CharacterDetailPage : Page
         base.OnNavigatedFrom(e);
         var galleryViewModel = App.Services.GetRequiredService<CharacterGalleryViewModel>();
         galleryViewModel.CancelPendingWork();
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = null;
+        PageCancellation.Stop(ref _metadataCts);
         galleryViewModel.VersionIndexChanged -= OnVersionIndexChanged;
         galleryViewModel.CardsReloaded -= OnCardsReloaded;
     }
@@ -107,36 +105,24 @@ public sealed partial class CharacterDetailPage : Page
             if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
                 return;
 
-            var refreshed = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards
-                .FirstOrDefault(card => string.Equals(
-                    card.FilePath,
-                    current.FilePath,
-                    StringComparison.OrdinalIgnoreCase));
-            if (refreshed is null)
-            {
-                if (Frame.CanGoBack) Frame.GoBack();
-                return;
-            }
-
-            if (!ReferenceEquals(refreshed, current))
-                ShowCard(refreshed);
-            else
-                UpdateNavigationButtons();
+            DetailNavigationHelper.RefreshAfterReload(
+                App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards, current,
+                ShowCard,
+                UpdateNavigationButtons,
+                () => { if (Frame.CanGoBack) Frame.GoBack(); });
         });
     }
 
     private void ShowCard(CharacterCard card)
     {
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = new CancellationTokenSource();
+        var metadataCts = PageCancellation.Restart(ref _metadataCts);
         ViewModel.Card = card;
         LoadAnnotationInto(card);
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        LoadMetadataAsync(card, _metadataCts.Token).Observe(
+        LoadMetadataAsync(card, metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
             "CharacterDetail.LoadMetadata");
     }
@@ -430,10 +416,8 @@ public sealed partial class CharacterDetailPage : Page
     private void UpdateNavigationButtons()
     {
         if (_viewer.Update()) return;
-        var scopedCards = GetScopedCards();
-        var (hasPrev, hasNext) = scopedCards is null
-            ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.GetNavigationState(scopedCards, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(
+            GetScopedCards(), App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
@@ -441,10 +425,8 @@ public sealed partial class CharacterDetailPage : Page
     private void Navigate(int direction)
     {
         if (_viewer.Navigate(direction)) return;
-        var scopedCards = GetScopedCards();
-        var next = scopedCards is null
-            ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card, direction)
-            : DetailNavigationHelper.Navigate(scopedCards, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(
+            GetScopedCards(), App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -455,10 +437,8 @@ public sealed partial class CharacterDetailPage : Page
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
         if (_viewer.Navigate(0, true)) return;
-        var scopedCards = GetScopedCards();
-        var card = scopedCards is null
-            ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.RandomCard(scopedCards, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(
+            GetScopedCards(), App.Services.GetRequiredService<CharacterGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 

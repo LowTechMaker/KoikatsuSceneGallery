@@ -96,6 +96,40 @@ public sealed class ImportLibraryIndexerTests
         Assert.Empty(f.Errors);
     }
 
+    // The cost guard. Even if a name normalizes into a bucket of unrelated
+    // files, one import must not read them all.
+    [Fact]
+    public async Task ALargeBucketOfSimilarNamesIsNotReadAtAll()
+    {
+        using var f = new Fixture();
+        var source = f.FileFor("inputs/card(1).png", CardBytes(TinyPng, "one character"));
+        foreach (var i in Enumerable.Range(0, 12))
+            f.FileFor($"library/card ({i}).png", CardBytes(TinyPng, "one character"));
+
+        var result = await f.Build(Request([f.PathFor("library")],
+            new ImportLibrarySource(source, "card(1).png")));
+
+        // Identical content in every candidate, so reading even one would have
+        // matched; the bucket was skipped instead.
+        Assert.Empty(result.IdenticalSourcePaths);
+        Assert.Equal(0, result.TotalCandidatesCompared);
+        Assert.Empty(f.Errors);
+    }
+
+    // A real copy bucket stays small, so it is still examined.
+    [Fact]
+    public async Task ASmallBucketIsStillCompared()
+    {
+        using var f = new Fixture();
+        var source = f.FileFor("inputs/card(1).png", CardBytes(TinyPng, "one character"));
+        f.FileFor("library/card.png", CardBytes(OtherPng, "one character"));
+
+        var result = await f.Build(Request([f.PathFor("library")],
+            new ImportLibrarySource(source, "card(1).png")));
+
+        Assert.Equal(source, Assert.Single(result.IdenticalSourcePaths));
+    }
+
     [Fact]
     public async Task MultipleRootsCompareContentsAndPreserveDiagnosticCounts()
     {

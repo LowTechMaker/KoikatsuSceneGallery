@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
@@ -37,7 +36,7 @@ public class ThumbnailCacheService
     public string? TryGetCachedPath(string filePath, DateTime dateModified)
     {
         var folder = _cacheFolder;
-        var cacheKey = ComputeCacheKey(filePath, dateModified);
+        var cacheKey = FileVersionCacheKey.Compute(filePath, dateModified);
         var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
         return GetUsableCachePath(cachePath);
     }
@@ -56,7 +55,7 @@ public class ThumbnailCacheService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var folder = _cacheFolder;
-            var cacheKey = ComputeCacheKey(filePath, dateModified);
+            var cacheKey = FileVersionCacheKey.Compute(filePath, dateModified);
             var cachePath = Path.Combine(folder, $"{cacheKey}.jpg");
 
             var existingCachePath = GetUsableCachePath(cachePath);
@@ -122,13 +121,6 @@ public class ThumbnailCacheService
         var folder = _cacheFolder;
         return Task.Run(() => ThumbnailCacheMaintenance.Clear(folder,
             (ex, file) => _logger.LogError("Thumbnail.Delete", ex, file), cancellationToken), cancellationToken);
-    }
-
-    private static string ComputeCacheKey(string filePath, DateTime dateModified)
-    {
-        var input = $"{filePath}|{dateModified.Ticks}";
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(hash)[..16];
     }
 
     private string? GetUsableCachePath(string cachePath)

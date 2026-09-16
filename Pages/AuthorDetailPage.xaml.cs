@@ -123,9 +123,7 @@ public sealed partial class AuthorDetailPage : Page
             foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
                 _navigationParameter.BrowserStates[index] = browser.SaveState();
         ReleaseRequestedThumbnails();
-        _postsCts?.Cancel();
-        _postsCts?.Dispose();
-        _postsCts = null;
+        PageCancellation.Stop(ref _postsCts);
         ScenesGrid.SizeChanged -= Grid_SizeChanged;
         CharactersGrid.SizeChanged -= Grid_SizeChanged;
         CoordinatesGrid.SizeChanged -= Grid_SizeChanged;

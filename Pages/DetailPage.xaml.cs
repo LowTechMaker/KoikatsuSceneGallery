@@ -105,24 +105,15 @@ public sealed partial class DetailPage : Page
             if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
                 return;
 
-            var refreshed = App.Services.GetRequiredService<GalleryViewModel>().Cards
-                .FirstOrDefault(card => string.Equals(
-                    card.FilePath,
-                    current.FilePath,
-                    StringComparison.OrdinalIgnoreCase));
-            if (refreshed is null)
-            {
-                if (Frame.CanGoBack) Frame.GoBack();
-                return;
-            }
-
-            if (!ReferenceEquals(refreshed, current))
-                ShowCard(refreshed);
-            else
-            {
-                if (_groupScope is not null) ViewModel.RefreshSiblingCards();
-                UpdateNavigationButtons();
-            }
+            DetailNavigationHelper.RefreshAfterReload(
+                App.Services.GetRequiredService<GalleryViewModel>().Cards, current,
+                ShowCard,
+                () =>
+                {
+                    if (_groupScope is not null) ViewModel.RefreshSiblingCards();
+                    UpdateNavigationButtons();
+                },
+                () => { if (Frame.CanGoBack) Frame.GoBack(); });
         });
     }
 
@@ -138,10 +129,8 @@ public sealed partial class DetailPage : Page
     private void UpdateNavigationButtons()
     {
         if (_viewer.Update()) return;
-        var scopedCards = GetScopedCards();
-        var (hasPrev, hasNext) = scopedCards is null
-            ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.GetNavigationState(scopedCards, ViewModel.Card);
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(
+            GetScopedCards(), App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
@@ -149,10 +138,8 @@ public sealed partial class DetailPage : Page
     private void Navigate(int direction)
     {
         if (_viewer.Navigate(direction)) return;
-        var scopedCards = GetScopedCards();
-        var next = scopedCards is null
-            ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction)
-            : DetailNavigationHelper.Navigate(scopedCards, ViewModel.Card, direction);
+        var next = DetailNavigationHelper.Navigate(
+            GetScopedCards(), App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -163,10 +150,8 @@ public sealed partial class DetailPage : Page
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
         if (_viewer.Navigate(0, true)) return;
-        var scopedCards = GetScopedCards();
-        var card = scopedCards is null
-            ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.RandomCard(scopedCards, ViewModel.Card);
+        var card = DetailNavigationHelper.RandomCard(
+            GetScopedCards(), App.Services.GetRequiredService<GalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 

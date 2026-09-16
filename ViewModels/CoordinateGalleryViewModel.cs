@@ -26,15 +26,11 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
 
     public bool IsParsingMetadata => PendingMetadataCount > 0;
 
-    private bool HasResolutionFilter => _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
-    private bool _resolutionFilterEnabled;
-    private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CoordinateCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly MetadataScanCoordinator<CoordinateCard, CoordinateMetadata> _metadataScan;
-    private readonly GalleryMetadataRefresh _metadataRefresh;
+    private readonly GalleryMetadataSession<CoordinateCard, CoordinateMetadata> _metadata;
 
     public CoordinateGalleryViewModel(CoordinateCardService cardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, CoordinateMetadataService metadataService, SettingsViewModel settingsViewModel, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
         : base(new ObservableCollection<CoordinateCard>(), thumbnailScheduler)
@@ -46,17 +42,20 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
         _logger = logger;
-        _metadataRefresh = new(_dispatcherQueue, RefreshMetadataFilter);
-        _metadataScan = new(
-            card => card.MetadataLoaded,
-            _metadataService.TryGetCached,
-            _metadataService.ParseAndCache,
-            ApplyMetadata,
-            action => _dispatcherQueue.TryEnqueue(() => action()),
-            (card, error) => _logger.LogError(
-                error is OperationCanceledException ? "CoordinateGallery.ParseMetadataCanceled" : "CoordinateGallery.ParseMetadata",
-                error, card.FilePath));
-        _metadataScan.PendingCountChanged += count => PendingMetadataCount = count;
+        _metadata = new(
+            new MetadataScanCoordinator<CoordinateCard, CoordinateMetadata>(
+                card => card.MetadataLoaded,
+                _metadataService.TryGetCached,
+                _metadataService.ParseAndCache,
+                ApplyMetadata,
+                action => _dispatcherQueue.TryEnqueue(() => action()),
+                (card, error) => _logger.LogError(
+                    error is OperationCanceledException ? "CoordinateGallery.ParseMetadataCanceled" : "CoordinateGallery.ParseMetadata",
+                    error, card.FilePath)),
+            new GalleryMetadataRefresh(_dispatcherQueue, RefreshMetadataFilter),
+            _logger,
+            "CoordinateGallery");
+        _metadata.PendingCountChanged += count => PendingMetadataCount = count;
         MetadataFilters.PropertyChanged += (_, _) =>
         {
             if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
@@ -67,7 +66,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         _cardService.CardRemoved += OnCardRemoved;
 
         _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
-        _settingsViewModel.CoordinateResolutionFilterChanged += OnCoordinateResolutionFilterChanged;
+        _settingsViewModel.CoordinateResolutionFilterChanged += OnResolutionFilterChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -87,43 +86,17 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             Cards.Clear();
             _cardIndex.Clear();
 
-            await _cardService.ScanFoldersAsync(paths, batch =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                PublishScannedBatch(() =>
-                {
-                    foreach (var card in batch)
-                    {
-                        if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                        Cards.Add(card);
-                    }
-                }, cancellationToken);
-            }, cancellationToken);
+            await _cardService.ScanFoldersAsync(paths,
+                batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
-        }, _logger, "CoordinateGallery.LoadCanceled", () => _metadataScan.Cancel());
+        }, _logger, "CoordinateGallery.LoadCanceled", _metadata.CancelScan);
 
-    private bool _metadataStopping;
+    internal Task StopMetadataAsync() => _metadata.StopAsync();
 
-    internal Task StopMetadataAsync()
-    {
-        _metadataStopping = true;
-        _metadataRefresh.Stop();
-        return _metadataScan.StopAsync(CancellationToken.None);
-    }
-
-    private void StartMetadataScan()
-    {
-        if (_metadataStopping) return;
-        _metadataScan.Start(
-                Cards,
-                ApplyFilter,
-                StartMetadataRefreshTimer,
-                OnMetadataScanCompleted)
-            .Observe(_logger, "CoordinateGallery.ParseMetadata");
-    }
+    private void StartMetadataScan() => _metadata.Start(Cards, ApplyFilter);
 
     private static void ApplyMetadata(CoordinateCard card, CoordinateMetadata meta)
     {
@@ -131,10 +104,6 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         card.CoordinateName = meta.CoordinateName ?? string.Empty;
         card.MetadataLoaded = true;
     }
-
-    private void StartMetadataRefreshTimer() => _metadataRefresh.Start();
-
-    private void OnMetadataScanCompleted() => _metadataRefresh.Complete();
 
     public void RequestThumbnail(
         CoordinateCard card,
@@ -150,22 +119,8 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private void OnCoordinateResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
-    {
-        _dispatcherQueue.TryEnqueue(() =>
-        {
-            _resolutionFilterEnabled = enabled;
-            _allowedResolutions = resolutions;
-            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
-            ApplyFilter();
-        });
-    }
 
-    public CoordinateCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as CoordinateCard;
-    }
+    public CoordinateCard? GetRandomCard() => GetRandomVisibleCard<CoordinateCard>();
 
     public override bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
         => card is CoordinateCard coordinate && BaseFilterPasses(coordinate, keywords);
@@ -178,8 +133,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             card.MetadataLoaded ? card.CoordinateName : null, keywords ?? _searchKeywords)
             || !MetadataFilters.Matches(card.MetadataLoaded ? card.MetadataSummary : null)) return false;
 
-        if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
-            && !_allowedResolutions.Contains(card.Resolution))
+        if (HasResolutionFilter && !_allowedResolutions.Contains(card.Resolution))
             return false;
 
         return true;
@@ -190,7 +144,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         if (TryApplyShuffleFilter()) return;
 
         var hasSearch = _searchKeywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+        var filterRes = HasResolutionFilter;
 
         if (!hasSearch && !filterRes && !HasOriginFilter && MetadataFilters.ActiveCount == 0)
         {
@@ -218,12 +172,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         });
     }
 
-    private void QueueMetadata(CoordinateCard card)
-    {
-        if (_metadataStopping) return;
-        _metadataScan.Queue(card, RefreshMetadataFilter, OnMetadataScanCompleted)
-            .Observe(_logger, "CoordinateGallery.ParseAddedCardMetadata");
-    }
+    private void QueueMetadata(CoordinateCard card) => _metadata.Queue(card, RefreshMetadataFilter);
 
     private void RefreshMetadataFilter()
     {
@@ -242,16 +191,12 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
 
     public void Dispose()
     {
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _metadataScan.Dispose();
-        _metadataRefresh.Dispose();
+        DisposeWorkCancellationSources();
+        _metadata.Dispose();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
-        _settingsViewModel.CoordinateResolutionFilterChanged -= OnCoordinateResolutionFilterChanged;
+        _settingsViewModel.CoordinateResolutionFilterChanged -= OnResolutionFilterChanged;
         GC.SuppressFinalize(this);
     }
 
@@ -265,7 +210,6 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     public override void CancelPendingWork()
     {
         base.CancelPendingWork();
-        _metadataScan.Cancel(resetCount: true);
-        _metadataRefresh.Stop();
+        _metadata.Suspend();
     }
 }

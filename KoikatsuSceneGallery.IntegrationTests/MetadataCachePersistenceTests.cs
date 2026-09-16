@@ -7,6 +7,53 @@ namespace KoikatsuSceneGallery.IntegrationTests;
 
 public sealed class MetadataCachePersistenceTests
 {
+    [Fact]
+    public void ExistingMetadataKeyCanBeReadInvalidatedAndWrittenWithoutMigration()
+    {
+        using var h = new Harness();
+        var card = new CharacterCard { FilePath = @"C:\Cards\a.png", DateModified = new DateTime(0) };
+        const string key = "DD4B79A75CCE35A5";
+        File.WriteAllText(h.CachePath, "{\"DD4B79A75CCE35A5\":{\"Name\":\"existing\"}}");
+        try
+        {
+            Assert.True(h.Service.TryGetCached(card, out var existing));
+            Assert.Equal("existing", existing.Name);
+            h.Service.Invalidate(card);
+            h.Persistence!.Flush();
+            Assert.Empty(JsonSerializer.Deserialize<Dictionary<string, Metadata>>(h.Json!)!);
+            h.Service.ParseAndCache(card);
+            h.Persistence.Flush();
+            Assert.Equal(key, Assert.Single(JsonSerializer.Deserialize<Dictionary<string, Metadata>>(h.Json!)!).Key);
+        }
+        finally { File.Delete(h.CachePath); }
+    }
+
+    [Fact]
+    public async Task ExistingThumbnailKeyRemainsReadableWithoutRegeneration()
+    {
+        using var h = new Harness();
+        var folder = Path.Combine(Path.GetTempPath(), "thumbnail-key-" + Guid.NewGuid().ToString("N"));
+        var service = new ThumbnailCacheService(h, folder);
+        var cached = Path.Combine(folder, "DD4B79A75CCE35A5.jpg");
+        // This case tests the existing cache marker policy, not JPEG decoding.
+        byte[] bytes = [0xFF, 0xD8, 0x01, 0x02, 0xFF, 0xD9];
+        try
+        {
+            File.WriteAllBytes(cached, bytes);
+            Assert.Equal(cached, service.TryGetCachedPath(@"C:\Cards\a.png", new DateTime(0)));
+            Assert.Equal(cached, await service.EnsureThumbnailAsync(@"C:\Cards\a.png", new DateTime(0))
+                .WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.Null(service.TryGetCachedPath(@"c:\cards\a.png", new DateTime(0)));
+            Assert.Null(service.TryGetCachedPath(@"C:\Cards\a.png", new DateTime(1)));
+            Assert.Equal(bytes, File.ReadAllBytes(cached));
+        }
+        finally
+        {
+            File.Delete(cached);
+            Directory.Delete(folder);
+        }
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("null")]

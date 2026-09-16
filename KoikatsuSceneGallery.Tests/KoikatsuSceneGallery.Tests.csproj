@@ -29,6 +29,9 @@
     <Compile Include="..\ViewModels\ImportArtworkAssignment.cs" Link="ViewModels\ImportArtworkAssignment.cs" />
     <Compile Include="..\ViewModels\ImportReviewEditService.cs" Link="ViewModels\ImportReviewEditService.cs" />
     <Compile Include="..\Services\PostMetadataMapper.cs" Link="Services\PostMetadataMapper.cs" />
+    <Compile Include="..\Services\CardGroupingService.cs" Link="Services\CardGroupingService.cs" />
+    <Compile Include="..\Services\ResolveDiagnosticCollector.cs" Link="Services\ResolveDiagnosticCollector.cs" />
+    <Compile Include="..\Services\ResolveDiagnosticResult.cs" Link="Services\ResolveDiagnosticResult.cs" />
     <Compile Include="..\ViewModels\ImportManualAssignmentHistory.cs" Link="ViewModels\ImportManualAssignmentHistory.cs" />
     <Compile Include="..\ViewModels\ImportItemReviewState.cs" Link="ViewModels\ImportItemReviewState.cs" />
     <Compile Include="..\ViewModels\ImportReviewWorkspace.cs" Link="ViewModels\ImportReviewWorkspace.cs" />

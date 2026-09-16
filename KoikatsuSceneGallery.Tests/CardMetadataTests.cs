@@ -215,6 +215,23 @@ public sealed class CardMetadataTests
         Assert.False(CardMetadataQuery.NoteMatches("短髮 IF", []));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("coordinate")]
+    public void CoordinateCsvPreservesSerializedName(string name)
+    {
+        using var dir = new TestDirectory();
+        var path = dir.Write("fallback-must-not-replace-name.png",
+            TestFiles.BinaryCard("【KoiKatuClothes】", "0.0.0", name));
+        var document = CardMetadataReader.TryRead(path)!;
+
+        Assert.Equal(name, document.Summary.Name);
+        var row = CardMetadataExport.ToCsv(document).Split("\r\n")[1];
+        // These fixture fields contain no commas; inspect the reference's fourth column.
+        Assert.Equal("\"" + name + "\"", row.Split(',')[3]);
+    }
+
     [Fact]
     public async Task ExportsCompatibleCsvAndAtomicJson()
     {

@@ -115,15 +115,31 @@ public sealed class CopySuffixTests
     [Theory]
     [InlineData("card (2).png")]
     [InlineData("card(2).png")]
-    [InlineData("card_2.png")]
     [InlineData("card - Copy.png")]
     [InlineData("card - Copy (2).png")]
     [InlineData("card - 複製.png")]
     [InlineData("card - 副本.png")]
     [InlineData("card - コピー.png")]
-    [InlineData("card (1)(2).png")]
     public void EveryCopyMarkerNormalizesToTheSameName(string fileName)
         => Assert.Equal("card.png", CopySuffix.Normalize(fileName));
+
+    // The defect this pattern was rewritten for: a Koikatsu scene name is a
+    // chain of underscore-separated numbers. Treating the last one as a copy
+    // marker, and stripping repeatedly, collapsed every scene card in the
+    // library into one bucket — and one card's import then hashed all of them.
+    [Theory]
+    [InlineData("2026_0910_1547_51_330.png")]
+    [InlineData("2026_0908_1541_53_249.png")]
+    [InlineData("118126644_p39.png")]
+    [InlineData("card_2.png")]
+    public void ANumericUnderscoreSuffixIsNotACopyMarker(string fileName)
+        => Assert.Equal(fileName, CopySuffix.Normalize(fileName));
+
+    // One marker at most, for the same reason: repeated stripping is what ate
+    // its way down a name until nothing distinguishing was left.
+    [Fact]
+    public void OnlyOneMarkerIsStripped()
+        => Assert.Equal("card (1).png", CopySuffix.Normalize("card (1)(2).png"));
 
     [Fact]
     public void ANameWithoutAMarkerIsUnchanged()
@@ -149,6 +165,8 @@ public sealed class CopySuffixTests
         Assert.True(CopySuffix.AreCopiesOfOneName("card(1).png", "card(2).png"));
         Assert.False(CopySuffix.AreCopiesOfOneName("card.png", "card.png"));
         Assert.False(CopySuffix.AreCopiesOfOneName("card.png", "other.png"));
+        Assert.False(CopySuffix.AreCopiesOfOneName(
+            "2026_0910_1547_51_330.png", "2026_0910_1547_51_331.png"));
     }
 
     // The timestamp in a Koikatsu name must survive: it is what makes two

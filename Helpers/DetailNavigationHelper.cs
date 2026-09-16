@@ -9,6 +9,62 @@ namespace KoikatsuSceneGallery.Helpers;
 
 internal static class DetailNavigationHelper
 {
+    // Invoke after the page verifies that it is still active. Keep scheduling,
+    // back navigation and page-specific refresh work in the caller.
+    public static void RefreshAfterReload<TCard>(
+        IEnumerable<TCard> cards,
+        TCard current,
+        Action<TCard> showCard,
+        Action refreshCurrent,
+        Action missingCard)
+        where TCard : CardBase
+    {
+        var refreshed = cards.FirstOrDefault(card => string.Equals(
+            card.FilePath, current.FilePath, StringComparison.OrdinalIgnoreCase));
+        if (refreshed is null)
+        {
+            missingCard();
+            return;
+        }
+
+        if (!ReferenceEquals(refreshed, current))
+            showCard(refreshed);
+        else
+            refreshCurrent();
+    }
+
+    // A page that was entered through an author or a group browses that subset;
+    // otherwise it browses the gallery's visible collection. The choice is the
+    // same on every such page, so only the choice is shared here: the two
+    // collection policies below keep their own missing-item and index rules.
+    public static (bool hasPrev, bool hasNext) GetNavigationState<TCard>(
+        IList<TCard>? scopedCards,
+        AdvancedCollectionView view,
+        TCard? card)
+        where TCard : CardBase
+        => scopedCards is null
+            ? GetNavigationState(view, card)
+            : GetNavigationState(scopedCards, card);
+
+    public static TCard? Navigate<TCard>(
+        IList<TCard>? scopedCards,
+        AdvancedCollectionView view,
+        TCard? currentCard,
+        int direction)
+        where TCard : CardBase
+        => scopedCards is null
+            ? Navigate(view, currentCard, direction)
+            : Navigate(scopedCards, currentCard, direction);
+
+    public static TCard? RandomCard<TCard>(
+        IList<TCard>? scopedCards,
+        AdvancedCollectionView view,
+        TCard? currentCard)
+        where TCard : CardBase
+        => scopedCards is null
+            ? RandomCard(view, currentCard)
+            : RandomCard(scopedCards, currentCard);
+
     public static (bool hasPrev, bool hasNext) GetNavigationState<TCard>(
         IList<TCard> cards,
         TCard? card)
@@ -58,12 +114,7 @@ internal static class DetailNavigationHelper
         if (view.Count == 0) return null;
 
         var currentIndex = currentCard != null ? view.IndexOf(currentCard) : -1;
-        var newIndex = Random.Shared.Next(view.Count);
-        if (view.Count > 1)
-        {
-            while (newIndex == currentIndex)
-                newIndex = Random.Shared.Next(view.Count);
-        }
+        var newIndex = ChooseRandomIndex(view.Count, currentIndex);
 
         return view[newIndex] as TCard;
     }
@@ -74,14 +125,21 @@ internal static class DetailNavigationHelper
         if (cards.Count == 0) return null;
 
         var currentIndex = currentCard is null ? -1 : cards.IndexOf(currentCard);
-        var newIndex = Random.Shared.Next(cards.Count);
-        if (cards.Count > 1)
-        {
-            while (newIndex == currentIndex)
-                newIndex = Random.Shared.Next(cards.Count);
-        }
+        var newIndex = ChooseRandomIndex(cards.Count, currentIndex);
 
         return cards[newIndex];
+    }
+
+    // Both callers supply a nonempty collection that stays stable on the UI thread.
+    private static int ChooseRandomIndex(int count, int currentIndex)
+    {
+        var newIndex = Random.Shared.Next(count);
+        if (count > 1)
+        {
+            while (newIndex == currentIndex)
+                newIndex = Random.Shared.Next(count);
+        }
+        return newIndex;
     }
 
     public static TCard? FindAdjacentOnRemoval<TCard>(AdvancedCollectionView view, TCard card)

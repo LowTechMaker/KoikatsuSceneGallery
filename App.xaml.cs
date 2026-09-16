@@ -267,6 +267,8 @@ public partial class App : Application
                 _characterMetadataService.DisposePersistence),
             new(() => Task.WhenAll(coordinateGalleryViewModel.StopMetadataAsync(), _coordinateMetadataService.StopAsync()),
                 _coordinateMetadataService.DisposePersistence),
+            new(() => Task.WhenAll(galleryViewModel.StopMetadataAsync(), _sceneMetadataService.StopAsync()),
+                _sceneMetadataService.DisposePersistence),
             new(_sceneCardCacheService.StopAsync, _sceneCardCacheService.Dispose)
         ], ex => _logger.LogError("App.MetadataShutdown", ex));
         var closing = false;

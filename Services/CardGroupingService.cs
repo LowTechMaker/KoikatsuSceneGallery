@@ -59,7 +59,7 @@ public static class CardGroupingService
         ShouldUnion(a, b, pHashThreshold, histogramThreshold);
 
     /// <summary>
-    /// Determines if the majority of items in a group are visually related,
+    /// Determines if at least 30% of eligible pairs are visually related,
     /// which means they should be placed in an artwork subfolder.
     /// Returns null if fingerprints are unavailable (caller should fallback).
     /// </summary>
@@ -97,7 +97,7 @@ public static class CardGroupingService
         if (a.PHash is null || b.PHash is null) return false;
 
         bool sameFolder = string.Equals(a.SourceFolder, b.SourceFolder, StringComparison.OrdinalIgnoreCase);
-        int distance = ImageFingerprintService.HammingDistance(a.PHash.Value, b.PHash.Value);
+        int distance = ImageFingerprintComparison.HammingDistance(a.PHash.Value, b.PHash.Value);
 
         int effectiveThreshold = sameFolder ? BorderlinePHashHigh : pHashThreshold;
         float effectiveCorrelation = sameFolder ? LenientHistogramCorrelation : histogramThreshold;
@@ -107,7 +107,7 @@ public static class CardGroupingService
         if (a.ColorHistogram is null || b.ColorHistogram is null)
             return distance <= effectiveThreshold;
 
-        float corr = ImageFingerprintService.HistogramCorrelation(a.ColorHistogram, b.ColorHistogram);
+        float corr = ImageFingerprintComparison.HistogramCorrelation(a.ColorHistogram, b.ColorHistogram);
         return corr >= effectiveCorrelation;
     }
 

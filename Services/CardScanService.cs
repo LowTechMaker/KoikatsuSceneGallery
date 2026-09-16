@@ -32,19 +32,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         {
             var cards = new ConcurrentBag<TCard>();
             var options = CreateScanOptions(cancellationToken);
-            foreach (var folder in folderPaths)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!Directory.Exists(folder)) continue;
-
-                Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var card = TryCreateCard(file);
-                    if (card != null)
-                        cards.Add(card);
-                });
-            }
+            ScanFolders(folderPaths, options, cards.Add);
             return cards.ToList();
         }, cancellationToken);
     }
@@ -77,18 +65,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                     onBatch(ready);
             }
 
-            foreach (var folder in folderPaths)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!Directory.Exists(folder)) continue;
-                Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var card = TryCreateCard(file);
-                    if (card != null)
-                        Accumulate(card);
-                });
-            }
+            ScanFolders(folderPaths, options, Accumulate);
 
             if (batch.Count > 0)
             {
@@ -96,6 +73,24 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                 onBatch(batch);
             }
         }, cancellationToken);
+    }
+
+    // Synchronous worker core: callers retain their own result collection/publication.
+    private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept)
+    {
+        var cancellationToken = options.CancellationToken;
+        foreach (var folder in folderPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Directory.Exists(folder)) continue;
+            Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var card = TryCreateCard(file);
+                if (card != null)
+                    accept(card);
+            });
+        }
     }
 
     private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)

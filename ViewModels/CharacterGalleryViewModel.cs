@@ -39,10 +39,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     public partial CardSourceFilterOption SourceFilter { get; set; } = CardSourceFilterOption.All;
 
     private bool HasSourceFilter => SourceFilter != CardSourceFilterOption.All;
-    private bool HasResolutionFilter => _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
-    private bool _resolutionFilterEnabled;
-    private HashSet<string> _allowedResolutions = [];
 
     private readonly Dictionary<string, CharacterCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
     // Case-insensitive to match _cardIndex above; safe only because removal
@@ -50,8 +47,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     private readonly Dictionary<string, List<CharacterCard>> _versionIndex =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly MetadataScanCoordinator<CharacterCard, CharacterMetadata> _metadataScan;
-    private readonly GalleryMetadataRefresh _metadataRefresh;
+    private readonly GalleryMetadataSession<CharacterCard, CharacterMetadata> _metadata;
 
     public event Action<string>? VersionIndexChanged;
 
@@ -65,17 +61,20 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _metadataService = metadataService;
         _settingsViewModel = settingsViewModel;
         _logger = logger;
-        _metadataRefresh = new(_dispatcherQueue, RefreshMetadataFilter);
-        _metadataScan = new(
-            card => card.MetadataLoaded,
-            _metadataService.TryGetCached,
-            _metadataService.ParseAndCache,
-            (card, meta) => { ApplyMetadata(card, meta); UpdateVersionIndex(card); },
-            action => _dispatcherQueue.TryEnqueue(() => action()),
-            (card, error) => _logger.LogError(
-                error is OperationCanceledException ? "CharacterGallery.ParseMetadataCanceled" : "CharacterGallery.ParseMetadata",
-                error, card.FilePath));
-        _metadataScan.PendingCountChanged += count => PendingMetadataCount = count;
+        _metadata = new(
+            new MetadataScanCoordinator<CharacterCard, CharacterMetadata>(
+                card => card.MetadataLoaded,
+                _metadataService.TryGetCached,
+                _metadataService.ParseAndCache,
+                (card, meta) => { ApplyMetadata(card, meta); UpdateVersionIndex(card); },
+                action => _dispatcherQueue.TryEnqueue(() => action()),
+                (card, error) => _logger.LogError(
+                    error is OperationCanceledException ? "CharacterGallery.ParseMetadataCanceled" : "CharacterGallery.ParseMetadata",
+                    error, card.FilePath)),
+            new GalleryMetadataRefresh(_dispatcherQueue, RefreshMetadataFilter),
+            _logger,
+            "CharacterGallery");
+        _metadata.PendingCountChanged += count => PendingMetadataCount = count;
         MetadataFilters.PropertyChanged += (_, _) =>
         {
             if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
@@ -86,7 +85,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         _cardService.CardRemoved += OnCardRemoved;
 
         _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
-        _settingsViewModel.CharacterResolutionFilterChanged += OnCharacterResolutionFilterChanged;
+        _settingsViewModel.CharacterResolutionFilterChanged += OnResolutionFilterChanged;
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -115,43 +114,17 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             _cardIndex.Clear();
             _versionIndex.Clear();
 
-            await _cardService.ScanFoldersAsync(paths, batch =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                PublishScannedBatch(() =>
-                {
-                    foreach (var card in batch)
-                    {
-                        if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                        Cards.Add(card);
-                    }
-                }, cancellationToken);
-            }, cancellationToken);
+            await _cardService.ScanFoldersAsync(paths,
+                batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
             StartMetadataScan();
-        }, _logger, "CharacterGallery.LoadCanceled", () => _metadataScan.Cancel());
+        }, _logger, "CharacterGallery.LoadCanceled", _metadata.CancelScan);
 
-    private bool _metadataStopping;
+    internal Task StopMetadataAsync() => _metadata.StopAsync();
 
-    internal Task StopMetadataAsync()
-    {
-        _metadataStopping = true;
-        _metadataRefresh.Stop();
-        return _metadataScan.StopAsync(CancellationToken.None);
-    }
-
-    private void StartMetadataScan()
-    {
-        if (_metadataStopping) return;
-        _metadataScan.Start(
-                Cards,
-                ApplyFilter,
-                StartMetadataRefreshTimer,
-                OnMetadataScanCompleted)
-            .Observe(_logger, "CharacterGallery.ParseMetadata");
-    }
+    private void StartMetadataScan() => _metadata.Start(Cards, ApplyFilter);
 
     private static void ApplyMetadata(CharacterCard card, CharacterMetadata meta)
     {
@@ -311,10 +284,6 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
                             && pair.Value.Any(card => card.Author?.Key == author.Key)))
             .OrderBy(entry => entry.Key, StringComparer.CurrentCulture)];
 
-    private void StartMetadataRefreshTimer() => _metadataRefresh.Start();
-
-    private void OnMetadataScanCompleted() => _metadataRefresh.Complete();
-
     public void RequestThumbnail(
         CharacterCard card,
         ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
@@ -329,22 +298,8 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private void OnCharacterResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
-    {
-        _dispatcherQueue.TryEnqueue(() =>
-        {
-            _resolutionFilterEnabled = enabled;
-            _allowedResolutions = resolutions;
-            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
-            ApplyFilter();
-        });
-    }
 
-    public CharacterCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as CharacterCard;
-    }
+    public CharacterCard? GetRandomCard() => GetRandomVisibleCard<CharacterCard>();
 
     public override bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
         => card is CharacterCard character && BaseFilterPasses(character, keywords);
@@ -370,8 +325,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             card.MetadataLoaded ? card.CharacterName : null, terms, card.VersionNote)
             || !MetadataFilters.Matches(card.MetadataLoaded ? card.MetadataSummary : null)) return false;
 
-        if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
-            && !_allowedResolutions.Contains(card.Resolution))
+        if (HasResolutionFilter && !_allowedResolutions.Contains(card.Resolution))
             return false;
 
         if (SourceFilter != CardSourceFilterOption.All)
@@ -395,7 +349,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         if (TryApplyShuffleFilter()) return;
 
         var hasSearch = _searchKeywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+        var filterRes = HasResolutionFilter;
         var hasSourceFilter = SourceFilter != CardSourceFilterOption.All;
 
         if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter
@@ -429,12 +383,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         });
     }
 
-    private void QueueMetadata(CharacterCard card)
-    {
-        if (_metadataStopping) return;
-        _metadataScan.Queue(card, RefreshMetadataFilter, OnMetadataScanCompleted)
-            .Observe(_logger, "CharacterGallery.ParseAddedCardMetadata");
-    }
+    private void QueueMetadata(CharacterCard card) => _metadata.Queue(card, RefreshMetadataFilter);
 
     private void RefreshMetadataFilter()
     {
@@ -456,16 +405,12 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
 
     public void Dispose()
     {
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _metadataScan.Dispose();
-        _metadataRefresh.Dispose();
+        DisposeWorkCancellationSources();
+        _metadata.Dispose();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
-        _settingsViewModel.CharacterResolutionFilterChanged -= OnCharacterResolutionFilterChanged;
+        _settingsViewModel.CharacterResolutionFilterChanged -= OnResolutionFilterChanged;
         GC.SuppressFinalize(this);
     }
 
@@ -479,7 +424,6 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
     public override void CancelPendingWork()
     {
         base.CancelPendingWork();
-        _metadataScan.Cancel(resetCount: true);
-        _metadataRefresh.Stop();
+        _metadata.Suspend();
     }
 }

@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using KoikatsuSceneGallery.Models;
 using SceneGallery.PluginCommon;
@@ -65,7 +63,7 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     public bool TryGetCached(TCard card, out TMetadata metadata)
     {
         _operations.TryRun(EnsureLoaded);
-        var key = ComputeCacheKey(card.FilePath, card.DateModified);
+        var key = FileVersionCacheKey.Compute(card.FilePath, card.DateModified);
         return _cache.TryGetValue(key, out metadata!);
     }
 
@@ -80,7 +78,7 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     private TMetadata ParseAndCacheCore(TCard card, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var key = ComputeCacheKey(card.FilePath, card.DateModified);
+        var key = FileVersionCacheKey.Compute(card.FilePath, card.DateModified);
         if (_cache.TryGetValue(key, out var cached))
             return cached;
 
@@ -95,7 +93,7 @@ public abstract class MetadataCacheService<TCard, TMetadata>
     {
         _operations.TryRun(() =>
         {
-            var key = ComputeCacheKey(card.FilePath, card.DateModified);
+            var key = FileVersionCacheKey.Compute(card.FilePath, card.DateModified);
             if (_cache.TryRemove(key, out _))
                 ScheduleSave();
         });
@@ -111,12 +109,5 @@ public abstract class MetadataCacheService<TCard, TMetadata>
         if (!StopAsync().IsCompletedSuccessfully)
             throw new InvalidOperationException("Metadata operations must drain before persistence disposal.");
         _persistence.Dispose();
-    }
-
-    private static string ComputeCacheKey(string filePath, DateTime dateModified)
-    {
-        var input = $"{filePath}|{dateModified.Ticks}";
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(hash)[..16];
     }
 }

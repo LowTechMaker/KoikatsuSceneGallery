@@ -29,6 +29,7 @@
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <InternalsVisibleTo Include="KoikatsuSceneGallery.IntegrationTests" />
+    <InternalsVisibleTo Include="KoikatsuSceneGallery.XamlTestHost" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />

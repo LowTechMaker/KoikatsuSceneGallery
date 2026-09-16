@@ -1,6 +1,7 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using KoikatsuSceneGallery.Models;
+
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -32,18 +33,13 @@ internal sealed class LocalSourceStore
         WriteIndented = true,
     };
 
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteLocks =
-        new(OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal);
-
     public string GetDocumentPath(string sourceDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDirectory);
 
         return Path.Combine(
             Path.GetFullPath(sourceDirectory),
-            PostMetadataStore.MetadataDirectoryName,
+            LibraryMetadataDirectory.Name,
             DocumentFileName);
     }
 
@@ -64,7 +60,7 @@ internal sealed class LocalSourceStore
 
         var path = Path.GetFullPath(Path.Combine(
             Path.GetFullPath(sourceDirectory),
-            PostMetadataStore.MetadataDirectoryName,
+            LibraryMetadataDirectory.Name,
             fileName));
 
         return File.Exists(path) ? path : null;
@@ -96,12 +92,12 @@ internal sealed class LocalSourceStore
 
         var metadataDirectory = Path.Combine(
             Path.GetFullPath(sourceDirectory),
-            PostMetadataStore.MetadataDirectoryName);
+            LibraryMetadataDirectory.Name);
         var fileName = AvatarBaseName + extension.ToLowerInvariant();
         var destination = Path.Combine(metadataDirectory, fileName);
 
         Directory.CreateDirectory(metadataDirectory);
-        MarkHiddenOnWindows(metadataDirectory);
+        LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
 
         var temporaryPath = $"{destination}.{Guid.NewGuid():N}.tmp";
         try
@@ -137,7 +133,7 @@ internal sealed class LocalSourceStore
         => DeleteOtherAvatarFiles(
             Path.Combine(
                 Path.GetFullPath(sourceDirectory),
-                PostMetadataStore.MetadataDirectoryName),
+                LibraryMetadataDirectory.Name),
             keep: null);
 
     private static void DeleteOtherAvatarFiles(string metadataDirectory, string? keep)
@@ -179,14 +175,14 @@ internal sealed class LocalSourceStore
             throw new ArgumentException("The local source document is invalid.", nameof(document));
 
         var path = GetDocumentPath(sourceDirectory);
-        var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
+        var writeLock = PathWriteLock.For(path);
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
             var metadataDirectory = Path.GetDirectoryName(path)!;
             Directory.CreateDirectory(metadataDirectory);
-            MarkHiddenOnWindows(metadataDirectory);
+            LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
 
             await WriteDocumentAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
         }
@@ -233,41 +229,11 @@ internal sealed class LocalSourceStore
         return document;
     }
 
-    private static async Task WriteDocumentAtomicallyAsync(
+    private static Task WriteDocumentAtomicallyAsync(
         string path,
         LocalSourceDocument document,
         CancellationToken cancellationToken)
-    {
-        string? temporaryPath = null;
-        try
-        {
-            temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
-            await using (var stream = new FileStream(
-                temporaryPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 4096,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    document,
-                    JsonOptions,
-                    cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporaryPath, path, overwrite: true);
-            temporaryPath = null;
-        }
-        finally
-        {
-            if (temporaryPath is not null)
-                File.Delete(temporaryPath);
-        }
-    }
+        => AtomicJsonFile.WriteAsync(path, document, JsonOptions, cancellationToken);
 
     private static LocalSourceDocument? ReadFile(string path)
     {
@@ -303,13 +269,4 @@ internal sealed class LocalSourceStore
             && document.Aliases is not null
             && document.Aliases.All(static alias => !string.IsNullOrWhiteSpace(alias));
 
-    private static void MarkHiddenOnWindows(string path)
-    {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var attributes = File.GetAttributes(path);
-        if ((attributes & FileAttributes.Hidden) == 0)
-            File.SetAttributes(path, attributes | FileAttributes.Hidden);
-    }
 }

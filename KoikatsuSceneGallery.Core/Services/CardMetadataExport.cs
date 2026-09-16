@@ -19,10 +19,16 @@ public static class CardMetadataExport
     {
         var s = document.Summary;
         string Quote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
+        // A coordinate keeps the header name as it stands, empty included; only a
+        // character name falls back to the file name.
+        bool isClothes = s.CardType == "KoikatuClothes";
+        string name = isClothes
+            ? s.Name ?? ""
+            : string.IsNullOrEmpty(s.Name) ? Path.GetFileNameWithoutExtension(document.FileName) : s.Name;
         string[] values = [document.FileName, FormatSize(document.FileSize), s.CardType,
-            string.IsNullOrEmpty(s.Name) ? Path.GetFileNameWithoutExtension(document.FileName) : s.Name,
+            name,
             s.Sex switch { 0 => "Male", 1 => "Female", _ => "Unknown" },
-            s.CardType == "KoikatuClothes" ? "" : PersonalityName(s.PersonalityId, s.Game),
+            isClothes ? "" : PersonalityName(s.PersonalityId, s.Game),
             s.UserId ?? "", s.DataId ?? "", s.Version ?? "",
             s.PluginGuids.Length.ToString(CultureInfo.InvariantCulture), FormatSize(s.ExtendedSize), "", "", ""];
         return string.Join(",", CsvHeader.Split(',').Select(Quote)) + "\r\n" + string.Join(",", values.Select(Quote)) + "\r\n\r\n";

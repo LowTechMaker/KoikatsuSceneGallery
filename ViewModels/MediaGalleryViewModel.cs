@@ -54,18 +54,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
             Cards.Clear();
             _cardIndex.Clear();
 
-            await _cardService.ScanFoldersAsync(paths, batch =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                PublishScannedBatch(() =>
-                {
-                    foreach (var card in batch)
-                    {
-                        if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                        Cards.Add(card);
-                    }
-                }, cancellationToken);
-            }, cancellationToken);
+            await _cardService.ScanFoldersAsync(paths,
+                batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
@@ -85,11 +75,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         ReleaseThumbnailRequest(card.FilePath);
     }
 
-    public MediaCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as MediaCard;
-    }
+    public MediaCard? GetRandomCard() => GetRandomVisibleCard<MediaCard>();
 
     private bool BaseFilterPasses(MediaCard card)
     {
@@ -144,10 +130,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
+        DisposeWorkCancellationSources();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;

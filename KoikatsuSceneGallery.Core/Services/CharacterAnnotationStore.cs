@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using KoikatsuSceneGallery.Models;
 
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 /// <summary>
@@ -30,11 +32,6 @@ internal class CharacterAnnotationStore
         WriteIndented = true,
     };
 
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteLocks =
-        new(OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal);
-
     private static readonly IReadOnlyDictionary<string, CharacterAnnotationEntry> Empty =
         new Dictionary<string, CharacterAnnotationEntry>(StringComparer.OrdinalIgnoreCase);
 
@@ -47,7 +44,7 @@ internal class CharacterAnnotationStore
 
         return Path.Combine(
             Path.GetFullPath(directory),
-            PostMetadataStore.MetadataDirectoryName,
+            LibraryMetadataDirectory.Name,
             DocumentFileName);
     }
 
@@ -88,7 +85,7 @@ internal class CharacterAnnotationStore
 
         var fileName = Path.GetFileName(filePath);
         var documentPath = GetDocumentPath(directory);
-        var writeLock = WriteLocks.GetOrAdd(documentPath, static _ => new SemaphoreSlim(1, 1));
+        var writeLock = PathWriteLock.For(documentPath);
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
@@ -130,7 +127,7 @@ internal class CharacterAnnotationStore
 
             var metadataDirectory = Path.GetDirectoryName(documentPath)!;
             Directory.CreateDirectory(metadataDirectory);
-            MarkHiddenOnWindows(metadataDirectory);
+            LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
             await WriteDocumentAtomicallyAsync(documentPath, document, cancellationToken).ConfigureAwait(false);
 
             // The app is the only writer, so the cache can be updated in place
@@ -236,49 +233,10 @@ internal class CharacterAnnotationStore
         }
     }
 
-    private static async Task WriteDocumentAtomicallyAsync(
+    private static Task WriteDocumentAtomicallyAsync(
         string path,
         CharacterAnnotationDocument document,
         CancellationToken cancellationToken)
-    {
-        string? temporaryPath = null;
-        try
-        {
-            temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
-            await using (var stream = new FileStream(
-                temporaryPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 4096,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    document,
-                    JsonOptions,
-                    cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                stream.Flush(flushToDisk: true);
-            }
+        => AtomicJsonFile.WriteAsync(path, document, JsonOptions, cancellationToken);
 
-            File.Move(temporaryPath, path, overwrite: true);
-            temporaryPath = null;
-        }
-        finally
-        {
-            if (temporaryPath is not null)
-                File.Delete(temporaryPath);
-        }
-    }
-
-    private static void MarkHiddenOnWindows(string path)
-    {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var attributes = File.GetAttributes(path);
-        if ((attributes & FileAttributes.Hidden) == 0)
-            File.SetAttributes(path, attributes | FileAttributes.Hidden);
-    }
 }

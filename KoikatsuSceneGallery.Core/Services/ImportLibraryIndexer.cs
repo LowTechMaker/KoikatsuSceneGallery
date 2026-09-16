@@ -32,6 +32,17 @@ internal sealed record ImportLibraryIndexResult(
 internal sealed class ImportLibraryIndexer(
     LibraryFileCache cache, Action<string, Exception, string?> logError)
 {
+    /// <summary>
+    /// How many files may share one copy-normalized name before the payload
+    /// comparison is abandoned for that name.
+    /// </summary>
+    /// <remarks>
+    /// A file the shell copied a few times gives two or three. Anything much
+    /// larger means the normalization was wrong, and the cost of finding out by
+    /// reading is unbounded — every file in the bucket, hashed, for one card.
+    /// </remarks>
+    private const int MaxCopyBucket = 8;
+
     private readonly LibraryFileCache _cache = cache;
     private readonly Action<string, Exception, string?> _logError = logError;
 
@@ -164,10 +175,22 @@ internal sealed class ImportLibraryIndexer(
             filesByNormalizedName ??= BuildNormalizedNameIndex(existingFilesByName);
             var normalized = CopySuffix.Normalize(item.FileName);
             if (normalized.Length == 0
-                || !filesByNormalizedName.TryGetValue(normalized, out var relatives))
+                || !filesByNormalizedName.TryGetValue(normalized, out var relatives)
+                || relatives.Count > MaxCopyBucket)
             {
+                // A bucket this large is not a file copied a few times; it means
+                // the name normalized into something many unrelated files share.
+                // Reading them all would cost the whole library, so the pass is
+                // skipped rather than trusted.
                 continue;
             }
+
+            // Hashed once for the item, not once per candidate: the source is
+            // the same file every time round the loop. Deferred until a
+            // candidate survives the skip guards below, because a bucket that
+            // holds only the exact-name entries already compared above would
+            // otherwise cost a full read of the source for nothing.
+            string? sourceHash = null;
 
             foreach (var candidate in relatives)
             {
@@ -182,13 +205,17 @@ internal sealed class ImportLibraryIndexer(
                     continue;
                 }
 
+                sourceHash ??= CardPayloadHash.TryCompute(item.SourceFilePath, cancellationToken);
+                if (sourceHash is null)
+                    break;
+
                 try
                 {
                     totalCandidatesCompared++;
-                    if (CardPayloadHash.AreSameCard(
-                            item.SourceFilePath,
-                            candidate,
-                            cancellationToken))
+                    if (string.Equals(
+                            sourceHash,
+                            CardPayloadHash.TryCompute(candidate, cancellationToken),
+                            StringComparison.Ordinal))
                     {
                         actualIdenticalDuplicates++;
                         identicalSourcePaths.Add(item.SourceFilePath);

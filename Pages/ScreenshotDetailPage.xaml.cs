@@ -68,21 +68,11 @@ public sealed partial class ScreenshotDetailPage : Page
             if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
                 return;
 
-            var refreshed = App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").Cards
-                .FirstOrDefault(card => string.Equals(
-                    card.FilePath,
-                    current.FilePath,
-                    StringComparison.OrdinalIgnoreCase));
-            if (refreshed is null)
-            {
-                if (Frame.CanGoBack) Frame.GoBack();
-                return;
-            }
-
-            if (!ReferenceEquals(refreshed, current))
-                ShowCard(refreshed);
-            else
-                UpdateNavigationButtons();
+            DetailNavigationHelper.RefreshAfterReload(
+                App.Services.GetRequiredService<MediaGalleryViewModel>("screenshots").Cards, current,
+                ShowCard,
+                UpdateNavigationButtons,
+                () => { if (Frame.CanGoBack) Frame.GoBack(); });
         });
     }
 

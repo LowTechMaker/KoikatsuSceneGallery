@@ -1,3 +1,5 @@
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 /// <summary>
@@ -24,9 +26,9 @@ internal sealed class ImportTransactionExecutor
 
         var receipts = new List<ImportItemTransactionReceipt>(plans.Count);
         var duplicateReceiptIndexes = new List<(int Index, bool Keep)>();
-        var createdDestinationDirectories = new HashSet<string>(PathComparer);
+        var createdDestinationDirectories = new HashSet<string>(PathComparison.Comparer);
         var warnings = new List<ImportExecutionWarning>();
-        var sourceDirectories = new HashSet<string>(PathComparer);
+        var sourceDirectories = new HashSet<string>(PathComparison.Comparer);
         var completedCount = 0;
         var successCount = 0;
         var failedCount = 0;
@@ -647,7 +649,4 @@ internal sealed class ImportTransactionExecutor
         int FailedCount,
         int ManualRecoveryRequiredCount);
 
-    private static StringComparer PathComparer => OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
 }

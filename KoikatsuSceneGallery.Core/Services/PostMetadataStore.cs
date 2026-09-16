@@ -1,6 +1,7 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using KoikatsuSceneGallery.Models;
+
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -26,7 +27,7 @@ internal enum SidecarUnbindResult
 /// </summary>
 internal sealed class PostMetadataStore
 {
-    public const string MetadataDirectoryName = ".scenegallery";
+    public const string MetadataDirectoryName = LibraryMetadataDirectory.Name;
     public const string FetchedDataDirectoryName = "fetched_data";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -34,11 +35,6 @@ internal sealed class PostMetadataStore
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
     };
-
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteLocks =
-        new(OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal);
 
     public string GetSidecarPath(
         string authorDirectory,
@@ -88,7 +84,7 @@ internal sealed class PostMetadataStore
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
         var path = GetSidecarPath(authorDirectory, providerId, artworkId);
-        var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
+        var writeLock = PathWriteLock.For(path);
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
@@ -181,7 +177,7 @@ internal sealed class PostMetadataStore
             authorDirectory,
             document.ProviderId,
             document.ArtworkId);
-        var writeLock = WriteLocks.GetOrAdd(path, static _ => new SemaphoreSlim(1, 1));
+        var writeLock = PathWriteLock.For(path);
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
@@ -233,7 +229,7 @@ internal sealed class PostMetadataStore
                 metadataDirectory,
                 FetchedDataDirectoryName);
             Directory.CreateDirectory(fetchedDataDirectory);
-            MarkHiddenOnWindows(metadataDirectory);
+            LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
 
             await WriteDocumentAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
             return new SidecarWriteReceipt(
@@ -250,41 +246,11 @@ internal sealed class PostMetadataStore
         }
     }
 
-    private static async Task WriteDocumentAtomicallyAsync(
+    private static Task WriteDocumentAtomicallyAsync(
         string path,
         PostMetadataDocument document,
         CancellationToken cancellationToken)
-    {
-        string? temporaryPath = null;
-        try
-        {
-            temporaryPath = $"{path}.{Guid.NewGuid():N}.tmp";
-            await using (var stream = new FileStream(
-                temporaryPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 4096,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    document,
-                    JsonOptions,
-                    cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporaryPath, path, overwrite: true);
-            temporaryPath = null;
-        }
-        finally
-        {
-            if (temporaryPath is not null)
-                File.Delete(temporaryPath);
-        }
-    }
+        => AtomicJsonFile.WriteAsync(path, document, JsonOptions, cancellationToken);
 
     private static PostMetadataDocument? ReadFile(string path)
     {
@@ -360,13 +326,4 @@ internal sealed class PostMetadataStore
                 tag is not null && !string.IsNullOrWhiteSpace(tag.Name))
             && document.FetchedAt != default;
 
-    private static void MarkHiddenOnWindows(string path)
-    {
-        if (!OperatingSystem.IsWindows())
-            return;
-
-        var attributes = File.GetAttributes(path);
-        if ((attributes & FileAttributes.Hidden) == 0)
-            File.SetAttributes(path, attributes | FileAttributes.Hidden);
-    }
 }

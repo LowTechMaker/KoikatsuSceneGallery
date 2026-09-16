@@ -491,10 +491,59 @@ public sealed class ImportService
                 var current = new ObservableCollection<ImportItem>(snapshot.Items.Where(items.Contains));
                 ResolveDestinations(current, config, libraryIndex.IdenticalSourcePaths,
                     libraryIndex.FolderIndex, threshold, visual, diagnostics);
-                return diagnostics.ToResult(backgroundStopwatch.ElapsedMilliseconds,
+                var result = diagnostics.ToResult(backgroundStopwatch.ElapsedMilliseconds,
                     queueStopwatch.ElapsedMilliseconds, libraryIndex);
+                RecordSlowResolution(result, snapshot.Sources.Length);
+                return result;
             };
         }, enqueue, debounce, ct);
+
+    /// <summary>How long a resolution pass may take before it is worth recording.</summary>
+    private const long SlowResolutionMs = 750;
+
+    /// <summary>
+    /// Records the timing of a resolution pass that was slow, or that had to
+    /// rebuild the library index.
+    /// </summary>
+    /// <remarks>
+    /// The breakdown has always been collected and always been discarded, which
+    /// left "the import sometimes takes a long time, and not in proportion to
+    /// the batch" impossible to answer. The library index is the suspect: it is
+    /// one snapshot keyed by the root set, so the first import after launch —
+    /// and any import after the index is invalidated — walks every library root
+    /// recursively, however few cards are being imported.
+    ///
+    /// Only slow or rebuilding passes are recorded. The review page re-resolves
+    /// on every edit, and logging each one would bury everything else.
+    ///
+    /// The decision is made here, on the UI thread that commits the pass, but
+    /// the write is handed to the thread pool: the log is an append under a
+    /// global lock, and a diagnostic must not add blocking file I/O to the
+    /// publication the user is waiting on.
+    /// </remarks>
+    private void RecordSlowResolution(ResolveDiagnosticResult result, int sourceCount)
+    {
+        var rebuiltIndex = result.BgLibraryScanAndCandidateIndexElapsedMs > 0;
+        var total = result.BackgroundIndexElapsedMs + result.UiQueueDelayMs
+            + result.UiArtworkDirectoryLookupElapsedMs + result.UiPropertyAssignmentElapsedMs;
+        if (!rebuiltIndex && total < SlowResolutionMs)
+            return;
+
+        var message =
+                $"cards={sourceCount} total={total}ms background={result.BackgroundIndexElapsedMs}ms "
+                + $"libraryScan={result.BgLibraryScanAndCandidateIndexElapsedMs}ms"
+                + $"{(rebuiltIndex ? " (rebuilt)" : "")} "
+                + $"byteCompare={result.BgByteComparisonElapsedMs}ms "
+                + $"folderIndex={result.BgFolderIndexElapsedMs}ms "
+                + $"uiQueue={result.UiQueueDelayMs}ms "
+                + $"artworkLookup={result.UiArtworkDirectoryLookupElapsedMs}ms "
+                + $"assign={result.UiPropertyAssignmentElapsedMs}ms "
+                + $"compared={result.TotalCandidatesCompared} "
+                + $"duplicates={result.ActualIdenticalDuplicates} "
+                + $"mismatches={result.ActualContentMismatches}";
+
+        _ = Task.Run(() => _logger.LogError("Import.SlowResolution", new TimeoutException(message)));
+    }
 
     public void CancelPendingResolution() => _resolution.CancelAll();
 
@@ -542,6 +591,10 @@ public sealed class ImportService
         ResolveDiagnosticCollector? diagnostics = null)
     {
         var subfolder = config.ImportSubfolder.Trim();
+        // Invariant across the whole pass: materialized once instead of being
+        // re-evaluated per root inside the fallback lookup, for every item.
+        var providerScopes = _importProviders.Select(p => GetProviderScope(p.ProviderId)).ToArray();
+        var gameVersionFolderNames = GetGameVersionFolderNames(config);
 
         foreach (var item in items)
         {
@@ -570,49 +623,16 @@ public sealed class ImportService
 
             if (item.AuthorId is not null)
             {
-                foreach (var root in roots)
-                {
-                    var scopeKey = ImportLibraryIndexer.BuildScopeKey(root, scope.Folder, gameVersionFolder, ratingFolder);
-                    if (folderIndex.TryGetValue(scopeKey, out var authorFolders)
-                        && authorFolders.TryGetValue(item.AuthorId, out var existing))
-                    {
-                        targetFolder = existing;
-                        break;
-                    }
-                }
+                targetFolder = ImportAuthorDirectoryLookup.FindExact(
+                    roots, scope.Folder, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
 
                 if (targetFolder is null && item.ArtworkId is null)
                 {
-                    string? matchedProvider = null;
-                    foreach (var root in roots)
-                    {
-                        foreach (var providerScope in _importProviders.Select(p => GetProviderScope(p.ProviderId)))
-                        {
-                            var rf = providerScope.UsesRatingFolders ? ratingFolder : "";
-
-                            var exactKey = ImportLibraryIndexer.BuildScopeKey(root, providerScope.Folder, gameVersionFolder, rf);
-                            if (folderIndex.TryGetValue(exactKey, out var exactFolders)
-                                && exactFolders.TryGetValue(item.AuthorId, out var existing))
-                            {
-                                targetFolder = existing;
-                                break;
-                            }
-
-                            foreach (var gv in GetGameVersionFolderNames(config))
-                            {
-                                if (gv == gameVersionFolder) continue;
-                                var altKey = ImportLibraryIndexer.BuildScopeKey(root, providerScope.Folder, gv, rf);
-                                if (folderIndex.TryGetValue(altKey, out var altFolders)
-                                    && altFolders.ContainsKey(item.AuthorId))
-                                {
-                                    matchedProvider = providerScope.Folder;
-                                    break;
-                                }
-                            }
-                            if (matchedProvider is not null) break;
-                        }
-                        if (targetFolder is not null || matchedProvider is not null) break;
-                    }
+                    var match = ImportAuthorDirectoryLookup.FindFallback(
+                        roots, providerScopes,
+                        gameVersionFolderNames, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
+                    targetFolder = match.Directory;
+                    var matchedProvider = match.ProviderFolder;
 
                     if (targetFolder is null && matchedProvider is not null && item.AuthorName is not null)
                     {
@@ -899,58 +919,6 @@ public sealed class ImportService
             diagnostics.StatusTransitionsToAlreadyInLibrary++;
     }
 
-    private sealed class ResolveDiagnosticCollector
-    {
-        private long _artworkDirectoryLookupElapsedTicks;
-        private long _propertyAssignmentElapsedTicks;
-
-        public int DestinationPathAssignments { get; set; }
-        public int StatusTransitionsToAlreadyInLibrary { get; set; }
-
-        public T MeasureArtworkDirectoryLookup<T>(Func<T> operation)
-        {
-            var startedAt = Stopwatch.GetTimestamp();
-            try
-            {
-                return operation();
-            }
-            finally
-            {
-                _artworkDirectoryLookupElapsedTicks += Stopwatch.GetTimestamp() - startedAt;
-            }
-        }
-
-        public void MeasurePropertyAssignment(Action operation)
-        {
-            var startedAt = Stopwatch.GetTimestamp();
-            try
-            {
-                operation();
-            }
-            finally
-            {
-                _propertyAssignmentElapsedTicks += Stopwatch.GetTimestamp() - startedAt;
-            }
-        }
-
-        public ResolveDiagnosticResult ToResult(
-            long backgroundIndexElapsedMs,
-            long uiQueueDelayMs,
-            ImportLibraryIndexResult libraryIndex)
-            => new(
-                backgroundIndexElapsedMs,
-                libraryIndex.LibraryScanAndCandidateIndexElapsedMs,
-                libraryIndex.ByteComparisonElapsedMs,
-                libraryIndex.FolderIndexElapsedMs,
-                libraryIndex.TotalCandidatesCompared,
-                libraryIndex.ActualIdenticalDuplicates,
-                libraryIndex.ActualContentMismatches,
-                uiQueueDelayMs,
-                (long)Stopwatch.GetElapsedTime(0, _artworkDirectoryLookupElapsedTicks).TotalMilliseconds,
-                (long)Stopwatch.GetElapsedTime(0, _propertyAssignmentElapsedTicks).TotalMilliseconds,
-                DestinationPathAssignments,
-                StatusTransitionsToAlreadyInLibrary);
-    }
 
     private string? FindArtworkDirectory(string authorDirectory, ArtworkId artworkId)
     {
@@ -1011,9 +979,7 @@ public sealed class ImportService
             && item.DestinationPath is not null
             && !Path.GetDirectoryName(item.DestinationPath)!.Equals(
                 item.AuthorDirectoryPath,
-                OperatingSystem.IsWindows()
-                    ? StringComparison.OrdinalIgnoreCase
-                    : StringComparison.Ordinal);
+                PathComparison.Comparison);
 
     private static string BuildArtworkGroupKey(
         string authorDirectory,

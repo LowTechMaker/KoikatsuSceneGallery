@@ -146,7 +146,7 @@ internal static class LocalSourceEditor
                 .Take(MaxCandidates)
                 .Select(path => new Candidate(path, Path.GetFileNameWithoutExtension(path)))
                 .ToArray();
-            if (await PickAsync(host, form, "LocalSources_Edit_PickCardTitle", candidates)
+            if (await PickAsync(dialog, host, form, "LocalSources_Edit_PickCardTitle", candidates)
                 .ConfigureAwait(true) is { } picked)
             {
                 Choose(picked, clearing: false);
@@ -159,7 +159,7 @@ internal static class LocalSourceEditor
                 .Take(MaxCandidates)
                 .Select(author => new Candidate(author.AvatarPath, author.Name))
                 .ToArray();
-            if (await PickAsync(host, form, "LocalSources_Edit_PickAuthorTitle", candidates)
+            if (await PickAsync(dialog, host, form, "LocalSources_Edit_PickAuthorTitle", candidates)
                 .ConfigureAwait(true) is { } picked)
             {
                 Choose(picked, clearing: false);
@@ -186,15 +186,24 @@ internal static class LocalSourceEditor
 
     /// <summary>
     /// Shows the candidates in place of <paramref name="form"/> and returns the
-    /// chosen path, or null when the user went back.
+    /// chosen path, or null when the user went back or closed the dialog.
     /// </summary>
+    /// <remarks>
+    /// The dialog closing has to complete the wait as well. Its own buttons stay
+    /// live while the candidates are showing, so a picker that only listened for
+    /// a click or the back button left this task awaiting forever once the
+    /// dialog was gone — holding every decoded candidate thumbnail with it.
+    /// </remarks>
     private static async Task<string?> PickAsync(
+        ContentDialog dialog,
         ContentControl host,
         UIElement form,
         string titleKey,
         IReadOnlyList<Candidate> candidates)
     {
         var completion = new TaskCompletionSource<string?>();
+        void Closed(ContentDialog _, ContentDialogClosedEventArgs __) => completion.TrySetResult(null);
+        dialog.Closed += Closed;
         var grid = new GridView
         {
             SelectionMode = ListViewSelectionMode.None,
@@ -228,6 +237,7 @@ internal static class LocalSourceEditor
         }
         finally
         {
+            dialog.Closed -= Closed;
             host.Content = form;
         }
     }
