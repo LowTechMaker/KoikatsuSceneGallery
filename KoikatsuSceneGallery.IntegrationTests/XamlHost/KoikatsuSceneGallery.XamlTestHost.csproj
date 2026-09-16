@@ -24,7 +24,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\KoikatsuSceneGallery.csproj" AdditionalProperties="Platform=x64;WindowsAppSDKSelfContained=true;SelfContained=true" />
+    <ProjectReference Include="..\..\KoikatsuSceneGallery.csproj" AdditionalProperties="Platform=x64;WindowsAppSDKSelfContained=true" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
     <PackageReference Include="CommunityToolkit.WinUI.Collections" Version="8.2.251219" />
   </ItemGroup>
