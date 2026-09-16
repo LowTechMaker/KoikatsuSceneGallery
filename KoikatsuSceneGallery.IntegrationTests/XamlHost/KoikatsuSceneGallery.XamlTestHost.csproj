@@ -4,6 +4,14 @@
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PlatformTarget>x64</PlatformTarget>
+    <!--
+      Must equal the deployment model of the referenced application: an
+      executable cannot reference one that differs (NETSDK1150 / NETSDK1151).
+      The application resolves this from Properties\PublishProfiles, which
+      .gitignore keeps out of the repository, so a fresh clone and a developer
+      machine disagree unless both sides are pinned. The ProjectReference below
+      therefore states the value instead of inheriting it.
+    -->
     <SelfContained>true</SelfContained>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
@@ -16,7 +24,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\KoikatsuSceneGallery.csproj" AdditionalProperties="Platform=x64;WindowsAppSDKSelfContained=true" />
+    <ProjectReference Include="..\..\KoikatsuSceneGallery.csproj" AdditionalProperties="Platform=x64;WindowsAppSDKSelfContained=true;SelfContained=true" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
     <PackageReference Include="CommunityToolkit.WinUI.Collections" Version="8.2.251219" />
   </ItemGroup>
