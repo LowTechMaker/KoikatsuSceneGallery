@@ -124,6 +124,45 @@ public sealed class PluginService
     public IPluginSettingsProvider? GetSettingsProvider(string pluginName)
         => _settingsProviders.GetValueOrDefault(pluginName);
 
+    /// <summary>
+    /// Registers a provider that ships with the app rather than being loaded
+    /// from a DLL, so it can be constructed with app services.
+    /// </summary>
+    /// <remarks>
+    /// Appended after <see cref="LoadPlugins"/> on purpose. Provider order is
+    /// load order, and callers that need a single fallback provider take the
+    /// first one; a built-in provider must never displace an installed plugin
+    /// there. For the same reason it does not claim
+    /// <see cref="AuthorProvider"/> or <see cref="ReverseImageSearchProvider"/>
+    /// unless nothing else has.
+    /// </remarks>
+    public void RegisterBuiltInProvider(IPlugin plugin)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+
+        lock (_pluginLock)
+        {
+            if (!_loadedPluginNames.Add(plugin.Name))
+                return;
+
+            _instances.Add(plugin);
+
+            if (plugin is IFolderAuthorProvider provider)
+            {
+                AuthorProvider ??= provider;
+                _authorProviders.Add(provider);
+            }
+
+            if (plugin is ICardImportProvider importProvider)
+                _importProviders.Add(importProvider);
+        }
+
+        // Deliberately absent from Plugins: that list is about installed DLLs
+        // the user can update or remove, and this one is neither.
+
+        Log(plugin.Name, $"registered built-in v{plugin.Version}");
+    }
+
     public void LoadPlugins()
     {
         if (!Directory.Exists(PluginsDirectory)) return;

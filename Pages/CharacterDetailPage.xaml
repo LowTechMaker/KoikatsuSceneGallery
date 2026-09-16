@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="using:KoikatsuSceneGallery.Converters"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -186,6 +187,26 @@
                                         <ColumnDefinition Width="60" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
+                                    <Grid.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem
+                                                x:Uid="Detail_RevealVersion"
+                                                Click="RevealVersion_Click"
+                                                Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xED43;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem
+                                                x:Uid="Detail_DeleteVersion"
+                                                Click="DeleteVersion_Click"
+                                                Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE74D;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyout>
+                                    </Grid.ContextFlyout>
                                     <Border
                                         CornerRadius="{StaticResource ControlCornerRadius}"
                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}">
@@ -202,6 +223,17 @@
                                         VerticalAlignment="Center"
                                         Spacing="2">
                                         <TextBlock
+                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            FontWeight="SemiBold"
+                                            Text="{x:Bind VersionLabelText, Mode=OneWay}"
+                                            Visibility="{x:Bind HasVersionLabel, Mode=OneWay}" />
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind VersionNote, Mode=OneWay}"
+                                            TextTrimming="CharacterEllipsis"
+                                            Visibility="{x:Bind HasVersionNote, Mode=OneWay}" />
+                                        <TextBlock
                                             Text="{x:Bind local:CharacterDetailPage.FormatTimestamp((models:CharacterCard))}"
                                             Style="{StaticResource CaptionTextBlockStyle}" />
                                         <TextBlock
@@ -217,6 +249,48 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
+                </StackPanel>
+
+                <!--  Annotation for the card on screen. Deliberately not tied to
+                      HasMultipleVersions: the first card of a character has to be
+                      markable too, or a what-if version could never be created.  -->
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        x:Uid="Detail_VersionAnnotation"
+                        Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <ComboBox
+                        x:Name="VersionKindBox"
+                        AutomationProperties.AutomationId="CharaDetailVersionKindBox"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="VersionKind_SelectionChanged">
+                        <ComboBoxItem x:Uid="Detail_VersionKind_Current" />
+                        <ComboBoxItem x:Uid="Detail_VersionKind_Alternate" />
+                    </ComboBox>
+                    <!--  Independent of the kind above: a what-if version can be
+                          replaced by a newer what-if, which one three-way choice
+                          could not express.  -->
+                    <CheckBox
+                        x:Name="VersionSupersededBox"
+                        x:Uid="Detail_VersionSuperseded"
+                        AutomationProperties.AutomationId="CharaDetailVersionSupersededBox"
+                        Checked="VersionSuperseded_Changed"
+                        Unchecked="VersionSuperseded_Changed" />
+                    <TextBox
+                        x:Name="VersionNoteBox"
+                        x:Uid="Detail_VersionNote"
+                        AutomationProperties.AutomationId="CharaDetailVersionNoteBox"
+                        KeyDown="VersionNote_KeyDown"
+                        LostFocus="VersionNote_LostFocus" />
+                    <Button
+                        x:Uid="Detail_AssignGroup"
+                        AutomationProperties.AutomationId="CharaDetailAssignGroupButton"
+                        Click="AssignGroup_Click"
+                        HorizontalAlignment="Stretch" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ViewModel.GroupOverrideText, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.HasGroupOverride, Mode=OneWay}" />
                 </StackPanel>
 
                 <TextBlock
@@ -302,6 +376,7 @@
                         </StackPanel>
                     </HyperlinkButton>
                 </StackPanel>
+                <controls:MetadataPanel FilePath="{x:Bind ViewModel.Card.FilePath, Mode=OneWay}" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

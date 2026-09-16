@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -43,6 +43,20 @@ public sealed partial class ImportPage : Page
         }
     }
 
+    private void PickFiles_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.PickFiles", async () =>
+        {
+            if (ViewModel.IsImporting) return;
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            picker.FileTypeFilter.Add(".png");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker,
+                Microsoft.UI.Win32Interop.GetWindowFromWindowId(XamlRoot.ContentIslandEnvironment.AppWindowId));
+            var files = await picker.PickMultipleFilesAsync();
+            var paths = files.Select(f => f.Path).ToArray();
+            if (paths.Length > 0 && await EnsureRequiredCookieSetupAsync(paths))
+                await ViewModel.AddFilesCommand.ExecuteAsync(paths);
+        });
+
     private void Page_DragOver(object sender, DragEventArgs e)
     {
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
@@ -71,24 +85,119 @@ public sealed partial class ImportPage : Page
             else if (item is Windows.Storage.StorageFolder folder && !string.IsNullOrEmpty(folder.Path))
             {
                 var folderPath = folder.Path;
-                await Task.Run(() =>
+                // Returned rather than appended from the background thread, and
+                // unreadable subdirectories are skipped so one of them cannot
+                // discard everything already enumerated.
+                paths.AddRange(await Task.Run(() =>
                 {
                     try
                     {
-                        foreach (var p in Directory.EnumerateFiles(folderPath, "*.png", SearchOption.AllDirectories))
-                            paths.Add(p);
+                        return Directory.EnumerateFiles(folderPath, "*.png", new EnumerationOptions
+                        {
+                            RecurseSubdirectories = true,
+                            IgnoreInaccessible = true,
+                        }).ToArray();
                     }
                     catch (Exception ex)
                     {
                         App.Services.GetRequiredService<IAppLogger>()
                             .LogError("Import.EnumerateDroppedFolder", ex, folderPath);
+                        return [];
                     }
-                });
+                }));
             }
         }
 
         if (paths.Count > 0 && await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
+        });
+
+    private void ReviewListHost_SizeChanged(object sender, SizeChangedEventArgs e)
+        => ViewModel.SetReviewViewportWidth(e.NewSize.Width);
+
+    private void JumpToReviewSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string section }) return;
+        var row = ViewModel.ReviewRows.FirstOrDefault(r => r.Key == section + ":");
+        if (row is not null) ReviewListHost.ScrollIntoView(row, ScrollIntoViewAlignment.Leading);
+    }
+
+    private void SelectMixedReviewGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewRow(row);
+    }
+
+    private void SelectReviewGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ImportReviewGroup group }) ViewModel.ToggleReviewGroup(group);
+    }
+
+    private void ReviewArtworkInput_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter || !ViewModel.IsReviewWorkspaceEnabled) return;
+        e.Handled = true;
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Lookup",
+            () => ViewModel.FetchReviewArtworkCommand.ExecuteAsync(null));
+    }
+
+    private bool _pickReviewAuthor;
+    private void PickReviewAuthor_Click(object sender, RoutedEventArgs e)
+    {
+        _pickTarget = null;
+        _pickTargetUnknownGroup = null;
+        _pickBatchUnknownAuthor = false;
+        _pickBatchFetchFailedAuthor = false;
+        _pickReviewAuthor = true;
+        ReviewAuthorFlyout.Hide();
+        ShowAuthorPickerFlyout(ReviewAuthorButton);
+    }
+
+    private void SearchSelected_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SearchSelected", async () =>
+        {
+            var selected = ViewModel.SelectedVisibleReviewItems;
+            if (selected.Count == 0 || !ViewModel.IsReviewWorkspaceEnabled) return;
+            var context = string.Format(ResLoader.GetString("Import_ReverseSelectionContext"), selected[0].FileName, selected.Count);
+            var confirmation = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = ResLoader.GetString("Import_ReverseConfirmTitle"),
+                Content = new StackPanel
+                {
+                    Spacing = 12,
+                    Children =
+                    {
+                        new Image { Source = new BitmapImage(selected[0].ThumbnailUri), Height = 150, Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform },
+                        new TextBlock { Text = context, TextWrapping = TextWrapping.Wrap }
+                    }
+                },
+                PrimaryButtonText = ResLoader.GetString("Import_ReverseStart"),
+                CloseButtonText = ResLoader.GetString("Import_SauceNaoCancelButton"),
+                DefaultButton = ContentDialogButton.Primary
+            };
+            if (await confirmation.ShowAsync() != ContentDialogResult.Primary) return;
+            ViewModel.IsResolvingReview = true;
+            ViewModel.ReviewBatchStatusText = ResLoader.GetString("Import_Review_Working");
+            try
+            {
+                var result = await ViewModel.SearchSauceNaoForFilesAsync(selected, CancellationToken.None);
+                if (result is null)
+                { await ShowMessageDialog(ResLoader.GetString("Import_SauceNaoNoResultTitle"), ResLoader.GetString("Import_SauceNaoNoResultMessage")); return; }
+                if (await ShowSauceNaoResultDialog(result, context) is { } rating)
+                {
+                    await ViewModel.ApplySearchResultToSelectionAsync(selected, result, rating);
+                    ViewModel.ReviewBatchStatusText = ResLoader.GetString("Import_Review_BatchApplied");
+                }
+                else ViewModel.ReviewBatchStatusText = string.Empty;
+            }
+            catch (InvalidOperationException)
+            { await ShowMessageDialog(ResLoader.GetString("Import_SauceNaoApiKeyMissingTitle"), ResLoader.GetString("Import_SauceNaoApiKeyMissingMessage")); }
+            finally
+            {
+                ViewModel.IsResolvingReview = false;
+                if (ViewModel.ReviewBatchStatusText == ResLoader.GetString("Import_Review_Working"))
+                    ViewModel.ReviewBatchStatusText = string.Empty;
+            }
         });
 
     private void AssignAuthor_Click(object sender, RoutedEventArgs e)
@@ -231,7 +340,14 @@ public sealed partial class ImportPage : Page
 
         _authorFlyout?.Hide();
 
-        if (_pickTarget is not null)
+        if (_pickReviewAuthor)
+        {
+            _pickReviewAuthor = false;
+            ViewModel.ReviewAuthorId = author.Id;
+            ViewModel.ReviewAuthorProviderId = author.ProviderId;
+            await ViewModel.ApplyReviewAuthorCommand.ExecuteAsync(null);
+        }
+        else if (_pickTarget is not null)
         {
             _pickTarget.ManualAuthorId = author.Id;
             _pickTarget.ManualAuthorProviderId = author.ProviderId;
@@ -351,7 +467,7 @@ public sealed partial class ImportPage : Page
         }
         });
 
-    private async Task<ContentRating?> ShowSauceNaoResultDialog(ReverseImageSearchResult result)
+    private async Task<ContentRating?> ShowSauceNaoResultDialog(ReverseImageSearchResult result, string? selectionContext = null)
     {
         var ratingBox = new ComboBox
         {
@@ -363,6 +479,8 @@ public sealed partial class ImportPage : Page
         ratingBox.Items.Add(new ComboBoxItem { Content = "R-18G", Tag = ContentRating.R18G });
 
         var panel = new StackPanel { Spacing = 10 };
+        if (selectionContext is not null)
+            panel.Children.Add(new TextBlock { Text = selectionContext, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock
         {
             Text = string.Format(ResLoader.GetString("Import_SauceNaoAuthor"), result.AuthorName, result.AuthorId),

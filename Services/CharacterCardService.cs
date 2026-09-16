@@ -5,6 +5,15 @@ namespace KoikatsuSceneGallery.Services;
 
 public class CharacterCardService : CardScanService<CharacterCard>
 {
+    private readonly CharacterAnnotationStore? _annotations;
+
+    /// <summary>
+    /// The store is optional so existing callers keep working; without it the
+    /// cards simply carry no annotations.
+    /// </summary>
+    internal CharacterCardService(CharacterAnnotationStore? annotations = null)
+        => _annotations = annotations;
+
     protected override IEnumerable<FileInfo> EnumerateCardFiles(string folder) =>
         new DirectoryInfo(folder).EnumerateFiles("*.png", SearchOption.AllDirectories);
 
@@ -18,7 +27,7 @@ public class CharacterCardService : CardScanService<CharacterCard>
             if (!info.Exists) return null;
 
             var (width, height) = PngHelper.ReadDimensions(info.FullName);
-            return new CharacterCard
+            var card = new CharacterCard
             {
                 FilePath = info.FullName,
                 FileSize = info.Length,
@@ -27,6 +36,20 @@ public class CharacterCardService : CardScanService<CharacterCard>
                 Width = width,
                 Height = height
             };
+
+            // Applied here because this is the one place every card is built —
+            // the parallel scan and the file watcher both come through it — and
+            // it already runs off the UI thread. The store reads at most once
+            // per directory, so this costs a dictionary lookup per card.
+            if (_annotations?.GetForCard(info.FullName) is { } annotation)
+            {
+                card.VersionKind = annotation.ParsedKind;
+                card.IsSuperseded = annotation.IsSuperseded;
+                card.VersionNote = annotation.Note;
+                card.CharacterGroupKey = annotation.GroupKey;
+            }
+
+            return card;
         }
         catch (Exception)
         {

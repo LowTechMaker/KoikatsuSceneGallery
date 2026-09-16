@@ -14,6 +14,7 @@ namespace KoikatsuSceneGallery.Pages;
 
 public sealed partial class CoordinateDetailPage : Page
 {
+    private readonly ViewerChrome _viewer;
     public CoordinateDetailViewModel ViewModel { get; } = new();
 
     private static readonly ResourceLoader ResLoader = new();
@@ -23,14 +24,19 @@ public sealed partial class CoordinateDetailPage : Page
     public CoordinateDetailPage()
     {
         InitializeComponent();
+        _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((CoordinateCard)card));
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _viewer.SetContext(BrowseContexts.From(e.Parameter));
         App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded += OnCardsReloaded;
         switch (e.Parameter)
         {
+            case BrowseNavigation navigation:
+                ShowCard((CoordinateCard)navigation.Card);
+                break;
             case AuthorScopedCoordinateNavigationParameter scoped:
                 _authorScope = scoped.AuthorKey;
                 ShowCard(scoped.Card);
@@ -45,9 +51,7 @@ public sealed partial class CoordinateDetailPage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = null;
+        PageCancellation.Stop(ref _metadataCts);
         App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsReloaded -= OnCardsReloaded;
     }
 
@@ -58,35 +62,23 @@ public sealed partial class CoordinateDetailPage : Page
             if (!ReferenceEquals(Frame?.Content, this) || ViewModel.Card is not { } current)
                 return;
 
-            var refreshed = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards
-                .FirstOrDefault(card => string.Equals(
-                    card.FilePath,
-                    current.FilePath,
-                    StringComparison.OrdinalIgnoreCase));
-            if (refreshed is null)
-            {
-                if (Frame.CanGoBack) Frame.GoBack();
-                return;
-            }
-
-            if (!ReferenceEquals(refreshed, current))
-                ShowCard(refreshed);
-            else
-                UpdateNavigationButtons();
+            DetailNavigationHelper.RefreshAfterReload(
+                App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards, current,
+                ShowCard,
+                UpdateNavigationButtons,
+                () => { if (Frame.CanGoBack) Frame.GoBack(); });
         });
     }
 
     private void ShowCard(CoordinateCard card)
     {
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = new CancellationTokenSource();
+        var metadataCts = PageCancellation.Restart(ref _metadataCts);
         ViewModel.Card = card;
         var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
-        LoadMetadataAsync(card, _metadataCts.Token).Observe(
+        LoadMetadataAsync(card, metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
             "CoordinateDetail.LoadMetadata");
     }
@@ -113,20 +105,18 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void UpdateNavigationButtons()
     {
-        var scopedCards = GetScopedCards();
-        var (hasPrev, hasNext) = scopedCards is null
-            ? DetailNavigationHelper.GetNavigationState(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.GetNavigationState(scopedCards, ViewModel.Card);
+        if (_viewer.Update()) return;
+        var (hasPrev, hasNext) = DetailNavigationHelper.GetNavigationState(
+            GetScopedCards(), App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         PrevButton.IsEnabled = hasPrev;
         NextButton.IsEnabled = hasNext;
     }
 
     private void Navigate(int direction)
     {
-        var scopedCards = GetScopedCards();
-        var next = scopedCards is null
-            ? DetailNavigationHelper.Navigate(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card, direction)
-            : DetailNavigationHelper.Navigate(scopedCards, ViewModel.Card, direction);
+        if (_viewer.Navigate(direction)) return;
+        var next = DetailNavigationHelper.Navigate(
+            GetScopedCards(), App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card, direction);
         if (next != null) ShowCard(next);
     }
 
@@ -136,10 +126,9 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void RandomButton_Click(object sender, RoutedEventArgs e)
     {
-        var scopedCards = GetScopedCards();
-        var card = scopedCards is null
-            ? DetailNavigationHelper.RandomCard(App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card)
-            : DetailNavigationHelper.RandomCard(scopedCards, ViewModel.Card);
+        if (_viewer.Navigate(0, true)) return;
+        var card = DetailNavigationHelper.RandomCard(
+            GetScopedCards(), App.Services.GetRequiredService<CoordinateGalleryViewModel>().CardsView, ViewModel.Card);
         if (card != null) ShowCard(card);
     }
 
@@ -152,12 +141,14 @@ public sealed partial class CoordinateDetailPage : Page
 
     private void PreviousCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot) || KoikatsuSceneGallery.Controls.MetadataPanel.ContainsFocus(XamlRoot)) return;
         Navigate(-1);
         args.Handled = true;
     }
 
     private void NextCard_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (ViewerChrome.IsEditing(XamlRoot) || KoikatsuSceneGallery.Controls.MetadataPanel.ContainsFocus(XamlRoot)) return;
         Navigate(1);
         args.Handled = true;
     }

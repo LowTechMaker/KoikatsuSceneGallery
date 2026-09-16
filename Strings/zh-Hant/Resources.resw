@@ -78,7 +78,7 @@
   <data name="Gallery_SearchBox.PlaceholderText" xml:space="preserve">
     <value>依路徑或檔名搜尋…</value>
   </data>
-  <data name="Gallery_SearchHint.Text" xml:space="preserve">
+  <data name="Gallery_SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>以逗號分隔多個關鍵字可進行 AND 搜尋，例如：作者,檔名</value>
   </data>
   <data name="Gallery_RandomButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
@@ -105,32 +105,14 @@
   <data name="Gallery_SortDirection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>切換排序方向</value>
   </data>
-  <data name="Gallery_SizeSmall.Content" xml:space="preserve">
-    <value>小</value>
-  </data>
-  <data name="Gallery_SizeSmall.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>小型縮圖</value>
-  </data>
-  <data name="Gallery_SizeMedium.Content" xml:space="preserve">
-    <value>中</value>
-  </data>
-  <data name="Gallery_SizeMedium.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>中型縮圖</value>
-  </data>
-  <data name="Gallery_SizeLarge.Content" xml:space="preserve">
-    <value>大</value>
-  </data>
-  <data name="Gallery_SizeLarge.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>大型縮圖</value>
-  </data>
   <data name="Gallery_Empty.Text" xml:space="preserve">
     <value>找不到場景卡片。請在設定中新增資料夾。</value>
   </data>
   <data name="Gallery_GeneratingLabel.Text" xml:space="preserve">
     <value>正在生成縮圖…</value>
   </data>
-  <data name="Gallery_GameFilterLabel.Text" xml:space="preserve">
-    <value>遊戲：</value>
+  <data name="Gallery_GameFilter.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>依遊戲版本篩選</value>
   </data>
   <data name="Gallery_FilterAll.Content" xml:space="preserve">
     <value>全部</value>
@@ -236,6 +218,13 @@
     <value>隨機一張</value>
   </data>
   <data name="Detail_VersionHistory.Text" xml:space="preserve">
+  <data name="Detail_RevealVersion.Text" xml:space="preserve"><value>在檔案總管中顯示</value></data>
+  <data name="Detail_DeleteVersion.Text" xml:space="preserve"><value>刪除這個版本…</value></data>
+  <data name="Detail_DeleteVersion_Title" xml:space="preserve"><value>要刪除這個版本嗎？</value></data>
+  <data name="Detail_DeleteVersion_Body" xml:space="preserve"><value>{0}&#10;&#10;檔案會移到資源回收筒，可以從那裡還原。刪除後這個角色還有 {1} 個版本。</value></data>
+  <data name="Detail_DeleteVersion_Confirm" xml:space="preserve"><value>移到資源回收筒</value></data>
+  <data name="Detail_DeleteVersion_FailedTitle" xml:space="preserve"><value>刪除失敗</value></data>
+  <data name="Detail_DeleteVersion_Failed" xml:space="preserve"><value>刪不掉「{0}」，通常是有程式正在讀這個檔案。關掉之後再試一次。</value></data>
     <value>其他版本</value>
   </data>
   <data name="Detail_FileInfo.Text" xml:space="preserve">
@@ -319,10 +308,10 @@
     <value>篩選</value>
   </data>
   <data name="Settings_TabAdvanced.Header" xml:space="preserve">
-    <value>進階</value>
+    <value>效能與快取</value>
   </data>
   <data name="Settings_TabOcd.Header" xml:space="preserve">
-    <value>強迫症選項</value>
+    <value>實驗功能</value>
   </data>
   <data name="Settings_FoldersHeader.Text" xml:space="preserve">
     <value>場景卡片</value>
@@ -403,7 +392,7 @@
     <value>外掛分析</value>
   </data>
   <data name="Settings_PluginDesc.Text" xml:space="preserve">
-    <value>讀取內嵌的外掛資料，依環境（Madevil／非 Madevil）與是否使用 Timeline 為場景加標籤，並啟用圖庫篩選器。關閉則完全不掃描並隱藏篩選器。</value>
+    <value>讀取場景內嵌資料，辨識 Madevil 環境與 Timeline 標籤。啟用後可補掃缺漏資料，或重新分析全部場景。</value>
   </data>
   <data name="Settings_PluginToggle.Header" xml:space="preserve">
     <value>分析場景外掛</value>
@@ -469,16 +458,7 @@
     <value>強迫症選項</value>
   </data>
   <data name="Settings_OcdDesc.Message" xml:space="preserve">
-    <value>此選項專為強迫症打造，裡面的功能不保證即時更新或修復。</value>
-  </data>
-  <data name="Settings_SizeSelector.Header" xml:space="preserve">
-    <value>縮圖大小按鈕</value>
-  </data>
-  <data name="Settings_SizeSelector.OnContent" xml:space="preserve">
-    <value>開</value>
-  </data>
-  <data name="Settings_SizeSelector.OffContent" xml:space="preserve">
-    <value>關</value>
+    <value>這些功能仍在實驗階段，可能調整或暫停維護。請依需求啟用。</value>
   </data>
   <data name="Settings_VisualSimilarity.Header" xml:space="preserve">
     <value>視覺相似度偵測</value>
@@ -719,6 +699,36 @@
   <data name="Import_Title.Text" xml:space="preserve">
     <value>匯入</value>
   </data>
+  <data name="Import_ReviewWorkspace.Text" xml:space="preserve">
+    <value>檢閱工作區</value>
+  </data>
+  <data name="Import_ReviewHeading.Text" xml:space="preserve">
+    <value>匯入前檢閱</value>
+  </data>
+  <data name="Import_ReviewDescription.Text" xml:space="preserve">
+    <value>先處理需要注意的卡片，再以全寬清單確認分級、來源與匯入目的地。</value>
+  </data>
+  <data name="Import_FetchFailedWorkspaceHint.Text" xml:space="preserve">
+    <value>指定資料庫作者或查詢相符項目以完成這些卡片。</value>
+  </data>
+  <data name="Import_UnknownWorkspaceTitle.Text" xml:space="preserve">
+    <value>需要識別</value>
+  </data>
+  <data name="Import_UnknownWorkspaceHint.Text" xml:space="preserve">
+    <value>設定作品或作者，也可使用反向圖片搜尋。</value>
+  </data>
+  <data name="Import_ReviewFiles.Text" xml:space="preserve">
+    <value>檔案</value>
+  </data>
+  <data name="Import_ResolvedWorkspaceTitle.Text" xml:space="preserve">
+    <value>已準備匯入</value>
+  </data>
+  <data name="Import_ResolvedWorkspaceHint.Text" xml:space="preserve">
+    <value>依分級、作者與作品分組；每個檔案都會顯示規劃的目的地。</value>
+  </data>
+  <data name="Import_Importing.Text" xml:space="preserve">
+    <value>正在匯入…</value>
+  </data>
   <data name="Import_DropZoneTitle.Text" xml:space="preserve">
     <value>將 Koikatsu 卡片拖放到此處</value>
   </data>
@@ -746,8 +756,11 @@
   <data name="Import_CookieSetup.Text" xml:space="preserve">
     <value>設定 Cookie</value>
   </data>
+  <data name="Import_RefreshLibraryIndex.Text" xml:space="preserve">
+    <value>重新掃描收藏庫</value>
+  </data>
   <data name="Import_Tab_Matched.Header" xml:space="preserve">
-    <value>已配對</value>
+    <value>已識別</value>
   </data>
   <data name="Import_Tab_Unknown.Header" xml:space="preserve">
     <value>未識別</value>
@@ -963,16 +976,499 @@
   <data name="SC_CacheBuffer.Description" xml:space="preserve">
     <value>畫面外渲染緩衝，以可見範圍的倍數計算。數值越大，捲動越流暢</value>
   </data>
-  <data name="SC_SizeSelector.Header" xml:space="preserve">
-    <value>縮圖大小按鈕</value>
-  </data>
-  <data name="SC_SizeSelector.Description" xml:space="preserve">
-    <value>在圖庫工具列顯示小/中/大尺寸切換按鈕</value>
-  </data>
   <data name="SC_VisualSimilarity.Header" xml:space="preserve">
     <value>視覺相似度偵測</value>
   </data>
   <data name="SC_VisualSimilarity.Description" xml:space="preserve">
     <value>偵測並群組圖庫中外觀相似的圖片</value>
   </data>
+  <data name="Import_Phase_Preparing" xml:space="preserve">
+    <value>正在準備匯入計畫明細...</value>
+  </data>
+  <data name="Import_Phase_Executing" xml:space="preserve">
+    <value>正在執行批次匯入：已處理 {0} / {1} 張卡片...</value>
+  </data>
+  <data name="Import_Phase_RollingBack" xml:space="preserve">
+    <value>偵測到衝突或使用者取消。正在執行全批次回滾與 Sidecar 安全解綁...</value>
+  </data>
+  <data name="Import_Phase_Completed" xml:space="preserve">
+    <value>匯入交易流程結算完成。</value>
+  </data>
+  <data name="Import_CancelButton.Content" xml:space="preserve">
+    <value>取消匯入</value>
+  </data>
+  <data name="Import_Summary_Success" xml:space="preserve">
+    <value>匯入成功！已將 {0} 張卡片安全納入收藏庫。</value>
+  </data>
+  <data name="Import_Summary_Failed" xml:space="preserve">
+    <value>匯入未完成：已安全回滾 {0} | 失敗 {1} | 警告 {2} | 需人工復原 {3}</value>
+  </data>
+  <data name="Import_Summary_NoEligible" xml:space="preserve">
+    <value>沒有可執行匯入的卡片。</value>
+  </data>
+  <data name="Import_Summary_UnexpectedError" xml:space="preserve">
+    <value>匯入交易發生未預期錯誤。</value>
+  </data>
+  <data name="Import_Progress_Counters" xml:space="preserve">
+    <value>已提交 {0} | 失敗 {1} | 警告 {2}</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeComboBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>縮圖大小</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeSmall.Content" xml:space="preserve">
+    <value>縮圖：小</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeMedium.Content" xml:space="preserve">
+    <value>縮圖：中</value>
+  </data>
+  <data name="Gallery_ThumbnailSizeLarge.Content" xml:space="preserve">
+    <value>縮圖：大</value>
+  </data>
+  <data name="Gallery_OpenFileLocation.Text" xml:space="preserve">
+    <value>開啟檔案所在位置</value>
+  </data>
+  <data name="Import_Review_Unassigned" xml:space="preserve"><value>待指派</value></data>
+  <data name="Import_Review_IdentityPairRequired" xml:space="preserve"><value>身分覆寫必須同時選擇 Provider 與 ID。</value></data>
+  <data name="Import_Review_NoChanges" xml:space="preserve"><value>請至少指定一項要套用的變更。</value></data>
+  <data name="Import_Review_MetadataCleared" xml:space="preserve"><value>無法重新擷取 metadata，已清除舊資料。</value></data>
+  <data name="Import_Review_BatchApplied" xml:space="preserve"><value>已套用批次變更。</value></data>
+  <data name="Import_ReviewLoading.Text" xml:space="preserve"><value>正在建立收藏庫歸檔結構…</value></data>
+  <data name="Import_Review_SelectAll.Content" xml:space="preserve"><value>選取目前檢視</value></data>
+  <data name="Import_Review_FilterAll.Content" xml:space="preserve"><value>全部</value></data>
+  <data name="Import_Review_FlatHint.Text" xml:space="preserve"><value>選取檔案後，可批次編輯作者、作品或分級。</value></data>
+  <data name="Import_Review_InspectorTitle.Text" xml:space="preserve"><value>批次編輯</value></data>
+  <data name="Import_Review_AuthorProvider.PlaceholderText" xml:space="preserve"><value>作者來源：不變更</value></data>
+  <data name="Import_Review_AuthorId.PlaceholderText" xml:space="preserve"><value>作者 ID：不變更</value></data>
+  <data name="Import_Review_ArtworkProvider.PlaceholderText" xml:space="preserve"><value>作品來源：不變更</value></data>
+  <data name="Import_Review_ArtworkId.PlaceholderText" xml:space="preserve"><value>作品 ID：不變更</value></data>
+  <data name="Import_Review_Rating.PlaceholderText" xml:space="preserve"><value>分級：不變更</value></data>
+  <data name="Import_Review_KeepUnchanged.Content" xml:space="preserve"><value>不變更</value></data>
+  <data name="Import_Review_Apply.Content" xml:space="preserve"><value>套用選取項目</value></data>
+  <data name="Import_ReviewEmpty_Title" xml:space="preserve"><value>目前沒有可匯入的卡片</value></data>
+  <data name="Import_ReviewEmpty_Description" xml:space="preserve"><value>請先處理上方警告，或切換至「未識別」；產生目的地後的卡片會顯示在這裡。</value></data>
+  <data name="Import_ReviewSelection_Title.Text" xml:space="preserve"><value>選取卡片以進行批次編輯</value></data>
+  <data name="Import_ReviewSelection_Description.Text" xml:space="preserve"><value>選取一張以上目前可見的卡片，即可一起編輯作者、作品或分級。</value></data>
+  <data name="Import_Review_FileHeader.Text" xml:space="preserve"><value>檔案</value></data>
+  <data name="Import_Review_AuthorHeader.Text" xml:space="preserve"><value>作者</value></data>
+  <data name="Import_Review_ArtworkHeader.Text" xml:space="preserve"><value>作品</value></data>
+  <data name="Import_Review_RatingHeader.Text" xml:space="preserve"><value>分級</value></data>
+  <data name="Import_Review_DestinationHeader.Text" xml:space="preserve"><value>匯入目的地</value></data>
+  <data name="Import_Review_NoDestination_Title" xml:space="preserve"><value>尚未產生匯入目的地</value></data>
+  <data name="Import_Review_NoDestination_Description" xml:space="preserve"><value>已有 {0} 張卡片完成處理，正在等待最後一次目的地計算。</value></data>
+  <data name="Import_Review_Summary" xml:space="preserve"><value>共 {0} 張卡片 · {1} 張可匯入</value></data>
+  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>目前顯示 {0} 張 · 操作套用至已選取的 {1} 張</value></data>
+  <data name="Import_Review_FilterEmpty.Text" xml:space="preserve"><value>此分頁目前沒有符合分級的圖片</value></data>
+  <data name="Import_Review_ShowAll.Content" xml:space="preserve"><value>顯示此分頁的全部分級</value></data>
+  <data name="Import_UnknownEmpty_Title.Text" xml:space="preserve"><value>沒有需要識別的卡片</value></data>
+  <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>可切換至「已識別」檢閱匯入清單，也可以繼續拖入其他 PNG 卡片。</value></data>
+  <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>這些卡片已在收藏庫中</value></data>
+  <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>不需要重複匯入。可以清除清單，或繼續拖入其他 PNG 卡片。</value></data>
+  <data name="Import_Options.Content" xml:space="preserve"><value>匯入選項</value></data>
+  <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>匯入選項</value></data>
+  <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>全選</value></data>
+  <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>選取目前清單</value></data>
+  <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>依分級篩選</value></data>
+  <data name="Import_AllRatings.Content" xml:space="preserve"><value>全部分級</value></data>
+  <data name="Import_EditSelected.Content" xml:space="preserve"><value>編輯選取</value></data>
+  <data name="Import_KeepDropping.Text" xml:space="preserve"><value>可繼續拖入 PNG 卡片</value></data>
+  <data name="Import_ActionCount" xml:space="preserve"><value>匯入 {0} 張</value></data>
+  <data name="Settings_Subtitle.Text" xml:space="preserve">
+    <value>調整瀏覽體驗、管理圖庫來源與外掛。變更會自動儲存。</value>
+  </data>
+  <data name="Settings_FoldersIntro.Text" xml:space="preserve">
+    <value>管理各類圖庫的來源資料夾。子資料夾會自動掃描；從清單移除來源不會刪除原始檔案。</value>
+  </data>
+  <data name="Settings_FiltersIntro.Text" xml:space="preserve">
+    <value>只顯示符合指定尺寸的卡片。停用時會保留已設定的尺寸；此處不影響截圖圖庫。</value>
+  </data>
+  <data name="Settings_ResolutionInvalid" xml:space="preserve">
+    <value>請輸入有效的寬度與高度，例如 1920x1080（必須大於 0）。</value>
+  </data>
+  <data name="Settings_ResolutionDuplicate" xml:space="preserve">
+    <value>此解析度已在清單中。</value>
+  </data>
+  <data name="Plugins_InstallHelp.Header" xml:space="preserve">
+    <value>如何安裝外掛</value>
+  </data>
+  <data name="Settings_SizeFiltersHeader.Text" xml:space="preserve">
+    <value>圖片尺寸</value>
+  </data>
+  <data name="Settings_FilterDisabled" xml:space="preserve">
+    <value>已停用 · 顯示全部卡片</value>
+  </data>
+  <data name="Settings_FilterEmpty" xml:space="preserve">
+    <value>尚未新增尺寸 · 目前顯示全部卡片</value>
+  </data>
+  <data name="Settings_FilterActive" xml:space="preserve">
+    <value>已啟用 · 僅顯示符合下列 {0} 種尺寸的卡片</value>
+  </data>
+  <data name="Settings_RemoveSizeLabel" xml:space="preserve">
+    <value>移除尺寸 {0}</value>
+  </data>
+  <data name="Settings_AddSize.Content" xml:space="preserve">
+    <value>新增尺寸</value>
+  </data>
+  <data name="Settings_SceneFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>啟用場景卡尺寸篩選</value>
+  </data>
+  <data name="Settings_CharaFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>啟用角色卡尺寸篩選</value>
+  </data>
+  <data name="Settings_CoordFilterToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>啟用服裝卡尺寸篩選</value>
+  </data>
+  <data name="Settings_PluginAnalysisToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>啟用場景外掛分析</value>
+  </data>
+  <data name="Settings_SceneTagsHeader.Text" xml:space="preserve">
+    <value>場景標籤與分析</value>
+  </data>
+  <data name="Settings_AnalysisDisabled" xml:space="preserve">
+    <value>已停用 · 不掃描外掛資料，並隱藏相關篩選器</value>
+  </data>
+  <data name="Settings_AnalysisEnabled" xml:space="preserve">
+    <value>已啟用 · 可使用場景外掛標籤篩選</value>
+  </data>
+  <data name="Settings_SaveError.Title" xml:space="preserve">
+    <value>設定尚未儲存</value>
+  </data>
+  <data name="Settings_SaveError.Message" xml:space="preserve">
+    <value>無法寫入設定檔。目前變更仍保留在此工作階段，請確認儲存位置可寫入後重試。</value>
+  </data>
+  <data name="Settings_RetrySave.Content" xml:space="preserve">
+    <value>重試儲存</value>
+  </data>
+  <data name="SC_CacheUsage.Header" xml:space="preserve">
+    <value>快取用量</value>
+  </data>
+  <data name="SC_CacheUsage.Description" xml:space="preserve">
+    <value>目前資料夾中的縮圖快取；瀏覽圖庫時會自動重建。</value>
+  </data>
+  <data name="Settings_RefreshCache.Content" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="Settings_CacheUsage" xml:space="preserve">
+    <value>{0} · {1:N0} 個檔案</value>
+  </data>
+  <data name="Settings_CacheCalculating" xml:space="preserve">
+    <value>正在計算快取用量…</value>
+  </data>
+  <data name="Settings_CacheUsageFailed" xml:space="preserve">
+    <value>無法讀取快取用量，請檢查資料夾權限後重新整理。</value>
+  </data>
+  <data name="Settings_CacheCleared" xml:space="preserve">
+    <value>已清除 {0:N0} 個縮圖快取檔案。瀏覽圖庫時會按需重建。</value>
+  </data>
+  <data name="Settings_CachePartiallyCleared" xml:space="preserve">
+    <value>已清除 {0:N0} 個檔案，另有 {1:N0} 個無法清除。檔案可能正被使用，請稍後重試。</value>
+  </data>
+  <data name="Settings_CacheClearFailed" xml:space="preserve">
+    <value>未能完成清除快取。請檢查資料夾權限後重試。</value>
+  </data>
+  <data name="SceneGallery_TotalCount" xml:space="preserve">
+    <value>{0:N0} 張</value>
+  </data>
+  <data name="SceneGallery_FilteredCount" xml:space="preserve">
+    <value>{0:N0} / {1:N0} 張</value>
+  </data>
+  <data name="SceneGallery_Filters" xml:space="preserve">
+    <value>篩選</value>
+  </data>
+  <data name="SceneGallery_ActiveFilters" xml:space="preserve">
+    <value>篩選 · {0}</value>
+  </data>
+  <data name="SceneGallery_FilterHeading.Text" xml:space="preserve">
+    <value>顯示內容</value>
+  </data>
+  <data name="SceneGallery_FilterButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>篩選內容與環境</value>
+  </data>
+  <data name="SceneGallery_Rating.Header" xml:space="preserve">
+    <value>顯示 R-18 內容</value>
+  </data>
+  <data name="SceneGallery_Environment.Header" xml:space="preserve">
+    <value>遊戲環境</value>
+  </data>
+  <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
+    <value>解析度與外掛分析可在設定中調整。</value>
+  </data>
+  <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
+    <value>開啟圖庫設定</value>
+  </data>
+  <data name="SceneGallery_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="SceneGallery_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="SceneGallery_Search.PlaceholderText" xml:space="preserve">
+    <value>搜尋檔名、作者或路徑…</value>
+  </data>
+  <data name="SceneGallery_Search.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>搜尋場景卡</value>
+  </data>
+  <data name="SceneGallery_Search.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Ctrl+F 搜尋；用逗號組合關鍵字，例如：作者,海邊。Enter 立即搜尋。</value>
+  </data>
+  <data name="SceneGallery_RandomLabel.Text" xml:space="preserve">
+    <value>隨機瀏覽</value>
+  </data>
+  <data name="SceneGallery_UnknownAuthor" xml:space="preserve">
+    <value>未標註作者</value>
+  </data>
+  <data name="SceneGallery_NoLibraryTitle" xml:space="preserve">
+    <value>開始建立你的收藏庫</value>
+  </data>
+  <data name="SceneGallery_NoLibraryDescription" xml:space="preserve">
+    <value>在圖庫設定中新增場景卡資料夾，掃描後就會顯示在這裡。</value>
+  </data>
+  <data name="SceneGallery_NoResultsTitle" xml:space="preserve">
+    <value>沒有符合的場景卡</value>
+  </data>
+  <data name="SceneGallery_NoResultsDescription" xml:space="preserve">
+    <value>試試其他關鍵字，或調整內容、環境及設定中的解析度篩選。</value>
+  </data>
+  <data name="SceneGallery_ResetSearch.Content" xml:space="preserve">
+    <value>清除搜尋與環境篩選</value>
+  </data>
+  <data name="SceneGallery_GroupBack.Content" xml:space="preserve">
+    <value>← 返回全部圖片</value>
+  </data>
+  <data name="SceneGallery_GroupCount" xml:space="preserve">
+    <value>{0:N0} 張圖片</value>
+  </data>
+  <data name="SceneGallery_GroupEmpty.Text" xml:space="preserve">
+    <value>此群組沒有符合目前搜尋或篩選條件的圖片。</value>
+  </data>
+  <data name="Browser_Versions" xml:space="preserve"><value>{0} 個版本</value></data>
+  <data name="Browser_GroupSearch" xml:space="preserve"><value>搜尋此群組…</value></data>
+  <data name="Browser_ClearGroupSearch" xml:space="preserve"><value>清除群組搜尋</value></data>
+  <data name="Browser_Loading" xml:space="preserve"><value>正在載入收藏庫…</value></data>
+  <data name="Browser_Source" xml:space="preserve"><value>卡片來源</value></data>
+  <data name="Viewer_Fit" xml:space="preserve"><value>適合視窗</value></data>
+  <data name="Viewer_Original" xml:space="preserve"><value>原始大小</value></data>
+  <data name="Viewer_Info" xml:space="preserve"><value>顯示檔案資訊</value></data>
+  <data name="Viewer_Position" xml:space="preserve"><value>{0} / {1} 張</value></data>
+  <data name="Browser_AllImages" xml:space="preserve"><value>全部圖片</value></data>
+  <data name="PostDetail_OpenLocal.ToolTipService.ToolTip" xml:space="preserve"><value>在檢視器中開啟圖片</value></data>
+  <data name="PostDetail_TagsExpander.Header" xml:space="preserve"><value>標籤</value></data>
+  <data name="Authors_NoResults.Text" xml:space="preserve"><value>找不到符合的作者</value></data>
+  <data name="Import_StatusFilter.Header" xml:space="preserve"><value>處理狀態</value></data>
+  <data name="Import_StatusAll.Content" xml:space="preserve"><value>所有項目</value></data>
+  <data name="Import_StatusReady.Content" xml:space="preserve"><value>待確認</value></data>
+  <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>缺少資料</value></data>
+  <data name="Import_StatusFailed.Content" xml:space="preserve"><value>取得失敗</value></data>
+  <data name="Import_StatusExisting.Content" xml:space="preserve"><value>已在收藏庫</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>待確認</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>缺少資料</value></data>
+  <data name="Import_Status_Failed" xml:space="preserve"><value>取得失敗</value></data>
+  <data name="Import_Status_Existing" xml:space="preserve"><value>已在收藏庫</value></data>
+  <data name="Import_Status_Analyzing" xml:space="preserve"><value>分析中</value></data>
+  <data name="Import_Status_Completed" xml:space="preserve"><value>已完成</value></data>
+  <data name="Import_SearchSelected.Content" xml:space="preserve"><value>反向搜尋所選圖片</value></data>
+  <data name="Import_RemoveSelected.Content" xml:space="preserve"><value>從本次工作區移除</value></data>
+  <data name="PostDetail_Saved" xml:space="preserve"><value>詳細資料已儲存在本機</value></data>
+  <data name="PostDetail_Unsaved" xml:space="preserve"><value>詳細資料尚未儲存</value></data>
+  <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} 張本機圖片</value></data>
+  <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>選擇檔案</value></data>
+  <data name="Import_AddFiles.Content" xml:space="preserve"><value>繼續加入檔案</value></data>
+  <data name="Import_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
+  <data name="Import_UnidentifiedCount" xml:space="preserve"><value>未識別（{0}）</value></data>
+  <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>貼文網址或作品 ID</value></data>
+  <data name="Import_LookupInput.AutomationProperties.Name" xml:space="preserve"><value>貼文網址或作品 ID</value></data>
+  <data name="Import_LookupProvider.PlaceholderText" xml:space="preserve"><value>來源：自動判斷</value></data>
+  <data name="Import_LookupProvider.AutomationProperties.Name" xml:space="preserve"><value>作品來源，網址會自動判斷</value></data>
+  <data name="Import_LookupFetch.Content" xml:space="preserve"><value>取得資料</value></data>
+  <data name="Import_ApplyRating.Content" xml:space="preserve"><value>套用分級</value></data>
+  <data name="Import_AssignAuthor.Content" xml:space="preserve"><value>指定作者</value></data>
+  <data name="Import_PickKnownAuthor.Text" xml:space="preserve"><value>選擇現有作者</value></data>
+  <data name="Import_SelectGroup.Content" xml:space="preserve"><value>選取／取消整組</value></data>
+  <data name="Import_Review_GroupTitle" xml:space="preserve"><value>{0} · {1} 張</value></data>
+  <data name="Import_Review_Working" xml:space="preserve"><value>正在取得資料，請稍候…</value></data>
+  <data name="Import_Review_InputUnresolved" xml:space="preserve"><value>無法判斷來源。請確認網址屬於已安裝的外掛；若輸入純 ID，請選擇來源後重試。</value></data>
+  <data name="Import_Review_FetchUnchanged" xml:space="preserve"><value>未取得資料。請確認網址／ID 或外掛登入狀態後重試；原有資料已保留。</value></data>
+  <data name="Import_Review_ActionFailed" xml:space="preserve"><value>操作未完成，請重試；若已有變更，可使用「復原」。</value></data>
+  <data name="Import_ReverseSelectionContext" xml:space="preserve"><value>搜尋圖片：{0}。將以這張圖片進行反向搜尋；確認結果後，套用至目前選取的 {1} 張圖片。</value></data>
+  <data name="Import_ReverseConfirmTitle" xml:space="preserve"><value>確認反向搜尋圖片</value></data>
+  <data name="Import_ReverseStart" xml:space="preserve"><value>開始搜尋</value></data>
+  <data name="Import_IdentifiedEmpty" xml:space="preserve"><value>尚無已識別圖片。可在「未識別」分頁取得資料或指定作者。</value></data>
+  <data name="Import_UnidentifiedEmpty" xml:space="preserve"><value>所有圖片都已識別。</value></data>
+  <data name="Import_Review_Rating.AutomationProperties.Name" xml:space="preserve"><value>要套用的分級</value></data>
+  <data name="Import_Review_Undone" xml:space="preserve"><value>已復原上一次編輯。</value></data>
+  <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>本次分級統計</value></data>
+  <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>統計待匯入與已完成的圖片，不受目前分頁或篩選影響。</value></data>
+  <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>未識別（{0}）</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>先選取需要補齊資料的圖片，再使用上方的取得資料、反向搜尋或指定作者。</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>確認圖片、作者與分級後，可直接匯入；批次操作也支援跨區選取。</value></data>
+  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>目前沒有符合篩選的待處理圖片。</value></data>
+  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>目前沒有符合篩選的已識別圖片。</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>匯入圖片：未識別清單、貼文無法取得清單、已識別圖片網格</value></data>
+  <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>貼文無法取得（{0}）</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>已辨識網址或作品 ID，但未能取得貼文資料。可重試取得資料、反向搜尋或指定作者。</value></data>
+  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>目前沒有符合篩選的無法取得貼文。</value></data>
+  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>未識別 · {0}</value></data>
+  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>無法取得 · {0}</value></data>
+  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>已識別 · {0}</value></data>
+  <data name="Nav_Discovery.Content" xml:space="preserve"><value>隨機探索</value></data>
+  <data name="Discovery_Title.Text" xml:space="preserve"><value>隨機探索</value></data>
+  <data name="Discovery_Description.Text" xml:space="preserve"><value>換個順序探索場景。持續往下捲動，每輪不重複。</value></data>
+  <data name="Discovery_Filters.Content" xml:space="preserve"><value>篩選</value></data>
+  <data name="Discovery_Reset.Content" xml:space="preserve"><value>重新洗牌</value></data>
+  <data name="Discovery_Reset.ToolTipService.ToolTip" xml:space="preserve"><value>重新產生隨機順序，並回到頂部。</value></data>
+  <data name="Discovery_Resolution.Header" xml:space="preserve"><value>套用解析度篩選</value></data>
+  <data name="Discovery_FilterHint.Text" xml:space="preserve"><value>使用設定中的解析度清單。變更條件會開始新一輪，一般圖庫的篩選不受影響。</value></data>
+  <data name="Discovery_Clear.Content" xml:space="preserve"><value>清除條件</value></data>
+  <data name="Discovery_Progress" xml:space="preserve"><value>第 {0} 輪 · 已加入 {1:N0}／{2:N0} 張場景</value></data>
+  <data name="Discovery_RoundEnd" xml:space="preserve"><value>第 {0} 輪已全部展示。繼續後會在下方接上新的隨機順序，上方內容仍可回看。</value></data>
+  <data name="Discovery_Continue.Content" xml:space="preserve"><value>繼續下一輪</value></data>
+  <data name="Discovery_Error.Title" xml:space="preserve"><value>無法載入場景</value></data>
+  <data name="Discovery_Error.Message" xml:space="preserve"><value>請重試，或到設定檢查場景資料夾。</value></data>
+  <data name="Discovery_Retry.Content" xml:space="preserve"><value>重試</value></data>
+  <data name="Metadata_Title" xml:space="preserve">
+    <value>卡片詳細資料</value>
+  </data>
+  <data name="Metadata_Loading" xml:space="preserve">
+    <value>正在讀取詳細資料…</value>
+  </data>
+  <data name="Metadata_Failed" xml:space="preserve">
+    <value>無法讀取詳細資料，可重試重新讀取檔案。</value>
+  </data>
+  <data name="Metadata_Partial" xml:space="preserve">
+    <value>部分區塊無法展開，以下顯示可讀資料。</value>
+  </data>
+  <data name="Metadata_Complete" xml:space="preserve">
+    <value>詳細資料已載入。</value>
+  </data>
+  <data name="Metadata_ExportJson" xml:space="preserve">
+    <value>匯出資料 JSON</value>
+  </data>
+  <data name="Metadata_ExportPartialJson" xml:space="preserve">
+    <value>匯出部分資料 JSON</value>
+  </data>
+  <data name="Metadata_ExportCsv" xml:space="preserve">
+    <value>匯出 KKManager CSV</value>
+  </data>
+  <data name="Metadata_CsvNote" xml:space="preserve">
+    <value>CSV 包含摘要欄位；未檢查模組相依性，缺失模組欄位留空。</value>
+  </data>
+  <data name="Metadata_Retry" xml:space="preserve">
+    <value>重試</value>
+  </data>
+  <data name="Metadata_Version" xml:space="preserve">
+    <value>格式版本</value>
+  </data>
+  <data name="Metadata_Language" xml:space="preserve">
+    <value>語言 ID</value>
+  </data>
+  <data name="Metadata_Sex" xml:space="preserve">
+    <value>性別</value>
+  </data>
+  <data name="Metadata_Personality" xml:space="preserve">
+    <value>性格</value>
+  </data>
+  <data name="Metadata_PluginGuid" xml:space="preserve">
+    <value>外掛 GUID</value>
+  </data>
+  <data name="Metadata_Extended" xml:space="preserve">
+    <value>擴充資料</value>
+  </data>
+  <data name="Metadata_Unavailable" xml:space="preserve">
+    <value>無法讀取</value>
+  </data>
+  <data name="Metadata_More" xml:space="preserve">
+    <value>更多…</value>
+  </data>
+  <data name="Metadata_Exported" xml:space="preserve">
+    <value>匯出完成。</value>
+  </data>
+  <data name="Metadata_ExportFailed" xml:space="preserve">
+    <value>匯出失敗，請重試或選擇其他儲存位置。</value>
+  </data>
+  <data name="Metadata_SearchHint" xml:space="preserve">
+    <value>搜尋姓名、暱稱、作者／資料 ID、外掛 GUID 或路徑</value>
+  </data>
+  <data name="Browser_Origin.Header" xml:space="preserve"><value>來源</value></data>
+  <data name="Browser_Origin_All.Content" xml:space="preserve"><value>全部來源</value></data>
+  <data name="Browser_Origin_ExcludeLocal.Content" xml:space="preserve"><value>排除本地</value></data>
+  <data name="Browser_Origin_LocalOnly.Content" xml:space="preserve"><value>僅本地</value></data>
+  <data name="Nav_LocalSources.Content" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="LocalSources_Title.Text" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="LocalSources_DropZoneTitle.Text" xml:space="preserve"><value>把私下取得的卡片拖到這裡</value></data>
+  <data name="LocalSources_DropZoneHint.Text" xml:space="preserve"><value>放在這裡的檔案全程不會對外查詢。</value></data>
+  <data name="LocalSources_ChooseFiles.Content" xml:space="preserve"><value>選擇檔案</value></data>
+  <data name="LocalSources_PendingCount" xml:space="preserve"><value>{0} 張待歸檔</value></data>
+  <data name="LocalSources_RejectedCount" xml:space="preserve"><value>{0} 個不是卡片，已略過</value></data>
+  <data name="LocalSources_MoreThumbnails" xml:space="preserve"><value>+{0}</value></data>
+  <data name="LocalSources_ClearStaging.Content" xml:space="preserve"><value>清空</value></data>
+  <data name="LocalSources_DragFolderHint.Text" xml:space="preserve"><value>把這個資料夾拖到下方的來源上</value></data>
+  <data name="LocalSources_FolderAutomationName" xml:space="preserve"><value>待匯入的卡片。拖到某個來源上，或開啟快捷選單選擇來源。</value></data>
+  <data name="LocalSources_ImportToMenuHeader" xml:space="preserve"><value>匯入到</value></data>
+  <data name="LocalSources_AddSource.Text" xml:space="preserve"><value>新增來源</value></data>
+  <data name="LocalSources_DropCaption" xml:space="preserve"><value>匯入到 {0}</value></data>
+  <data name="LocalSources_ImportingTo" xml:space="preserve"><value>正在匯入到 {0}…</value></data>
+  <data name="LocalSources_ImportSucceeded" xml:space="preserve"><value>已匯入 {0} 張卡片到 {1}。</value></data>
+  <data name="LocalSources_ImportSucceededWithDuplicates" xml:space="preserve"><value>已匯入 {0} 張卡片到 {1}；另有 {2} 張重複，保留在原處。</value></data>
+  <data name="LocalSources_Duplicates_Title" xml:space="preserve"><value>有 {0} 張卡片重複</value></data>
+  <data name="LocalSources_Duplicates_Body" xml:space="preserve"><value>圖庫裡已經有內容完全相同的卡片，所以下面這些檔案保留在原處，沒有移動也沒有刪除：</value></data>
+  <data name="LocalSources_Duplicates_More" xml:space="preserve"><value>…等 {0} 張</value></data>
+  <data name="LocalSources_Duplicates_OpenFolder" xml:space="preserve"><value>開啟檔案所在資料夾</value></data>
+  <data name="LocalSources_ImportFailed" xml:space="preserve"><value>匯入失敗，{0} 張卡片保留在原處。</value></data>
+  <data name="LocalSources_ImportNothingEligible" xml:space="preserve"><value>這裡沒有可以匯入的東西。</value></data>
+  <data name="LocalSources_ImportBusy" xml:space="preserve"><value>已經有一個匯入正在進行，請等它完成後再試。</value></data>
+  <data name="LocalSources_Empty.Text" xml:space="preserve"><value>還沒有本地來源。先拖入卡片，再把資料夾放到「新增來源」上。</value></data>
+  <data name="LocalSources_NewSourceTitle" xml:space="preserve"><value>新增本地來源</value></data>
+  <data name="LocalSources_NewSourceNamePlaceholder" xml:space="preserve"><value>名稱，例如朋友的暱稱</value></data>
+  <data name="LocalSources_NewSourceConfirm" xml:space="preserve"><value>建立</value></data>
+  <data name="LocalSources_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="LocalSources_ImportAlreadyInLibrary" xml:space="preserve"><value>這些卡片已經在圖庫裡了。</value></data>
+  <data name="LocalSources_ImportNoDestination" xml:space="preserve"><value>算不出落地位置。請在設定裡確認這種卡片類型有設定圖庫資料夾。</value></data>
+  <data name="LocalSources_EditSource.Text" xml:space="preserve"><value>編輯…</value></data>
+  <data name="Authors_EditLocal.Text" xml:space="preserve"><value>編輯本地來源…</value></data>
+  <data name="AuthorDetail_EditLocal.ToolTipService.ToolTip" xml:space="preserve"><value>編輯名稱與頭像</value></data>
+  <data name="LocalSources_Edit_Title" xml:space="preserve"><value>編輯本地來源</value></data>
+  <data name="LocalSources_Edit_NameLabel" xml:space="preserve"><value>名稱</value></data>
+  <data name="LocalSources_Edit_PickFile" xml:space="preserve"><value>選擇圖片檔…</value></data>
+  <data name="LocalSources_Edit_PickCard" xml:space="preserve"><value>從卡片挑…</value></data>
+  <data name="LocalSources_Edit_PickAuthor" xml:space="preserve"><value>從線上作者挑…</value></data>
+  <data name="LocalSources_Edit_ClearAvatar" xml:space="preserve"><value>清除頭像</value></data>
+  <data name="LocalSources_Edit_PickCardTitle" xml:space="preserve"><value>挑一張卡片當頭像</value></data>
+  <data name="LocalSources_Edit_PickAuthorTitle" xml:space="preserve"><value>挑一位線上作者的頭像</value></data>
+  <data name="LocalSources_Edit_Back" xml:space="preserve"><value>返回</value></data>
+  <data name="LocalSources_Edit_Save" xml:space="preserve"><value>儲存</value></data>
+  <data name="LocalSources_Edit_Close" xml:space="preserve"><value>知道了</value></data>
+  <data name="LocalSources_Edit_FolderNote" xml:space="preserve"><value>改名時會一併改掉磁碟上的資料夾名稱，資料夾裡的識別碼保持不變。這批卡片的縮圖會重新產生。</value></data>
+  <data name="LocalSources_Edit_FolderKeptTitle" xml:space="preserve"><value>有資料夾沒改到名字</value></data>
+  <data name="LocalSources_Edit_FolderKeptBody" xml:space="preserve"><value>來源已經改名為「{0}」，但下列資料夾改不動，通常是有程式正在讀裡面的檔案。卡片與名稱都不受影響，之後可以再改一次：&#10;{1}</value></data>
+  <data name="LocalSources_ImportFailedCards" xml:space="preserve"><value>匯入失敗：{0} — {1}。{2} 張卡片全部保留在原處。</value></data>
+  <data name="LocalSources_ImportFailedUnknown" xml:space="preserve"><value>匯入失敗，{0} 張卡片全部保留在原處。</value></data>
+  <data name="LocalSources_ImportFailedManual" xml:space="preserve"><value>匯入失敗，而且 {0} 已經被移到圖庫、無法還原，請手動處理。其餘卡片保留在原處。</value></data>
+  <data name="LocalSources_FailedCardsMore" xml:space="preserve"><value>{0} 等 {1} 張</value></data>
+  <data name="LocalSources_NameSeparator" xml:space="preserve"><value>、</value></data>
+  <data name="LocalSources_Failure_ContentMismatch" xml:space="preserve"><value>圖庫裡已經有同名但內容不同的卡片</value></data>
+  <data name="LocalSources_Failure_SourceMissing" xml:space="preserve"><value>找不到原始檔案</value></data>
+  <data name="LocalSources_Failure_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="LocalSources_Failure_DiskFull" xml:space="preserve"><value>目標磁碟空間不足</value></data>
+  <data name="LocalSources_Failure_AccessDenied" xml:space="preserve"><value>沒有權限寫入目標資料夾</value></data>
+  <data name="LocalSources_Failure_NameExhausted" xml:space="preserve"><value>找不到可用的檔名</value></data>
+  <data name="LocalSources_Failure_Sidecar" xml:space="preserve"><value>無法寫入卡片資訊</value></data>
+  <data name="LocalSources_Failure_Unknown" xml:space="preserve"><value>未知的錯誤</value></data>
+  <data name="Browser_AlternateVersion" xml:space="preserve"><value>IF</value></data>
+  <data name="Detail_VersionAnnotation.Text" xml:space="preserve"><value>版本標記</value></data>
+  <data name="Detail_VersionNote.Header" xml:space="preserve"><value>備註</value></data>
+  <data name="Detail_VersionNote.PlaceholderText" xml:space="preserve"><value>例如：短髮 IF</value></data>
+  <data name="Detail_AssignGroup.Content" xml:space="preserve"><value>歸入其他角色…</value></data>
+  <data name="Detail_GroupDialog_Title" xml:space="preserve"><value>要歸入哪個角色？</value></data>
+  <data name="Detail_GroupDialog_SearchPlaceholder" xml:space="preserve"><value>搜尋角色名稱</value></data>
+  <data name="Detail_GroupDialog_Clear" xml:space="preserve"><value>使用這張卡自己的名字</value></data>
+  <data name="Detail_GroupDialog_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Detail_GroupEntry" xml:space="preserve"><value>{0} · {1} 張</value></data>
+  <data name="Detail_GroupOverride" xml:space="preserve"><value>已歸入：{0}</value></data>
+  <data name="Detail_GroupDialog_AllAuthors" xml:space="preserve"><value>顯示所有作者的角色</value></data>
+  <data name="Character_VersionKind_Current" xml:space="preserve"><value>正式版</value></data>
+  <data name="Character_VersionKind_Alternate" xml:space="preserve"><value>IF 版</value></data>
+  <data name="Character_VersionSuperseded" xml:space="preserve"><value>{0}・已取代</value></data>
+  <data name="Detail_VersionKind_Current.Content" xml:space="preserve"><value>本尊</value></data>
+  <data name="Detail_VersionKind_Alternate.Content" xml:space="preserve"><value>IF 版</value></data>
+  <data name="Detail_VersionSuperseded.Content" xml:space="preserve"><value>已被更新的卡片取代</value></data>
 </root>

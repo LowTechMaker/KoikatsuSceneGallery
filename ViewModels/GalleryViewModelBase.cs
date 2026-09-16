@@ -25,11 +25,12 @@ public static class ShuffleConstants
 public abstract partial class GalleryViewModelBase : ObservableObject
 {
     protected string[] _searchKeywords = [];
+    protected bool _resolutionFilterEnabled;
+    protected HashSet<string> _allowedResolutions = [];
+    protected bool HasResolutionFilter => _resolutionFilterEnabled && _allowedResolutions.Count > 0;
 
     private int _shuffleDisplayCount;
-    private readonly List<object> _shuffleQueue = [];
-    private readonly Dictionary<object, int> _shuffleOrderMap = [];
-    private readonly HashSet<object> _shuffleUsedCards = [];
+    private readonly GalleryShuffleQueue _shuffle = new(ShuffleConstants.PoolSize);
 
     protected CancellationTokenSource? _thumbnailCts;
     protected CancellationTokenSource? _loadCts;
@@ -77,6 +78,26 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     protected abstract bool CardPassesFilter(object card);
     protected abstract void ApplyFilter();
 
+    protected TCard? GetRandomVisibleCard<TCard>() where TCard : CardBase
+    {
+        if (CardsView.Count == 0) return null;
+        return CardsView[Random.Shared.Next(CardsView.Count)] as TCard;
+    }
+
+    protected void OnResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
+    {
+        _dispatcherQueue.TryEnqueue(() =>
+        {
+            _resolutionFilterEnabled = enabled;
+            _allowedResolutions = resolutions;
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+            ApplyFilter();
+        });
+    }
+
+    public virtual bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
+        => GallerySearch.Matches(card.FilePath, (card as IAuthorOwner)?.Author?.Name, keywords);
+
     protected GalleryViewModelBase(IList cardsSource, ThumbnailPriorityScheduler thumbnailScheduler)
     {
         _cardsSource = cardsSource;
@@ -86,6 +107,25 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         if (cardsSource is INotifyCollectionChanged observable)
             observable.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
         ApplySort();
+    }
+
+    /// <summary>
+    /// Where a card came from, as opposed to what it contains. Shared by every
+    /// gallery whose cards can carry an author, and session-only like the other
+    /// browser filters.
+    /// </summary>
+    [ObservableProperty]
+    public partial CardOriginFilter OriginFilter { get; set; }
+
+    protected bool HasOriginFilter => OriginFilter != CardOriginFilter.All;
+
+    protected bool OriginPasses(object? card)
+        => !HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter);
+
+    partial void OnOriginFilterChanged(CardOriginFilter value)
+    {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value)
@@ -129,7 +169,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
             if (SelectedSort == SortOption.Shuffle)
             {
                 CardsView.SortDescriptions.Add(
-                    new SortDescription(SortDirection.Ascending, new ShuffleQueueComparer(_shuffleOrderMap)));
+                    new SortDescription(SortDirection.Ascending, _shuffle.Comparer));
                 return;
             }
             var direction = SortAscending ? SortDirection.Ascending : SortDirection.Descending;
@@ -144,98 +184,108 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         }
     }
 
-    protected void BuildShuffleQueue()
-    {
-        var candidates = new List<object>();
-        foreach (object? card in _cardsSource)
-            if (card is not null && CardPassesFilter(card))
-                candidates.Add(card);
+    protected void BuildShuffleQueue() => _shuffle.Build(_cardsSource, CardPassesFilter);
 
-        for (int i = candidates.Count - 1; i > 0; i--)
-        {
-            int j = Random.Shared.Next(i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-        }
+    private void AdvanceShuffleQueue() =>
+        _shuffle.Advance(_cardsSource, CardPassesFilter, _shuffleDisplayCount);
 
-        int poolSize = Math.Min(ShuffleConstants.PoolSize, candidates.Count);
-        _shuffleQueue.Clear();
-        _shuffleUsedCards.Clear();
-        _shuffleOrderMap.Clear();
-
-        for (int i = 0; i < poolSize; i++)
-        {
-            _shuffleQueue.Add(candidates[i]);
-            _shuffleOrderMap[candidates[i]] = i;
-            _shuffleUsedCards.Add(candidates[i]);
-        }
-    }
-
-    private void AdvanceShuffleQueue()
-    {
-        int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
-        if (displayCount <= 0 || _shuffleQueue.Count == 0) return;
-
-        var tail = _shuffleQueue.Skip(displayCount).ToList();
-
-        var candidates = new List<object>();
-        foreach (object? card in _cardsSource)
-            if (card is not null && CardPassesFilter(card) && !_shuffleUsedCards.Contains(card))
-                candidates.Add(card);
-
-        if (candidates.Count == 0)
-        {
-            _shuffleUsedCards.Clear();
-            foreach (var item in tail)
-                _shuffleUsedCards.Add(item);
-            foreach (object? card in _cardsSource)
-                if (card is not null && CardPassesFilter(card) && !_shuffleUsedCards.Contains(card))
-                    candidates.Add(card);
-        }
-
-        for (int i = candidates.Count - 1; i > 0; i--)
-        {
-            int j = Random.Shared.Next(i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-        }
-
-        int needed = ShuffleConstants.PoolSize - tail.Count;
-        int take = Math.Min(needed, candidates.Count);
-
-        _shuffleQueue.Clear();
-        _shuffleOrderMap.Clear();
-        _shuffleQueue.AddRange(tail);
-        for (int i = 0; i < take; i++)
-        {
-            _shuffleQueue.Add(candidates[i]);
-            _shuffleUsedCards.Add(candidates[i]);
-        }
-
-        for (int i = 0; i < _shuffleQueue.Count; i++)
-            _shuffleOrderMap[_shuffleQueue[i]] = i;
-    }
-
-    private void ClearShuffleState()
-    {
-        _shuffleQueue.Clear();
-        _shuffleOrderMap.Clear();
-        _shuffleUsedCards.Clear();
-    }
+    private void ClearShuffleState() => _shuffle.Clear();
 
     protected bool TryApplyShuffleFilter()
     {
         if (!IsShuffleMode) return false;
 
-        int displayCount = Math.Min(_shuffleDisplayCount, _shuffleQueue.Count);
-        var displaySet = new HashSet<object>();
-        for (int i = 0; i < displayCount; i++)
-            displaySet.Add(_shuffleQueue[i]);
+        var displaySet = _shuffle.GetDisplaySet(_shuffleDisplayCount);
 
         CardsView.Filter = item => displaySet.Contains(item);
         RefreshFilterAndNotify();
         return true;
     }
 
+    /// <summary>
+    /// Requests a thumbnail using the existing per-card request lifecycle. Call on the UI thread.
+    /// The generator receives the request-owned cancellation token. onGenerated runs only for
+    /// a non-null generated path before UI dispatch (never for cache hits); its exceptions use
+    /// the same logging and completion path as generation failures.
+    /// </summary>
+    protected void RequestThumbnailCore<TCard>(
+        TCard card,
+        ThumbnailWorkPriority priority,
+        Func<TCard, string?> tryGetCachedPath,
+        Func<TCard, CancellationToken, Task<string?>> generateAsync,
+        IAppLogger logger,
+        string logPrefix,
+        Action<TCard, string>? onGenerated = null) where TCard : CardBase
+    {
+        if (card.HasThumbnail) return;
+        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
+        {
+            card.ThumbnailPath = cached;
+            return;
+        }
+
+        var diskCached = tryGetCachedPath(card);
+        if (diskCached is not null)
+        {
+            _thumbnailPathCache[card.FilePath] = diskCached;
+            card.ThumbnailPath = diskCached;
+            return;
+        }
+
+        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
+        _ = ScheduleThumbnailRequest(request, token => GenerateThumbnailAsync(
+            card, request, token, generateAsync, logger, logPrefix, onGenerated));
+    }
+
+    private async Task GenerateThumbnailAsync<TCard>(
+        TCard card,
+        ThumbnailRequest request,
+        CancellationToken cancellationToken,
+        Func<TCard, CancellationToken, Task<string?>> generateAsync,
+        IAppLogger logger,
+        string logPrefix,
+        Action<TCard, string>? onGenerated) where TCard : CardBase
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (card.HasThumbnail) return;
+            var thumbnailPath = await generateAsync(card, cancellationToken)
+                .ConfigureAwait(false);
+            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
+            {
+                onGenerated?.Invoke(card, thumbnailPath);
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
+                    card.ThumbnailPath = thumbnailPath;
+                });
+            }
+        }
+        catch (OperationCanceledException ex) { logger.LogError($"{logPrefix}.GenerateThumbnailCanceled", ex, card.FilePath); }
+        catch (Exception ex) { logger.LogError($"{logPrefix}.GenerateThumbnail", ex, card.FilePath); }
+        finally
+        {
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                CompleteThumbnailRequest(request);
+            });
+        }
+    }
+
     protected void ResetThumbnailState()
+    {
+        StartThumbnailSession();
+        _thumbnailPathCache.Clear();
+        PendingThumbnailCount = 0;
+    }
+
+    // Retires the current session before a new one begins: the old source is
+    // cancelled and disposed only after the requests it owns have been taken
+    // off the scheduler, and the session number moves so late completions from
+    // the retired session are ignored. The path cache is deliberately not
+    // cleared here; only a full reload discards it.
+    private void StartThumbnailSession()
     {
         var previousCts = _thumbnailCts;
         previousCts?.Cancel();
@@ -243,8 +293,6 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         previousCts?.Dispose();
         _thumbnailCts = new CancellationTokenSource();
         _thumbnailSession++;
-        _thumbnailPathCache.Clear();
-        PendingThumbnailCount = 0;
     }
 
     /// <summary>
@@ -346,6 +394,34 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         return _loadCts.Token;
     }
 
+    protected async Task RunLoadAsync(Func<CancellationToken, Task> load,
+        IAppLogger logger, string cancellationOperation, Action? cancelMetadata = null)
+    {
+        var cancellationToken = BeginLoad();
+        var loadSource = _loadCts;
+        cancelMetadata?.Invoke();
+        ResetThumbnailState();
+
+        IsLoading = true;
+        var viewRefreshDeferral = DeferCardsViewRefresh();
+        try
+        {
+            await load(cancellationToken);
+        }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(cancellationOperation, ex);
+        }
+        finally
+        {
+            viewRefreshDeferral.Dispose();
+            // Dispose can run while load is awaiting; reading a disposed CTS.Token throws.
+            if (ReferenceEquals(_loadCts, loadSource))
+                IsLoading = false;
+            RaiseCardsReloaded();
+        }
+    }
+
     /// <summary>
     /// Holds view notifications while an initial folder scan is adding batches.
     /// Without this deferral, every partial, re-sorted batch can recycle the same
@@ -353,6 +429,29 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     /// visibly flash until the scan completes.
     /// </summary>
     protected IDisposable DeferCardsViewRefresh() => CardsView.DeferRefresh();
+
+    // For galleries whose scan result needs only path de-duplication before adding.
+    // The supplied index uses the caller's existing comparer and belongs to this source.
+    protected void PublishScannedCards<TCard>(IEnumerable<TCard> batch,
+        Dictionary<string, TCard> index, CancellationToken token) where TCard : CardBase
+    {
+        token.ThrowIfCancellationRequested();
+        PublishScannedBatch(() =>
+        {
+            foreach (var card in batch)
+            {
+                if (!index.TryAdd(card.FilePath, card)) continue;
+                _cardsSource.Add(card);
+            }
+        }, token);
+    }
+
+    // ScanFoldersAsync invokes this synchronous producer callback on its worker.
+    protected void PublishScannedBatch(Action applyBatch, CancellationToken token)
+        => AwaitedUiPublication.InvokeBlocking(
+            action => _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => action()),
+            () => { using (CardsView.DeferRefresh()) applyBatch(); },
+            TimeSpan.FromSeconds(10), token);
 
     public virtual void Activate()
     {
@@ -364,13 +463,17 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         if (_thumbnailCts is not null && !_thumbnailCts.IsCancellationRequested)
             return;
 
-        var previousCts = _thumbnailCts;
-        previousCts?.Cancel();
-        CancelPendingThumbnailRequests();
-        previousCts?.Dispose();
-        _thumbnailCts = new CancellationTokenSource();
-        _thumbnailSession++;
+        StartThumbnailSession();
         PendingThumbnailCount = 0;
+    }
+
+    // Derived Dispose methods retain their own metadata and event cleanup after this.
+    protected void DisposeWorkCancellationSources()
+    {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _thumbnailCts?.Cancel();
+        _thumbnailCts?.Dispose();
     }
 
     public virtual void CancelPendingWork()

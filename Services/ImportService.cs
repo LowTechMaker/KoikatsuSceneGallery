@@ -1,4 +1,5 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Dispatching;
@@ -12,8 +13,6 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 public sealed class ImportService
 {
-    private const string UnrecognizedFolderName = "!unrecognized";
-
     private static string GetRatingFolder(ContentRating rating, SettingsService.ConfigData config) => rating switch
     {
         ContentRating.R18 => config.R18FolderName,
@@ -55,10 +54,13 @@ public sealed class ImportService
     private readonly IReadOnlyList<ICardImportProvider> _importProviders;
     private readonly IReadOnlyList<IFolderAuthorProvider> _authorProviders;
     private readonly IReverseImageSearchProvider? _reverseImageSearchProvider;
-    private readonly SettingsService _settingsService;
+    private readonly Func<Task<SettingsService.ConfigData>> _loadConfig;
     private readonly IAppLogger _logger;
     private readonly ImportFileExecutor _fileExecutor;
-    private readonly PostMetadataStore _postMetadataStore = new();
+    private readonly PostMetadataStore _postMetadataStore;
+    private readonly LibraryFileCache _libraryFileCache;
+    private readonly ImportLibraryIndexer _libraryIndexer;
+    private readonly ImportResolutionCoordinator<ResolveDiagnosticResult> _resolution = new();
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
@@ -66,12 +68,26 @@ public sealed class ImportService
         IReverseImageSearchProvider? reverseImageSearchProvider,
         SettingsService settingsService,
         IAppLogger logger)
+        : this(importProviders, authorProviders, reverseImageSearchProvider,
+            settingsService.LoadConfigAsync, logger, new PostMetadataStore(), new LibraryFileCache())
+    {
+    }
+
+    internal ImportService(
+        IReadOnlyList<ICardImportProvider> importProviders,
+        IReadOnlyList<IFolderAuthorProvider> authorProviders,
+        IReverseImageSearchProvider? reverseImageSearchProvider,
+        Func<Task<SettingsService.ConfigData>> loadConfig,
+        IAppLogger logger, PostMetadataStore metadataStore, LibraryFileCache libraryFileCache)
     {
         _importProviders = importProviders;
         _authorProviders = authorProviders;
         _reverseImageSearchProvider = reverseImageSearchProvider;
-        _settingsService = settingsService;
+        _loadConfig = loadConfig;
+        _postMetadataStore = metadataStore;
+        _libraryFileCache = libraryFileCache;
         _logger = logger;
+        _libraryIndexer = new(libraryFileCache, logger.LogError);
         _fileExecutor = new ImportFileExecutor(logger);
     }
 
@@ -107,6 +123,22 @@ public sealed class ImportService
                 item.ColorHistogram = fp.Value.Histogram;
             }
         }).ConfigureAwait(false);
+    }
+
+    public ArtworkId? ResolveReviewArtworkInput(string input, string? preferredProviderId)
+    {
+        var value = input.Trim();
+        if (string.IsNullOrEmpty(value)) return null;
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+            return _importProviders.Select(p => p.TryParseUrl(value)).FirstOrDefault(id => id is not null);
+
+        if (value.Contains("://", StringComparison.Ordinal) || value.Any(char.IsWhiteSpace)) return null;
+        var candidates = _importProviders.Select(p => p.TryParseFilename(value))
+            .Where(id => id is not null).DistinctBy(id => (id!.ProviderId, id.Id)).ToList();
+        var source = ImportSourceSelection.Resolve(preferredProviderId,
+            _importProviders.Select(p => p.ProviderId).ToArray(), candidates.Select(id => id!.ProviderId));
+        return source is null ? null : candidates.FirstOrDefault(id => string.Equals(id!.ProviderId, source, StringComparison.OrdinalIgnoreCase))
+            ?? new ArtworkId(source, value);
     }
 
     public ArtworkId CreateManualArtworkId(string id)
@@ -205,12 +237,19 @@ public sealed class ImportService
     /// destination folders. Items in the collection are updated on the dispatcher
     /// thread as results arrive.
     /// </summary>
-    public async Task<int> AnalyzeAsync(
+    public Task<int> AnalyzeAsync(IReadOnlyList<string> filePaths, ObservableCollection<ImportItem> items,
+        DispatcherQueue dispatcher, CancellationToken ct, ImportAnalysisOptions? options = null)
+        => AnalyzeAsync(filePaths, items, action => dispatcher.TryEnqueue(() => action()), ct, options);
+
+    internal async Task<int> AnalyzeAsync(
         IReadOnlyList<string> filePaths,
         ObservableCollection<ImportItem> items,
-        DispatcherQueue dispatcher,
-        CancellationToken ct)
+        Func<Action, bool> enqueue,
+        CancellationToken ct,
+        ImportAnalysisOptions? options = null)
     {
+        options ??= ImportAnalysisOptions.Default;
+
         // Phase 1: classify on a background thread so the UI stays responsive
         // (CardTypeClassifier reads file content for each card).
         var (validItems, rejectedCount) = await Task.Run(() =>
@@ -225,7 +264,20 @@ public sealed class ImportService
                 var item = new ImportItem { SourceFilePath = path, Status = ImportItemStatus.Analyzing };
                 item.CardType = cardType;
                 item.GameVersion = gameVersion;
-                item.ArtworkId = TryParseFilenameAll(item.FileName);
+                if (options.LocalSource is { } localSource)
+                {
+                    // No file-name parsing for a local batch. A privately
+                    // shared name can contain a digit run that would be read
+                    // as a remote artwork and fetched in phase 2 below.
+                    item.AuthorProviderId = LocalSourceIdentity.ProviderId;
+                    item.AuthorId = localSource.AuthorId;
+                    item.AuthorName = localSource.AuthorName;
+                }
+                else
+                {
+                    item.ArtworkId = TryParseFilenameAll(item.FileName);
+                }
+
                 valid.Add(item);
             }
             return (valid, rejected);
@@ -233,10 +285,15 @@ public sealed class ImportService
 
         // Back on the UI thread: add valid items to the collection.
         // The first Add flips HasItems → the DropZone transitions to the queue view.
-        foreach (var item in validItems)
-            items.Add(item);
+        await AwaitedUiPublication.InvokeAsync(enqueue, () =>
+        {
+            ct.ThrowIfCancellationRequested();
+            foreach (var item in validItems) items.Add(item);
+            return true;
+        }, ct).ConfigureAwait(false);
 
-        // Phase 2: deduplicate artwork IDs and fetch metadata from provider
+        // Phase 2: deduplicate artwork IDs and fetch metadata from provider.
+        // A local batch has no artwork ids, so this fetches nothing.
         var groups = validItems
             .Where(i => i.ArtworkId is not null)
             .GroupBy(i => BuildArtworkIdentityKey(i.ArtworkId!))
@@ -265,10 +322,11 @@ public sealed class ImportService
                 info = null;
             }
 
-            dispatcher.TryEnqueue(() =>
+            await AwaitedUiPublication.InvokeAsync(enqueue, () =>
             {
                 foreach (var item in group)
                 {
+                    if (!items.Contains(item)) continue;
                     if (info is not null)
                     {
                         item.FetchedArtworkInfo = info;
@@ -285,24 +343,20 @@ public sealed class ImportService
                     }
                     item.Status = ImportItemStatus.ReadyToImport;
                 }
-            });
+                return true;
+            }, ct).ConfigureAwait(false);
         }
 
-        // Mark items without an artwork ID as ready
-        dispatcher.TryEnqueue(() =>
+        // Wait for readiness publication before indexing destinations.
+        await AwaitedUiPublication.InvokeAsync(enqueue, () =>
         {
-            foreach (var item in validItems.Where(i => i.ArtworkId is null))
+            foreach (var item in validItems.Where(i => i.ArtworkId is null && items.Contains(i)))
                 item.Status = ImportItemStatus.ReadyToImport;
-        });
+            return true;
+        }, ct).ConfigureAwait(false);
 
-        // Phase 3: resolve destinations (initial pass; fingerprints not yet computed,
-        // so visual similarity falls back to count threshold here — a second
-        // ReResolveAsync call after ComputeFingerprintsAsync corrects this)
-        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
-            config, validItems, ct).ConfigureAwait(false);
-        dispatcher.TryEnqueue(() => ResolveDestinations(items, config, identicalSourcePaths, folderIndex,
-            config.ArtworkSubfolderThreshold, config.UseVisualSimilarity));
+        // Initial pass still precedes fingerprint calculation; it shares the resolution pipeline.
+        await ReResolveWithDetailedDiagnosticsAsync(items, enqueue, ct).ConfigureAwait(false);
 
         return rejectedCount;
     }
@@ -315,7 +369,7 @@ public sealed class ImportService
     {
         if (_authorProviders.Count == 0) return [];
 
-        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
+        var config = await _loadConfig().ConfigureAwait(false);
 
         return await Task.Run(() =>
         {
@@ -382,15 +436,116 @@ public sealed class ImportService
         int? artworkSubfolderThreshold = null,
         bool? useVisualSimilarity = null)
     {
-        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
-        var itemSnapshot = items.ToList();
-        var (identicalSourcePaths, folderIndex) = await BuildLibraryIndexAsync(
-            config, itemSnapshot, ct).ConfigureAwait(false);
-        int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
-        bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
-        dispatcher.TryEnqueue(() => ResolveDestinations(
-            items, config, identicalSourcePaths, folderIndex, threshold, visual));
+        _ = await ReResolveWithDetailedDiagnosticsAsync(
+            items,
+            dispatcher,
+            ct,
+            artworkSubfolderThreshold,
+            useVisualSimilarity).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Re-resolves destinations and reports the background, UI-queue, directory-I/O,
+    /// and property-notification costs of the newest pass. The coordinator captures
+    /// the collection on the UI dispatcher before indexing and coalesces overlapping callers.
+    /// </summary>
+    public Task<ResolveDiagnosticResult> ReResolveWithDetailedDiagnosticsAsync(
+        ObservableCollection<ImportItem> items,
+        DispatcherQueue dispatcher,
+        CancellationToken ct,
+        int? artworkSubfolderThreshold = null,
+        bool? useVisualSimilarity = null,
+        bool debounce = false)
+        => ReResolveWithDetailedDiagnosticsAsync(items, action => dispatcher.TryEnqueue(() => action()),
+            ct, artworkSubfolderThreshold, useVisualSimilarity, debounce);
+
+    internal Task<ResolveDiagnosticResult> ReResolveWithDetailedDiagnosticsAsync(
+        ObservableCollection<ImportItem> items,
+        Func<Action, bool> enqueue,
+        CancellationToken ct,
+        int? artworkSubfolderThreshold = null,
+        bool? useVisualSimilarity = null,
+        bool debounce = false)
+        => _resolution.RequestAsync(async token =>
+        {
+            var snapshot = await AwaitedUiPublication.InvokeAsync(enqueue, () =>
+            {
+                var capturedItems = items.ToArray();
+                var sources = capturedItems.Select(item =>
+                    new ImportLibrarySource(item.SourceFilePath, item.FileName)).ToArray();
+                return (Items: capturedItems, Sources: sources);
+            }, token).ConfigureAwait(false);
+            var config = await _loadConfig().ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            var backgroundStopwatch = Stopwatch.StartNew();
+            var libraryIndex = await _libraryIndexer.BuildAsync(CreateLibraryIndexRequest(config, snapshot.Sources), token).ConfigureAwait(false);
+            backgroundStopwatch.Stop();
+            int threshold = artworkSubfolderThreshold ?? config.ArtworkSubfolderThreshold;
+            bool visual = useVisualSimilarity ?? config.UseVisualSimilarity;
+            var queueStopwatch = Stopwatch.StartNew();
+            return () =>
+            {
+                queueStopwatch.Stop();
+                var diagnostics = new ResolveDiagnosticCollector();
+                // Never apply an old snapshot's index to newly added or removed items.
+                var current = new ObservableCollection<ImportItem>(snapshot.Items.Where(items.Contains));
+                ResolveDestinations(current, config, libraryIndex.IdenticalSourcePaths,
+                    libraryIndex.FolderIndex, threshold, visual, diagnostics);
+                var result = diagnostics.ToResult(backgroundStopwatch.ElapsedMilliseconds,
+                    queueStopwatch.ElapsedMilliseconds, libraryIndex);
+                RecordSlowResolution(result, snapshot.Sources.Length);
+                return result;
+            };
+        }, enqueue, debounce, ct);
+
+    /// <summary>How long a resolution pass may take before it is worth recording.</summary>
+    private const long SlowResolutionMs = 750;
+
+    /// <summary>
+    /// Records the timing of a resolution pass that was slow, or that had to
+    /// rebuild the library index.
+    /// </summary>
+    /// <remarks>
+    /// The breakdown has always been collected and always been discarded, which
+    /// left "the import sometimes takes a long time, and not in proportion to
+    /// the batch" impossible to answer. The library index is the suspect: it is
+    /// one snapshot keyed by the root set, so the first import after launch —
+    /// and any import after the index is invalidated — walks every library root
+    /// recursively, however few cards are being imported.
+    ///
+    /// Only slow or rebuilding passes are recorded. The review page re-resolves
+    /// on every edit, and logging each one would bury everything else.
+    ///
+    /// The decision is made here, on the UI thread that commits the pass, but
+    /// the write is handed to the thread pool: the log is an append under a
+    /// global lock, and a diagnostic must not add blocking file I/O to the
+    /// publication the user is waiting on.
+    /// </remarks>
+    private void RecordSlowResolution(ResolveDiagnosticResult result, int sourceCount)
+    {
+        var rebuiltIndex = result.BgLibraryScanAndCandidateIndexElapsedMs > 0;
+        var total = result.BackgroundIndexElapsedMs + result.UiQueueDelayMs
+            + result.UiArtworkDirectoryLookupElapsedMs + result.UiPropertyAssignmentElapsedMs;
+        if (!rebuiltIndex && total < SlowResolutionMs)
+            return;
+
+        var message =
+                $"cards={sourceCount} total={total}ms background={result.BackgroundIndexElapsedMs}ms "
+                + $"libraryScan={result.BgLibraryScanAndCandidateIndexElapsedMs}ms"
+                + $"{(rebuiltIndex ? " (rebuilt)" : "")} "
+                + $"byteCompare={result.BgByteComparisonElapsedMs}ms "
+                + $"folderIndex={result.BgFolderIndexElapsedMs}ms "
+                + $"uiQueue={result.UiQueueDelayMs}ms "
+                + $"artworkLookup={result.UiArtworkDirectoryLookupElapsedMs}ms "
+                + $"assign={result.UiPropertyAssignmentElapsedMs}ms "
+                + $"compared={result.TotalCandidatesCompared} "
+                + $"duplicates={result.ActualIdenticalDuplicates} "
+                + $"mismatches={result.ActualContentMismatches}";
+
+        _ = Task.Run(() => _logger.LogError("Import.SlowResolution", new TimeoutException(message)));
+    }
+
+    public void CancelPendingResolution() => _resolution.CancelAll();
 
     /// <summary>
     /// Moves all ReadyToImport (non-excluded) items to their resolved destinations.
@@ -414,25 +569,42 @@ public sealed class ImportService
             SaveFetchedMetadataAsync);
     }
 
+    /// <summary>
+    /// Registers files committed by the transaction executor, avoiding a full
+    /// library scan the next time an import workspace is re-resolved.
+    /// </summary>
+    public void RegisterCommittedLibraryFiles(IEnumerable<string> destinationPaths)
+        => _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+
+    /// <summary>
+    /// Causes the following resolution to rebuild its filename index from disk.
+    /// </summary>
+    public void InvalidateLibraryFileCache() => _libraryFileCache.Invalidate();
+
     private void ResolveDestinations(
         ObservableCollection<ImportItem> items,
         SettingsService.ConfigData config,
         IReadOnlySet<string> identicalSourcePaths,
         Dictionary<string, Dictionary<string, string>> folderIndex,
         int artworkThreshold = 1,
-        bool useVisualSimilarity = false)
+        bool useVisualSimilarity = false,
+        ResolveDiagnosticCollector? diagnostics = null)
     {
         var subfolder = config.ImportSubfolder.Trim();
+        // Invariant across the whole pass: materialized once instead of being
+        // re-evaluated per root inside the fallback lookup, for every item.
+        var providerScopes = _importProviders.Select(p => GetProviderScope(p.ProviderId)).ToArray();
+        var gameVersionFolderNames = GetGameVersionFolderNames(config);
 
         foreach (var item in items)
         {
             if (item.Status != ImportItemStatus.ReadyToImport || item.CardType == CardType.NotACard)
                 continue;
 
-            item.AuthorDirectoryPath = null;
+            SetAuthorDirectoryPath(item, null, diagnostics);
             if (identicalSourcePaths.Contains(item.SourceFilePath))
             {
-                item.Status = ImportItemStatus.AlreadyInLibrary;
+                SetStatus(item, ImportItemStatus.AlreadyInLibrary, diagnostics);
                 continue;
             }
 
@@ -444,53 +616,23 @@ public sealed class ImportService
             var ratingFolder = scope.UsesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
             var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
             string? targetFolder = null;
-            var useUnrecognizedSubfolder = item.ArtworkId is null && item.AuthorId is not null;
+            var useUnrecognizedSubfolder = ImportDestinationPolicy.UsesUnrecognizedSink(
+                hasArtwork: item.ArtworkId is not null,
+                hasAuthor: item.AuthorId is not null,
+                item.AuthorProviderId);
 
             if (item.AuthorId is not null)
             {
-                foreach (var root in roots)
-                {
-                    var scopeKey = BuildScopeKey(root, scope.Folder, gameVersionFolder, ratingFolder);
-                    if (folderIndex.TryGetValue(scopeKey, out var authorFolders)
-                        && authorFolders.TryGetValue(item.AuthorId, out var existing))
-                    {
-                        targetFolder = existing;
-                        break;
-                    }
-                }
+                targetFolder = ImportAuthorDirectoryLookup.FindExact(
+                    roots, scope.Folder, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
 
                 if (targetFolder is null && item.ArtworkId is null)
                 {
-                    string? matchedProvider = null;
-                    foreach (var root in roots)
-                    {
-                        foreach (var providerScope in _importProviders.Select(p => GetProviderScope(p.ProviderId)))
-                        {
-                            var rf = providerScope.UsesRatingFolders ? ratingFolder : "";
-
-                            var exactKey = BuildScopeKey(root, providerScope.Folder, gameVersionFolder, rf);
-                            if (folderIndex.TryGetValue(exactKey, out var exactFolders)
-                                && exactFolders.TryGetValue(item.AuthorId, out var existing))
-                            {
-                                targetFolder = existing;
-                                break;
-                            }
-
-                            foreach (var gv in GetGameVersionFolderNames(config))
-                            {
-                                if (gv == gameVersionFolder) continue;
-                                var altKey = BuildScopeKey(root, providerScope.Folder, gv, rf);
-                                if (folderIndex.TryGetValue(altKey, out var altFolders)
-                                    && altFolders.ContainsKey(item.AuthorId))
-                                {
-                                    matchedProvider = providerScope.Folder;
-                                    break;
-                                }
-                            }
-                            if (matchedProvider is not null) break;
-                        }
-                        if (targetFolder is not null || matchedProvider is not null) break;
-                    }
+                    var match = ImportAuthorDirectoryLookup.FindFallback(
+                        roots, providerScopes,
+                        gameVersionFolderNames, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
+                    targetFolder = match.Directory;
+                    var matchedProvider = match.ProviderFolder;
 
                     if (targetFolder is null && matchedProvider is not null && item.AuthorName is not null)
                     {
@@ -521,15 +663,15 @@ public sealed class ImportService
             }
 
             targetFolder ??= BuildTargetBase(roots[0], subfolder, config.UnknownFolderName, gameVersionFolder, "", null);
-            item.AuthorDirectoryPath = item.ArtworkId is not null ? targetFolder : null;
+            SetAuthorDirectoryPath(item, item.ArtworkId is not null ? targetFolder : null, diagnostics);
 
             if (useUnrecognizedSubfolder)
-                targetFolder = Path.Combine(targetFolder, UnrecognizedFolderName);
+                targetFolder = Path.Combine(targetFolder, GalleryGrouping.UnrecognizedFolderName);
 
-            item.DestinationPath = Path.Combine(targetFolder, item.FileName);
+            SetDestinationPath(item, Path.Combine(targetFolder, item.FileName), diagnostics);
         }
 
-        ResolveArtworkDestinations(items, config, artworkThreshold, useVisualSimilarity);
+        ResolveArtworkDestinations(items, config, artworkThreshold, useVisualSimilarity, diagnostics);
     }
 
     private Task<List<ImportItem>> PrepareArtworkPromotionsAsync(
@@ -641,7 +783,8 @@ public sealed class ImportService
         IReadOnlyList<ImportItem> items,
         SettingsService.ConfigData config,
         int artworkThreshold,
-        bool useVisualSimilarity)
+        bool useVisualSimilarity,
+        ResolveDiagnosticCollector? diagnostics = null)
     {
         var artworkGroups = items
             .Where(item => item.Status == ImportItemStatus.ReadyToImport
@@ -663,11 +806,15 @@ public sealed class ImportService
 
             try
             {
-                var existingArtworkDirectory = FindArtworkDirectory(authorDirectory, artworkId);
-                var existingRootFiles = FindRootArtworkFiles(
-                    authorDirectory,
-                    artworkId,
-                    CancellationToken.None);
+                var existingArtworkDirectory = MeasureArtworkDirectoryLookup(
+                    diagnostics,
+                    () => FindArtworkDirectory(authorDirectory, artworkId));
+                var existingRootFiles = MeasureArtworkDirectoryLookup(
+                    diagnostics,
+                    () => FindRootArtworkFiles(
+                        authorDirectory,
+                        artworkId,
+                        CancellationToken.None));
 
                 bool shouldUseArtworkDirectory;
                 if (existingArtworkDirectory is not null)
@@ -702,7 +849,7 @@ public sealed class ImportService
                         authorDirectory,
                         FormatArtworkFolder(config, first.Title, artworkId.Id));
                 foreach (var item in artworkItems)
-                    item.DestinationPath = Path.Combine(artworkDirectory, item.FileName);
+                    SetDestinationPath(item, Path.Combine(artworkDirectory, item.FileName), diagnostics);
             }
             catch (Exception ex)
             {
@@ -710,6 +857,68 @@ public sealed class ImportService
             }
         }
     }
+
+    private static T MeasureArtworkDirectoryLookup<T>(
+        ResolveDiagnosticCollector? diagnostics,
+        Func<T> operation)
+        => diagnostics is null
+            ? operation()
+            : diagnostics.MeasureArtworkDirectoryLookup(operation);
+
+    private static void SetAuthorDirectoryPath(
+        ImportItem item,
+        string? value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (string.Equals(item.AuthorDirectoryPath, value, StringComparison.Ordinal))
+            return;
+
+        if (diagnostics is null)
+        {
+            item.AuthorDirectoryPath = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.AuthorDirectoryPath = value);
+    }
+
+    private static void SetDestinationPath(
+        ImportItem item,
+        string? value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (string.Equals(item.DestinationPath, value, StringComparison.Ordinal))
+            return;
+
+        if (diagnostics is null)
+        {
+            item.DestinationPath = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.DestinationPath = value);
+        diagnostics.DestinationPathAssignments++;
+    }
+
+    private static void SetStatus(
+        ImportItem item,
+        ImportItemStatus value,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        if (item.Status == value)
+            return;
+
+        if (diagnostics is null)
+        {
+            item.Status = value;
+            return;
+        }
+
+        diagnostics.MeasurePropertyAssignment(() => item.Status = value);
+        if (value == ImportItemStatus.AlreadyInLibrary)
+            diagnostics.StatusTransitionsToAlreadyInLibrary++;
+    }
+
 
     private string? FindArtworkDirectory(string authorDirectory, ArtworkId artworkId)
     {
@@ -720,17 +929,16 @@ public sealed class ImportService
         if (provider is null)
             return null;
 
-        return Directory.EnumerateDirectories(authorDirectory)
+        var candidates = Directory.EnumerateDirectories(authorDirectory)
             .Where(path => !Path.GetFileName(path).Equals(
                 PostMetadataStore.MetadataDirectoryName,
                 StringComparison.OrdinalIgnoreCase))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(path =>
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+        return ArtworkDirectoryLookup.FindFirst(candidates, artworkId.ProviderId, artworkId.Id,
+            name =>
             {
-                var parsed = provider.TryParseArtworkFolderName(Path.GetFileName(path));
-                return parsed is not null
-                    && parsed.ProviderId.Equals(artworkId.ProviderId, StringComparison.OrdinalIgnoreCase)
-                    && parsed.Id.Equals(artworkId.Id, StringComparison.OrdinalIgnoreCase);
+                var parsed = provider.TryParseArtworkFolderName(name);
+                return parsed is null ? null : (parsed.ProviderId, parsed.Id);
             });
     }
 
@@ -771,9 +979,7 @@ public sealed class ImportService
             && item.DestinationPath is not null
             && !Path.GetDirectoryName(item.DestinationPath)!.Equals(
                 item.AuthorDirectoryPath,
-                OperatingSystem.IsWindows()
-                    ? StringComparison.OrdinalIgnoreCase
-                    : StringComparison.Ordinal);
+                PathComparison.Comparison);
 
     private static string BuildArtworkGroupKey(
         string authorDirectory,
@@ -801,169 +1007,20 @@ public sealed class ImportService
             authorName);
     }
 
-    private Task<(HashSet<string> IdenticalSourcePaths, Dictionary<string, Dictionary<string, string>> FolderIndex)>
-        BuildLibraryIndexAsync(
-            SettingsService.ConfigData config,
-            IReadOnlyList<ImportItem> items,
-            CancellationToken cancellationToken)
-        => Task.Run(() =>
-        {
-            var filesByName = BuildExistingFileIndex(config, cancellationToken);
-            var identicalSourcePaths = FindIdenticalSourcePaths(
-                items, filesByName, cancellationToken);
-            var folders = BuildFolderIndex(config, cancellationToken);
-            return (identicalSourcePaths, folders);
-        }, cancellationToken);
-
-    private Dictionary<string, List<string>> BuildExistingFileIndex(
-        SettingsService.ConfigData config,
-        CancellationToken cancellationToken)
+    private ImportLibraryIndexRequest CreateLibraryIndexRequest(
+        SettingsService.ConfigData config, IReadOnlyList<ImportLibrarySource> sources)
     {
-        var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        var allRoots = config.FolderPaths
-            .Concat(config.CharacterFolderPaths)
-            .Concat(config.CoordinateFolderPaths)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var root in allRoots)
+        var roots = config.FolderPaths.Concat(config.CharacterFolderPaths)
+            .Concat(config.CoordinateFolderPaths).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var scopes = _importProviders.Select(provider =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!Directory.Exists(root)) continue;
-            try
-            {
-                foreach (var file in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var fileName = Path.GetFileName(file);
-                    if (!index.TryGetValue(fileName, out var paths))
-                    {
-                        paths = [];
-                        index[fileName] = paths;
-                    }
-                    paths.Add(file);
-                }
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { _logger.LogError("Import.ScanExistingFilenames", ex, root); }
-        }
-
-        return index;
-    }
-
-    private HashSet<string> FindIdenticalSourcePaths(
-        IReadOnlyList<ImportItem> items,
-        IReadOnlyDictionary<string, List<string>> existingFilesByName,
-        CancellationToken cancellationToken)
-    {
-        var identicalSourcePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var item in items)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!File.Exists(item.SourceFilePath)
-                || !existingFilesByName.TryGetValue(item.FileName, out var candidates))
-            {
-                continue;
-            }
-
-            foreach (var candidate in candidates)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
-                {
-                    if (!ImportDuplicateDetector.AreFilesIdentical(
-                            item.SourceFilePath,
-                            candidate,
-                            cancellationToken))
-                    {
-                        continue;
-                    }
-
-                    identicalSourcePaths.Add(item.SourceFilePath);
-                    break;
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        "Import.CompareExistingFile",
-                        ex,
-                        $"{item.SourceFilePath} | {candidate}");
-                }
-            }
-        }
-
-        return identicalSourcePaths;
-    }
-
-    private Dictionary<string, Dictionary<string, string>> BuildFolderIndex(
-        SettingsService.ConfigData config,
-        CancellationToken cancellationToken)
-    {
-        // (root, providerFolder, gameVersionFolder, ratingFolder) → authorId → fullFolderPath
-        var index = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-        var subfolder = config.ImportSubfolder.Trim();
-
-        var allRoots = config.FolderPaths
-            .Concat(config.CharacterFolderPaths)
-            .Concat(config.CoordinateFolderPaths)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        var providerScopes = _importProviders
-            .Select(p =>
-            {
-                var s = GetProviderScope(p.ProviderId);
-                return (
-                    p.ProviderId,
-                    s.Folder,
-                    RatingFolders: s.UsesRatingFolders
-                        ? GetRatingFolderNames(config)
-                        : [""]
-                );
-            })
-            .ToList();
-
-        foreach (var root in allRoots)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!Directory.Exists(root)) continue;
-
-            foreach (var providerScope in providerScopes)
-            {
-                foreach (var gameVersionFolder in GetGameVersionFolderNames(config))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    foreach (var ratingFolder in providerScope.RatingFolders)
-                    {
-                        var ratingDir = BuildTargetBase(root, subfolder, providerScope.Folder, gameVersionFolder, ratingFolder, null);
-                        var authorFolders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                        if (Directory.Exists(ratingDir))
-                        {
-                            try
-                            {
-                                foreach (var dir in Directory.EnumerateDirectories(ratingDir))
-                                {
-                                    cancellationToken.ThrowIfCancellationRequested();
-                                    var parsed = FindAuthorProvider(providerScope.ProviderId)?.TryParseFolderName(Path.GetFileName(dir));
-                                    if (parsed is not null)
-                                        authorFolders.TryAdd(parsed.Key.Id, dir);
-                                }
-                            }
-                            catch (OperationCanceledException) { throw; }
-                            catch (Exception ex) { _logger.LogError("Import.BuildFolderIndex", ex, ratingDir); }
-                        }
-
-                        index[BuildScopeKey(root, providerScope.Folder, gameVersionFolder, ratingFolder)] = authorFolders;
-                    }
-                }
-            }
-        }
-
-        return index;
+            var scope = GetProviderScope(provider.ProviderId);
+            var authorProvider = FindAuthorProvider(provider.ProviderId);
+            return new ImportLibraryProviderScope(scope.Folder,
+                scope.UsesRatingFolders ? GetRatingFolderNames(config) : [""],
+                name => authorProvider?.TryParseFolderName(name)?.Key.Id);
+        }).ToArray();
+        return new(sources, roots, config.ImportSubfolder, GetGameVersionFolderNames(config), scopes);
     }
 
     private static List<string> GetRootsForCardType(CardType cardType, SettingsService.ConfigData config)
@@ -975,11 +1032,5 @@ public sealed class ImportService
             config.CoordinateFolderPaths)];
     }
 
-    private static string BuildScopeKey(
-        string root,
-        string providerFolder,
-        string gameVersionFolder,
-        string ratingFolder)
-        => string.Join('\u001F', root, providerFolder, gameVersionFolder, ratingFolder);
 
 }

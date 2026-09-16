@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -66,18 +67,6 @@ public class SettingsService
         public bool ScrollToTopOnSort { get; set; } = true;
 
         /// <summary>
-        /// Gallery thumbnail card width in pixels. Adjusted via Ctrl+mouse wheel
-        /// in the gallery. Column count then reflows with the window width.
-        /// </summary>
-        public double ThumbnailWidth { get; set; } = 240;
-
-        /// <summary>
-        /// Whether the gallery shows the small/medium/large size buttons. Off =
-        /// buttons hidden and thumbnails fixed at the medium size. Off by default.
-        /// </summary>
-        public bool SizeSelectorEnabled { get; set; } = false;
-
-        /// <summary>
         /// Off-screen render buffer for the gallery, as a multiple of the
         /// viewport (ItemsWrapGrid.CacheLength). Higher = more thumbnails kept
         /// realized above/below the view (smoother fast-scroll) but more eager
@@ -85,6 +74,9 @@ public class SettingsService
         /// default.
         /// </summary>
         public double CacheLength { get; set; } = 4;
+
+        /// <summary>Preferred base width for all gallery thumbnail grids.</summary>
+        public ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;
 
         /// <summary>
         /// Whether to parse embedded plugin GUIDs to classify scenes (environment
@@ -120,6 +112,13 @@ public class SettingsService
         /// Empty = place directly under the root (legacy behaviour).
         /// </summary>
         public string ImportSubfolder { get; set; } = "Organized";
+
+        /// <summary>
+        /// Folder name the built-in local source provider claims below
+        /// <see cref="ImportSubfolder"/>. Locally collected cards land under it,
+        /// which is also what marks them as local when the library is scanned.
+        /// </summary>
+        public string LocalFolderName { get; set; } = "Local";
 
         /// <summary>
         /// When the number of files from the same pixiv artwork in one import batch

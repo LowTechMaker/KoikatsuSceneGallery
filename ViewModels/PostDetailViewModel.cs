@@ -70,17 +70,17 @@ public partial class PostDetailViewModel : ObservableObject
     public bool CanSave => IsDetailLoaded && !IsSaved && !IsLoading;
 
     public string SavedStatusText => IsSaved
-        ? "Details saved locally"
-        : IsDetailLoaded ? "Not saved" : "";
+        ? Helpers.UiText.Get("PostDetail_Saved")
+        : IsDetailLoaded ? Helpers.UiText.Get("PostDetail_Unsaved") : "";
 
     public void Load(AuthorPost post)
     {
         Post = post;
+        IsLoading = false;
         DisplayTitle = post.DisplayTitle;
-        ArtworkIdText = $"pixiv #{post.ArtworkId.Id}";
-        LocalFileInfo = post.LocalFileCount == 1
-            ? "1 local file"
-            : $"{post.LocalFileCount} local files";
+        ArtworkIdText = $"{post.ArtworkId.ProviderId} #{post.ArtworkId.Id}";
+        LocalFileInfo = Helpers.UiText.Format("PostDetail_LocalFiles", post.LocalFileCount);
+        Tags.Clear(); Description = null; RatingText = "";
         LocalImages.Clear();
         foreach (var path in post.LocalFilePaths.Where(File.Exists))
             LocalImages.Add(new LocalImagePreview(new Uri(path), Path.GetFileName(path), path));
@@ -97,14 +97,15 @@ public partial class PostDetailViewModel : ObservableObject
     {
         if (Post is null) return;
 
+        var requestedPost = Post;
         IsLoading = true;
         try
         {
             var info = await postService.FetchArtworkDetailAsync(
-                Post,
+                requestedPost,
                 ct,
                 saveToLocalCache: false);
-            if (info is not null)
+            if (info is not null && ReferenceEquals(Post, requestedPost) && !ct.IsCancellationRequested)
             {
                 ApplyInfo(info);
             }
@@ -116,7 +117,7 @@ public partial class PostDetailViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            if (ReferenceEquals(Post, requestedPost)) IsLoading = false;
         }
     }
 
@@ -170,6 +171,7 @@ public partial class PostDetailViewModel : ObservableObject
         {
             ContentRating.R18 => "R-18",
             ContentRating.R18G => "R-18G",
+            ContentRating.AllAges => "G",
             _ => "",
         };
 

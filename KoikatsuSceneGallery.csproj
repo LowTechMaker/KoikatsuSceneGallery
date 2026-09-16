@@ -18,11 +18,18 @@
       repo root). Keep their sources out of this project's default globs or
       they would be compiled twice.
     -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;PluginSdk\**;PluginCommon\**;PluginCommon.Secrets\**;eng\PackageValidation\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**;PluginSdk\**;PluginCommon\**;PluginCommon.Secrets\**;eng\PackageValidation\**;KoikatsuSceneGallery.Core\**;KoikatsuSceneGallery.Tests\**;KoikatsuSceneGallery.IntegrationTests\**;KoikatsuSceneGallery.Avalonia\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- Keep local debugging independent of a machine-wide Windows App Runtime installation. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
+    <InternalsVisibleTo Include="KoikatsuSceneGallery.IntegrationTests" />
+    <InternalsVisibleTo Include="KoikatsuSceneGallery.XamlTestHost" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />
@@ -99,4 +106,8 @@
     -->
     <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="PluginCommon\AtomicFileWriter.cs" />
+    <Compile Include="PluginCommon\DebouncedDiskPersistence.cs" />
+  </ItemGroup>
 </Project>

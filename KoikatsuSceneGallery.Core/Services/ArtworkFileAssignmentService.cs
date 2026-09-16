@@ -1,3 +1,5 @@
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 /// <summary>Moves one local file into the folder representing an artwork.</summary>
@@ -15,8 +17,7 @@ internal sealed class ArtworkFileAssignmentService
             return;
 
         var plannedMoves = new List<(string Source, string Destination)>();
-        var destinations = new HashSet<string>(
-            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var destinations = new HashSet<string>(PathComparison.Comparer);
 
         foreach (var assignment in assignments)
         {
@@ -27,10 +28,7 @@ internal sealed class ArtworkFileAssignmentService
                 throw new FileNotFoundException("The selected local file no longer exists.", source);
 
             var destination = Path.Combine(directory, Path.GetFileName(source));
-            if (string.Equals(source, destination,
-                    OperatingSystem.IsWindows()
-                        ? StringComparison.OrdinalIgnoreCase
-                        : StringComparison.Ordinal))
+            if (string.Equals(source, destination, PathComparison.Comparison))
             {
                 continue;
             }
@@ -49,7 +47,7 @@ internal sealed class ArtworkFileAssignmentService
         {
             foreach (var directory in plannedMoves
                          .Select(static move => Path.GetDirectoryName(move.Destination)!)
-                         .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+                         .Distinct(PathComparison.Comparer))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!Directory.Exists(directory))

@@ -10,12 +10,19 @@ namespace KoikatsuSceneGallery.Pages;
 public sealed partial class AuthorsPage : Page
 {
     public AuthorsViewModel ViewModel { get; }
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _searchTimer;
 
     public AuthorsPage()
     {
         ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
+        _searchTimer = DispatcherQueue.CreateTimer();
+        _searchTimer.Interval = TimeSpan.FromMilliseconds(200); _searchTimer.IsRepeating = false;
+        _searchTimer.Tick += (_, _) => ViewModel.SearchText = AuthorSearchBox.Text;
+        var find = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F, Modifiers = Windows.System.VirtualKeyModifiers.Control };
+        find.Invoked += (_, e) => { AuthorSearchBox.Focus(FocusState.Programmatic); e.Handled = true; };
+        KeyboardAccelerators.Add(find);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -32,7 +39,7 @@ public sealed partial class AuthorsPage : Page
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
-        ViewModel.SearchText = sender.Text;
+        _searchTimer?.Stop(); _searchTimer?.Start();
     }
 
     private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -61,6 +68,20 @@ public sealed partial class AuthorsPage : Page
             JumpToGroup(group);
     }
 
+    // The grid lives in a Pivot item template, so it is reached through the
+    // sender rather than by name.
+    private void AuthorsGrid_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is GridView grid)
+            AuthorTileLayout.Apply(grid);
+    }
+
+    private void AuthorsGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is GridView grid)
+            AuthorTileLayout.Apply(grid);
+    }
+
     private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is AuthorSummary summary)
@@ -70,12 +91,28 @@ public sealed partial class AuthorsPage : Page
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.OpenProfile", async () =>
         {
-            if (sender is FrameworkElement { Tag: AuthorSummary summary })
+            // A local source has no profile, and the menu item is hidden for
+            // one; guarded here as well so no path can launch an empty Uri.
+            if (sender is FrameworkElement { Tag: AuthorSummary summary }
+                && summary.Display.HasProfileUrl)
+            {
                 await Windows.System.Launcher.LaunchUriAsync(new Uri(summary.Display.ProfileUrl));
+            }
         });
 
     private void OpenAuthorDetail(AuthorSummary summary)
         => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+
+    private void EditLocal_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: AuthorSummary summary })
+            return;
+
+        UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "Authors.EditLocal",
+            () => LocalSourceEditing.RunAsync(XamlRoot, summary.Display.Key.Id));
+    }
 
     private void RefreshOne_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Authors.RefreshOne", async () =>
@@ -83,6 +120,8 @@ public sealed partial class AuthorsPage : Page
             if (sender is FrameworkElement { Tag: AuthorSummary summary })
                 await ViewModel.RefreshOneAsync(summary);
         });
+
+    private void ClearSearch_Click(object sender, RoutedEventArgs e) => AuthorSearchBox.Text = string.Empty;
 
     private void JumpToGroup(AuthorGroupViewModel group)
     {
@@ -92,9 +131,9 @@ public sealed partial class AuthorsPage : Page
                 return;
 
             if (AuthorsPivot.ContainerFromItem(tab) is DependencyObject container
-                && VisualTreeSearch.FindDescendantByName<ListView>(container, "GroupListView") is { } listView)
+                && VisualTreeSearch.FindDescendantByName<GridView>(container, "AuthorsGrid") is { } listView)
             {
-                listView.ScrollIntoView(group, ScrollIntoViewAlignment.Leading);
+                if (group.Authors.FirstOrDefault() is { } first) listView.ScrollIntoView(first, ScrollIntoViewAlignment.Leading);
             }
         });
     }

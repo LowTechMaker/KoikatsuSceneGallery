@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1"
+          xmlns:asmv3="urn:schemas-microsoft-com:asm.v3"
+          xmlns:winrt="urn:schemas-microsoft-com:winrt.v1">
+  <assemblyIdentity name="SceneGallery.DispatcherQueue.Tests" version="1.0.0.0" type="win32" processorArchitecture="amd64" />
+  <!-- Matches the DispatcherQueue declarations in the SDK-generated WindowsAppSDK.manifest. -->
+  <asmv3:file name="CoreMessagingXP.dll">
+    <winrt:activatableClass name="Microsoft.UI.Dispatching.DispatcherExitDeferral" threadingModel="both" />
+    <winrt:activatableClass name="Microsoft.UI.Dispatching.DispatcherQueue" threadingModel="both" />
+    <winrt:activatableClass name="Microsoft.UI.Dispatching.DispatcherQueueController" threadingModel="both" />
+  </asmv3:file>
+</assembly>

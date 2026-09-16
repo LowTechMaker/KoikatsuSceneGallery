@@ -1,4 +1,4 @@
-using KoikatsuSceneGallery.Helpers;
+﻿using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
@@ -45,6 +45,26 @@ public sealed partial class AuthorDetailPage : Page
     private readonly HashSet<CharacterCard> _requestedCharacterThumbnails = [];
     private readonly HashSet<CoordinateCard> _requestedCoordinateThumbnails = [];
 
+    private GridView ScenesGrid => ScenesBrowser.ItemsGrid;
+    private GridView CharactersGrid => CharactersBrowser.ItemsGrid;
+    private GridView CoordinatesGrid => CoordinatesBrowser.ItemsGrid;
+    private bool _browsersInitialized;
+    private void InitializeBrowsers()
+    {
+        if (_browsersInitialized) return;
+        _browsersInitialized = true;
+        ScenesBrowser.Initialize(LibraryKind.Scenes, ViewModel.Scenes, ViewModel.Author?.Name);
+        CharactersBrowser.Initialize(LibraryKind.Characters, ViewModel.Characters, ViewModel.Author?.Name);
+        CoordinatesBrowser.Initialize(LibraryKind.Coordinates, ViewModel.Coordinates, ViewModel.Author?.Name);
+        foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
+        {
+            if (_navigationParameter?.BrowserStates.TryGetValue(index, out var saved) == true) browser.RestoreState(saved);
+            browser.OpeningDetail += () => SetRestoreSelectedTabOnBack(index);
+            browser.Loaded += (_, _) => browser.Activate(Frame);
+            browser.Unloaded += (_, _) => browser.Deactivate();
+        }
+    }
+
     public AuthorDetailPage()
     {
         InitializeComponent();
@@ -73,6 +93,7 @@ public sealed partial class AuthorDetailPage : Page
             {
                 UpdateTabPresence();
             }
+            InitializeBrowsers();
             RestoreSelectedTab(e.NavigationMode);
             if (ViewModel.CanLoadPosts
                 && (!restoringSameAuthor
@@ -85,27 +106,24 @@ public sealed partial class AuthorDetailPage : Page
             }
         }
 
-        ScenesGrid.SizeChanged += Grid_SizeChanged;
-        CharactersGrid.SizeChanged += Grid_SizeChanged;
-        CoordinatesGrid.SizeChanged += Grid_SizeChanged;
+
 
         DispatcherQueue.TryEnqueue(() =>
         {
             ViewModel.SetOverviewPreviewWidth(OverviewContent.ActualWidth);
             RequestOverviewThumbnails();
-            ApplyLayout(ScenesGrid, SceneImageRatio);
-            ApplyLayout(CharactersGrid, CharaImageRatio);
-            ApplyLayout(CoordinatesGrid, CharaImageRatio);
+
         });
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        if (_navigationParameter is not null && _browsersInitialized)
+            foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
+                _navigationParameter.BrowserStates[index] = browser.SaveState();
         ReleaseRequestedThumbnails();
-        _postsCts?.Cancel();
-        _postsCts?.Dispose();
-        _postsCts = null;
+        PageCancellation.Stop(ref _postsCts);
         ScenesGrid.SizeChanged -= Grid_SizeChanged;
         CharactersGrid.SizeChanged -= Grid_SizeChanged;
         CoordinatesGrid.SizeChanged -= Grid_SizeChanged;
@@ -321,7 +339,7 @@ public sealed partial class AuthorDetailPage : Page
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
         {
-            if (ViewModel.Author is { } author)
+            if (ViewModel.Author is { HasProfileUrl: true } author)
                 await Windows.System.Launcher.LaunchUriAsync(new Uri(author.ProfileUrl));
         });
 
@@ -351,6 +369,20 @@ public sealed partial class AuthorDetailPage : Page
             Frame.Navigate(typeof(PostDetailPage),
                 CreatePostParameter(ViewModel.Posts[Random.Shared.Next(ViewModel.Posts.Count)]));
         }
+    }
+
+    private void EditLocal_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Author is not { IsLocalSource: true } author)
+            return;
+
+        UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(),
+            "AuthorDetail.EditLocal",
+            // The header binds to the AuthorDisplay instance, which the
+            // author refresh inside mutates in place, so nothing needs
+            // rebinding here.
+            () => LocalSourceEditing.RunAsync(XamlRoot, author.Key.Id));
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -558,43 +590,18 @@ public sealed partial class AuthorDetailPage : Page
         if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
     }
 
-    private void PostImages_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<LocalImagePreview>().Select(p => p.FilePath));
+    private void OverviewScenes_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<SceneCard>().Select(c => c.FilePath));
 
-    private void ScenesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<SceneCard>().Select(c => c.FilePath));
+    private void OverviewCharacters_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<CharacterCard>().Select(c => c.FilePath));
 
-    private void CharactersGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<CharacterCard>().Select(c => c.FilePath));
+    private void OverviewCoordinates_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag", e.Items.OfType<CoordinateCard>().Select(c => c.FilePath));
 
-    private void CoordinatesGrid_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
-        => SetDragFiles(e, e.Items.OfType<CoordinateCard>().Select(c => c.FilePath));
-
-    private static void SetDragFiles(DragItemsStartingEventArgs e, IEnumerable<string> filePaths)
-    {
-        var paths = filePaths.ToList();
-        if (paths.Count == 0) return;
-        e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-        e.Data.SetDataProvider(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems, async request =>
-        {
-            var deferral = request.GetDeferral();
-            try
-            {
-                var files = new List<IStorageItem>();
-                foreach (var path in paths)
-                {
-                    try { files.Add(await StorageFile.GetFileFromPathAsync(path)); }
-                    catch (Exception ex)
-                    {
-                        App.Services.GetRequiredService<IAppLogger>()
-                            .LogError("AuthorDetail.PrepareDragFile", ex, path);
-                    }
-                }
-                request.SetData(files);
-            }
-            finally { deferral.Complete(); }
-        });
-    }
+    private void OverviewPosts_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
+        => DragFilePayload.Attach(e, "AuthorDetail.Drag",
+            e.Items.OfType<PostImageGroupViewModel>().SelectMany(g => g.Images).Select(image => image.FilePath));
 
     private static bool TryGetNavigationParameter(object? parameter, out AuthorDetailNavigationParameter navigationParameter)
     {

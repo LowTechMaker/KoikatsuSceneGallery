@@ -11,8 +11,8 @@
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#C62828" />
-                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#D84315" />
+                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#FF4060" />
+                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#FF4060" />
                     <SolidColorBrush x:Key="RatingAllAgesBadgeBrush" Color="#2E7D32" />
                     <SolidColorBrush x:Key="RatingBadgeForegroundBrush" Color="White" />
                     <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
@@ -20,8 +20,8 @@
                     <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#C62828" />
-                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#D84315" />
+                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#FF4060" />
+                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#FF4060" />
                     <SolidColorBrush x:Key="RatingAllAgesBadgeBrush" Color="#2E7D32" />
                     <SolidColorBrush x:Key="RatingBadgeForegroundBrush" Color="White" />
                     <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />

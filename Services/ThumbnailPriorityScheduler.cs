@@ -15,7 +15,12 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
     private const int DefaultCapacity = 128;
     private const int DefaultWorkerCount = 2;
 
-    private readonly object _sync = new();
+    // These short queue-only critical sections are also entered during WinUI
+    // container realization. Monitor waits on an STA pump COM/window messages,
+    // which can reenter a protected XAML layout tick and fail fast (0xc000027b).
+    // A SpinLock does not pump messages. Keep all work, callbacks and semaphore
+    // operations outside it; do not make this mutable struct readonly.
+    private SpinLock _sync = new(enableThreadOwnerTracking: false);
     private readonly LinkedList<WorkItem> _visible = [];
     private readonly LinkedList<WorkItem> _prefetch = [];
     private readonly Dictionary<long, LinkedListNode<WorkItem>> _pending = [];
@@ -53,8 +58,10 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
         WorkItem? discarded = null;
         var releaseSignal = true;
         ThumbnailWorkHandle? handle;
-        lock (_sync)
+        var lockTaken = false;
+        try
         {
+            _sync.Enter(ref lockTaken);
             if (_disposed) return null;
 
             if (_pending.Count >= _capacity)
@@ -74,6 +81,10 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
                 : _prefetch.AddFirst(item);
             _pending.Add(handle.Value.Id, node);
         }
+        finally
+        {
+            if (lockTaken) _sync.Exit();
+        }
 
         if (releaseSignal)
             _available.Release();
@@ -85,17 +96,24 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
     public void Cancel(ThumbnailWorkHandle handle)
     {
         WorkItem? discarded = null;
-        lock (_sync)
+        var lockTaken = false;
+        try
         {
+            _sync.Enter(ref lockTaken);
             if (_pending.Remove(handle.Id, out var node))
             {
                 node.List!.Remove(node);
-                // Keep signals bounded too. If a worker has already claimed this
-                // signal, it will find no work and continue normally.
-                _available.Wait(0);
                 discarded = node.Value;
             }
         }
+        finally
+        {
+            if (lockTaken) _sync.Exit();
+        }
+
+        // A worker may have claimed the removed item's signal already; it can
+        // consume another queued item or find no work and continue normally.
+        if (discarded is not null) _available.Wait(0);
 
         InvokeDiscarded(discarded);
     }
@@ -119,9 +137,15 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
                 await _available.WaitAsync(_shutdown.Token).ConfigureAwait(false);
 
                 WorkItem? item;
-                lock (_sync)
+                var lockTaken = false;
+                try
                 {
+                    _sync.Enter(ref lockTaken);
                     item = TakeNextLocked();
+                }
+                finally
+                {
+                    if (lockTaken) _sync.Exit();
                 }
 
                 if (item is null)
@@ -178,13 +202,19 @@ public sealed class ThumbnailPriorityScheduler : IDisposable
 
     public void Dispose()
     {
-        lock (_sync)
+        var lockTaken = false;
+        try
         {
+            _sync.Enter(ref lockTaken);
             if (_disposed) return;
             _disposed = true;
             _visible.Clear();
             _prefetch.Clear();
             _pending.Clear();
+        }
+        finally
+        {
+            if (lockTaken) _sync.Exit();
         }
 
         _shutdown.Cancel();

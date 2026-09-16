@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <UserControl
     x:Class="KoikatsuSceneGallery.Controls.AuthorLiveTileControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -10,8 +10,8 @@
     <!-- Live tile mode: scene thumbnails cycling behind author info -->
     <Grid
         x:Name="RootGrid"
-        Width="280"
-        Height="160"
+        MinWidth="260"
+        MinHeight="150"
         CornerRadius="{StaticResource OverlayCornerRadius}"
         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

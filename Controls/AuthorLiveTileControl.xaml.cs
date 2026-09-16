@@ -85,7 +85,6 @@ public sealed partial class AuthorLiveTileControl : UserControl
             ThumbnailContainer.Visibility = Visibility.Visible;
             GradientOverlay.Visibility = Visibility.Visible;
             LiveOverlay.Visibility = Visibility.Visible;
-            RootGrid.Height = 160;
 
             ApplyAuthorInfo(summary);
 
@@ -188,6 +187,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        ApplySummary();
         ResetVisuals();
         if (_thumbnailPaths.Count > 1 && App.Services.GetRequiredService<SettingsViewModel>()?.AuthorLiveTilesEnabled == true)
             StartCycling();
@@ -208,7 +208,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
     private void StartCycling()
     {
-        if (_cycleTimer is not null) return;
+        if (_cycleTimer is not null || !new Windows.UI.ViewManagement.UISettings().AnimationsEnabled) return;
 
         _cycleTimer = DispatcherQueue.CreateTimer();
         _cycleTimer.IsRepeating = false;
@@ -227,6 +227,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
     private void OnCycleTick(DispatcherQueueTimer sender, object e)
     {
+        if (!new Windows.UI.ViewManagement.UISettings().AnimationsEnabled || _thumbnailPaths.Count < 2) { StopCycling(); return; }
         _currentIndex = (_currentIndex + 1) % _thumbnailPaths.Count;
         var nextImage = GetOrCreateThumbnail(_thumbnailPaths[_currentIndex]);
 
@@ -313,7 +314,9 @@ public sealed partial class AuthorLiveTileControl : UserControl
     {
         if (_imageCache.TryGetValue(path, out var cached))
             return cached;
-        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 280 };
+        // Tiles flex with the window, so decode for the widest one rather
+        // than the old fixed 280.
+        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 400 };
         _imageCache[path] = img;
         return img;
     }

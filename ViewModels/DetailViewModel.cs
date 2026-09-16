@@ -31,7 +31,7 @@ public partial class DetailViewModel : ObservableObject
 
     partial void OnCardChanged(SceneCard? value)
     {
-        _linkInfo = FilenameLinkParser.Parse(value?.FilePath);
+        _linkInfo = CardOrigin.LinksFor(value);
         RefreshSiblingCards();
     }
 
@@ -51,9 +51,10 @@ public partial class DetailViewModel : ObservableObject
             : null;
 
     public ObservableCollection<SceneCard> SiblingCards { get; } = [];
+    public IReadOnlySet<string>? GroupScope { get; set; }
     public bool HasSiblingCards => SiblingCards.Count > 1;
 
-    private void RefreshSiblingCards()
+    internal void RefreshSiblingCards()
     {
         if (Card is null)
         {
@@ -65,7 +66,12 @@ public partial class DetailViewModel : ObservableObject
         var artworkId = _linkInfo.PixivArtworkId;
         var siblings = new List<SceneCard>();
 
-        if (artworkId is not null)
+        if (GroupScope is { } scope)
+        {
+            siblings.AddRange(_galleryViewModel.CardsView.OfType<SceneCard>()
+                .Where(c => scope.Contains(c.FilePath)));
+        }
+        else if (artworkId is not null)
         {
             foreach (var c in _galleryViewModel.Cards)
             {

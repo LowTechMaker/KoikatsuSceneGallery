@@ -43,14 +43,8 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
         card is MediaCard mc && BaseFilterPasses(mc);
 
     [RelayCommand]
-    private async Task LoadCardsAsync()
-    {
-        var cancellationToken = BeginLoad();
-        ResetThumbnailState();
-
-        IsLoading = true;
-        var viewRefreshDeferral = DeferCardsViewRefresh();
-        try
+    private Task LoadCardsAsync()
+        => RunLoadAsync(async cancellationToken =>
         {
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
@@ -60,115 +54,28 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
             Cards.Clear();
             _cardIndex.Clear();
 
-            await _cardService.ScanFoldersAsync(paths, batch =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var processed = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        processed.TrySetResult();
-                        return;
-                    }
-                    using (CardsView.DeferRefresh())
-                    {
-                        foreach (var card in batch)
-                        {
-                            if (!_cardIndex.TryAdd(card.FilePath, card)) continue;
-                            Cards.Add(card);
-                        }
-                    }
-                    processed.TrySetResult();
-                });
-                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
-                    .GetAwaiter().GetResult();
-            }, cancellationToken);
+            await _cardService.ScanFoldersAsync(paths,
+                batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
 
             ApplyFilter();
             _cardService.StartWatching(paths);
-        }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("MediaGallery.LoadCanceled", ex);
-        }
-        finally
-        {
-            viewRefreshDeferral.Dispose();
-            if (_loadCts?.Token == cancellationToken)
-                IsLoading = false;
-            RaiseCardsReloaded();
-        }
-    }
+        }, _logger, "MediaGallery.LoadCanceled");
 
     public void RequestThumbnail(
         MediaCard card,
         ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
-    {
-        if (card.HasThumbnail) return;
-        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
-        {
-            card.ThumbnailPath = cached;
-            return;
-        }
-
-        var diskCached = _thumbnailCacheService.TryGetCachedPath(card.FilePath, card.DateModified);
-        if (diskCached is not null)
-        {
-            _thumbnailPathCache[card.FilePath] = diskCached;
-            card.ThumbnailPath = diskCached;
-            return;
-        }
-
-        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
-        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
-    }
+        => RequestThumbnailCore(
+            card, priority,
+            item => _thumbnailCacheService.TryGetCachedPath(item.FilePath, item.DateModified),
+            (item, token) => _thumbnailCacheService.EnsureThumbnailAsync(item.FilePath, item.DateModified, token),
+            _logger, "MediaGallery");
 
     public void ReleaseThumbnail(MediaCard card)
     {
         ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private async Task GenerateOneAsync(
-        MediaCard card,
-        ThumbnailRequest request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (card.HasThumbnail) return;
-
-            var thumbnailPath = await _thumbnailCacheService
-                .EnsureThumbnailAsync(card.FilePath, card.DateModified, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-            {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                    card.ThumbnailPath = thumbnailPath;
-                });
-            }
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("MediaGallery.GenerateThumbnailCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("MediaGallery.GenerateThumbnail", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                CompleteThumbnailRequest(request);
-            });
-        }
-    }
-
-    public MediaCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as MediaCard;
-    }
+    public MediaCard? GetRandomCard() => GetRandomVisibleCard<MediaCard>();
 
     private bool BaseFilterPasses(MediaCard card)
     {
@@ -223,10 +130,7 @@ public partial class MediaGalleryViewModel : GalleryViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
+        DisposeWorkCancellationSources();
         _cardService.CardAdded -= OnCardAdded;
         _cardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;

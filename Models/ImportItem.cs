@@ -4,18 +4,6 @@ using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.Models;
 
-public enum ImportItemStatus
-{
-    Pending,
-    Analyzing,
-    ReadyToImport,
-    AlreadyInLibrary,
-    Importing,
-    Completed,
-    Failed,
-    Skipped,
-}
-
 public partial class ImportItem : ObservableObject
 {
     public required string SourceFilePath { get; init; }
@@ -92,6 +80,7 @@ public partial class ImportItem : ObservableObject
     {
         ContentRating.R18  => "R-18",
         ContentRating.R18G => "R-18G",
+        ContentRating.AllAges => "G",
         _ => "",
     };
 

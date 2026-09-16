@@ -55,14 +55,10 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private bool HasMetadataFilter =>
         GameFilter != GameFilterOption.All;
 
-    private bool _resolutionFilterEnabled;
-    private HashSet<string> _allowedResolutions = [];
     private HashSet<string> _r18FolderNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SceneCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
 
-    private CancellationTokenSource? _metadataCts;
-    private const int MetadataParseConcurrency = 4;
-    private DispatcherQueueTimer? _metadataRefreshTimer;
+    private readonly GalleryMetadataSession<SceneCard, SceneMetadata> _metadata;
     private bool _pluginAnalysisEnabled;
 
     public event Action<string>? CardRemovedNotification;
@@ -79,6 +75,20 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _settingsViewModel = settingsViewModel;
         _pluginService = pluginService;
         _logger = logger;
+        _metadata = new(
+            new MetadataScanCoordinator<SceneCard, SceneMetadata>(
+                card => card.MetadataLoaded,
+                _metadataService.TryGetCached,
+                _metadataService.ParseAndCache,
+                ApplyMetadata,
+                action => _dispatcherQueue.TryEnqueue(() => action()),
+                (card, error) => _logger.LogError(
+                    error is OperationCanceledException ? "Gallery.ParseMetadataCanceled" : "Gallery.ParseMetadata",
+                    error, card.FilePath)),
+            new GalleryMetadataRefresh(_dispatcherQueue, RefreshMetadataFilter),
+            _logger,
+            "Gallery");
+        _metadata.PendingCountChanged += count => PendingMetadataCount = count;
 
         _sceneCardService.CardAdded += OnCardAdded;
         _sceneCardService.CardRemoved += OnCardRemoved;
@@ -103,9 +113,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             }
             else
             {
-                _metadataCts?.Cancel();
-                _metadataRefreshTimer?.Stop();
-                PendingMetadataCount = 0;
+                _metadata.Suspend();
                 GameFilter = GameFilterOption.All;
             }
         });
@@ -124,15 +132,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private async Task LoadCardsAsync()
-    {
-        var cancellationToken = BeginLoad();
-        _metadataCts?.Cancel();
-        ResetThumbnailState();
-
-        IsLoading = true;
-        var viewRefreshDeferral = DeferCardsViewRefresh();
-        try
+    private Task LoadCardsAsync()
+        => RunLoadAsync(async cancellationToken =>
         {
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
@@ -212,38 +213,24 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 foreach (var card in batch)
                     scannedIndex.TryAdd(card.FilePath, card);
 
-                var processed = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                PublishScannedBatch(() =>
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    foreach (var fresh in batch)
                     {
-                        processed.TrySetResult();
-                        return;
-                    }
-
-                    using (CardsView.DeferRefresh())
-                    {
-                        foreach (var fresh in batch)
+                        if (_cardIndex.TryGetValue(fresh.FilePath, out var existing))
                         {
-                            if (_cardIndex.TryGetValue(fresh.FilePath, out var existing))
-                            {
-                                if (existing.DateModified.Ticks == fresh.DateModified.Ticks)
-                                    continue;
+                            if (existing.DateModified.Ticks == fresh.DateModified.Ticks)
+                                continue;
 
-                                _cardIndex.Remove(fresh.FilePath);
-                                Cards.Remove(existing);
-                            }
-
-                            fresh.IsR18Content = IsR18Path(fresh.FilePath);
-                            if (_cardIndex.TryAdd(fresh.FilePath, fresh))
-                                Cards.Add(fresh);
+                            _cardIndex.Remove(fresh.FilePath);
+                            Cards.Remove(existing);
                         }
+
+                        fresh.IsR18Content = IsR18Path(fresh.FilePath);
+                        if (_cardIndex.TryAdd(fresh.FilePath, fresh))
+                            Cards.Add(fresh);
                     }
-                    processed.TrySetResult();
-                });
-                processed.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken)
-                    .GetAwaiter().GetResult();
+                }, cancellationToken);
             }, cancellationToken);
 
             // Everything received in the batches is current.  Remove cache entries
@@ -277,19 +264,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             _sceneCardService.StartWatching(paths);
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
-        }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogError("Gallery.LoadCanceled", ex);
-        }
-        finally
-        {
-            viewRefreshDeferral.Dispose();
-            if (_loadCts?.Token == cancellationToken)
-                IsLoading = false;
-            RaiseCardsReloaded();
-        }
-    }
+        }, _logger, "Gallery.LoadCanceled", _metadata.CancelScan);
+
+    /// <summary>
+    /// Refuses further metadata work and waits for parses already running, so
+    /// shutdown can flush the scene metadata cache. Mirrors the character and
+    /// coordinate galleries; see App for the shared disposal deadline.
+    /// </summary>
+    internal Task StopMetadataAsync() => _metadata.StopAsync();
 
     public void ScanMissingMetadata() => StartMetadataScan();
 
@@ -304,60 +286,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     }
 
     private void StartMetadataScan()
-    {
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataCts = new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        PendingMetadataCount = 0;
-
-        var pending = new List<SceneCard>();
-        foreach (var card in Cards)
-        {
-            if (card.MetadataLoaded) continue;
-            if (_metadataService.TryGetCached(card, out var meta))
-                ApplyMetadata(card, meta);
-            else
-                pending.Add(card);
-        }
-
-        if (pending.Count == 0)
-        {
-            if (HasMetadataFilter) ApplyFilter();
-            return;
-        }
-
-        PendingMetadataCount = pending.Count;
-        StartMetadataRefreshTimer();
-        BoundedAsyncPipeline.ForEachAsync(
-                pending,
-                MetadataParseConcurrency,
-                (card, cancellationToken) => new ValueTask(ParseMetadataAsync(card, cancellationToken)),
-                token)
-            .Observe(_logger, "Gallery.ParseMetadata");
-    }
-
-    private async Task ParseMetadataAsync(SceneCard card, CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var meta = _metadataService.ParseAndCache(card, cancellationToken);
-            if (!cancellationToken.IsCancellationRequested)
-                _dispatcherQueue.TryEnqueue(() => ApplyMetadata(card, meta));
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("Gallery.ParseMetadataCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("Gallery.ParseMetadata", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                if (cancellationToken.IsCancellationRequested) return;
-                if (PendingMetadataCount > 0) PendingMetadataCount--;
-                if (PendingMetadataCount == 0) OnMetadataScanCompleted();
-            });
-        }
-    }
+        => _metadata.Start(Cards, () => { if (HasMetadataFilter) ApplyFilter(); });
 
     private static void ApplyMetadata(SceneCard card, SceneMetadata meta)
     {
@@ -365,139 +294,28 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         card.MetadataLoaded = true;
     }
 
-    private void StartMetadataRefreshTimer()
-    {
-        _metadataRefreshTimer ??= _dispatcherQueue.CreateTimer();
-        _metadataRefreshTimer.Interval = TimeSpan.FromMilliseconds(750);
-        _metadataRefreshTimer.IsRepeating = true;
-        _metadataRefreshTimer.Tick -= OnMetadataRefreshTick;
-        _metadataRefreshTimer.Tick += OnMetadataRefreshTick;
-        _metadataRefreshTimer.Start();
-    }
-
-    private void OnMetadataRefreshTick(DispatcherQueueTimer sender, object args)
-    {
-        if (HasMetadataFilter)
-        {
-            CardsView.RefreshFilter();
-            OnPropertyChanged(nameof(IsEmpty));
-        }
-    }
-
-    private void OnMetadataScanCompleted()
-    {
-        _metadataRefreshTimer?.Stop();
-        if (HasMetadataFilter)
-        {
-            CardsView.RefreshFilter();
-            OnPropertyChanged(nameof(IsEmpty));
-        }
-    }
-
     public void RequestThumbnail(
         SceneCard card,
         ThumbnailWorkPriority priority = ThumbnailWorkPriority.Prefetch)
-    {
-        if (card.HasThumbnail) return;
-        if (_thumbnailPathCache.TryGetValue(card.FilePath, out var cached))
-        {
-            card.ThumbnailPath = cached;
-            return;
-        }
-
-        var diskCached = _thumbnailCacheService.TryGetCachedPath(card);
-        if (diskCached is not null)
-        {
-            _thumbnailPathCache[card.FilePath] = diskCached;
-            card.ThumbnailPath = diskCached;
-            return;
-        }
-
-        if (!TryBeginThumbnailRequest(card.FilePath, priority, out var request)) return;
-        _ = ScheduleThumbnailRequest(request, token => GenerateOneAsync(card, request, token));
-    }
+        => RequestThumbnailCore(
+            card, priority,
+            _thumbnailCacheService.TryGetCachedPath,
+            _thumbnailCacheService.EnsureThumbnailAsync,
+            _logger, "Gallery",
+            (item, path) => _cardCacheService.SetThumbnailPath(item.FilePath, path));
 
     public void ReleaseThumbnail(SceneCard card)
     {
         ReleaseThumbnailRequest(card.FilePath);
     }
 
-    private async Task GenerateOneAsync(
-        SceneCard card,
-        ThumbnailRequest request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (card.HasThumbnail) return;
-            var thumbnailPath = await _thumbnailCacheService
-                .EnsureThumbnailAsync(card, cancellationToken)
-                .ConfigureAwait(false);
-            if (thumbnailPath != null && !cancellationToken.IsCancellationRequested)
-            {
-                _cardCacheService.SetThumbnailPath(card.FilePath, thumbnailPath);
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _thumbnailPathCache[card.FilePath] = thumbnailPath;
-                    card.ThumbnailPath = thumbnailPath;
-                });
-            }
-        }
-        catch (OperationCanceledException ex) { _logger.LogError("Gallery.GenerateThumbnailCanceled", ex, card.FilePath); }
-        catch (Exception ex) { _logger.LogError("Gallery.GenerateThumbnail", ex, card.FilePath); }
-        finally
-        {
-            _dispatcherQueue.TryEnqueue(() =>
-            {
-                CompleteThumbnailRequest(request);
-            });
-        }
-    }
 
-    private void OnResolutionFilterChanged(bool enabled, HashSet<string> resolutions)
-    {
-        _dispatcherQueue.TryEnqueue(() =>
-        {
-            _resolutionFilterEnabled = enabled;
-            _allowedResolutions = resolutions;
-            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
-            ApplyFilter();
-        });
-    }
-
-    public SceneCard? GetRandomCard()
-    {
-        if (CardsView.Count == 0) return null;
-        return CardsView[Random.Shared.Next(CardsView.Count)] as SceneCard;
-    }
+    public SceneCard? GetRandomCard() => GetRandomVisibleCard<SceneCard>();
 
     private bool BaseFilterPasses(SceneCard card)
-    {
-        if (!ShowR18Content && card.IsR18Content) return false;
-
-        foreach (var kw in _searchKeywords)
-            if (!card.FilePath.Contains(kw, StringComparison.OrdinalIgnoreCase))
-                return false;
-
-        if (_resolutionFilterEnabled && _allowedResolutions.Count > 0
-            && !_allowedResolutions.Contains(card.Resolution))
-            return false;
-
-        if (GameFilter != GameFilterOption.All)
-        {
-            if (!card.MetadataLoaded) return false;
-            var targetGame = GameFilter switch
-            {
-                GameFilterOption.Koikatsu => GameVersion.Koikatsu,
-                GameFilterOption.KoikatsuSunshine => GameVersion.KoikatsuSunshine,
-                _ => GameVersion.Unknown
-            };
-            if (card.Game != targetGame) return false;
-        }
-
-        return true;
-    }
+        => OriginPasses(card)
+           && SceneDiscoveryFilter.Matches(card, _searchKeywords, ShowR18Content, GameFilter,
+               _resolutionFilterEnabled, _allowedResolutions);
 
     protected override void ApplyFilter()
     {
@@ -505,10 +323,10 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
         var showR18Content = ShowR18Content;
         var hasSearch = _searchKeywords.Length > 0;
-        var filterRes = _resolutionFilterEnabled && _allowedResolutions.Count > 0;
+        var filterRes = HasResolutionFilter;
         var hasMetadataFilter = GameFilter != GameFilterOption.All;
 
-        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter)
+        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter && !HasOriginFilter)
         {
             CardsView.Filter = null!;
         }
@@ -541,28 +359,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private void QueueMetadata(SceneCard card)
     {
         if (!_pluginAnalysisEnabled) return;
-        if (card.MetadataLoaded) return;
-        if (_metadataService.TryGetCached(card, out var meta))
-        {
-            ApplyMetadata(card, meta);
-            if (HasMetadataFilter)
-            {
-                CardsView.RefreshFilter();
-                OnPropertyChanged(nameof(IsEmpty));
-            }
-            return;
-        }
+        _metadata.Queue(card, RefreshMetadataFilter);
+    }
 
-        _metadataCts ??= new CancellationTokenSource();
-        var token = _metadataCts.Token;
-        if (token.IsCancellationRequested) return;
-        PendingMetadataCount++;
-        BoundedAsyncPipeline.ForEachAsync(
-                [card],
-                MetadataParseConcurrency,
-                (item, cancellationToken) => new ValueTask(ParseMetadataAsync(item, cancellationToken)),
-                token)
-            .Observe(_logger, "Gallery.ParseAddedCardMetadata");
+    private void RefreshMetadataFilter()
+    {
+        if (!HasMetadataFilter) return;
+        CardsView.RefreshFilter();
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private void OnCardRemoved(string path)
@@ -596,13 +400,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-        _thumbnailCts?.Cancel();
-        _thumbnailCts?.Dispose();
-        _metadataCts?.Cancel();
-        _metadataCts?.Dispose();
-        _metadataRefreshTimer?.Stop();
+        DisposeWorkCancellationSources();
+        _metadata.Dispose();
         _sceneCardService.CardAdded -= OnCardAdded;
         _sceneCardService.CardRemoved -= OnCardRemoved;
         _settingsViewModel.ResolutionFilterChanged -= OnResolutionFilterChanged;
@@ -621,8 +420,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     public override void CancelPendingWork()
     {
         base.CancelPendingWork();
-        _metadataCts?.Cancel();
-        _metadataRefreshTimer?.Stop();
-        PendingMetadataCount = 0;
+        _metadata.Suspend();
     }
 }

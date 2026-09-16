@@ -52,6 +52,24 @@ internal static class ImportDestinationPolicy
         return Path.Combine([.. parts]);
     }
 
+    /// <summary>
+    /// Whether an item belongs in the author folder's "unrecognized" sink,
+    /// which collects files that have an author but no artwork identity.
+    /// </summary>
+    /// <remarks>
+    /// Local sources never have an artwork identity by design, so they would
+    /// otherwise all land in the sink. That would also cost them their folder
+    /// grouping, because GalleryGrouping deliberately degrades that directory
+    /// to per-file keys.
+    /// </remarks>
+    public static bool UsesUnrecognizedSink(
+        bool hasArtwork,
+        bool hasAuthor,
+        string? authorProviderId)
+        => !hasArtwork
+            && hasAuthor
+            && !LocalSourceIdentity.IsLocal(authorProviderId);
+
     public static bool ShouldCreateArtworkFolder(
         bool alreadyExists,
         int threshold,

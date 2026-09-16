@@ -64,9 +64,9 @@ public sealed class WrapPanel : Panel
         foreach (var child in Children)
         {
             var desired = child.DesiredSize;
-            var widthWithSpacing = x > 0 ? desired.Width + spacing : desired.Width;
-
-            if (x > 0 && x + widthWithSpacing > finalSize.Width)
+            // x already includes the spacing after the previous child. Counting
+            // it again wraps an item that MeasureOverride placed on this row.
+            if (x > 0 && x + desired.Width > finalSize.Width)
             {
                 x = 0;
                 y += lineHeight + spacing;
