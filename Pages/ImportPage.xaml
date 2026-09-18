@@ -197,19 +197,8 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
             <Grid>
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
-                            Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                    <FontIcon FontSize="48" Glyph="&#xE896;" HorizontalAlignment="Center"
-                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="Import_DropZoneTitle" Style="{StaticResource SubtitleTextBlockStyle}"
-                               HorizontalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <Button x:Uid="Import_ChooseFiles" HorizontalAlignment="Center" Click="PickFiles_Click" Style="{StaticResource AccentButtonStyle}" />
-
-                    <TextBlock x:Uid="Import_DropZoneHint" Style="{StaticResource CaptionTextBlockStyle}"
-                               HorizontalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                </StackPanel>
+                <controls:ImportDropZoneContent PickFilesRequested="PickFiles_Click"
+                                                Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}" />
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
                             Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}">
                     <ProgressRing Width="56" Height="56" IsActive="True" HorizontalAlignment="Center" />
@@ -466,6 +455,34 @@
 
         </Grid>
 
+        <!-- Shares the workspace cell, so it can never spill past that card's bounds.
+             Staying in the page's visual tree also keeps the page-level Drop handler
+             covering it, which a Popup or Flyout would not. -->
+        <Grid x:Name="AddFilesOverlay" Grid.Row="2"
+              Visibility="Collapsed" Background="Transparent"
+              AutomationProperties.AutomationId="ImportAddFilesOverlay"
+              SizeChanged="AddFilesOverlay_SizeChanged"
+              Tapped="AddFilesOverlay_Tapped">
+            <Grid.KeyboardAccelerators>
+                <KeyboardAccelerator Key="Escape" Invoked="AddFilesOverlayEscape_Invoked" />
+            </Grid.KeyboardAccelerators>
+            <!-- Left margin is set in code-behind so the card sits directly above
+                 the button that opened it; bottom margin is the gap to that button. -->
+            <Border x:Name="AddFilesOverlayCard" x:Uid="Import_AddFilesOverlayCard"
+                    MaxWidth="560" MaxHeight="320" Margin="0,0,0,8" Padding="24"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    IsTabStop="True" UseSystemFocusVisuals="False"
+                    CornerRadius="12" BorderThickness="1"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
+                    Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
+                    SizeChanged="AddFilesOverlayCard_SizeChanged"
+                    Tapped="AddFilesOverlayCard_Tapped">
+                <controls:ImportDropZoneContent x:Name="AddFilesOverlayContent"
+                                                UseBoxArtwork="True"
+                                                PickFilesRequested="PickFiles_Click" />
+            </Border>
+        </Grid>
+
         <Grid Grid.Row="3" Padding="0,8,0,16" ColumnSpacing="12"
               Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
             <Grid.ColumnDefinitions>
@@ -484,10 +501,8 @@
                     <TextBlock x:Uid="Import_UndoLabel" />
                 </StackPanel>
             </Button>
-            <Button Grid.Column="2" x:Uid="Import_AddFiles" HorizontalAlignment="Left" Click="PickFiles_Click" />
-            <TextBlock Grid.Column="2" Visibility="Collapsed" x:Uid="Import_KeepDropping" VerticalAlignment="Center"
-                       Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="2" x:Name="AddFilesButton" x:Uid="Import_AddFiles"
+                    HorizontalAlignment="Left" Click="ShowAddFilesOverlay_Click" />
             <Button Grid.Column="3" Style="{StaticResource AccentButtonStyle}"
                     Command="{x:Bind ViewModel.ConfirmImportCommand}"
                     IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}">

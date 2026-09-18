@@ -729,6 +729,9 @@
   <data name="Import_Importing.Text" xml:space="preserve">
     <value>Importing…</value>
   </data>
+  <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
+    <value>Add files: drop Koikatsu cards here</value>
+  </data>
   <data name="Import_DropZoneTitle.Text" xml:space="preserve">
     <value>Drop Koikatsu cards here</value>
   </data>
@@ -1070,7 +1073,6 @@
   <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>Filter by rating</value></data>
   <data name="Import_AllRatings.Content" xml:space="preserve"><value>All ratings</value></data>
   <data name="Import_EditSelected.Content" xml:space="preserve"><value>Edit selected</value></data>
-  <data name="Import_KeepDropping.Text" xml:space="preserve"><value>Drop more PNG cards to add them</value></data>
   <data name="Import_ActionCount" xml:space="preserve"><value>Import {0} cards</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
     <value>Customize browsing, library sources, and plugins. Changes are saved automatically.</value>

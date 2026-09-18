@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -7,6 +7,9 @@ using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using SceneGallery.PluginSdk;
@@ -43,6 +46,159 @@ public sealed partial class ImportPage : Page
         }
     }
 
+    // Translate, scale and opacity are all composition-driven, so these storyboards
+    // run off the UI thread and need no EnableDependentAnimation.
+    private readonly CompositeTransform _addFilesCardTransform = new();
+    private Storyboard? _addFilesCardEntrance;
+    private Storyboard? _addFilesCardCollapse;
+
+    private Storyboard BuildAddFilesCardEntrance()
+    {
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(BuildCardAnimation(
+            "TranslateY", from: 24, to: 0, milliseconds: 220,
+            easing: new CubicEase { EasingMode = EasingMode.EaseOut }));
+        storyboard.Children.Add(BuildCardOpacityAnimation(from: 0, to: 1, milliseconds: 140));
+        return storyboard;
+    }
+
+    private DoubleAnimation BuildCardAnimation(
+        string property, double from, double to, int milliseconds, EasingFunctionBase? easing = null)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+            EasingFunction = easing,
+        };
+        Storyboard.SetTarget(animation, _addFilesCardTransform);
+        Storyboard.SetTargetProperty(animation, property);
+        return animation;
+    }
+
+    private DoubleAnimation BuildCardOpacityAnimation(double from, double to, int milliseconds)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+        };
+        Storyboard.SetTarget(animation, AddFilesOverlayCard);
+        Storyboard.SetTargetProperty(animation, "Opacity");
+        return animation;
+    }
+
+    private void ShowAddFilesOverlay_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.IsImporting) return;
+        AddFilesOverlay.Visibility = Visibility.Visible;
+        PositionAddFilesCard();
+        ResetAddFilesCard();
+
+        _addFilesCardEntrance ??= BuildAddFilesCardEntrance();
+        _addFilesCardEntrance.Begin();
+
+        // Focused so Escape reaches the accelerator and Tab lands inside the card.
+        AddFilesOverlayCard.Focus(FocusState.Programmatic);
+    }
+
+    // A completed storyboard holds its final value, so both must be stopped before
+    // the base values below take effect.
+    private void ResetAddFilesCard()
+    {
+        _addFilesCardEntrance?.Stop();
+        _addFilesCardCollapse?.Stop();
+        AddFilesOverlayCard.RenderTransform = _addFilesCardTransform;
+        _addFilesCardTransform.TranslateX = 0;
+        _addFilesCardTransform.TranslateY = 0;
+        _addFilesCardTransform.ScaleX = 1;
+        _addFilesCardTransform.ScaleY = 1;
+        AddFilesOverlayCard.Opacity = 1;
+        AddFilesOverlayContent.OpenBox();
+    }
+
+    /// <summary>
+    /// Seals the box, then shrinks the whole card into the button that opened it.
+    /// Awaited before the files are handed to the view model so the analysis spinner
+    /// does not disable the workspace mid-animation.
+    /// </summary>
+    private async Task PlayAddFilesAcceptedAsync()
+    {
+        if (AddFilesOverlay.Visibility != Visibility.Visible) return;
+
+        await AddFilesOverlayContent.SealBoxAsync();
+        if (AddFilesOverlay.Visibility != Visibility.Visible) return;
+
+        await PlayAddFilesCardCollapseAsync();
+        CloseAddFilesOverlay();
+    }
+
+    private Task PlayAddFilesCardCollapseAsync()
+    {
+        var cardCentre = AddFilesOverlayCard.TransformToVisual(AddFilesOverlay).TransformPoint(
+            new Windows.Foundation.Point(AddFilesOverlayCard.ActualWidth / 2, AddFilesOverlayCard.ActualHeight / 2));
+        var buttonCentre = AddFilesButton.TransformToVisual(AddFilesOverlay).TransformPoint(
+            new Windows.Foundation.Point(AddFilesButton.ActualWidth / 2, AddFilesButton.ActualHeight / 2));
+
+        // Scaling about the card's own centre keeps the shrink aimed at the button.
+        _addFilesCardTransform.CenterX = AddFilesOverlayCard.ActualWidth / 2;
+        _addFilesCardTransform.CenterY = AddFilesOverlayCard.ActualHeight / 2;
+
+        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(BuildCardAnimation("TranslateX", 0, buttonCentre.X - cardCentre.X, 300, easing));
+        storyboard.Children.Add(BuildCardAnimation("TranslateY", 0, buttonCentre.Y - cardCentre.Y, 300, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleX", 1, 0.12, 300, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleY", 1, 0.12, 300, easing));
+        storyboard.Children.Add(BuildCardOpacityAnimation(1, 0, 300));
+
+        var completion = new TaskCompletionSource();
+        storyboard.Completed += (_, _) => completion.TrySetResult();
+        _addFilesCardCollapse = storyboard;
+        storyboard.Begin();
+        return completion.Task;
+    }
+
+    // Lines the card's left edge up with the button that opened it. The button
+    // lives in the row below the overlay, so only its horizontal position
+    // carries over; the card's own Bottom alignment puts it just above the row.
+    private void PositionAddFilesCard()
+    {
+        if (AddFilesOverlay.Visibility != Visibility.Visible) return;
+        var left = AddFilesButton.TransformToVisual(AddFilesOverlay)
+            .TransformPoint(new Windows.Foundation.Point(0, 0)).X;
+        var maxLeft = AddFilesOverlay.ActualWidth - AddFilesOverlayCard.ActualWidth;
+        var margin = AddFilesOverlayCard.Margin;
+        margin.Left = Math.Max(0, Math.Min(left, maxLeft));
+        AddFilesOverlayCard.Margin = margin;
+    }
+
+    private void AddFilesOverlay_SizeChanged(object sender, SizeChangedEventArgs e) => PositionAddFilesCard();
+
+    private void AddFilesOverlayCard_SizeChanged(object sender, SizeChangedEventArgs e) => PositionAddFilesCard();
+
+    private void CloseAddFilesOverlay()
+    {
+        if (AddFilesOverlay.Visibility == Visibility.Collapsed) return;
+        _addFilesCardEntrance?.Stop();
+        _addFilesCardCollapse?.Stop();
+        AddFilesOverlay.Visibility = Visibility.Collapsed;
+        AddFilesButton.Focus(FocusState.Programmatic);
+    }
+
+    private void AddFilesOverlay_Tapped(object sender, TappedRoutedEventArgs e) => CloseAddFilesOverlay();
+
+    // Keeps a tap on the card itself from being read as a tap on the backdrop.
+    private void AddFilesOverlayCard_Tapped(object sender, TappedRoutedEventArgs e) => e.Handled = true;
+
+    private void AddFilesOverlayEscape_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        CloseAddFilesOverlay();
+        args.Handled = true;
+    }
+
     private void PickFiles_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.PickFiles", async () =>
         {
@@ -53,7 +209,9 @@ public sealed partial class ImportPage : Page
                 Microsoft.UI.Win32Interop.GetWindowFromWindowId(XamlRoot.ContentIslandEnvironment.AppWindowId));
             var files = await picker.PickMultipleFilesAsync();
             var paths = files.Select(f => f.Path).ToArray();
-            if (paths.Length > 0 && await EnsureRequiredCookieSetupAsync(paths))
+            if (paths.Length == 0) return; // Cancelled picker leaves the overlay open.
+            await PlayAddFilesAcceptedAsync();
+            if (await EnsureRequiredCookieSetupAsync(paths))
                 await ViewModel.AddFilesCommand.ExecuteAsync(paths);
         });
 
@@ -108,7 +266,9 @@ public sealed partial class ImportPage : Page
             }
         }
 
-        if (paths.Count > 0 && await EnsureRequiredCookieSetupAsync(paths))
+        if (paths.Count == 0) return;
+        await PlayAddFilesAcceptedAsync();
+        if (await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
         });
 

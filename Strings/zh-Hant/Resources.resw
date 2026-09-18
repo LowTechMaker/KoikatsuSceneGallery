@@ -729,6 +729,9 @@
   <data name="Import_Importing.Text" xml:space="preserve">
     <value>正在匯入…</value>
   </data>
+  <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
+    <value>加入檔案：將 Koikatsu 卡片拖放到此處</value>
+  </data>
   <data name="Import_DropZoneTitle.Text" xml:space="preserve">
     <value>將 Koikatsu 卡片拖放到此處</value>
   </data>
@@ -1070,7 +1073,6 @@
   <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>依分級篩選</value></data>
   <data name="Import_AllRatings.Content" xml:space="preserve"><value>全部分級</value></data>
   <data name="Import_EditSelected.Content" xml:space="preserve"><value>編輯選取</value></data>
-  <data name="Import_KeepDropping.Text" xml:space="preserve"><value>可繼續拖入 PNG 卡片</value></data>
   <data name="Import_ActionCount" xml:space="preserve"><value>匯入 {0} 張</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
     <value>調整瀏覽體驗、管理圖庫來源與外掛。變更會自動儲存。</value>
