@@ -195,6 +195,7 @@ public sealed partial class DetailPage : Page
         if (ViewModel.PixivUrl is { } url)
         {
             DetailNavigationHelper.CopyText(url);
+            RecordUse("Detail.CopyPixivUrl");
             e.Handled = true;
         }
     }
@@ -204,6 +205,7 @@ public sealed partial class DetailPage : Page
         if (ViewModel.BepisDbUrl is { } url)
         {
             DetailNavigationHelper.CopyText(url);
+            RecordUse("Detail.CopyBepisDbUrl");
             e.Handled = true;
         }
     }
@@ -213,8 +215,19 @@ public sealed partial class DetailPage : Page
         if (ViewModel.Card is { } card)
         {
             DetailNavigationHelper.CopyText(card.FilePath);
+            RecordUse("Detail.CopyFilePath");
             e.Handled = true;
         }
+    }
+
+    /// <summary>
+    /// Copying a card's path or origin link counts as taking it somewhere, which
+    /// is what record mode is for. The service decides whether to keep it.
+    /// </summary>
+    private void RecordUse(string operation)
+    {
+        if (ViewModel.Card is { } card)
+            App.Services.GetService<UsageRecordService>()?.Record([card.FilePath], operation);
     }
 
     private void FilePath_RightTapped(object sender, RightTappedRoutedEventArgs e)

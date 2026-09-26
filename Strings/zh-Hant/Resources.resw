@@ -87,18 +87,6 @@
   <data name="Gallery_ShowR18Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>顯示 R-18 內容</value>
   </data>
-  <data name="Gallery_SortName.Content" xml:space="preserve">
-    <value>名稱</value>
-  </data>
-  <data name="Gallery_SortDateModified.Content" xml:space="preserve">
-    <value>修改日期</value>
-  </data>
-  <data name="Gallery_SortFileSize.Content" xml:space="preserve">
-    <value>檔案大小</value>
-  </data>
-  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
-    <value>隨機</value>
-  </data>
   <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
     <value>手氣不錯</value>
   </data>
@@ -527,13 +515,13 @@
   <data name="Authors_RefreshOne.Text" xml:space="preserve">
     <value>重新整理</value>
   </data>
-  <data name="Authors_SortCount.Content" xml:space="preserve">
+  <data name="Authors_SortCount.Text" xml:space="preserve">
     <value>卡片數量</value>
   </data>
-  <data name="Authors_SortLastUpdated.Content" xml:space="preserve">
+  <data name="Authors_SortLastUpdated.Text" xml:space="preserve">
     <value>最近更新</value>
   </data>
-  <data name="Authors_SortName.Content" xml:space="preserve">
+  <data name="Authors_SortName.Text" xml:space="preserve">
     <value>名稱</value>
   </data>
   <data name="Authors_GroupSymbols" xml:space="preserve">
@@ -1059,7 +1047,7 @@
   <data name="Import_Review_NoDestination_Title" xml:space="preserve"><value>尚未產生匯入目的地</value></data>
   <data name="Import_Review_NoDestination_Description" xml:space="preserve"><value>已有 {0} 張卡片完成處理，正在等待最後一次目的地計算。</value></data>
   <data name="Import_Review_Summary" xml:space="preserve"><value>共 {0} 張卡片 · {1} 張可匯入</value></data>
-  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>目前顯示 {0} 張 · 操作套用至已選取的 {1} 張</value></data>
+  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>顯示 {0} 張 · 已選 {1} 張</value></data>
   <data name="Import_Review_FilterEmpty.Text" xml:space="preserve"><value>此分頁目前沒有符合分級的圖片</value></data>
   <data name="Import_Review_ShowAll.Content" xml:space="preserve"><value>顯示此分頁的全部分級</value></data>
   <data name="Import_UnknownEmpty_Title.Text" xml:space="preserve"><value>沒有需要識別的卡片</value></data>
@@ -1072,8 +1060,16 @@
   <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>選取目前清單</value></data>
   <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>依分級篩選</value></data>
   <data name="Import_AllRatings.Content" xml:space="preserve"><value>全部分級</value></data>
-  <data name="Import_EditSelected.Content" xml:space="preserve"><value>編輯選取</value></data>
-  <data name="Import_ActionCount" xml:space="preserve"><value>匯入 {0} 張</value></data>
+  <data name="Import_EditSelected.Content" xml:space="preserve"><value>編輯所選</value></data>
+  <data name="Import_ActionCount" xml:space="preserve"><value>匯入所有可匯入的 {0} 張</value></data>
+  <data name="Import_ActionCountCompact" xml:space="preserve"><value>匯入 {0} 張</value></data>
+  <data name="Import_EditSelectedMetadata.Text" xml:space="preserve"><value>取得作品資料</value></data>
+  <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>調整分級與作者</value></data>
+  <data name="Import_SelectSection.Content" xml:space="preserve"><value>選取／取消本區</value></data>
+  <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>選取或取消本區卡片</value></data>
+  <data name="Import_More.Content" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_More_Undo.Text" xml:space="preserve"><value>復原上次編輯</value></data>
+  <data name="Import_More_Clear.Text" xml:space="preserve"><value>清空待匯入清單</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
     <value>調整瀏覽體驗、管理圖庫來源與外掛。變更會自動儲存。</value>
   </data>
@@ -1194,6 +1190,9 @@
   <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
     <value>解析度與外掛分析可在設定中調整。</value>
   </data>
+  <data name="Browser_ResolutionFilterActive" xml:space="preserve">
+    <value>圖片尺寸篩選已啟用 · 已在設定選取 {0} 種尺寸</value>
+  </data>
   <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
     <value>開啟圖庫設定</value>
   </data>
@@ -1273,7 +1272,7 @@
   <data name="PostDetail_Unsaved" xml:space="preserve"><value>詳細資料尚未儲存</value></data>
   <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} 張本機圖片</value></data>
   <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>選擇檔案</value></data>
-  <data name="Import_AddFiles.Content" xml:space="preserve"><value>繼續加入檔案</value></data>
+  <data name="Import_AddFiles.Content" xml:space="preserve"><value>加入檔案</value></data>
   <data name="Import_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
   <data name="Import_UnidentifiedCount" xml:space="preserve"><value>未識別（{0}）</value></data>
   <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>貼文網址或作品 ID</value></data>
@@ -1301,8 +1300,8 @@
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>統計待匯入與已完成的圖片，不受目前分頁或篩選影響。</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>未識別（{0}）</value></data>
   <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>先選取需要補齊資料的圖片，再使用上方的取得資料、反向搜尋或指定作者。</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>確認圖片、作者與分級後，可直接匯入；批次操作也支援跨區選取。</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>選取需要補齊資料的圖片，再開啟「編輯所選」取得資料、反向搜尋或指定作者。</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>逐張確認圖片、作者與分級；選取卡片後可編輯，準備好再匯入。</value></data>
   <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>目前沒有符合篩選的待處理圖片。</value></data>
   <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>目前沒有符合篩選的已識別圖片。</value></data>
   <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>匯入圖片：未識別清單、貼文無法取得清單、已識別圖片網格</value></data>
@@ -1473,4 +1472,313 @@
   <data name="Detail_VersionKind_Current.Content" xml:space="preserve"><value>本尊</value></data>
   <data name="Detail_VersionKind_Alternate.Content" xml:space="preserve"><value>IF 版</value></data>
   <data name="Detail_VersionSuperseded.Content" xml:space="preserve"><value>已被更新的卡片取代</value></data>
+  <data name="Authors_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="Authors_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="Authors_TotalCount" xml:space="preserve">
+    <value>{0:N0} 位作者</value>
+  </data>
+  <data name="Authors_PlatformBar.AutomationProperties.Name" xml:space="preserve">
+    <value>平台</value>
+  </data>
+  <data name="Discovery_Joker" xml:space="preserve">
+    <value>小丑牌</value>
+  </data>
+  <data name="Discovery_PokerHandEnd" xml:space="preserve">
+    <value>已發牌 · 13 張</value>
+  </data>
+  <data name="Discovery_PokerProgress" xml:space="preserve">
+    <value>第 {0} 手 · 已抽 {1} / {2} 張</value>
+  </data>
+  <data name="Gallery_SortAscending.Text" xml:space="preserve">
+    <value>遞增</value>
+  </data>
+  <data name="Gallery_SortDateAdded.Text" xml:space="preserve">
+    <value>新增日期</value>
+  </data>
+  <data name="Gallery_SortDateModified.Text" xml:space="preserve">
+    <value>修改日期</value>
+  </data>
+  <data name="Gallery_SortDescending.Text" xml:space="preserve">
+    <value>遞減</value>
+  </data>
+  <data name="Gallery_SortFileSize.Text" xml:space="preserve">
+    <value>檔案大小</value>
+  </data>
+  <data name="Gallery_SortName.Text" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="Gallery_SortShuffle.Text" xml:space="preserve">
+    <value>隨機</value>
+  </data>
+  <data name="Meta_LanguageTag" xml:space="preserve">
+    <value>zh-Hant</value>
+  </data>
+  <data name="Nav_Tags.Content" xml:space="preserve">
+    <value>標籤</value>
+  </data>
+  <data name="Nav_Usage.AutomationProperties.Name" xml:space="preserve">
+    <value>使用紀錄</value>
+  </data>
+  <data name="Nav_Usage_Label.Text" xml:space="preserve">
+    <value>使用紀錄</value>
+  </data>
+  <data name="Origin_SelectorBar.AutomationProperties.Name" xml:space="preserve">
+    <value>瀏覽來源</value>
+  </data>
+  <data name="Platform_All" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="Platform_bepisdb" xml:space="preserve">
+    <value>BepisDB</value>
+  </data>
+  <data name="Platform_fanbox" xml:space="preserve">
+    <value>FANBOX</value>
+  </data>
+  <data name="Platform_local" xml:space="preserve">
+    <value>本地</value>
+  </data>
+  <data name="Platform_pixiv" xml:space="preserve">
+    <value>pixiv</value>
+  </data>
+  <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>記錄模式</value>
+  </data>
+  <data name="Record_NavToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>記錄每張拖出或複製出去的卡片的原網址</value>
+  </data>
+  <data name="SC_DiscoverySpread.Description" xml:space="preserve">
+    <value>讓看起來相似的卡片在隨機網格中錯開。僅調換位置，不會隱藏任何卡片</value>
+  </data>
+  <data name="SC_DiscoverySpread.Header" xml:space="preserve">
+    <value>在隨機探索中錯開相似卡片</value>
+  </data>
+  <data name="SC_GroupCollapseAnimation.Description" xml:space="preserve">
+    <value>離開群組時，卡片會飛回疊起來的那張磚上。仍然遵守 Windows 本身的動畫設定</value>
+  </data>
+  <data name="SC_GroupCollapseAnimation.Header" xml:space="preserve">
+    <value>關閉群組時播放動畫</value>
+  </data>
+  <data name="SC_PokerHand.Description" xml:space="preserve">
+    <value>一次抽 13 張，不再無限捲動。偶爾會發到小丑牌，從最大的檔案中抽出。關閉後回到原本的隨機捲動</value>
+  </data>
+  <data name="SC_PokerHand.Header" xml:space="preserve">
+    <value>隨機探索改為發一手牌</value>
+  </data>
+  <data name="SC_RecordMode.Description" xml:space="preserve">
+    <value>記錄每張從 app 拖出或複製出去的卡片的原始頁面。本地收藏的卡片會被忽略</value>
+  </data>
+  <data name="SC_RecordMode.Header" xml:space="preserve">
+    <value>記錄模式</value>
+  </data>
+  <data name="TagCloud_ArticleLink.Content" xml:space="preserve">
+    <value>在 pixiv 百科查看</value>
+  </data>
+  <data name="TagCloud_ArticleParents" xml:space="preserve">
+    <value>分類：{0}</value>
+  </data>
+  <data name="TagCloud_Back.Content" xml:space="preserve">
+    <value>← 返回標籤</value>
+  </data>
+  <data name="TagCloud_EmptyDescription.Text" xml:space="preserve">
+    <value>標籤來自平台外掛抓取的作品 metadata。安裝外掛後再匯入一些卡片，標籤就會出現在這裡</value>
+  </data>
+  <data name="TagCloud_EmptyTitle.Text" xml:space="preserve">
+    <value>找不到任何標籤</value>
+  </data>
+  <data name="TagCloud_Kind_Characters" xml:space="preserve">
+    <value>角色</value>
+  </data>
+  <data name="TagCloud_Kind_Coordinates" xml:space="preserve">
+    <value>服裝</value>
+  </data>
+  <data name="TagCloud_Kind_Scenes" xml:space="preserve">
+    <value>場景</value>
+  </data>
+  <data name="TagCloud_Loading.Text" xml:space="preserve">
+    <value>正在讀取標籤…</value>
+  </data>
+  <data name="TagCloud_NoCardsDescription" xml:space="preserve">
+    <value>帶這個標籤的作品在你的收藏庫裡沒有檔案。標籤數量來自已抓取的 metadata，涵蓋的作品比你實際匯入的多</value>
+  </data>
+  <data name="TagCloud_NoCardsTitle" xml:space="preserve">
+    <value>這個標籤沒有卡片</value>
+  </data>
+  <data name="TagCloud_TagAccessibleName" xml:space="preserve">
+    <value>{0}，{1} 件作品</value>
+  </data>
+  <data name="TagCloud_TagCount" xml:space="preserve">
+    <value>{0} 件作品</value>
+  </data>
+  <data name="TagCloud_TagMergedFrom" xml:space="preserve">
+    <value>已併入：{0}</value>
+  </data>
+  <data name="TagCloud_Title.Text" xml:space="preserve">
+    <value>標籤</value>
+  </data>
+  <data name="Usage_Clear.Content" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="Usage_ClearConfirmBody" xml:space="preserve">
+    <value>所有已記錄的項目都會被刪除，且無法復原</value>
+  </data>
+  <data name="Usage_ClearConfirmNo" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Usage_ClearConfirmTitle" xml:space="preserve">
+    <value>要清空使用紀錄嗎？</value>
+  </data>
+  <data name="Usage_ClearConfirmYes" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="Usage_Count" xml:space="preserve">
+    <value>共 {0} 筆</value>
+  </data>
+  <data name="Usage_EmptyDescription.Text" xml:space="preserve">
+    <value>打開側邊欄「使用紀錄」右邊的開關，然後拖出或複製一張卡片，它的原網址就會記在這裡</value>
+  </data>
+  <data name="Usage_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有任何紀錄</value>
+  </data>
+  <data name="Usage_Export.Content" xml:space="preserve">
+    <value>全部複製</value>
+  </data>
+  <data name="Usage_NoOrigin" xml:space="preserve">
+    <value>沒有原始頁面</value>
+  </data>
+  <data name="Usage_Title.Text" xml:space="preserve">
+    <value>使用紀錄</value>
+  </data>
+  <data name="Refetch_SectionTitle" xml:space="preserve">
+    <value>重新抓取作品資料</value>
+  </data>
+  <data name="Refetch_Description" xml:space="preserve">
+    <value>掃描收藏庫中所有 {0} 卡片，向 {0} 重新抓取每件作品的標題、分級與標籤（標籤翻譯採用目前的介面語言），並寫回卡片旁的作品資料檔。已經有資料的作品也會重新抓取。</value>
+  </data>
+  <data name="Refetch_WarningTitle" xml:space="preserve">
+    <value>高風險操作：開始前請完整閱讀</value>
+  </data>
+  <data name="Refetch_WarningMessage" xml:space="preserve">
+    <value>這會對 {0} 連續發出數千次請求，並持續數小時。大量請求可能使你的 IP 或帳號遭 {0} 暫時限流，甚至封鎖；執行期間匯入也會明顯變慢。選「全部重抓」時，每件作品現有的作品資料檔都會被新抓到的資料直接覆寫（作品已刪除或改為私人時保留舊資料）。開始前會自動備份這些檔案，可在下方還原到重抓前；但備份只保留最近 2 份，更早的會被淘汰。</value>
+  </data>
+  <data name="Refetch_Acknowledge" xml:space="preserve">
+    <value>我已閱讀並了解上述風險：可能被限流或封鎖、作品資料會被覆寫（只能還原到最近 2 份備份），並自行承擔後果。</value>
+  </data>
+  <data name="Refetch_Scan" xml:space="preserve">
+    <value>掃描收藏庫</value>
+  </data>
+  <data name="Refetch_ScanResume" xml:space="preserve">
+    <value>掃描並從中斷處繼續</value>
+  </data>
+  <data name="Refetch_ScanRestart" xml:space="preserve">
+    <value>掃描並從頭開始</value>
+  </data>
+  <data name="Refetch_Stop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Refetch_Scanning" xml:space="preserve">
+    <value>正在掃描收藏庫…</value>
+  </data>
+  <data name="Refetch_ScanSummary" xml:space="preserve">
+    <value>找到 {0} 件作品，共 {1} 張卡。以每件 2–5 秒估算，約需 {2}–{3} 小時。</value>
+  </data>
+  <data name="Refetch_NothingFound" xml:space="preserve">
+    <value>收藏庫中沒有找到可重新抓取的 {0} 作品。</value>
+  </data>
+  <data name="Refetch_Unassigned" xml:space="preserve">
+    <value>另有 {0} 張卡無法從資料夾名稱或檔名判斷屬於哪件作品，不會處理；可在作者頁手動指定作品。</value>
+  </data>
+  <data name="Refetch_Progress" xml:space="preserve">
+    <value>已處理 {0} / {1} 件（更新 {2}、已刪除或私人 {3}、失敗 {4}）</value>
+  </data>
+  <data name="Refetch_Completed" xml:space="preserve">
+    <value>已完成：更新 {0} 件、已刪除或私人 {1} 件、失敗 {2} 件。失敗的作品下次會再試。</value>
+  </data>
+  <data name="Refetch_Stopped" xml:space="preserve">
+    <value>已停止，下次可從中斷處繼續。</value>
+  </data>
+  <data name="Refetch_TooManyFailures" xml:space="preserve">
+    <value>連續 {0} 件抓取失敗，已自動停止。可能是網路中斷，或已被平台限流；請隔一段時間再從中斷處繼續。</value>
+  </data>
+  <data name="Refetch_Error" xml:space="preserve">
+    <value>發生錯誤而停止，詳情見記錄檔。下次可從中斷處繼續。</value>
+  </data>
+  <data name="Refetch_OtherPlatformBusy" xml:space="preserve">
+    <value>另一個平台正在重新抓取，完成或停止後才能開始。</value>
+  </data>
+  <data name="Refetch_UnfinishedHint" xml:space="preserve">
+    <value>上次的重新抓取尚未完成。</value>
+  </data>
+  <data name="Refetch_BannerTitle" xml:space="preserve">
+    <value>重新抓取 {0} 作品資料</value>
+  </data>
+  <data name="Refetch_BannerStop.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Refetch_BackingUp" xml:space="preserve">
+    <value>正在備份會被覆寫的作品資料檔…</value>
+  </data>
+  <data name="Refetch_BackupFailed" xml:space="preserve">
+    <value>備份失敗，已停止，沒有發出任何請求。詳情見記錄檔。</value>
+  </data>
+  <data name="Refetch_BackupsTitle" xml:space="preserve">
+    <value>重抓前的備份</value>
+  </data>
+  <data name="Refetch_BackupsHint" xml:space="preserve">
+    <value>每次從頭開始重抓前，會自動備份所有可能被覆寫的作品資料檔，保留最近 {0} 份。還原會把它們改回當時的狀態，之後抓到的資料都會捨棄。</value>
+  </data>
+  <data name="Refetch_BackupItem" xml:space="preserve">
+    <value>{0}（{1} 份作品資料檔）</value>
+  </data>
+  <data name="Refetch_Restore" xml:space="preserve">
+    <value>還原</value>
+  </data>
+  <data name="Refetch_RestoreConfirm" xml:space="preserve">
+    <value>要把作品資料檔還原到 {0} 重抓前的狀態嗎？之後抓到的資料都會捨棄，上次的重抓紀錄也會清除。</value>
+  </data>
+  <data name="Refetch_RestoreConfirmButton" xml:space="preserve">
+    <value>確定還原</value>
+  </data>
+  <data name="Refetch_Restoring" xml:space="preserve">
+    <value>正在還原作品資料檔…</value>
+  </data>
+  <data name="Refetch_Restored" xml:space="preserve">
+    <value>已還原到 {0} 重抓前的狀態：改回 {1} 份、移除 {2} 份、失敗 {3} 份。</value>
+  </data>
+  <data name="Refetch_StartMissing" xml:space="preserve">
+    <value>只抓缺少的（{0} 件）</value>
+  </data>
+  <data name="Refetch_StartAll" xml:space="preserve">
+    <value>全部重抓（{0} 件）</value>
+  </data>
+  <data name="Refetch_Continue" xml:space="preserve">
+    <value>繼續抓取</value>
+  </data>
+  <data name="Refetch_ScanMissing" xml:space="preserve">
+    <value>其中 {0} 件完全沒有作品資料；只抓這些約需 {1}–{2} 小時，已有資料的作品不會被動到。</value>
+  </data>
+  <data name="Refetch_ResumeSummary" xml:space="preserve">
+    <value>上次的「{0}」尚未完成：已抓 {1} 件，剩下 {2} 件，約需 {3}–{4} 小時。</value>
+  </data>
+  <data name="Refetch_KindMissing" xml:space="preserve">
+    <value>只抓缺少的</value>
+  </data>
+  <data name="Refetch_KindAll" xml:space="preserve">
+    <value>全部重抓</value>
+  </data>
+  <data name="Refetch_ScanGone" xml:space="preserve">
+    <value>另有 {0} 件先前已確認刪除或改為私人，將略過。</value>
+  </data>
+  <data name="TagCloud_Stale.Title" xml:space="preserve">
+    <value>標籤資料已更新</value>
+  </data>
+  <data name="TagCloud_Stale.Message" xml:space="preserve">
+    <value>重新抓取寫入了新的作品資料。</value>
+  </data>
+  <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
+    <value>更新文字雲</value>
+  </data>
 </root>

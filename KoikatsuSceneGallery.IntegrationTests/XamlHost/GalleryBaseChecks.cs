@@ -50,6 +50,9 @@ internal static class GalleryBaseChecks
             Require(gallery.CardsView.Count == 1 && gallery.Choose() is { } next
                 && !ReferenceEquals(previous, next), "shuffle advances to the retained tail");
             gallery.SelectedSort = SortOption.Name;
+            // Ascending is no longer the default — galleries now open on newest
+            // first — so the direction has to be stated to assert either order.
+            gallery.SortAscending = true;
             Require(gallery.CardsView.Count == 3 && ReferenceEquals(gallery.CardsView[0], first), "leaving shuffle restores name sorting");
             gallery.SortAscending = false;
             Require(ReferenceEquals(gallery.CardsView[0], third), "descending name sorting");

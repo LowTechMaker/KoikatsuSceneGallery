@@ -23,8 +23,7 @@ internal sealed class LibraryRegistry
         ?? throw new ArgumentException("Card type has no registered library.", nameof(card));
 
     public static LibraryRegistry Create(SettingsViewModel settings, GalleryViewModel scenes,
-        CharacterGalleryViewModel characters, CoordinateGalleryViewModel coordinates,
-        MediaGalleryViewModel screenshots) => new([
+        CharacterGalleryViewModel characters, CoordinateGalleryViewModel coordinates) => new([
         new LibraryAdapter<SceneCard>(LibraryKind.Scenes, scenes, scenes.Cards,
             "Gallery_Title.Text", 135.0 / 240, true, () => scenes.IsParsingMetadata,
             () => scenes.LoadCardsCommand.ExecuteAsync(null), card => scenes.RequestThumbnail(card), scenes.ReleaseThumbnail,
@@ -36,10 +35,6 @@ internal sealed class LibraryRegistry
         new LibraryAdapter<CoordinateCard>(LibraryKind.Coordinates, coordinates, coordinates.Cards,
             "Coordinate_Title.Text", 352.0 / 252, true, () => coordinates.IsParsingMetadata,
             () => coordinates.LoadCardsCommand.ExecuteAsync(null), card => coordinates.RequestThumbnail(card), coordinates.ReleaseThumbnail,
-            callback => settings.CoordinateFolderPathsChanged += callback),
-        new LibraryAdapter<MediaCard>(LibraryKind.Screenshots, screenshots, screenshots.Cards,
-            "Screenshot_Title.Text", 135.0 / 240, false, () => false,
-            () => screenshots.LoadCardsCommand.ExecuteAsync(null), card => screenshots.RequestThumbnail(card), screenshots.ReleaseThumbnail,
-            callback => settings.ScreenshotFolderPathsChanged += callback)
+            callback => settings.CoordinateFolderPathsChanged += callback)
     ]);
 }

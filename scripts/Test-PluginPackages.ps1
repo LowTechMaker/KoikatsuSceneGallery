@@ -79,8 +79,12 @@ function Assert-CompileContentFiles {
     }
 }
 
-Assert-CompileContentFiles -PackageKey "SceneGallery.PluginCommon/0.1.0" -ExpectedCount 3
-Assert-CompileContentFiles -PackageKey "SceneGallery.PluginCommon.Secrets/0.1.0" -ExpectedCount 1
+if ($null -eq $target.Value.PSObject.Properties['SceneGallery.PluginSdk/1.3.0']) {
+    throw 'SceneGallery.PluginSdk/1.3.0 is missing from the validation target graph.'
+}
+
+Assert-CompileContentFiles -PackageKey "SceneGallery.PluginCommon/0.2.0" -ExpectedCount 5
+Assert-CompileContentFiles -PackageKey "SceneGallery.PluginCommon.Secrets/0.2.0" -ExpectedCount 1
 
 $unexpectedRuntimeAssemblies = @(
     "SceneGallery.PluginSdk.dll",

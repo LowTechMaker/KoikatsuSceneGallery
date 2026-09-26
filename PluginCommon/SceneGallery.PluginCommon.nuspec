@@ -20,6 +20,8 @@
     <file src="AtomicFileWriter.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
     <file src="DebouncedDiskPersistence.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
     <file src="RateLimiter.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
+    <file src="DisposalDeadline.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
+    <file src="PluginOperationDrain.cs" target="contentFiles/cs/any/SceneGallery.PluginCommon" />
     <file src="../PluginPackages.README.md" target="README.md" />
   </files>
 </package>

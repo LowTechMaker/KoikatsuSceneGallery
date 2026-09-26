@@ -196,6 +196,20 @@ public sealed partial class SettingsPage : Page
                 panel.Children.Add(BuildSettingRow(setting, editor));
             }
         }
+
+        // Host-owned rather than a plugin setting: the plugin answers for one
+        // artwork at a time, and the library, the sidecars and the hours-long
+        // run are the app's. Offered only by plugins that opted in.
+        Controls.ArtworkRefetchPanel? refetchPanel = null;
+        if (App.Services.GetRequiredService<PluginService>().ArtworkRefresherFor(item.Name) is { } refresher
+            && App.Services.GetService<ArtworkRefetchService>() is { } refetch
+            && refetch.IsAvailableFor(refresher.ProviderId))
+        {
+            refetchPanel = new Controls.ArtworkRefetchPanel(
+                refetch, refresher.ProviderId, PlatformDisplayName.For(refresher.ProviderId));
+            panel.Children.Add(new MenuFlyoutSeparator());
+            panel.Children.Add(refetchPanel);
+        }
         else
         {
             panel.Children.Add(new InfoBar
@@ -239,6 +253,10 @@ public sealed partial class SettingsPage : Page
                 }
             };
         }
+
+        // The run outlives the dialog; the panel following it must not.
+        if (refetchPanel is not null)
+            dialog.Closed += (_, _) => refetchPanel.Detach();
 
         await dialog.ShowAsync();
     }
@@ -429,13 +447,6 @@ public sealed partial class SettingsPage : Page
         {
             if (sender is Button button && button.CommandParameter is string path)
                 await ViewModel.RemoveCoordinateFolderCommand.ExecuteAsync(path);
-        });
-
-    private void RemoveScreenshotFolder_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.RemoveScreenshotFolder", async () =>
-        {
-            if (sender is Button button && button.CommandParameter is string path)
-                await ViewModel.RemoveScreenshotFolderCommand.ExecuteAsync(path);
         });
 
     private void AddCoordinateResolution_Click(object sender, RoutedEventArgs e)

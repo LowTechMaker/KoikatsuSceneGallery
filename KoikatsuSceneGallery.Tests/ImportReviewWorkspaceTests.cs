@@ -108,6 +108,38 @@ public sealed class ImportReviewWorkspaceTests
     }
 
     [Fact]
+    public void ToggleSectionOnlySelectsOneSectionAndTogglesItOff()
+    {
+        using var h = new Harness();
+        var unidentified = Item("unidentified");
+        var secondUnidentified = Item("second-unidentified");
+        var unavailable = Item("unavailable");
+        unavailable.ArtworkId = new("test", "artwork");
+        var identified = Item("identified");
+        identified.AuthorId = "author";
+        h.Workspace.Reconcile([unidentified, secondUnidentified, unavailable, identified]);
+        h.Flush();
+
+        var unidentifiedRow = h.Workspace.Rows.Single(row => row.Key == "Unidentified:");
+        var unavailableRow = h.Workspace.Rows.Single(row => row.Key == "Unavailable:");
+        var identifiedRow = h.Workspace.Rows.Single(row => row.Key == "Identified:");
+
+        h.Workspace.ToggleSectionOnly(unidentifiedRow.Items);
+        Assert.Equal(2, h.Workspace.SelectedItems.Count);
+        Assert.Contains(unidentified, h.Workspace.SelectedItems);
+        Assert.Contains(secondUnidentified, h.Workspace.SelectedItems);
+        h.Workspace.ToggleSectionOnly(unidentifiedRow.Items);
+        Assert.Empty(h.Workspace.SelectedItems);
+
+        h.Workspace.ToggleSectionOnly(identifiedRow.Items);
+        Assert.Same(identified, Assert.Single(h.Workspace.SelectedItems));
+        h.Workspace.ToggleSectionOnly(unavailableRow.Items);
+        Assert.Same(unavailable, Assert.Single(h.Workspace.SelectedItems));
+        h.Workspace.ToggleSectionOnly(unavailableRow.Items);
+        Assert.Empty(h.Workspace.SelectedItems);
+    }
+
+    [Fact]
     public void ItemRatingChangesRefreshVisibleProjection()
     {
         using var h = new Harness();

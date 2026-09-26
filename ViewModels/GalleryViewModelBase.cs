@@ -13,6 +13,7 @@ public enum SortOption
 {
     Name,
     DateModified,
+    DateAdded,
     FileSize,
     Shuffle
 }
@@ -50,10 +51,10 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsShuffleMode))]
-    public partial SortOption SelectedSort { get; set; } = SortOption.Name;
+    public partial SortOption SelectedSort { get; set; } = SortOption.DateModified;
 
     [ObservableProperty]
-    public partial bool SortAscending { get; set; } = true;
+    public partial bool SortAscending { get; set; } = false;
 
     public bool IsShuffleMode => SelectedSort == SortOption.Shuffle;
 
@@ -115,14 +116,14 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     /// browser filters.
     /// </summary>
     [ObservableProperty]
-    public partial CardOriginFilter OriginFilter { get; set; }
+    public partial CardOriginSelection OriginFilter { get; set; }
 
-    protected bool HasOriginFilter => OriginFilter != CardOriginFilter.All;
+    protected bool HasOriginFilter => !OriginFilter.IsAll;
 
     protected bool OriginPasses(object? card)
         => !HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter);
 
-    partial void OnOriginFilterChanged(CardOriginFilter value)
+    partial void OnOriginFilterChanged(CardOriginSelection value)
     {
         if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
@@ -177,6 +178,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
             {
                 SortOption.Name => nameof(CardBase.FileName),
                 SortOption.DateModified => nameof(CardBase.DateModified),
+                SortOption.DateAdded => nameof(CardBase.DateCreated),
                 SortOption.FileSize => nameof(CardBase.FileSize),
                 _ => nameof(CardBase.FileName)
             };

@@ -69,6 +69,13 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           "file_version=$fileVersion" >> $env:GITHUB_OUTPUT
 
+      - name: Test shared plugin lifecycle before packaging
+        run: dotnet test PluginCommon.Tests/SceneGallery.PluginCommon.Tests.csproj -c Release
+
+      - name: Validate SDK and source-only package contracts
+        shell: pwsh
+        run: ./scripts/Test-PluginPackages.ps1
+
       - name: Pack Plugin SDK
         if: steps.package.outputs.package == 'sdk'
         shell: pwsh

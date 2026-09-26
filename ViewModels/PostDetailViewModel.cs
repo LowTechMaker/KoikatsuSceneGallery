@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Pages;
 using KoikatsuSceneGallery.Services;
@@ -178,9 +179,10 @@ public partial class PostDetailViewModel : ObservableObject
         Tags.Clear();
         foreach (var tag in post.Tags ?? Array.Empty<ArtworkTag>())
         {
-            var display = !string.IsNullOrWhiteSpace(tag.TranslatedName)
-                ? $"{tag.Name} ({tag.TranslatedName})"
-                : tag.Name;
+            // Only a translation in the reader's language is worth the
+            // brackets; an English stand-in for a Chinese reader is not.
+            var translation = TagTranslationPolicy.Pick(UiText.Get("Meta_LanguageTag"), tag.Name, tag.TranslatedName);
+            var display = translation is null ? tag.Name : $"{tag.Name} ({translation})";
             Tags.Add(new TagDisplay(display));
         }
         OnPropertyChanged(nameof(HasTags));

@@ -57,6 +57,20 @@ internal sealed class ImportManualAssignmentHistory
         _lastAssignment = null;
     }
 
+    public bool RetainOnly(IEnumerable<ImportItem> remainingItems)
+    {
+        var remaining = remainingItems.ToHashSet();
+        foreach (var item in _baselines.Keys.Where(item => !remaining.Contains(item)).ToArray())
+            _baselines.Remove(item);
+
+        if (_lastAssignment is { } undo)
+        {
+            var states = undo.Items.Where(state => remaining.Contains(state.Item)).ToArray();
+            _lastAssignment = states.Length == 0 ? null : undo with { Items = states };
+        }
+        return _lastAssignment is not null;
+    }
+
     public static void Restore(ManualImportItemState state)
     {
         state.Item.ArtworkId = state.ArtworkId;

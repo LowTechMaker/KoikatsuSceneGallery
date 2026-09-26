@@ -18,4 +18,12 @@ public interface IPluginHost
     /// </summary>
     Task<string?> RequestInputAsync(string title, string message, string? placeholder, CancellationToken ct)
         => Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// BCP-47 tag of the language the app's UI is displayed in (e.g. "zh-Hant",
+    /// "en-US"). Plugins that fetch localized data, such as tag translations,
+    /// ask their backend for this language. Hosts that predate the property
+    /// answer "en".
+    /// </summary>
+    string Language => "en";
 }

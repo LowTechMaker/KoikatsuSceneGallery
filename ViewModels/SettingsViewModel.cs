@@ -43,7 +43,6 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> FolderPaths { get; } = [];
     public ObservableCollection<string> CharacterFolderPaths { get; } = [];
     public ObservableCollection<string> CoordinateFolderPaths { get; } = [];
-    public ObservableCollection<string> ScreenshotFolderPaths { get; } = [];
     public ObservableCollection<string> AllowedResolutions { get; } = [];
     public ObservableCollection<string> CharacterAllowedResolutions { get; } = [];
     public ObservableCollection<string> CoordinateAllowedResolutions { get; } = [];
@@ -51,7 +50,6 @@ public partial class SettingsViewModel : ObservableObject
     public bool HasNoFolders => FolderPaths.Count == 0;
     public bool HasNoCharacterFolders => CharacterFolderPaths.Count == 0;
     public bool HasNoCoordinateFolders => CoordinateFolderPaths.Count == 0;
-    public bool HasNoScreenshotFolders => ScreenshotFolderPaths.Count == 0;
 
     [ObservableProperty]
     public partial bool ResolutionFilterEnabled { get; set; }
@@ -67,6 +65,23 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool ScrollToTopOnSort { get; set; } = true;
+
+    /// <summary>Spread look-alike cards apart in the random discovery grid instead of drawing them straight.</summary>
+    [ObservableProperty]
+    public partial bool DiscoverySpreadEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool PokerHandEnabled { get; set; }
+
+    /// <summary>
+    /// Also surfaced in the title bar, so it can be flipped mid-session without
+    /// a trip to settings.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool RecordModeEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool GroupCollapseAnimationEnabled { get; set; } = true;
 
     [ObservableProperty]
     public partial double CacheLength { get; set; } = 4;
@@ -134,8 +149,28 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowCoordinatesNav { get; set; } = true;
 
+    /// <summary>
+    /// The global online/local browse mode. Unlike the per-browser filters this
+    /// one is persisted and fanned out to every gallery, so the title bar and
+    /// the navigation pane agree with what the grids are showing.
+    /// </summary>
     [ObservableProperty]
-    public partial bool ShowScreenshotsNav { get; set; } = true;
+    public partial CardOriginSelection BrowseOrigin { get; set; } = CardOriginSelection.All;
+
+    /// <summary>
+    /// False when no platform plugin is installed. Set once at startup.
+    /// </summary>
+    public bool PlatformFilteringAvailable { get; set; } = true;
+
+    /// <summary>
+    /// The browse origin actually worth applying. Without a platform installed
+    /// every card counts as not-local, so the stored choice would silently
+    /// empty or not change the galleries. The stored value is deliberately left
+    /// alone rather than reset, so reinstalling a plugin brings the user's own
+    /// choice back.
+    /// </summary>
+    public CardOriginSelection EffectiveBrowseOrigin =>
+        PlatformFilteringAvailable ? BrowseOrigin : CardOriginSelection.All;
 
     [ObservableProperty]
     public partial bool AuthorLiveTilesEnabled { get; set; } = true;
@@ -184,8 +219,8 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? SceneFolderPathsChanged;
     public event Action? CharacterFolderPathsChanged;
     public event Action? CoordinateFolderPathsChanged;
-    public event Action? ScreenshotFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
+    public event Action<CardOriginSelection>? BrowseOriginChanged;
 
     public SettingsViewModel(
         SettingsService settingsService,
@@ -216,12 +251,6 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNoCoordinateFolders));
             if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
                 CoordinateFolderPathsChanged?.Invoke();
-        };
-        ScreenshotFolderPaths.CollectionChanged += (_, e) =>
-        {
-            OnPropertyChanged(nameof(HasNoScreenshotFolders));
-            if (!_isLoading && e.Action != System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
-                ScreenshotFolderPathsChanged?.Invoke();
         };
     }
 
@@ -262,6 +291,52 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnScrollToTopOnSortChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    // No event: the discovery page reads this when it appends the next batch, so a change
+    // takes effect on the next draw without disturbing cards that are already laid out.
+    partial void OnDiscoverySpreadEnabledChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    // Unlike the spread toggle this one changes how many cards a draw yields, so
+    // the page has to restart rather than pick it up on the next append.
+    public event Action? PokerHandEnabledChanged;
+
+    partial void OnPokerHandEnabledChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        PokerHandEnabledChanged?.Invoke();
+    }
+
+    // The title bar and the settings page both bind this, so each needs to see
+    // the other's change.
+    public event Action<bool>? RecordModeEnabledChanged;
+
+    partial void OnRecordModeEnabledChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        RecordModeEnabledChanged?.Invoke(value);
+    }
+
+    // No event: each browser reads this at the moment a group closes, so a
+    // change takes effect on the next collapse without disturbing anything.
+    partial void OnGroupCollapseAnimationEnabledChanged(bool value)
     {
         if (_isLoading)
             return;
@@ -375,10 +450,16 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
+    partial void OnBrowseOriginChanged(CardOriginSelection value)
+    {
+        if (_isLoading) return;
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        BrowseOriginChanged?.Invoke(value);
+    }
+
     partial void OnShowGalleryNavChanged(bool value) => OnNavVisibilityChanged("gallery", value);
     partial void OnShowCharactersNavChanged(bool value) => OnNavVisibilityChanged("characters", value);
     partial void OnShowCoordinatesNavChanged(bool value) => OnNavVisibilityChanged("coordinates", value);
-    partial void OnShowScreenshotsNavChanged(bool value) => OnNavVisibilityChanged("screenshots", value);
 
     private void OnNavVisibilityChanged(string tag, bool value)
     {
@@ -441,15 +522,15 @@ public partial class SettingsViewModel : ObservableObject
             foreach (var res in config.CoordinateAllowedResolutions)
                 CoordinateAllowedResolutions.Add(res);
 
-            ScreenshotFolderPaths.Clear();
-            foreach (var path in config.ScreenshotFolderPaths)
-                ScreenshotFolderPaths.Add(path);
-
             ResolutionFilterEnabled = config.ResolutionFilterEnabled;
             CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             ShowFileNames = config.ShowFileNames;
             ScrollToTopOnSort = config.ScrollToTopOnSort;
+            DiscoverySpreadEnabled = config.DiscoverySpreadEnabled;
+            PokerHandEnabled = config.PokerHandEnabled;
+            RecordModeEnabled = config.RecordModeEnabled;
+            GroupCollapseAnimationEnabled = config.GroupCollapseAnimationEnabled;
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
@@ -477,7 +558,8 @@ public partial class SettingsViewModel : ObservableObject
             ShowGalleryNav = !hidden.Contains("gallery");
             ShowCharactersNav = !hidden.Contains("characters");
             ShowCoordinatesNav = !hidden.Contains("coordinates");
-            ShowScreenshotsNav = !hidden.Contains("screenshots");
+
+            BrowseOrigin = CardOriginSelection.Parse(config.BrowseOrigin);
         }
         finally
         {
@@ -563,31 +645,6 @@ public partial class SettingsViewModel : ObservableObject
     private async Task RemoveCoordinateFolder(string path)
     {
         CoordinateFolderPaths.Remove(path);
-        await SaveConfigAsync();
-    }
-
-    [RelayCommand]
-    private async Task AddScreenshotFolderAsync()
-    {
-        var picker = new FolderPicker();
-        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-        picker.FileTypeFilter.Add("*");
-
-        var hwnd = GetWindowHandle();
-        InitializeWithWindow.Initialize(picker, hwnd);
-
-        var folder = await picker.PickSingleFolderAsync();
-        if (folder != null && !ScreenshotFolderPaths.Contains(folder.Path))
-        {
-            ScreenshotFolderPaths.Add(folder.Path);
-            await SaveConfigAsync();
-        }
-    }
-
-    [RelayCommand]
-    private async Task RemoveScreenshotFolder(string path)
-    {
-        ScreenshotFolderPaths.Remove(path);
         await SaveConfigAsync();
     }
 
@@ -766,9 +823,12 @@ public partial class SettingsViewModel : ObservableObject
                 CharacterAllowedResolutions = [.. CharacterAllowedResolutions],
                 CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
-                ScreenshotFolderPaths = [.. ScreenshotFolderPaths],
                 ShowFileNames = ShowFileNames,
                 ScrollToTopOnSort = ScrollToTopOnSort,
+                DiscoverySpreadEnabled = DiscoverySpreadEnabled,
+                PokerHandEnabled = PokerHandEnabled,
+                RecordModeEnabled = RecordModeEnabled,
+                GroupCollapseAnimationEnabled = GroupCollapseAnimationEnabled,
                 CacheLength = CacheLength,
                 ThumbnailSize = ThumbnailSize,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
@@ -781,6 +841,7 @@ public partial class SettingsViewModel : ObservableObject
                 UseVisualSimilarity = UseVisualSimilarity,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
                 HiddenNavItems = GetHiddenNavItems(),
+                BrowseOrigin = BrowseOrigin.ToConfigValue(),
                 AuthorFolderFormat = AuthorFolderFormat,
                 ArtworkFolderFormat = ArtworkFolderFormat,
                 UnknownFolderName = UnknownFolderName,
@@ -810,7 +871,6 @@ public partial class SettingsViewModel : ObservableObject
         if (!ShowGalleryNav) list.Add("gallery");
         if (!ShowCharactersNav) list.Add("characters");
         if (!ShowCoordinatesNav) list.Add("coordinates");
-        if (!ShowScreenshotsNav) list.Add("screenshots");
         return list;
     }
 }

@@ -3,18 +3,20 @@
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Isolated BaseIntermediateOutputPath must not make an old local obj tree source input. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**;artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="SceneGallery.PluginSdk"
-                      Version="1.0.0"
+                      Version="1.3.0"
                       ExcludeAssets="runtime"
                       PrivateAssets="all" />
     <PackageReference Include="SceneGallery.PluginCommon"
-                      Version="0.1.0"
+                      Version="0.2.0"
                       PrivateAssets="all" />
     <PackageReference Include="SceneGallery.PluginCommon.Secrets"
-                      Version="0.1.0"
+                      Version="0.2.0"
                       PrivateAssets="all" />
   </ItemGroup>
 </Project>

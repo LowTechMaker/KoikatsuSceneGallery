@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory,
-    [string]$SdkVersion = "1.0.0",
-    [string]$CommonVersion = "0.1.0"
+    [string]$SdkVersion = "1.3.0",
+    [string]$CommonVersion = "0.2.0"
 )
 
 $ErrorActionPreference = "Stop"

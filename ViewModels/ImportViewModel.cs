@@ -61,6 +61,7 @@ public partial class ImportViewModel : ObservableObject
     private readonly ImportManualAssignmentHistory _manualHistory = new();
     private int _unknownGroupCounter;
     private readonly ImportReviewWorkspace _reviewWorkspace;
+    private bool _suspendItemCollectionRefresh;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanConfirmImport))]
@@ -124,6 +125,7 @@ public partial class ImportViewModel : ObservableObject
     public string ReviewSummaryText => string.Format(GetLocalizedString("Import_Review_Summary"), Items.Count, ImportableCount);
     public string ReviewSelectionText => string.Format(GetLocalizedString("Import_Review_SelectionCount"), ReviewedItemsView.Count, SelectedReviewCount);
     public string ImportActionText => string.Format(GetLocalizedString("Import_ActionCount"), ImportableCount);
+    public string ImportCompactActionText => string.Format(GetLocalizedString("Import_ActionCountCompact"), ImportableCount);
     public Visibility ReviewSelectionEditorVisibility => HasSelectedReviewItems
         ? Visibility.Visible
         : Visibility.Collapsed;
@@ -415,6 +417,7 @@ public partial class ImportViewModel : ObservableObject
             _authorsLoaded = false;
             ClearReviewStates();
         }
+        if (_suspendItemCollectionRefresh) return;
         UpdateCounts();
         UpdateAnalysisProgress();
         ReconcileReviewStatesIfVisible();
@@ -932,7 +935,8 @@ public partial class ImportViewModel : ObservableObject
         if (!CanConfirmImport)
             return;
 
-        var plans = BuildExecutionPlansFromWorkspace();
+        var importItems = Items.Where(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)).ToArray();
+        var plans = BuildExecutionPlansFromWorkspace(importItems);
         if (plans.Count == 0)
         {
             TransactionStatusText = GetLocalizedString("Import_Summary_NoEligible");
@@ -973,7 +977,7 @@ public partial class ImportViewModel : ObservableObject
             if (result.Receipt.IsFullySuccessful)
             {
                 _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
-                ResetWorkspaceAfterCommittedTransaction();
+                RemoveCommittedItemsFromWorkspace(importItems);
                 TransactionStatusText = string.Format(
                     GetLocalizedString("Import_Summary_Success"),
                     plans.Count);
@@ -1016,10 +1020,10 @@ public partial class ImportViewModel : ObservableObject
         }
     }
 
-    private IReadOnlyList<ImportItemPlan> BuildExecutionPlansFromWorkspace()
+    private IReadOnlyList<ImportItemPlan> BuildExecutionPlansFromWorkspace(IReadOnlyList<ImportItem> importItems)
     {
         var plans = new List<ImportItemPlan>();
-        foreach (var item in Items.Where(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)))
+        foreach (var item in importItems)
         {
             var document = item.FetchedArtworkInfo is null
                 ? null
@@ -1034,10 +1038,25 @@ public partial class ImportViewModel : ObservableObject
         return plans;
     }
 
-    private void ResetWorkspaceAfterCommittedTransaction()
+    private void RemoveCommittedItemsFromWorkspace(IReadOnlyList<ImportItem> committedItems)
     {
-        Items.Clear();
-        UpdateCounts();
+        _suspendItemCollectionRefresh = true;
+        try
+        {
+            foreach (var item in committedItems)
+            {
+                RemoveItemFromManualContainers(item);
+                Items.Remove(item);
+            }
+        }
+        finally
+        {
+            _suspendItemCollectionRefresh = false;
+            CanUndoManualAssignment = _manualHistory.RetainOnly(Items);
+            UpdateCounts();
+            UpdateAnalysisProgress();
+            ReconcileReviewStatesIfVisible();
+        }
     }
 
     private static string GetLocalizedString(string key)
@@ -1357,6 +1376,7 @@ public partial class ImportViewModel : ObservableObject
         ConfirmImportCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ReviewSummaryText));
         OnPropertyChanged(nameof(ImportActionText));
+        OnPropertyChanged(nameof(ImportCompactActionText));
         OnPropertyChanged(nameof(ReviewSelectionText));
         OnPropertyChanged(nameof(ReviewEmptyTitle));
         OnPropertyChanged(nameof(ReviewEmptyDescription));
@@ -1367,6 +1387,12 @@ public partial class ImportViewModel : ObservableObject
     public void ToggleReviewRow(ImportReviewRow row)
     {
         if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(row.Items);
+    }
+
+    public void ToggleReviewSection(ImportReviewRow row)
+    {
+        if (IsReviewWorkspaceEnabled && row.Kind == ImportReviewRowKind.Section)
+            _reviewWorkspace.ToggleSectionOnly(row.Items);
     }
 
     public void ToggleReviewGroup(ImportReviewGroup group)
@@ -1471,6 +1497,7 @@ public partial class ImportViewModel : ObservableObject
     private void RemoveItemFromManualContainers(ImportItem item)
     {
         AnalyzingItems.Remove(item);
+        _pendingUnknownItems.Remove(item);
         RemoveItemFromUnknownGroups(item);
         RemoveItemFromFetchFailed(item);
         RemoveItemFromTree(item);

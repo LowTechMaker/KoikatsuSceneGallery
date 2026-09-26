@@ -4,7 +4,6 @@ namespace KoikatsuSceneGallery.Models;
 
 public partial class CoordinateCard : CardBase, IAuthorOwner
 {
-    public DateTime DateCreated { get; init; }
 
     [ObservableProperty]
     public partial bool MetadataLoaded { get; set; }

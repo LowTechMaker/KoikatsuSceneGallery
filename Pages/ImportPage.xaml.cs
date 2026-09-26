@@ -1,4 +1,5 @@
 using System.IO;
+using KoikatsuSceneGallery.Controls;
 using KoikatsuSceneGallery.Helpers;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -51,6 +52,11 @@ public sealed partial class ImportPage : Page
     private readonly CompositeTransform _addFilesCardTransform = new();
     private Storyboard? _addFilesCardEntrance;
     private Storyboard? _addFilesCardCollapse;
+    private TaskCompletionSource? _addFilesCardCollapseCompletion;
+
+    // Bumped on every open. An accept animation that began under an earlier
+    // opening must not go on to close the card the user has since reopened.
+    private int _addFilesOverlayGeneration;
 
     private Storyboard BuildAddFilesCardEntrance()
     {
@@ -93,6 +99,7 @@ public sealed partial class ImportPage : Page
     private void ShowAddFilesOverlay_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.IsImporting) return;
+        _addFilesOverlayGeneration++;
         AddFilesOverlay.Visibility = Visibility.Visible;
         PositionAddFilesCard();
         ResetAddFilesCard();
@@ -109,7 +116,7 @@ public sealed partial class ImportPage : Page
     private void ResetAddFilesCard()
     {
         _addFilesCardEntrance?.Stop();
-        _addFilesCardCollapse?.Stop();
+        StopAddFilesCardCollapse();
         AddFilesOverlayCard.RenderTransform = _addFilesCardTransform;
         _addFilesCardTransform.TranslateX = 0;
         _addFilesCardTransform.TranslateY = 0;
@@ -124,15 +131,39 @@ public sealed partial class ImportPage : Page
     /// Awaited before the files are handed to the view model so the analysis spinner
     /// does not disable the workspace mid-animation.
     /// </summary>
+    /// <remarks>
+    /// Always completes, even when the user closes or reopens the card part way
+    /// through — the callers hand the files over only after it returns.
+    /// </remarks>
     private async Task PlayAddFilesAcceptedAsync()
     {
         if (AddFilesOverlay.Visibility != Visibility.Visible) return;
+        if (!CardMotion.AnimationsEnabled)
+        {
+            CloseAddFilesOverlay();
+            return;
+        }
+        var generation = _addFilesOverlayGeneration;
 
         await AddFilesOverlayContent.SealBoxAsync();
-        if (AddFilesOverlay.Visibility != Visibility.Visible) return;
+        if (!IsAddFilesOverlayStillOpen(generation)) return;
 
         await PlayAddFilesCardCollapseAsync();
+        if (!IsAddFilesOverlayStillOpen(generation)) return;
         CloseAddFilesOverlay();
+    }
+
+    private bool IsAddFilesOverlayStillOpen(int generation)
+        => AddFilesOverlay.Visibility == Visibility.Visible && generation == _addFilesOverlayGeneration;
+
+    // Stop() never raises Completed, so the collapse's awaiter is released here —
+    // otherwise an Escape mid-collapse would strand the files being imported.
+    private void StopAddFilesCardCollapse()
+    {
+        _addFilesCardCollapse?.Stop();
+        _addFilesCardCollapse = null;
+        _addFilesCardCollapseCompletion?.TrySetResult();
+        _addFilesCardCollapseCompletion = null;
     }
 
     private Task PlayAddFilesCardCollapseAsync()
@@ -157,6 +188,7 @@ public sealed partial class ImportPage : Page
         var completion = new TaskCompletionSource();
         storyboard.Completed += (_, _) => completion.TrySetResult();
         _addFilesCardCollapse = storyboard;
+        _addFilesCardCollapseCompletion = completion;
         storyboard.Begin();
         return completion.Task;
     }
@@ -183,7 +215,7 @@ public sealed partial class ImportPage : Page
     {
         if (AddFilesOverlay.Visibility == Visibility.Collapsed) return;
         _addFilesCardEntrance?.Stop();
-        _addFilesCardCollapse?.Stop();
+        StopAddFilesCardCollapse();
         AddFilesOverlay.Visibility = Visibility.Collapsed;
         AddFilesButton.Focus(FocusState.Programmatic);
     }
@@ -275,6 +307,28 @@ public sealed partial class ImportPage : Page
     private void ReviewListHost_SizeChanged(object sender, SizeChangedEventArgs e)
         => ViewModel.SetReviewViewportWidth(e.NewSize.Width);
 
+    private void ImportPage_Loaded(object sender, RoutedEventArgs e)
+        => UpdateCompactLayout(ActualWidth, ActualHeight);
+
+    private void ImportPage_SizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdateCompactLayout(e.NewSize.Width, e.NewSize.Height);
+
+    private void UpdateCompactLayout(double width, double height)
+    {
+        var compact = width < 760;
+        if (ReviewJumpPanel is not null)
+            ReviewJumpPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        if (ImportFullActionText is not null && ImportCompactActionText is not null)
+        {
+            ImportFullActionText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+            ImportCompactActionText.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        }
+        if (ReviewEditScrollViewer is not null)
+            ReviewEditScrollViewer.MaxHeight = Math.Max(180, Math.Min(440, height - 140));
+        if (ReviewEditPanel is not null)
+            ReviewEditPanel.Width = Math.Max(180, Math.Min(320, width - 80));
+    }
+
     private void JumpToReviewSection_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string section }) return;
@@ -285,6 +339,11 @@ public sealed partial class ImportPage : Page
     private void SelectMixedReviewGroup_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewRow(row);
+    }
+
+    private void SelectReviewSection_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewSection(row);
     }
 
     private void SelectReviewGroup_Click(object sender, RoutedEventArgs e)
@@ -308,8 +367,8 @@ public sealed partial class ImportPage : Page
         _pickBatchUnknownAuthor = false;
         _pickBatchFetchFailedAuthor = false;
         _pickReviewAuthor = true;
-        ReviewAuthorFlyout.Hide();
-        ShowAuthorPickerFlyout(ReviewAuthorButton);
+        ReviewEditFlyout.Hide();
+        ShowAuthorPickerFlyout(ReviewEditButton);
     }
 
     private void SearchSelected_Click(object sender, RoutedEventArgs e)
@@ -317,6 +376,7 @@ public sealed partial class ImportPage : Page
         {
             var selected = ViewModel.SelectedVisibleReviewItems;
             if (selected.Count == 0 || !ViewModel.IsReviewWorkspaceEnabled) return;
+            ReviewEditFlyout.Hide();
             var context = string.Format(ResLoader.GetString("Import_ReverseSelectionContext"), selected[0].FileName, selected.Count);
             var confirmation = new ContentDialog
             {

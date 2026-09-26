@@ -29,16 +29,19 @@ public sealed partial class RandomDiscoveryPage : Page
     private string _appliedQuery = "";
     private double _offset;
     private int _returnIndex = -1;
+    // Anti-clustering needs the real column count; 4 stands in until the layout has measured.
+    private int _columns = 4;
 
     public RandomDiscoveryPage()
     {
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
-        _items = new(DispatcherQueue, () => _active && _shuffle.Remaining > 0, Append);
+        _items = new(DispatcherQueue, CanDrawMore, Append);
         DiscoveryGrid.ItemsSource = _items;
         AutomationProperties.SetName(DiscoveryGrid, UiText.Get("Discovery_Title.Text"));
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
-        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, _ => { }, _settings, 62);
+        // The engine reports columns * 2; the discovery page only needs the column count itself.
+        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings, 62);
         _searchTimer = DispatcherQueue.CreateTimer();
         _searchTimer.Interval = TimeSpan.FromMilliseconds(250);
         _searchTimer.IsRepeating = false;
@@ -65,6 +68,8 @@ public sealed partial class RandomDiscoveryPage : Page
         _gallery.ViewRefreshed += QueueRefresh;
         _gallery.PropertyChanged += Gallery_Changed;
         _settings.SceneFolderPathsChanged += Folders_Changed;
+        _settings.BrowseOriginChanged += Origin_Changed;
+        _settings.PokerHandEnabledChanged += PokerMode_Changed;
         _layout.BaseItemWidth = _settings.ThumbnailSize.ToPixels();
         _gallery.Activate();
         if (!_initialized)
@@ -83,7 +88,9 @@ public sealed partial class RandomDiscoveryPage : Page
         _folders = _settings.FolderPaths.ToArray();
         UpdateStatus();
         if (reload || _reloadRequested || _gallery.Cards.Count == 0) Load();
-        else if (SearchBox.Text != _appliedQuery) ApplyConditions();
+        // The page is cached, so a switch flipped while it was away is only
+        // visible in the captured filter.
+        else if (SearchBox.Text != _appliedQuery || _filter.Origin != _settings.EffectiveBrowseOrigin) ApplyConditions();
         else RefreshCandidates();
     }
 
@@ -102,16 +109,22 @@ public sealed partial class RandomDiscoveryPage : Page
         _gallery.ViewRefreshed -= QueueRefresh;
         _gallery.PropertyChanged -= Gallery_Changed;
         _settings.SceneFolderPathsChanged -= Folders_Changed;
+        _settings.BrowseOriginChanged -= Origin_Changed;
+        _settings.PokerHandEnabledChanged -= PokerMode_Changed;
         _gallery.CancelPendingWork();
         base.OnNavigatedFrom(e);
     }
+
+    private void Origin_Changed(CardOriginSelection origin) => DispatcherQueue.TryEnqueue(ApplyConditions);
+
+    private void PokerMode_Changed() => DispatcherQueue.TryEnqueue(Restart);
 
     private void CaptureFilter()
     {
         _appliedQuery = SearchBox.Text;
         _filter = new(SearchBox.Text.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray(),
             RatingFilter.IsOn, (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
-            ResolutionFilter.IsOn, new(_settings.AllowedResolutions));
+            ResolutionFilter.IsOn, new(_settings.AllowedResolutions), _settings.EffectiveBrowseOrigin);
     }
 
     private void ApplyConditions()
@@ -156,12 +169,52 @@ public sealed partial class RandomDiscoveryPage : Page
         RequestVisible();
     }
 
+    /// <summary>
+    /// Poker mode stops at a full hand; the classic round runs until the shuffle
+    /// is exhausted.
+    /// </summary>
+    private bool CanDrawMore() => _active && _shuffle.Remaining > 0
+        && (!_settings.PokerHandEnabled || _items.Count < PokerHand.HandSize);
+
     private int Append(int count)
     {
-        var paths = _shuffle.Take(count);
-        foreach (var path in paths) _items.Add(new(_candidates[path], _shuffle.Round));
+        bool poker = _settings.PokerHandEnabled;
+        // A viewport-driven request can be as small as one card, which leaves nothing to rearrange.
+        // Drawing a few rows at a time costs nothing here and gives the spread pass real material.
+        int draw = poker
+            ? PokerHand.HandSize - _items.Count
+            : _settings.DiscoverySpreadEnabled ? Math.Max(count, _columns * 3) : count;
+        if (draw <= 0) { UpdateStatus(); return 0; }
+        var cards = _shuffle.Take(draw).Select(path => _candidates[path]).ToList();
+        if (_settings.DiscoverySpreadEnabled)
+        {
+            var tail = _items.Skip(Math.Max(0, _items.Count - _columns)).Select(item => item.Card).ToList();
+            DiscoveryAntiClustering.Spread(
+                cards, card => new(card.FileSize, Path.GetDirectoryName(card.FilePath) ?? ""), _columns, tail);
+        }
+        // After the spread, never before: the joker is by definition an outlier
+        // in file size, so spreading it afterwards would move it back out.
+        int jokerSlot = poker ? DealJoker(cards) : -1;
+        for (int i = 0; i < cards.Count; i++) _items.Add(new(cards[i], _shuffle.Round, i == jokerSlot));
         UpdateStatus();
-        return paths.Count;
+        return cards.Count;
+    }
+
+    /// <summary>
+    /// Swaps one of the freshly drawn cards for a heavyweight, and reports which
+    /// slot it landed in. Returns -1 when no joker was dealt.
+    /// </summary>
+    private int DealJoker(List<SceneCard> cards)
+    {
+        if (cards.Count == 0 || !PokerHand.ShouldDealJoker(Random.Shared)) return -1;
+        var drawn = cards.Select(c => c.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var joker = PokerHand
+            .JokerCandidates(_candidates.Values.ToArray(), c => c.FileSize)
+            .FirstOrDefault(c => !drawn.Contains(c.FilePath));
+        if (joker is null) return -1;
+        int slot = PokerHand.JokerSlot(Random.Shared, cards.Count);
+        cards[slot] = joker;
+        return slot;
     }
 
     private void UpdateStatus()
@@ -171,11 +224,23 @@ public sealed partial class RandomDiscoveryPage : Page
         BusyPanel.Visibility = busy || analyzing ? Visibility.Visible : Visibility.Collapsed;
         BusyRing.IsActive = _active && (busy || analyzing);
         BusyText.Text = UiText.Get(busy ? "Browser_Loading" : "Gallery_AnalyzingLabel.Text");
-        ProgressText.Text = UiText.Format("Discovery_Progress", Math.Max(1, _shuffle.Round), _shuffle.Drawn, _shuffle.Total);
+        bool poker = _settings.PokerHandEnabled;
+        ProgressText.Text = poker
+            ? UiText.Format("Discovery_PokerProgress", Math.Max(1, _shuffle.Round), _items.Count, PokerHand.HandSize)
+            : UiText.Format("Discovery_Progress", Math.Max(1, _shuffle.Round), _shuffle.Drawn, _shuffle.Total);
         ResetButton.IsEnabled = _candidates.Count > 0;
-        bool complete = !busy && _shuffle.Total > 0 && _shuffle.Remaining == 0;
+        // A hand of 13 never exhausts the shuffle, so in poker mode a full hand
+        // is what ends the round — otherwise "deal again" would never appear.
+        // A library with fewer than 13 candidates ends on the shuffle instead,
+        // which is why both conditions are checked rather than just the count.
+        bool complete = !busy && _shuffle.Total > 0
+            && (poker
+                ? _items.Count >= PokerHand.HandSize || _shuffle.Remaining == 0
+                : _shuffle.Remaining == 0);
         RoundFooter.Visibility = complete ? Visibility.Visible : Visibility.Collapsed;
-        var endText = UiText.Format("Discovery_RoundEnd", _shuffle.Round);
+        var endText = poker
+            ? UiText.Get("Discovery_PokerHandEnd")
+            : UiText.Format("Discovery_RoundEnd", _shuffle.Round);
         if (RoundEndText.Text != endText)
         {
             RoundEndText.Text = endText;
@@ -220,6 +285,8 @@ public sealed partial class RandomDiscoveryPage : Page
 
     private void Continue_Click(object sender, RoutedEventArgs e)
     {
+        // A hand replaces the table; the classic round keeps its history.
+        if (_settings.PokerHandEnabled) _items.Clear();
         int firstNew = _items.Count;
         _items.Invalidate();
         _shuffle.StartRound(_candidates.Keys);

@@ -44,7 +44,9 @@ internal static class DetailViewNavigationChecks
         Require(ReferenceEquals(DetailNavigationHelper.RandomCard(view, first), first), "single visible card may repeat");
         Require(DetailNavigationHelper.FindAdjacentOnRemoval(view, first) is null, "single card removal");
         source.Clear();
-        source.Add(new MediaCard { FilePath = "media.png" });
+        // Any card type other than the one asked for; it used to be MediaCard,
+        // which went with the screenshot library.
+        source.Add(new SceneCard { FilePath = "other-type.png" });
         Require(DetailNavigationHelper.RandomCard(view, first) is null, "random preserves requested card type");
         Require(DetailNavigationHelper.Navigate(view, first, 1) is null, "navigation preserves requested card type");
         Console.WriteLine("PASS: detail view empty single and mismatched type");

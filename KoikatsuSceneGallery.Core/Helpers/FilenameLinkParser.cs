@@ -25,6 +25,26 @@ public static partial class FilenameLinkParser
 
     public static readonly FilenameLinkInfo Empty = new(null, null, null, null);
 
+    /// <summary>
+    /// A BepisDB id in the canonical form the site and the plugin use, with the
+    /// file name's zero padding removed: <c>KKSCENE_078928</c> becomes
+    /// <c>KKSCENE_78928</c>.
+    /// </summary>
+    /// <remarks>
+    /// The displayed id keeps whatever the file name had, but anything used as
+    /// an identity has to agree with the plugin's own parser — otherwise the
+    /// same card gets one identity with the plugin installed and another
+    /// without it, and neither matches the id stored in the artwork sidecars.
+    /// </remarks>
+    public static string CanonicalBepisDbId(string bepisDbId)
+    {
+        var separator = bepisDbId.LastIndexOf('_');
+        if (separator < 0) return bepisDbId;
+        var digits = bepisDbId[(separator + 1)..].TrimStart('0');
+        if (digits.Length == 0) digits = "0";
+        return string.Concat(bepisDbId.AsSpan(0, separator + 1), digits);
+    }
+
     public static FilenameLinkInfo Parse(string? filePath)
     {
         if (filePath is null) return Empty;

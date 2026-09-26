@@ -47,21 +47,43 @@ public sealed partial class ImportDropZoneContent : UserControl
         control.ArrowArtwork.Visibility = useBox ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    private Storyboard? _seal;
+    private TaskCompletionSource? _sealCompletion;
+
     /// <summary>Splays the flaps back open, ready for the next time the card is shown.</summary>
     public void OpenBox()
     {
+        // A seal still running would otherwise keep folding the flaps over the
+        // values set below. Stop() never raises Completed, so its awaiter is
+        // released here instead.
+        _seal?.Stop();
+        _seal = null;
+        _sealCompletion?.TrySetResult();
+        _sealCompletion = null;
         BoxFlapLeftRotate.Angle = LeftOpenAngle;
         BoxFlapRightRotate.Angle = RightOpenAngle;
     }
 
-    /// <summary>Folds both flaps shut, completing once the box is sealed.</summary>
+    /// <summary>
+    /// Folds both flaps shut, completing once the box is sealed — or as soon as
+    /// <see cref="OpenBox"/> interrupts it.
+    /// </summary>
     public Task SealBoxAsync()
     {
+        if (!CardMotion.AnimationsEnabled)
+        {
+            BoxFlapLeftRotate.Angle = 0;
+            BoxFlapRightRotate.Angle = 0;
+            return Task.CompletedTask;
+        }
+
         var completion = new TaskCompletionSource();
         var storyboard = new Storyboard();
         storyboard.Children.Add(BuildFlapAnimation(BoxFlapLeftRotate, LeftOpenAngle));
         storyboard.Children.Add(BuildFlapAnimation(BoxFlapRightRotate, RightOpenAngle));
         storyboard.Completed += (_, _) => completion.TrySetResult();
+        _seal = storyboard;
+        _sealCompletion = completion;
         storyboard.Begin();
         return completion.Task;
     }
@@ -73,7 +95,6 @@ public sealed partial class ImportDropZoneContent : UserControl
             From = from,
             To = 0,
             Duration = new Duration(TimeSpan.FromMilliseconds(260)),
-            EnableDependentAnimation = true,
             EasingFunction = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.4 },
         };
         Storyboard.SetTarget(animation, flap);
