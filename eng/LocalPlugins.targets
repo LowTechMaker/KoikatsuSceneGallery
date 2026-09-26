@@ -1,0 +1,94 @@
+<Project>
+
+  <!--
+    Builds the sibling plugin repositories as part of a Debug build of the app,
+    so `dotnet run` launches with the plugins already in place.
+
+    Each plugin project already owns a `CopyToAppPlugins` target that deploys
+    its output into this app's `bin\<Config>\<TFM>\<AppRid>\Plugins\<Name>\`.
+    Nothing here copies files — this only builds the projects so that their own
+    deploy target fires with the right Configuration and RID.
+
+    Off for Release on purpose: released plugins are distributed and installed
+    separately, and baking whatever happens to sit in the sibling folders into
+    a release build would make the output depend on the machine.
+
+    Opt out for one build with `-p:BuildLocalPlugins=false`.
+  -->
+
+  <PropertyGroup>
+    <BuildLocalPlugins Condition="'$(BuildLocalPlugins)' == '' and '$(Configuration)' == 'Debug'">true</BuildLocalPlugins>
+    <BuildLocalPlugins Condition="'$(BuildLocalPlugins)' == ''">false</BuildLocalPlugins>
+
+    <!-- The workspace container that holds this repo and the plugin repos. -->
+    <LocalPluginSearchRoot Condition="'$(LocalPluginSearchRoot)' == ''">$(MSBuildThisFileDirectory)..\..</LocalPluginSearchRoot>
+    <LocalPluginFeedDir Condition="'$(LocalPluginFeedDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\local-feed</LocalPluginFeedDir>
+
+    <!--
+      The plugin repos map `SceneGallery.*` to the private GitHub feed, which
+      needs credentials this machine may not have. `eng\PackageValidation\NuGet.config`
+      is the config the conventions already designate for resolving those
+      packages from `artifacts\local-feed`; pointing restore at it with
+      `RestoreConfigFile` leaves every plugin repo's committed NuGet.config
+      untouched, which is the part that actually matters.
+
+      Set `LocalPluginRestoreConfig` empty to restore with the plugin repo's own
+      config instead (i.e. from the real feed, with your credentials).
+    -->
+    <LocalPluginRestoreConfig Condition="'$(LocalPluginRestoreConfig)' == ''">$(MSBuildThisFileDirectory)PackageValidation\NuGet.config</LocalPluginRestoreConfig>
+  </PropertyGroup>
+
+  <Target Name="DeployLocalPlugins"
+          AfterTargets="Build"
+          Condition="'$(BuildLocalPlugins)' == 'true'">
+
+    <ItemGroup>
+      <!--
+        One level down only: a plugin repo's main project sits at its root,
+        while its test project lives one folder deeper and must not be built
+        into the app.
+      -->
+      <LocalPluginProject Include="$(LocalPluginSearchRoot)\*\SceneGallery.Plugin.*.csproj" />
+      <LocalPluginFeedPackage Include="$(LocalPluginFeedDir)\*.nupkg" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_LocalPluginConfigArg Condition="'$(LocalPluginRestoreConfig)' != '' and '@(LocalPluginFeedPackage)' != ''"> -p:RestoreConfigFile=&quot;$(LocalPluginRestoreConfig)&quot;</_LocalPluginConfigArg>
+      <_LocalPluginTargetDir>$(MSBuildProjectDirectory)\$(OutDir)Plugins</_LocalPluginTargetDir>
+    </PropertyGroup>
+
+    <Message Importance="high"
+             Text="Local plugins: building @(LocalPluginProject->'%(Filename)', ', ') -&gt; $(_LocalPluginTargetDir)"
+             Condition="'@(LocalPluginProject)' != ''" />
+    <Message Importance="high"
+             Text="Local plugins: no sibling plugin projects under $(LocalPluginSearchRoot)."
+             Condition="'@(LocalPluginProject)' == ''" />
+
+    <!--
+      A failing plugin repo must not stop the app from building or running:
+      the app is fully usable with no plugins, and a plugin that cannot restore
+      is a problem in that repo, not in this one. The verification below turns
+      the failure into something visible rather than silent.
+    -->
+    <Exec Command="dotnet build &quot;%(LocalPluginProject.Identity)&quot; -c $(Configuration) --nologo -v:minimal -p:AppRid=$(RuntimeIdentifier) -p:SceneGalleryAppDir=&quot;$(MSBuildProjectDirectory)&quot; -p:DeployPluginToApp=true$(_LocalPluginConfigArg)"
+          WorkingDirectory="%(LocalPluginProject.RootDir)%(LocalPluginProject.Directory)"
+          ContinueOnError="WarnAndContinue"
+          Condition="'@(LocalPluginProject)' != ''" />
+
+    <!--
+      PluginService skips an unreadable or missing plugin folder without a word
+      — the app just starts with no plugins and no explanation. Say it here,
+      where there is still someone watching.
+    -->
+    <ItemGroup>
+      <_DeployedPluginAssembly Include="$(_LocalPluginTargetDir)\**\SceneGallery.Plugin.*.dll" />
+    </ItemGroup>
+    <Warning Code="SGPLUG001"
+             Text="Local plugins: nothing landed in $(_LocalPluginTargetDir). The app will start with no plugins, so platform features (tags, the origin switch, authors) stay hidden."
+             Condition="'@(LocalPluginProject)' != '' and '@(_DeployedPluginAssembly)' == ''" />
+    <Message Importance="high"
+             Text="Local plugins ready: @(_DeployedPluginAssembly->'%(Filename)'->Distinct(), ', ')"
+             Condition="'@(_DeployedPluginAssembly)' != ''" />
+  </Target>
+
+</Project>

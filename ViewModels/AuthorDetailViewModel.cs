@@ -85,18 +85,26 @@ public partial class AuthorDetailViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasScenes))]
+    [NotifyPropertyChangedFor(nameof(SectionTypeCount))]
+    [NotifyPropertyChangedFor(nameof(ShowOverviewTab))]
     public partial int SceneCount { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCharacters))]
+    [NotifyPropertyChangedFor(nameof(SectionTypeCount))]
+    [NotifyPropertyChangedFor(nameof(ShowOverviewTab))]
     public partial int CharacterCount { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCoordinates))]
+    [NotifyPropertyChangedFor(nameof(SectionTypeCount))]
+    [NotifyPropertyChangedFor(nameof(ShowOverviewTab))]
     public partial int CoordinateCount { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPosts))]
+    [NotifyPropertyChangedFor(nameof(SectionTypeCount))]
+    [NotifyPropertyChangedFor(nameof(ShowOverviewTab))]
     public partial int PostCount { get; set; }
 
     [ObservableProperty]
@@ -108,6 +116,19 @@ public partial class AuthorDetailViewModel : ObservableObject
     public bool HasCharacters => CharacterCount > 0;
     public bool HasCoordinates => CoordinateCount > 0;
     public bool HasPosts => PostCount > 0;
+
+    /// <summary>
+    /// How many kinds of saved content this author actually has. Posts count as
+    /// a kind because they get their own tab.
+    /// </summary>
+    public int SectionTypeCount =>
+        (HasScenes ? 1 : 0) + (HasCharacters ? 1 : 0) + (HasCoordinates ? 1 : 0) + (CanLoadPosts ? 1 : 0);
+
+    /// <summary>
+    /// The overview only earns its tab when there is more than one kind to
+    /// overview; with a single kind it just repeats that kind's own tab.
+    /// </summary>
+    public bool ShowOverviewTab => SectionTypeCount > 1;
 
     [ObservableProperty]
     public partial bool IsLoadingPosts { get; set; }

@@ -23,8 +23,7 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public double MetadataHeight => ShowTitle ? 52 : 32;
     public string CountText => UiText.Format("SceneGallery_GroupCount", Members.Count);
     public AuthorDisplay? Author => (Card as IAuthorOwner)?.Author;
-    public string AuthorText => Author?.Name ?? (Card is MediaCard
-        ? Card.DateModified.ToString("yyyy/MM/dd") : UiText.Get("SceneGallery_UnknownAuthor"));
+    public string AuthorText => Author?.Name ?? UiText.Get("SceneGallery_UnknownAuthor");
     public bool IsR18 => Card is SceneCard { IsR18Content: true };
     public string RatingText => Card is SceneCard ? (IsR18 ? "R-18" : "G") : string.Empty;
     public bool HasVersions => Card is CharacterCard { HasVersions: true };

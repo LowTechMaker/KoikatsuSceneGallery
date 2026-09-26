@@ -94,6 +94,25 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         Select(selectable, !selectable.All(state => state.IsSelected));
     }
 
+    /// <summary>Selects one visible review section without carrying a selection from another section.</summary>
+    public void ToggleSectionOnly(IEnumerable<ImportItemReviewState> sectionItems)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var section = sectionItems.Where(state => VisibleItems.Contains(state) && state.CanSelect).ToHashSet();
+        if (section.Count == 0) return;
+
+        var selected = VisibleItems.Where(state => state.CanSelect && state.IsSelected).ToArray();
+        var clear = selected.Length == section.Count && selected.All(section.Contains);
+        _updating = true;
+        try
+        {
+            foreach (var state in VisibleItems.Where(state => state.CanSelect))
+                state.IsSelected = !clear && section.Contains(state);
+        }
+        finally { _updating = false; }
+        UpdateSelection();
+    }
+
     private void Select(IEnumerable<ImportItemReviewState> items, bool value)
     {
         _updating = true;
@@ -147,6 +166,7 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
             var found = existing.TryGetValue(source.Key, out var row);
             row ??= new ImportReviewRow(source.Key, source.Kind);
             if (!row.Items.SequenceEqual(source.Items)) row.Items = source.Items;
+            row.RefreshSelectionAvailability();
             if (source.Kind == Helpers.ImportReviewRowKind.Section)
             {
                 var resourcePrefix = source.Section switch

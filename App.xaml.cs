@@ -23,7 +23,6 @@ public partial class App : Application
     private readonly SceneMetadataService _sceneMetadataService;
     private readonly CharacterMetadataService _characterMetadataService;
     private readonly CoordinateMetadataService _coordinateMetadataService;
-    private readonly MediaCardService _screenshotCardService = new([".png", ".jpg", ".jpeg", ".bmp"]);
     private readonly ThumbnailPriorityScheduler _thumbnailScheduler = new();
     private readonly PluginService _pluginService;
     private readonly LocalSourceRegistry _localSourceRegistry;
@@ -47,11 +46,20 @@ public partial class App : Application
         // flavour of unhandled exception to a crash log the tester can hand back.
         // UI-thread exceptions are also marked handled so a single bad operation
         // (e.g. decoding one corrupt scene) doesn't take down the whole window.
+        // XAML puts the reason for a native failure in the args' own Message,
+        // not on the exception: a COMException out of MeasureOverride carries
+        // only the HRESULT, while Message says what the layout engine was
+        // refusing to do. Handled stops the managed rethrow but not a fail-fast
+        // that XAML has already stowed, so this is a record, not a rescue.
         UnhandledException += (_, e) =>
         {
-            _logger.LogError("UI", e.Exception);
+            _logger.LogError("UI", e.Exception, e.Message);
             e.Handled = true;
         };
+
+        // Names the elements taking part when a layout never settles. Costs
+        // nothing until one does.
+        DebugSettings.LayoutCycleTracingLevel = LayoutCycleTracingLevel.High;
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             _logger.LogError("Domain", e.ExceptionObject as Exception ?? new InvalidOperationException("Unknown unhandled exception"));
         TaskScheduler.UnobservedTaskException += (_, e) =>
@@ -88,6 +96,10 @@ public partial class App : Application
 
         try
         {
+            // Before loading, so a plugin's first request is already in the
+            // language the user reads rather than the English fallback.
+            PluginService.UiLanguage = UiText.Get("Meta_LanguageTag");
+
             // Local-disk reflection only; a broken plugin is recorded as Failed
             // and must never stop the window from opening.
             _pluginService.LoadPlugins();
@@ -160,14 +172,6 @@ public partial class App : Application
             settingsViewModel,
             _thumbnailScheduler,
             _logger);
-        var screenshotGalleryViewModel = new MediaGalleryViewModel(
-            _screenshotCardService,
-            _settingsService,
-            _thumbnailCacheService,
-            settingsViewModel,
-            _thumbnailScheduler,
-            _logger);
-
         // Shared by the online import page and the local collection page: one
         // library scan between them, and one execution coordinator, which
         // serializes transactions so two of them never move files into the
@@ -252,7 +256,6 @@ public partial class App : Application
             galleryViewModel,
             characterGalleryViewModel,
             coordinateGalleryViewModel,
-            screenshotGalleryViewModel,
             authorsViewModel,
             localImportViewModel,
             authorSourceCoordinator,
@@ -313,7 +316,6 @@ public partial class App : Application
         GalleryViewModel galleryViewModel,
         CharacterGalleryViewModel characterGalleryViewModel,
         CoordinateGalleryViewModel coordinateGalleryViewModel,
-        MediaGalleryViewModel screenshotGalleryViewModel,
         AuthorsViewModel authorsViewModel,
         LocalImportViewModel localImportViewModel,
         AuthorSourceCoordinator authorSourceCoordinator,
@@ -333,7 +335,6 @@ public partial class App : Application
         Services.Add(_characterMetadataService);
         Services.Add(_characterAnnotations);
         Services.Add(_coordinateMetadataService);
-        Services.Add(_screenshotCardService, "screenshots");
         Services.Add(_pluginService);
         Services.Add(_localSourceRegistry);
         Services.Add(authorInfoService);
@@ -341,15 +342,37 @@ public partial class App : Application
         Services.Add(galleryViewModel);
         Services.Add(characterGalleryViewModel);
         Services.Add(coordinateGalleryViewModel);
-        Services.Add(screenshotGalleryViewModel, "screenshots");
         Services.Add(LibraryRegistry.Create(settingsViewModel, galleryViewModel,
-            characterGalleryViewModel, coordinateGalleryViewModel, screenshotGalleryViewModel));
+            characterGalleryViewModel, coordinateGalleryViewModel));
+        // Resolved lazily through the registry rather than captured here: the
+        // card collections are rebuilt by every scan, so the lookup has to be
+        // taken fresh at the moment a card is dragged out.
+        Services.Add(new TagCloudService(
+            Services.GetRequiredService<LibraryRegistry>(), _pluginService, _logger));
+        Services.Add(new TagDictionaryService(_pluginService, _logger));
+        Services.Add(new UsageRecordService(
+            settingsViewModel,
+            () => Services.GetRequiredService<LibraryRegistry>().All
+                .SelectMany(library => library.Cards)
+                .DistinctBy(card => card.FilePath, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(card => card.FilePath, StringComparer.OrdinalIgnoreCase),
+            _logger));
         Services.Add(authorsViewModel);
         Services.Add(localImportViewModel);
         Services.Add(authorSourceCoordinator);
         if (importService is not null) Services.Add(importService);
         if (importViewModel is not null) Services.Add(importViewModel);
-        if (authorPostService is not null) Services.Add(authorPostService);
+        if (authorPostService is not null)
+        {
+            Services.Add(authorPostService);
+            Services.Add(new ArtworkRefetchService(
+                authorPostService,
+                DispatcherQueue.GetForCurrentThread(),
+                _logger,
+                // The tag cloud is read from the sidecars this rewrites.
+                () => Services.GetRequiredService<TagCloudService>().BuildAsync()
+                    .Observe(_logger, "ArtworkRefetch.RebuildTagCloud")));
+        }
     }
 
     private static readonly ResourceLoader ResLoader = new();

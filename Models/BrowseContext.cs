@@ -24,7 +24,7 @@ public sealed class BrowseContext(string title, IEnumerable<CardBase> cards, boo
         var page = card switch
         {
             CharacterCard => typeof(CharacterDetailPage), CoordinateCard => typeof(CoordinateDetailPage),
-            MediaCard => typeof(ScreenshotDetailPage), _ => typeof(DetailPage)
+            _ => typeof(DetailPage)
         };
         frame.Navigate(page, new BrowseNavigation(card, this));
         if (replace && frame.BackStack.Count > 0) frame.BackStack.RemoveAt(frame.BackStack.Count - 1);

@@ -36,6 +36,9 @@ public partial class AuthorPost : ObservableObject
     /// <summary>Author folders which contain this artwork's local files.</summary>
     public IReadOnlyList<string> AuthorDirectories { get; init; } = [];
 
+    /// <summary>When the saved metadata was fetched, or null when there is none.</summary>
+    public DateTimeOffset? MetadataFetchedAt { get; init; }
+
     public string DisplayTitle => Title ?? ArtworkId.Id;
 
     partial void OnTitleChanged(string? value) => OnPropertyChanged(nameof(DisplayTitle));

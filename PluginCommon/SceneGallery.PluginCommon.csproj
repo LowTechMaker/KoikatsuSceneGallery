@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>SceneGallery.PluginCommon</RootNamespace>
     <PackageId>SceneGallery.PluginCommon</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>LowTechMaker</Authors>
     <Description>Internal source-only infrastructure shared by SceneGallery plugins.</Description>
     <PackageTags>SceneGallery;plugins;source;infrastructure</PackageTags>

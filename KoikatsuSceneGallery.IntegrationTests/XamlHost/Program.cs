@@ -33,6 +33,7 @@ internal static class Program
                         await GalleryBaseChecks.RunAsync();
                         await GalleryLoadChecks.RunAsync();
                         DetailViewNavigationChecks.Run();
+                        await TagCloudMotionChecks.RunAsync();
                     }
                     catch (Exception ex) { Console.Error.WriteLine(ex); Environment.ExitCode = 1; }
                     finally { app.Exit(); }
@@ -98,7 +99,8 @@ internal sealed class Entry(int value) : INotifyPropertyChanged
     }
 }
 
-// No Window is created and the production App/settings are never initialized.
+// Only animation checks create a test Window; the production App/settings are
+// never initialized.
 // Referenced XAML resources need the production type provider even though the
 // production App is not constructed. Without it startup raises XamlParseException.
 internal sealed class TestApplication : Application, Microsoft.UI.Xaml.Markup.IXamlMetadataProvider

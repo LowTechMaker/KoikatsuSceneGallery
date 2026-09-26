@@ -5,7 +5,7 @@ using KoikatsuSceneGallery.ViewModels;
 
 namespace KoikatsuSceneGallery.Helpers;
 
-public enum LibraryKind { Scenes, Characters, Coordinates, Screenshots }
+public enum LibraryKind { Scenes, Characters, Coordinates }
 
 internal interface ILibrary
 {

@@ -87,18 +87,6 @@
   <data name="Gallery_ShowR18Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Show R-18 content</value>
   </data>
-  <data name="Gallery_SortName.Content" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="Gallery_SortDateModified.Content" xml:space="preserve">
-    <value>Date Modified</value>
-  </data>
-  <data name="Gallery_SortFileSize.Content" xml:space="preserve">
-    <value>File Size</value>
-  </data>
-  <data name="Gallery_SortShuffle.Content" xml:space="preserve">
-    <value>Shuffle</value>
-  </data>
   <data name="Gallery_FeelingLuckyLabel.Text" xml:space="preserve">
     <value>I'm feeling lucky</value>
   </data>
@@ -527,13 +515,13 @@
   <data name="Authors_RefreshOne.Text" xml:space="preserve">
     <value>Refresh</value>
   </data>
-  <data name="Authors_SortCount.Content" xml:space="preserve">
+  <data name="Authors_SortCount.Text" xml:space="preserve">
     <value>Card count</value>
   </data>
-  <data name="Authors_SortLastUpdated.Content" xml:space="preserve">
+  <data name="Authors_SortLastUpdated.Text" xml:space="preserve">
     <value>Recently updated</value>
   </data>
-  <data name="Authors_SortName.Content" xml:space="preserve">
+  <data name="Authors_SortName.Text" xml:space="preserve">
     <value>Name</value>
   </data>
   <data name="Authors_GroupSymbols" xml:space="preserve">
@@ -728,6 +716,9 @@
   </data>
   <data name="Import_Importing.Text" xml:space="preserve">
     <value>Importing…</value>
+  </data>
+  <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
+    <value>Add files: drop Koikatsu cards here</value>
   </data>
   <data name="Import_DropZoneTitle.Text" xml:space="preserve">
     <value>Drop Koikatsu cards here</value>
@@ -1056,7 +1047,7 @@
   <data name="Import_Review_NoDestination_Title" xml:space="preserve"><value>Import destinations are still needed</value></data>
   <data name="Import_Review_NoDestination_Description" xml:space="preserve"><value>{0} processed cards are waiting for their final destination calculation.</value></data>
   <data name="Import_Review_Summary" xml:space="preserve"><value>{0} cards total · {1} ready to import</value></data>
-  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>Showing {0} images · Actions apply to {1} selected</value></data>
+  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>Showing {0} · {1} selected</value></data>
   <data name="Import_Review_FilterEmpty.Text" xml:space="preserve"><value>No images in this tab match the selected rating</value></data>
   <data name="Import_Review_ShowAll.Content" xml:space="preserve"><value>Show all ratings in this tab</value></data>
   <data name="Import_UnknownEmpty_Title.Text" xml:space="preserve"><value>No cards need identification</value></data>
@@ -1070,8 +1061,15 @@
   <data name="Import_RatingFilter.AutomationProperties.Name" xml:space="preserve"><value>Filter by rating</value></data>
   <data name="Import_AllRatings.Content" xml:space="preserve"><value>All ratings</value></data>
   <data name="Import_EditSelected.Content" xml:space="preserve"><value>Edit selected</value></data>
-  <data name="Import_KeepDropping.Text" xml:space="preserve"><value>Drop more PNG cards to add them</value></data>
-  <data name="Import_ActionCount" xml:space="preserve"><value>Import {0} cards</value></data>
+  <data name="Import_ActionCount" xml:space="preserve"><value>Import all {0} ready cards</value></data>
+  <data name="Import_ActionCountCompact" xml:space="preserve"><value>Import {0}</value></data>
+  <data name="Import_EditSelectedMetadata.Text" xml:space="preserve"><value>Get artwork details</value></data>
+  <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>Rating and author</value></data>
+  <data name="Import_SelectSection.Content" xml:space="preserve"><value>Select / clear section</value></data>
+  <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>Select or clear cards in this section</value></data>
+  <data name="Import_More.Content" xml:space="preserve"><value>More</value></data>
+  <data name="Import_More_Undo.Text" xml:space="preserve"><value>Undo last edit</value></data>
+  <data name="Import_More_Clear.Text" xml:space="preserve"><value>Clear import list</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
     <value>Customize browsing, library sources, and plugins. Changes are saved automatically.</value>
   </data>
@@ -1192,6 +1190,9 @@
   <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
     <value>Manage resolution filters and plugin analysis in Settings.</value>
   </data>
+  <data name="Browser_ResolutionFilterActive" xml:space="preserve">
+    <value>Image size filter active · {0} selected in Settings</value>
+  </data>
   <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
     <value>Open library settings</value>
   </data>
@@ -1299,8 +1300,8 @@
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>Counts ready and completed images across this batch, regardless of the current tab or filter.</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>Unidentified ({0})</value></data>
   <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>Identified ({0})</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>Select images needing details, then fetch metadata, reverse search, or assign an author above.</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>Review images, authors, and ratings before importing. Batch actions support selections across both sections.</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>Select images that need details, then open Edit selected to fetch metadata, reverse search, or assign an author.</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>Review each image, author, and rating. Select cards to edit, then import when ready.</value></data>
   <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>No images need attention under the current filter.</value></data>
   <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>No identified images match the current filter.</value></data>
   <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Import images: unidentified list, unavailable posts list, then identified image grid</value></data>
@@ -1471,4 +1472,313 @@
   <data name="Detail_VersionKind_Current.Content" xml:space="preserve"><value>The character itself</value></data>
   <data name="Detail_VersionKind_Alternate.Content" xml:space="preserve"><value>What-if version</value></data>
   <data name="Detail_VersionSuperseded.Content" xml:space="preserve"><value>Replaced by a newer card</value></data>
+  <data name="Authors_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="Authors_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="Authors_TotalCount" xml:space="preserve">
+    <value>{0:N0} authors</value>
+  </data>
+  <data name="Authors_PlatformBar.AutomationProperties.Name" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="Discovery_Joker" xml:space="preserve">
+    <value>Joker</value>
+  </data>
+  <data name="Discovery_PokerHandEnd" xml:space="preserve">
+    <value>Hand dealt · 13 cards</value>
+  </data>
+  <data name="Discovery_PokerProgress" xml:space="preserve">
+    <value>Hand {0} · {1} of {2} cards drawn</value>
+  </data>
+  <data name="Gallery_SortAscending.Text" xml:space="preserve">
+    <value>Ascending</value>
+  </data>
+  <data name="Gallery_SortDateAdded.Text" xml:space="preserve">
+    <value>Date Added</value>
+  </data>
+  <data name="Gallery_SortDateModified.Text" xml:space="preserve">
+    <value>Date Modified</value>
+  </data>
+  <data name="Gallery_SortDescending.Text" xml:space="preserve">
+    <value>Descending</value>
+  </data>
+  <data name="Gallery_SortFileSize.Text" xml:space="preserve">
+    <value>File Size</value>
+  </data>
+  <data name="Gallery_SortName.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Gallery_SortShuffle.Text" xml:space="preserve">
+    <value>Shuffle</value>
+  </data>
+  <data name="Meta_LanguageTag" xml:space="preserve">
+    <value>en-US</value>
+  </data>
+  <data name="Nav_Tags.Content" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Nav_Usage.AutomationProperties.Name" xml:space="preserve">
+    <value>Usage log</value>
+  </data>
+  <data name="Nav_Usage_Label.Text" xml:space="preserve">
+    <value>Usage log</value>
+  </data>
+  <data name="Origin_SelectorBar.AutomationProperties.Name" xml:space="preserve">
+    <value>Browse source</value>
+  </data>
+  <data name="Platform_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Platform_bepisdb" xml:space="preserve">
+    <value>BepisDB</value>
+  </data>
+  <data name="Platform_fanbox" xml:space="preserve">
+    <value>FANBOX</value>
+  </data>
+  <data name="Platform_local" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="Platform_pixiv" xml:space="preserve">
+    <value>pixiv</value>
+  </data>
+  <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>Record mode</value>
+  </data>
+  <data name="Record_NavToggle.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Record the origin page of every card you drag or copy out</value>
+  </data>
+  <data name="SC_DiscoverySpread.Description" xml:space="preserve">
+    <value>Nudge cards that look alike apart in the random grid. Reorders only — no card is ever hidden</value>
+  </data>
+  <data name="SC_DiscoverySpread.Header" xml:space="preserve">
+    <value>Spread out look-alikes in Discovery</value>
+  </data>
+  <data name="SC_GroupCollapseAnimation.Description" xml:space="preserve">
+    <value>The cards fly back onto the stacked tile when you leave a group. Windows' own animation setting still applies</value>
+  </data>
+  <data name="SC_GroupCollapseAnimation.Header" xml:space="preserve">
+    <value>Animate closing a group</value>
+  </data>
+  <data name="SC_PokerHand.Description" xml:space="preserve">
+    <value>Draw 13 cards at a time instead of scrolling endlessly. Now and then one is a joker, pulled from the largest files. Turn this off for the classic random scroll</value>
+  </data>
+  <data name="SC_PokerHand.Header" xml:space="preserve">
+    <value>Deal discovery as a hand of cards</value>
+  </data>
+  <data name="SC_RecordMode.Description" xml:space="preserve">
+    <value>Logs the original page of every card dragged or copied out of the app. Locally collected cards are ignored</value>
+  </data>
+  <data name="SC_RecordMode.Header" xml:space="preserve">
+    <value>Record mode</value>
+  </data>
+  <data name="TagCloud_ArticleLink.Content" xml:space="preserve">
+    <value>Read on pixiv encyclopedia</value>
+  </data>
+  <data name="TagCloud_ArticleParents" xml:space="preserve">
+    <value>Category: {0}</value>
+  </data>
+  <data name="TagCloud_Back.Content" xml:space="preserve">
+    <value>← Back to tags</value>
+  </data>
+  <data name="TagCloud_EmptyDescription.Text" xml:space="preserve">
+    <value>Tags come from artwork metadata fetched by a platform plugin. Import some cards with a plugin installed, and they will show up here</value>
+  </data>
+  <data name="TagCloud_EmptyTitle.Text" xml:space="preserve">
+    <value>No tags found</value>
+  </data>
+  <data name="TagCloud_Kind_Characters" xml:space="preserve">
+    <value>Characters</value>
+  </data>
+  <data name="TagCloud_Kind_Coordinates" xml:space="preserve">
+    <value>Outfits</value>
+  </data>
+  <data name="TagCloud_Kind_Scenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="TagCloud_Loading.Text" xml:space="preserve">
+    <value>Reading tags…</value>
+  </data>
+  <data name="TagCloud_NoCardsDescription" xml:space="preserve">
+    <value>The artworks carrying this tag have no files in your library. Tag counts come from fetched metadata, which covers more artworks than you imported</value>
+  </data>
+  <data name="TagCloud_NoCardsTitle" xml:space="preserve">
+    <value>No cards for this tag</value>
+  </data>
+  <data name="TagCloud_TagAccessibleName" xml:space="preserve">
+    <value>{0}, {1} artworks</value>
+  </data>
+  <data name="TagCloud_TagCount" xml:space="preserve">
+    <value>{0} artworks</value>
+  </data>
+  <data name="TagCloud_TagMergedFrom" xml:space="preserve">
+    <value>Also counting: {0}</value>
+  </data>
+  <data name="TagCloud_Title.Text" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Usage_Clear.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Usage_ClearConfirmBody" xml:space="preserve">
+    <value>Every recorded entry is deleted. This cannot be undone</value>
+  </data>
+  <data name="Usage_ClearConfirmNo" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Usage_ClearConfirmTitle" xml:space="preserve">
+    <value>Clear the usage log?</value>
+  </data>
+  <data name="Usage_ClearConfirmYes" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Usage_Count" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="Usage_EmptyDescription.Text" xml:space="preserve">
+    <value>Flip the switch beside “Usage log” in the sidebar, then drag or copy a card out. Its original page is logged here</value>
+  </data>
+  <data name="Usage_EmptyTitle.Text" xml:space="preserve">
+    <value>Nothing recorded yet</value>
+  </data>
+  <data name="Usage_Export.Content" xml:space="preserve">
+    <value>Copy all</value>
+  </data>
+  <data name="Usage_NoOrigin" xml:space="preserve">
+    <value>No original page</value>
+  </data>
+  <data name="Usage_Title.Text" xml:space="preserve">
+    <value>Usage log</value>
+  </data>
+  <data name="Refetch_SectionTitle" xml:space="preserve">
+    <value>Re-fetch artwork data</value>
+  </data>
+  <data name="Refetch_Description" xml:space="preserve">
+    <value>Scans every {0} card in your library, fetches each artwork's title, rating and tags from {0} again (tag translations in the current UI language), and writes them to the artwork data files beside the cards. Artworks that already have data are fetched again too.</value>
+  </data>
+  <data name="Refetch_WarningTitle" xml:space="preserve">
+    <value>High-risk operation: read all of this before starting</value>
+  </data>
+  <data name="Refetch_WarningMessage" xml:space="preserve">
+    <value>This sends thousands of requests to {0} back to back, for hours. That volume can get your IP or account rate-limited or even blocked by {0}, and imports will be noticeably slower while it runs. With “Re-fetch all”, every artwork's existing data file is overwritten with the newly fetched data (the old data is kept when an artwork has been deleted or made private). Those files are backed up automatically before the run and can be restored below, but only the latest 2 backups are kept; older ones are discarded.</value>
+  </data>
+  <data name="Refetch_Acknowledge" xml:space="preserve">
+    <value>I have read and understand the risks above: rate limiting or blocking, and artwork data overwritten (restorable only to the latest 2 backups). I accept the consequences.</value>
+  </data>
+  <data name="Refetch_Scan" xml:space="preserve">
+    <value>Scan library</value>
+  </data>
+  <data name="Refetch_ScanResume" xml:space="preserve">
+    <value>Scan and continue where it stopped</value>
+  </data>
+  <data name="Refetch_ScanRestart" xml:space="preserve">
+    <value>Scan and start over</value>
+  </data>
+  <data name="Refetch_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Refetch_Scanning" xml:space="preserve">
+    <value>Scanning the library…</value>
+  </data>
+  <data name="Refetch_ScanSummary" xml:space="preserve">
+    <value>Found {0} artworks across {1} cards. At 2–5 seconds each, this takes about {2}–{3} hours.</value>
+  </data>
+  <data name="Refetch_NothingFound" xml:space="preserve">
+    <value>No {0} artworks to re-fetch were found in the library.</value>
+  </data>
+  <data name="Refetch_Unassigned" xml:space="preserve">
+    <value>{0} more cards could not be matched to an artwork from their folder or file name and will be left alone; you can assign them on the author page.</value>
+  </data>
+  <data name="Refetch_Progress" xml:space="preserve">
+    <value>{0} / {1} processed ({2} updated, {3} deleted or private, {4} failed)</value>
+  </data>
+  <data name="Refetch_Completed" xml:space="preserve">
+    <value>Done: {0} updated, {1} deleted or private, {2} failed. Failed artworks are tried again next time.</value>
+  </data>
+  <data name="Refetch_Stopped" xml:space="preserve">
+    <value>Stopped. You can continue where it stopped next time.</value>
+  </data>
+  <data name="Refetch_TooManyFailures" xml:space="preserve">
+    <value>{0} artworks in a row failed, so the run stopped by itself. The connection may be down, or the platform may be rate-limiting you; wait a while, then continue where it stopped.</value>
+  </data>
+  <data name="Refetch_Error" xml:space="preserve">
+    <value>Stopped by an error; see the log for details. You can continue where it stopped next time.</value>
+  </data>
+  <data name="Refetch_OtherPlatformBusy" xml:space="preserve">
+    <value>Another platform is being re-fetched. Start this one once that finishes or is stopped.</value>
+  </data>
+  <data name="Refetch_UnfinishedHint" xml:space="preserve">
+    <value>The last re-fetch did not finish.</value>
+  </data>
+  <data name="Refetch_BannerTitle" xml:space="preserve">
+    <value>Re-fetching {0} artwork data</value>
+  </data>
+  <data name="Refetch_BannerStop.Content" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Refetch_BackingUp" xml:space="preserve">
+    <value>Backing up the artwork data files that will be overwritten…</value>
+  </data>
+  <data name="Refetch_BackupFailed" xml:space="preserve">
+    <value>The backup failed, so the run stopped before sending any request. See the log for details.</value>
+  </data>
+  <data name="Refetch_BackupsTitle" xml:space="preserve">
+    <value>Backups taken before re-fetching</value>
+  </data>
+  <data name="Refetch_BackupsHint" xml:space="preserve">
+    <value>Every run from the start first backs up all the artwork data files it may overwrite; the latest {0} are kept. Restoring puts them back as they were then and discards everything fetched since.</value>
+  </data>
+  <data name="Refetch_BackupItem" xml:space="preserve">
+    <value>{0} ({1} artwork data files)</value>
+  </data>
+  <data name="Refetch_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Refetch_RestoreConfirm" xml:space="preserve">
+    <value>Restore the artwork data files to how they were before the run of {0}? Everything fetched since is discarded, and the record of that run is cleared.</value>
+  </data>
+  <data name="Refetch_RestoreConfirmButton" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Refetch_Restoring" xml:space="preserve">
+    <value>Restoring artwork data files…</value>
+  </data>
+  <data name="Refetch_Restored" xml:space="preserve">
+    <value>Restored to before the run of {0}: {1} put back, {2} removed, {3} failed.</value>
+  </data>
+  <data name="Refetch_StartMissing" xml:space="preserve">
+    <value>Fetch missing only ({0})</value>
+  </data>
+  <data name="Refetch_StartAll" xml:space="preserve">
+    <value>Re-fetch all ({0})</value>
+  </data>
+  <data name="Refetch_Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Refetch_ScanMissing" xml:space="preserve">
+    <value>{0} of them have no artwork data at all; fetching only those takes about {1}–{2} hours and leaves artworks that already have data untouched.</value>
+  </data>
+  <data name="Refetch_ResumeSummary" xml:space="preserve">
+    <value>The last "{0}" run did not finish: {1} fetched, {2} left, about {3}–{4} hours.</value>
+  </data>
+  <data name="Refetch_KindMissing" xml:space="preserve">
+    <value>fetch missing only</value>
+  </data>
+  <data name="Refetch_KindAll" xml:space="preserve">
+    <value>re-fetch all</value>
+  </data>
+  <data name="Refetch_ScanGone" xml:space="preserve">
+    <value>{0} more were found deleted or private earlier and will be skipped.</value>
+  </data>
+  <data name="TagCloud_Stale.Title" xml:space="preserve">
+    <value>Tag data updated</value>
+  </data>
+  <data name="TagCloud_Stale.Message" xml:space="preserve">
+    <value>The re-fetch has written new artwork data.</value>
+  </data>
+  <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
+    <value>Update cloud</value>
+  </data>
 </root>

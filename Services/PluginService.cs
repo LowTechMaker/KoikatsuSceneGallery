@@ -41,6 +41,14 @@ public sealed class PluginService
 
     public static Func<string, string, string?, CancellationToken, Task<string?>>? InputRequestHandler { get; set; }
 
+    /// <summary>
+    /// What <see cref="IPluginHost.Language"/> answers: the language the UI
+    /// resolved to. Set once at startup, before any plugin is loaded — plugins
+    /// read it from background threads, where the resource loader it comes
+    /// from is not safe to call.
+    /// </summary>
+    public static string UiLanguage { get; set; } = "en";
+
     public event Action? PluginsChanged;
 
     public PluginService(
@@ -121,8 +129,30 @@ public sealed class PluginService
     public IReadOnlyList<IPluginUpdateProvider> UpdateProviders => _updateProviders;
     private readonly List<IPluginUpdateProvider> _updateProviders = [];
 
+    private readonly Dictionary<string, ITagDictionaryProvider> _tagDictionaryProviders =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The tag dictionary for a platform, or null when that platform's plugin
+    /// is absent or has no encyclopedia. Keyed by provider id rather than
+    /// ordered, because a tag belongs to exactly one platform.
+    /// </summary>
+    public ITagDictionaryProvider? TagDictionaryFor(string providerId)
+        => _tagDictionaryProviders.GetValueOrDefault(providerId);
+
     public IPluginSettingsProvider? GetSettingsProvider(string pluginName)
         => _settingsProviders.GetValueOrDefault(pluginName);
+
+    private readonly Dictionary<string, IArtworkMetadataRefresher> _artworkRefreshers =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The plugin's bulk re-fetch capability, or null when it has not opted
+    /// in. Keyed by plugin name because it is offered from that plugin's own
+    /// settings.
+    /// </summary>
+    public IArtworkMetadataRefresher? ArtworkRefresherFor(string pluginName)
+        => _artworkRefreshers.GetValueOrDefault(pluginName);
 
     /// <summary>
     /// Registers a provider that ships with the app rather than being loaded
@@ -276,8 +306,14 @@ public sealed class PluginService
             if (plugin is IPluginUpdateProvider updateProvider)
                 _updateProviders.Add(updateProvider);
 
+            if (plugin is ITagDictionaryProvider tagDictionaryProvider)
+                _tagDictionaryProviders[tagDictionaryProvider.ProviderId] = tagDictionaryProvider;
+
             if (plugin is IPluginSettingsProvider settingsProvider)
                 _settingsProviders[plugin.Name] = settingsProvider;
+
+            if (plugin is IArtworkMetadataRefresher refresher)
+                _artworkRefreshers[plugin.Name] = refresher;
 
             var description = metadata.FirstOrDefault(a => a.Key == "PluginDescription")?.Value;
             var updateUrl = metadata.FirstOrDefault(a => a.Key == "PluginUpdateUrl")?.Value;
@@ -366,5 +402,7 @@ public sealed class PluginService
         public Task<string?> RequestInputAsync(string title, string message, string? placeholder, CancellationToken ct)
             => InputRequestHandler?.Invoke(title, message, placeholder, ct)
                ?? Task.FromResult<string?>(null);
+
+        public string Language => UiLanguage;
     }
 }

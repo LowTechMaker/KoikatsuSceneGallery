@@ -5,8 +5,6 @@ namespace KoikatsuSceneGallery.Models;
 
 public partial class CharacterCard : CardBase, IAuthorOwner
 {
-    public DateTime DateCreated { get; init; }
-
     public DateTime FileTimestamp => CharacterCardFilenameParser.ParseTimestamp(FileName) ?? DateCreated;
 
     [ObservableProperty]

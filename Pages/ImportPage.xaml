@@ -12,7 +12,9 @@
     mc:Ignorable="d"
     AllowDrop="True"
     DragOver="Page_DragOver"
-    Drop="Page_Drop">
+    Drop="Page_Drop"
+    Loaded="ImportPage_Loaded"
+    SizeChanged="ImportPage_SizeChanged">
 
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
@@ -137,26 +139,6 @@
                            Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}"
                            Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12" Margin="0,6,0,0"
-                                    Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
-                    <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <controls:RatingBadge Text="G" />
-                    <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}" VerticalAlignment="Center"
-                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <controls:RatingBadge Text="R-18" />
-                    <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}" VerticalAlignment="Center"
-                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <controls:RatingBadge Text="R-18G" />
-                    <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}" VerticalAlignment="Center"
-                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
-                </StackPanel>
-                </controls:WrapPanel>
             </StackPanel>
             <Button Grid.Column="1" x:Uid="Import_Options" VerticalAlignment="Center">
                 <Button.Flyout>
@@ -182,6 +164,26 @@
                                        SmallChange="1" SpinButtonPlacementMode="Compact"
                                        IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
                                        Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
+                            <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12"
+                                                Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+                                <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <controls:RatingBadge Text="G" />
+                                    <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}" VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <controls:RatingBadge Text="R-18" />
+                                    <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}" VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <controls:RatingBadge Text="R-18G" />
+                                    <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}" VerticalAlignment="Center"
+                                               Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </controls:WrapPanel>
                         </StackPanel>
                     </Flyout>
                 </Button.Flyout>
@@ -197,19 +199,8 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
             <Grid>
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
-                            Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                    <FontIcon FontSize="48" Glyph="&#xE896;" HorizontalAlignment="Center"
-                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Uid="Import_DropZoneTitle" Style="{StaticResource SubtitleTextBlockStyle}"
-                               HorizontalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <Button x:Uid="Import_ChooseFiles" HorizontalAlignment="Center" Click="PickFiles_Click" Style="{StaticResource AccentButtonStyle}" />
-
-                    <TextBlock x:Uid="Import_DropZoneHint" Style="{StaticResource CaptionTextBlockStyle}"
-                               HorizontalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                </StackPanel>
+                <controls:ImportDropZoneContent PickFilesRequested="PickFiles_Click"
+                                                Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}" />
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
                             Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}">
                     <ProgressRing Width="56" Height="56" IsActive="True" HorizontalAlignment="Center" />
@@ -252,68 +243,80 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
-                                    <StackPanel Spacing="10">
-                                        <controls:WrapPanel Spacing="8">
-                                            <TextBox x:Name="ReviewArtworkInput" x:Uid="Import_LookupInput" Width="300"
-                                                     Text="{x:Bind ViewModel.ReviewArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     KeyDown="ReviewArtworkInput_KeyDown" />
-                                            <ComboBox x:Uid="Import_LookupProvider" Width="150"
-                                                      ItemsSource="{x:Bind ViewModel.ReviewArtworkProviderIds}"
-                                                      SelectedItem="{x:Bind ViewModel.ReviewArtworkProviderId, Mode=TwoWay}" />
-                                            <Button x:Uid="Import_LookupFetch" Command="{x:Bind ViewModel.FetchReviewArtworkCommand}"
-                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                            <Button x:Uid="Import_SearchSelected" Click="SearchSelected_Click"
-                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                        </controls:WrapPanel>
-                                        <controls:WrapPanel Spacing="8">
-                                            <ComboBox x:Uid="Import_Review_Rating" MinWidth="130"
-                                                      SelectedIndex="{x:Bind ViewModel.ReviewRatingOverrideIndex, Mode=TwoWay}">
-                                                <ComboBoxItem x:Uid="Import_Review_KeepUnchanged" />
-                                                <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
-                                            </ComboBox>
-                                            <Button x:Uid="Import_ApplyRating" Command="{x:Bind ViewModel.ApplyReviewRatingCommand}"
-                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                            <Button x:Name="ReviewAuthorButton" x:Uid="Import_AssignAuthor"
-                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}">
-                                                <Button.Flyout>
-                                                    <Flyout x:Name="ReviewAuthorFlyout" Placement="BottomEdgeAlignedLeft">
-                                                        <StackPanel Width="280" Spacing="10">
-                                                            <Button x:Uid="Import_SelectAuthor" Click="PickReviewAuthor_Click" HorizontalAlignment="Stretch">
-                                                                <TextBlock x:Uid="Import_PickKnownAuthor" />
-                                                            </Button>
-                                                            <ComboBox x:Uid="Import_Review_AuthorProvider" HorizontalAlignment="Stretch"
-                                                                      ItemsSource="{x:Bind ViewModel.ReviewAuthorProviderIds}"
-                                                                      SelectedItem="{x:Bind ViewModel.ReviewAuthorProviderId, Mode=TwoWay}" />
-                                                            <TextBox x:Uid="Import_Review_AuthorId"
-                                                                     Text="{x:Bind ViewModel.ReviewAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                                            <Button x:Uid="Import_AssignAuthor" HorizontalAlignment="Stretch"
-                                                                    Command="{x:Bind ViewModel.ApplyReviewAuthorCommand}" />
-                                                        </StackPanel>
-                                                    </Flyout>
-                                                </Button.Flyout>
-                                            </Button>
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind ViewModel.ReviewSelectionText, Mode=OneWay}"
-                                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </controls:WrapPanel>
-                                        <TextBlock Text="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}" TextWrapping="Wrap"
-                                                   Visibility="{x:Bind ViewModel.ReviewBatchStatusVisibility, Mode=OneWay}"
-                                                   AutomationProperties.LiveSetting="Polite"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <controls:WrapPanel Spacing="12">
-                                            <CheckBox x:Uid="Import_SelectVisibleCompact" MinWidth="0"
-                                                      IsChecked="{x:Bind ViewModel.IsAllReviewSelected, Mode=TwoWay}" />
-                                            <ComboBox x:Uid="Import_RatingFilter" MinWidth="120"
+                                            <ComboBox Grid.Column="1" x:Uid="Import_RatingFilter" MinWidth="120"
                                                       SelectedIndex="{x:Bind ViewModel.ReviewFilterIndex, Mode=TwoWay}">
                                                 <ComboBoxItem x:Uid="Import_AllRatings" />
                                                 <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
                                             </ComboBox>
-                                            <Button x:Uid="Import_RemoveSelected" Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}"
-                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                            <Button x:Uid="Import_Review_ShowAll"
-                                                    Visibility="{x:Bind ViewModel.ClearReviewRatingFilterVisibility, Mode=OneWay}"
-                                                    Command="{x:Bind ViewModel.SetReviewFilterCommand}" CommandParameter="All" />
-                                        </controls:WrapPanel>
+                                            <Button x:Name="ReviewEditButton" Grid.Column="2" x:Uid="Import_EditSelected"
+                                                    Visibility="{x:Bind ViewModel.ReviewSelectionEditorVisibility, Mode=OneWay}">
+                                                <Button.Flyout>
+                                                    <Flyout x:Name="ReviewEditFlyout" Placement="BottomEdgeAlignedRight">
+                                                        <ScrollViewer x:Name="ReviewEditScrollViewer" MaxHeight="440" VerticalScrollBarVisibility="Auto"
+                                                                      HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+                                                            <StackPanel x:Name="ReviewEditPanel" Width="320" Spacing="10">
+                                                                <TextBlock x:Uid="Import_EditSelectedMetadata" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                                <TextBox x:Name="ReviewArtworkInput" x:Uid="Import_LookupInput"
+                                                                         HorizontalAlignment="Stretch"
+                                                                         Text="{x:Bind ViewModel.ReviewArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                         KeyDown="ReviewArtworkInput_KeyDown" />
+                                                                <ComboBox x:Uid="Import_LookupProvider" HorizontalAlignment="Stretch"
+                                                                          ItemsSource="{x:Bind ViewModel.ReviewArtworkProviderIds}"
+                                                                          SelectedItem="{x:Bind ViewModel.ReviewArtworkProviderId, Mode=TwoWay}" />
+                                                                <StackPanel Spacing="8">
+                                                                    <Button x:Uid="Import_LookupFetch" HorizontalAlignment="Stretch"
+                                                                            Command="{x:Bind ViewModel.FetchReviewArtworkCommand}"
+                                                                            IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                                                    <Button x:Uid="Import_SearchSelected" HorizontalAlignment="Stretch"
+                                                                            Click="SearchSelected_Click"
+                                                                            IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                                                </StackPanel>
+                                                                <TextBlock x:Uid="Import_EditSelectedDetails" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,6,0,0" />
+                                                                <ComboBox x:Uid="Import_Review_Rating" HorizontalAlignment="Stretch"
+                                                                          SelectedIndex="{x:Bind ViewModel.ReviewRatingOverrideIndex, Mode=TwoWay}">
+                                                                    <ComboBoxItem x:Uid="Import_Review_KeepUnchanged" />
+                                                                    <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
+                                                                </ComboBox>
+                                                                <Button x:Uid="Import_ApplyRating" HorizontalAlignment="Stretch"
+                                                                        Command="{x:Bind ViewModel.ApplyReviewRatingCommand}"
+                                                                        IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                                                <Button x:Uid="Import_SelectAuthor" Click="PickReviewAuthor_Click" HorizontalAlignment="Stretch">
+                                                                    <TextBlock x:Uid="Import_PickKnownAuthor" />
+                                                                </Button>
+                                                                <ComboBox x:Uid="Import_Review_AuthorProvider" HorizontalAlignment="Stretch"
+                                                                          ItemsSource="{x:Bind ViewModel.ReviewAuthorProviderIds}"
+                                                                          SelectedItem="{x:Bind ViewModel.ReviewAuthorProviderId, Mode=TwoWay}" />
+                                                                <TextBox x:Uid="Import_Review_AuthorId"
+                                                                         Text="{x:Bind ViewModel.ReviewAuthorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                <Button x:Uid="Import_AssignAuthor" HorizontalAlignment="Stretch"
+                                                                        Command="{x:Bind ViewModel.ApplyReviewAuthorCommand}"
+                                                                        IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}">
+                                                                </Button>
+                                                                <Button x:Uid="Import_RemoveSelected" HorizontalAlignment="Stretch"
+                                                                        Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}"
+                                                                        IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                                            </StackPanel>
+                                                        </ScrollViewer>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </Grid>
+                                        <TextBlock Text="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}"
+                                                   TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                                   ToolTipService.ToolTip="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}"
+                                                   Visibility="{x:Bind ViewModel.ReviewBatchStatusVisibility, Mode=OneWay}"
+                                                   AutomationProperties.LiveSetting="Polite"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
 
                                     <Grid Grid.Row="1" ColumnSpacing="12">
@@ -382,12 +385,19 @@
                                                 </Grid>
                                             </DataTemplate>
                                             <DataTemplate x:Key="ReviewSectionTemplate" x:DataType="vm:ImportReviewRow">
-                                                <StackPanel Padding="8,16,8,8" Spacing="4">
-                                                    <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"
-                                                               AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
-                                                    <TextBlock Text="{x:Bind Description, Mode=OneWay}" TextWrapping="Wrap"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                </StackPanel>
+                                                <Grid Padding="8,16,8,8" ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"
+                                                                   AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{x:Bind Description, Mode=OneWay}" TextWrapping="Wrap"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" x:Uid="Import_SelectSection" VerticalAlignment="Top"
+                                                            Tag="{x:Bind}" Click="SelectReviewSection_Click"
+                                                            IsEnabled="{x:Bind HasSelectableItems, Mode=OneWay}"
+                                                            AutomationProperties.HelpText="{x:Bind Title, Mode=OneWay}" />
+                                                </Grid>
                                             </DataTemplate>
                                             <DataTemplate x:Key="ReviewGroupTemplate" x:DataType="vm:ImportReviewRow">
                                                 <Grid Padding="8,8,8,4" ColumnSpacing="8">
@@ -448,7 +458,8 @@
                                                 GridTemplate="{StaticResource ReviewGridRowTemplate}" />
                                         </ListView.ItemTemplateSelector>
                                     </ListView>
-                                    <StackPanel Grid.Column="1" MinWidth="124" MaxWidth="180" VerticalAlignment="Top" Spacing="8" Margin="0,16,0,0">
+                                    <StackPanel x:Name="ReviewJumpPanel" Grid.Column="1" MinWidth="124" MaxWidth="180"
+                                                Visibility="Collapsed" VerticalAlignment="Top" Spacing="8" Margin="0,16,0,0">
                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" MinHeight="36"
                                                 Content="{x:Bind ViewModel.UnidentifiedNavigationText, Mode=OneWay}"
                                                 Tag="Unidentified" Click="JumpToReviewSection_Click" />
@@ -466,7 +477,35 @@
 
         </Grid>
 
-        <Grid Grid.Row="3" Padding="0,8,0,16" ColumnSpacing="12"
+        <!-- Shares the workspace cell, so it can never spill past that card's bounds.
+             Staying in the page's visual tree also keeps the page-level Drop handler
+             covering it, which a Popup or Flyout would not. -->
+        <Grid x:Name="AddFilesOverlay" Grid.Row="2"
+              Visibility="Collapsed" Background="Transparent"
+              AutomationProperties.AutomationId="ImportAddFilesOverlay"
+              SizeChanged="AddFilesOverlay_SizeChanged"
+              Tapped="AddFilesOverlay_Tapped">
+            <Grid.KeyboardAccelerators>
+                <KeyboardAccelerator Key="Escape" Invoked="AddFilesOverlayEscape_Invoked" />
+            </Grid.KeyboardAccelerators>
+            <!-- Left margin is set in code-behind so the card sits directly above
+                 the button that opened it; bottom margin is the gap to that button. -->
+            <Border x:Name="AddFilesOverlayCard" x:Uid="Import_AddFilesOverlayCard"
+                    MaxWidth="560" MaxHeight="320" Margin="0,0,0,8" Padding="24"
+                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    IsTabStop="True" UseSystemFocusVisuals="False"
+                    CornerRadius="12" BorderThickness="1"
+                    BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
+                    Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
+                    SizeChanged="AddFilesOverlayCard_SizeChanged"
+                    Tapped="AddFilesOverlayCard_Tapped">
+                <controls:ImportDropZoneContent x:Name="AddFilesOverlayContent"
+                                                UseBoxArtwork="True"
+                                                PickFilesRequested="PickFiles_Click" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="3" Padding="0,8,0,16" ColumnSpacing="8"
               Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -474,26 +513,31 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button Command="{x:Bind ViewModel.ClearCommand}" IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
-                <TextBlock x:Uid="Import_ClearLabel" />
+            <Button x:Name="AddFilesButton" x:Uid="Import_AddFiles"
+                    HorizontalAlignment="Left" Click="ShowAddFilesOverlay_Click" />
+            <Button Grid.Column="1" x:Uid="Import_More">
+                <Button.Flyout>
+                    <MenuFlyout Placement="TopEdgeAlignedLeft">
+                        <MenuFlyoutItem x:Uid="Import_More_Undo"
+                                        Command="{x:Bind ViewModel.UndoManualAssignmentCommand}"
+                                        Visibility="{x:Bind ViewModel.CanUndoManualAssignment, Mode=OneWay}" />
+                        <MenuFlyoutItem x:Uid="Import_More_Clear"
+                                        Command="{x:Bind ViewModel.ClearCommand}"
+                                        IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}" />
+                    </MenuFlyout>
+                </Button.Flyout>
             </Button>
-            <Button Grid.Column="1" Command="{x:Bind ViewModel.UndoManualAssignmentCommand}"
-                    Visibility="{x:Bind ViewModel.CanUndoManualAssignment, Mode=OneWay}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE7A7;" />
-                    <TextBlock x:Uid="Import_UndoLabel" />
-                </StackPanel>
-            </Button>
-            <Button Grid.Column="2" x:Uid="Import_AddFiles" HorizontalAlignment="Left" Click="PickFiles_Click" />
-            <TextBlock Grid.Column="2" Visibility="Collapsed" x:Uid="Import_KeepDropping" VerticalAlignment="Center"
-                       Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <Button Grid.Column="3" Style="{StaticResource AccentButtonStyle}"
                     Command="{x:Bind ViewModel.ConfirmImportCommand}"
-                    IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}">
+                    IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.ImportActionText, Mode=OneWay}"
+                    AutomationProperties.HelpText="{x:Bind ViewModel.ImportActionText, Mode=OneWay}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon FontSize="14" Glyph="&#xE896;" />
-                    <TextBlock Text="{x:Bind ViewModel.ImportActionText, Mode=OneWay}" />
+                    <TextBlock x:Name="ImportFullActionText" Visibility="Collapsed"
+                               Text="{x:Bind ViewModel.ImportActionText, Mode=OneWay}" />
+                    <TextBlock x:Name="ImportCompactActionText"
+                               Text="{x:Bind ViewModel.ImportCompactActionText, Mode=OneWay}" />
                 </StackPanel>
             </Button>
         </Grid>

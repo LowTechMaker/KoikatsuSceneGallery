@@ -1,7 +1,7 @@
 <UserControl x:Class="KoikatsuSceneGallery.Controls.LibraryBrowser"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:local="using:KoikatsuSceneGallery.Controls" xmlns:models="using:KoikatsuSceneGallery.Models">
+ xmlns:local="using:KoikatsuSceneGallery.Controls" xmlns:models="using:KoikatsuSceneGallery.Models" xmlns:toolkit="using:CommunityToolkit.WinUI.Controls">
  <UserControl.KeyboardAccelerators>
   <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
   <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="First_Invoked" />
@@ -15,17 +15,45 @@
    <StackPanel Spacing="4">
     <Button x:Name="BackButton" Visibility="Collapsed" x:Uid="SceneGallery_GroupBack" Click="Back_Click" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" />
     <TextBlock x:Name="Heading" Style="{StaticResource TitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
-    <TextBlock x:Name="ResultCount" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
    </StackPanel>
+   <!-- The count sits with the controls that change it rather than under the
+        title: on its own line below a heading it was the loudest thing on a
+        page whose subject is the cards. -->
    <StackPanel x:Name="SortControls" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-    <ComboBox x:Name="SortBox" x:Uid="SceneGallery_Sort" Width="150" SelectedIndex="0" SelectionChanged="Sort_Changed">
-     <ComboBoxItem x:Uid="Gallery_SortName"/><ComboBoxItem x:Uid="Gallery_SortDateModified"/>
-     <ComboBoxItem x:Uid="Gallery_SortFileSize"/><ComboBoxItem x:Uid="Gallery_SortShuffle"/>
-    </ComboBox>
-    <ToggleButton x:Name="DirectionButton" x:Uid="Gallery_SortDirection" Width="36" Click="Direction_Click"><FontIcon x:Name="DirectionIcon" Glyph="&#xE74A;" FontSize="14"/></ToggleButton>
-    <ComboBox x:Name="SizeBox" x:Uid="Gallery_ThumbnailSizeComboBox" Width="132" SelectedIndex="1" SelectionChanged="Size_Changed">
-     <ComboBoxItem x:Uid="Gallery_ThumbnailSizeSmall"/><ComboBoxItem x:Uid="Gallery_ThumbnailSizeMedium"/><ComboBoxItem x:Uid="Gallery_ThumbnailSizeLarge"/>
-    </ComboBox>
+    <TextBlock x:Name="ResultCount" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
+    <!-- Tag, not index: SortOption gains values over time and a silent
+         off-by-one here would sort by the wrong column with no compile error. -->
+    <!-- Order is one decision, so it is one control. A field ComboBox beside a
+         direction toggle made the reader combine two controls to learn what
+         the order is, and the toggle carried the accent fill that both Fluent
+         and HIG reserve for a view's single primary action - which sort
+         direction is not. -->
+    <DropDownButton x:Name="SortButton" x:Uid="SceneGallery_Sort" AutomationProperties.AutomationId="GallerySortButton">
+     <StackPanel Orientation="Horizontal" Spacing="8">
+      <FontIcon x:Name="DirectionIcon" Glyph="&#xE74B;" FontSize="14"/>
+      <TextBlock x:Name="SortLabel"/>
+     </StackPanel>
+     <DropDownButton.Flyout>
+      <MenuFlyout Placement="BottomEdgeAlignedRight">
+       <RadioMenuFlyoutItem x:Name="SortByName" x:Uid="Gallery_SortName" Tag="Name" GroupName="sort" Click="SortField_Click"/>
+       <RadioMenuFlyoutItem x:Name="SortByDateModified" x:Uid="Gallery_SortDateModified" Tag="DateModified" GroupName="sort" Click="SortField_Click"/>
+       <RadioMenuFlyoutItem x:Name="SortByDateAdded" x:Uid="Gallery_SortDateAdded" Tag="DateAdded" GroupName="sort" Click="SortField_Click"/>
+       <RadioMenuFlyoutItem x:Name="SortByFileSize" x:Uid="Gallery_SortFileSize" Tag="FileSize" GroupName="sort" Click="SortField_Click"/>
+       <RadioMenuFlyoutItem x:Name="SortByShuffle" x:Uid="Gallery_SortShuffle" Tag="Shuffle" GroupName="sort" Click="SortField_Click"/>
+       <MenuFlyoutSeparator/>
+       <RadioMenuFlyoutItem x:Name="SortDescendingItem" x:Uid="Gallery_SortDescending" Tag="Descending" GroupName="direction" Click="SortDirection_Click"/>
+       <RadioMenuFlyoutItem x:Name="SortAscendingItem" x:Uid="Gallery_SortAscending" Tag="Ascending" GroupName="direction" Click="SortDirection_Click"/>
+      </MenuFlyout>
+     </DropDownButton.Flyout>
+    </DropDownButton>
+    <!-- Three exclusive values: a segmented control shows all of them and takes
+         one click, where a ComboBox hides two thirds of the choice behind a
+         menu. Both design systems draw the line at about five. -->
+    <toolkit:Segmented x:Name="SizeSegmented" x:Uid="Gallery_ThumbnailSizeComboBox" AutomationProperties.AutomationId="GallerySizeSegmented" SelectedIndex="1" SelectionChanged="Size_Changed">
+     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeSmall"/>
+     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeMedium"/>
+     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeLarge"/>
+    </toolkit:Segmented>
    </StackPanel>
   </Grid>
   <StackPanel Grid.Row="1" Spacing="8">
@@ -34,10 +62,15 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <AutoSuggestBox x:Name="SearchBox" x:Uid="SceneGallery_Search" QueryIcon="Find" TextChanged="Search_Changed" QuerySubmitted="Search_Submitted" AutomationProperties.AutomationId="GallerySearchBox"/>
     <StackPanel x:Name="SearchActions" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-     <Button x:Name="FilterButton"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE71C;" FontSize="14"/><TextBlock x:Name="FilterLabel"/></StackPanel>
+     <!-- The active count is a badge rather than part of the label: it is a
+          state of the control, not a different control, and it stops the label
+          changing width as filters come and go. -->
+     <Button x:Name="FilterButton" AutomationProperties.AutomationId="GalleryFilterButton"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE71C;" FontSize="14"/><TextBlock x:Name="FilterLabel"/><InfoBadge x:Name="FilterBadge" Visibility="Collapsed" VerticalAlignment="Center"/></StackPanel>
       <Button.Flyout><Flyout><StackPanel Width="280" Spacing="16">
        <TextBlock x:Uid="SceneGallery_FilterHeading" Style="{StaticResource BodyStrongTextBlockStyle}"/>
        <StackPanel x:Name="SpecificFilters" Spacing="12"/>
+       <TextBlock x:Name="ResolutionFilterStatus" Visibility="Collapsed" TextWrapping="Wrap"
+                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
        <TextBlock x:Uid="SceneGallery_FilterHint" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
        <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" Padding="0"/>
       </StackPanel></Flyout></Button.Flyout>
@@ -88,5 +121,8 @@
    <Button x:Name="ClearButton" Click="Clear_Click" HorizontalAlignment="Center"/>
    <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" HorizontalAlignment="Center"/>
   </StackPanel>
+  <!-- Last child, so the collapse snapshots draw over the grid. Shares the
+       grid's coordinate space, which a Popup would not. -->
+  <Canvas x:Name="CollapseOverlay" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"/>
  </Grid>
 </UserControl>

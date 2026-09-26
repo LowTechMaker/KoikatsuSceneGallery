@@ -15,6 +15,9 @@ internal static class DragFilePayload
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (paths.Length == 0) { e.Cancel = true; return; }
+        // Every drag-out in the app funnels through here, so record mode needs
+        // exactly this one hook rather than six.
+        App.Services.GetService<UsageRecordService>()?.Record(paths, operation);
         e.Data.RequestedOperation = DataPackageOperation.Copy;
         e.Data.SetDataProvider(StandardDataFormats.StorageItems, async request =>
         {

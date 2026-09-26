@@ -23,6 +23,7 @@ public class SceneCardService : CardScanService<SceneCard>
                 FilePath = info.FullName,
                 FileSize = info.Length,
                 DateModified = info.LastWriteTime,
+                DateCreated = info.CreationTime,
                 Width = width,
                 Height = height
             };

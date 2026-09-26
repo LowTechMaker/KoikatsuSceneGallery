@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Services;
@@ -10,8 +11,14 @@ public class SettingsService
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public SettingsService()
+        : this(Path.Combine(AppPaths.LocalFolder, ConfigFileName))
     {
-        _configPath = Path.Combine(AppPaths.LocalFolder, ConfigFileName);
+    }
+
+    /// <summary>For tests: reads and writes <paramref name="configPath"/> instead of the user's config.</summary>
+    internal SettingsService(string configPath)
+    {
+        _configPath = configPath;
     }
 
     public async Task<ConfigData> LoadConfigAsync()
@@ -65,6 +72,28 @@ public class SettingsService
         public List<string> AllowedResolutions { get; set; } = ["320x180", "1600x900"];
         public bool ShowFileNames { get; set; } = true;
         public bool ScrollToTopOnSort { get; set; } = true;
+        public bool DiscoverySpreadEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Deals the discovery page as a fixed hand of cards instead of an
+        /// endless scrolling round. Off by default: the endless round is the
+        /// behaviour the page was built around.
+        /// </summary>
+        public bool PokerHandEnabled { get; set; }
+
+        /// <summary>
+        /// Records the origin page of every card dragged or copied out of the
+        /// app. Off by default: it is a deliberate act of note-keeping, not a
+        /// default behaviour.
+        /// </summary>
+        public bool RecordModeEnabled { get; set; }
+
+        /// <summary>
+        /// Animates a group's cards back onto their stacked tile when it
+        /// closes. On by default; purely visual, and the system's own
+        /// animation setting is honoured on top of it.
+        /// </summary>
+        public bool GroupCollapseAnimationEnabled { get; set; } = true;
 
         /// <summary>
         /// Off-screen render buffer for the gallery, as a multiple of the
@@ -104,7 +133,6 @@ public class SettingsService
         public bool CoordinateResolutionFilterEnabled { get; set; } = false;
         public List<string> CoordinateAllowedResolutions { get; set; } = ["252x352"];
 
-        public List<string> ScreenshotFolderPaths { get; set; } = [];
 
         /// <summary>
         /// Relative subfolder path inserted between the library root and the author
@@ -132,6 +160,14 @@ public class SettingsService
         public bool AuthorLiveTilesEnabled { get; set; } = true;
 
         public List<string> HiddenNavItems { get; set; } = [];
+
+        /// <summary>
+        /// The platform the galleries are filtered to: a provider id, or empty
+        /// for all of them. Values written by the previous online/local switch
+        /// ("All", "ExcludeLocal", "LocalOnly") are still read; see
+        /// <see cref="CardOriginSelection.Parse"/>.
+        /// </summary>
+        public string BrowseOrigin { get; set; } = "";
 
         // ── Folder naming (OCD) ─────────────────────────────────────
         public string AuthorFolderFormat { get; set; } = "{name} ({id})";

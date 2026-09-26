@@ -5,7 +5,7 @@ namespace KoikatsuSceneGallery.IntegrationTests;
 public sealed class XamlCollectionHostTests
 {
     [Fact]
-    public async Task RealXamlCollectionAndGalleryBaseSupportRefreshSortingAndReuseWithoutWindow()
+    public async Task RealXamlCollectionsGalleryNavigationAndTagCloudAnimationLifecycle()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "XamlHost", "KoikatsuSceneGallery.XamlTestHost.exe");
         Assert.True(File.Exists(path), "The XAML test host must be built and copied with the integration tests.");
@@ -47,6 +47,12 @@ public sealed class XamlCollectionHostTests
             Assert.Contains("PASS: detail view random and removal candidates", output);
             Assert.Contains("PASS: detail view empty single and mismatched type", output);
             Assert.Contains("PASS: detail view scope selection", output);
+            if (!output.Contains("PASS: tag cloud reduced motion callbacks", StringComparison.Ordinal))
+            {
+                Assert.Contains("PASS: tag cloud reveal handoff and return callbacks", output);
+                Assert.Contains("PASS: tag cloud finite transition cancellation and reset", output);
+                Assert.Contains("PASS: tag cloud dense return has bounded duration", output);
+            }
         }
         finally
         {

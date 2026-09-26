@@ -11,7 +11,6 @@ public sealed partial class LibraryBrowser
 {
     private ComboBox? _metadataSex, _metadataPersonality, _metadataGuid;
     private ComboBox? _sourceFilterCombo;
-    private ComboBox? _originFilterCombo;
     private bool _updatingMetadata;
     private bool _scopedMetadataSubscribed;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _metadataOptionsTimer;

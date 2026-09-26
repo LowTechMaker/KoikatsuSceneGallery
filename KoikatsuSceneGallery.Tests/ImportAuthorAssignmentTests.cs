@@ -118,4 +118,33 @@ public sealed class ImportAuthorAssignmentTests
         history.Capture(ManualAssignmentSource.FetchFailed, [item]);
         Assert.Equal("current", history.TakeUndo()!.Items[0].AuthorId);
     }
+
+    [Fact]
+    public void RetainOnlyKeepsUndoAndBaselineForRemainingItems()
+    {
+        var imported = Item();
+        var remaining = Item(null);
+        var history = new ImportManualAssignmentHistory();
+        history.RememberBaseline(imported);
+        history.RememberBaseline(remaining);
+        imported.AuthorId = "edited-imported";
+        remaining.AuthorId = "edited-remaining";
+        history.Capture(ManualAssignmentSource.Unknown, [imported, remaining]);
+
+        Assert.True(history.RetainOnly([remaining]));
+        var undo = history.TakeUndo()!;
+        Assert.Same(remaining, Assert.Single(undo.Items).Item);
+        Assert.Equal("old", undo.Items[0].AuthorId);
+
+        remaining.AuthorId = "later-remaining";
+        history.Capture(ManualAssignmentSource.Unknown, [remaining]);
+        Assert.Equal("old", Assert.Single(history.TakeUndo()!.Items).AuthorId);
+        imported.AuthorId = "later-imported";
+        history.Capture(ManualAssignmentSource.Unknown, [imported]);
+        Assert.Equal("later-imported", Assert.Single(history.TakeUndo()!.Items).AuthorId);
+
+        history.Capture(ManualAssignmentSource.Unknown, [remaining]);
+        Assert.False(history.RetainOnly([]));
+        Assert.Null(history.TakeUndo());
+    }
 }

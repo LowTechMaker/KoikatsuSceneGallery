@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Xaml.Controls;
 
 namespace KoikatsuSceneGallery.Helpers;
@@ -50,6 +51,32 @@ internal static class AuthorTileLayout
         grid.DispatcherQueue.TryEnqueue(() => ApplyCore(grid));
     }
 
+    /// <summary>
+    /// How many times one grid may be re-sized inside a single burst before the
+    /// current cell size is kept.
+    /// </summary>
+    /// <remarks>
+    /// This runs from <c>SizeChanged</c>, and setting <see cref="ItemsWrapGrid.ItemHeight"/>
+    /// changes the content height — which can bring the vertical scroll bar in
+    /// or out, which changes the panel's width, which changes the cell size
+    /// again. Two widths can trade places indefinitely, and XAML answers a
+    /// layout that never settles with <c>E_FAIL</c> out of the native measure;
+    /// it stows that error and later turns it into a fail-fast the app cannot
+    /// catch. A tile a few pixels off its ideal width is better than that.
+    /// </remarks>
+    private const int MaxPassesPerBurst = 4;
+
+    private static readonly TimeSpan BurstWindow = TimeSpan.FromMilliseconds(500);
+
+    private sealed class Churn
+    {
+        public int Passes;
+        public DateTime WindowStart;
+        public bool Reported;
+    }
+
+    private static readonly ConditionalWeakTable<GridView, Churn> Bursts = new();
+
     private static void ApplyCore(GridView grid)
     {
         // The panel's own width is the viewport: unlike the GridView's, it
@@ -57,6 +84,8 @@ internal static class AuthorTileLayout
         // actually fits instead of wrapping one tile early.
         if (grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
             return;
+
+        if (!TryEnterBurst(grid)) return;
 
         var available = panel.ActualWidth;
 
@@ -71,7 +100,43 @@ internal static class AuthorTileLayout
         var cellWidth = (available / columns) - 0.5;
         var tileHeight = Math.Clamp((cellWidth - CellOverhead) / AspectRatio, MinTileHeight, MaxTileHeight);
 
-        panel.ItemWidth = cellWidth;
-        panel.ItemHeight = Math.Round(tileHeight) + CellOverhead;
+        var cellHeight = Math.Round(tileHeight) + CellOverhead;
+
+        // Assigning the value the panel already holds would be harmless, but
+        // saying so here makes the settling condition explicit rather than
+        // leaving it to the property system.
+        if (Changed(panel.ItemWidth, cellWidth)) panel.ItemWidth = cellWidth;
+        if (Changed(panel.ItemHeight, cellHeight)) panel.ItemHeight = cellHeight;
+    }
+
+    /// <summary>Unset reads as NaN, which compares false against everything.</summary>
+    private static bool Changed(double current, double wanted)
+        => double.IsNaN(current) || Math.Abs(current - wanted) > 0.5;
+
+    /// <summary>
+    /// False once a grid has been re-sized <see cref="MaxPassesPerBurst"/> times
+    /// inside <see cref="BurstWindow"/>, which means the size is not converging.
+    /// </summary>
+    private static bool TryEnterBurst(GridView grid)
+    {
+        var churn = Bursts.GetValue(grid, _ => new Churn());
+        var now = DateTime.UtcNow;
+        if (now - churn.WindowStart > BurstWindow)
+        {
+            churn.WindowStart = now;
+            churn.Passes = 0;
+            churn.Reported = false;
+        }
+
+        if (++churn.Passes <= MaxPassesPerBurst) return true;
+
+        if (!churn.Reported)
+        {
+            churn.Reported = true;
+            CrashLog.Write("AuthorTileLayout.Churn", new InvalidOperationException(
+                $"Cell size did not settle: {churn.Passes} passes within {BurstWindow.TotalMilliseconds:0}ms."));
+        }
+
+        return false;
     }
 }

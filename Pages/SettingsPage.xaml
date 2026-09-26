@@ -97,6 +97,50 @@
                         </controls:SettingsCard>
 
                         <controls:SettingsCard
+                            x:Uid="SC_DiscoverySpread"
+                            AutomationProperties.AutomationId="SettingsDiscoverySpreadCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE8B3;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsDiscoverySpreadToggle"
+                                IsOn="{x:Bind ViewModel.DiscoverySpreadEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
+                            x:Uid="SC_PokerHand"
+                            AutomationProperties.AutomationId="SettingsPokerHandCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE8EF;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsPokerHandToggle"
+                                IsOn="{x:Bind ViewModel.PokerHandEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
+                            x:Uid="SC_RecordMode"
+                            AutomationProperties.AutomationId="SettingsRecordModeCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE7C8;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsRecordModeToggle"
+                                IsOn="{x:Bind ViewModel.RecordModeEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
+                            x:Uid="SC_GroupCollapseAnimation"
+                            AutomationProperties.AutomationId="SettingsGroupCollapseAnimationCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE8B9;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsGroupCollapseAnimationToggle"
+                                IsOn="{x:Bind ViewModel.GroupCollapseAnimationEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
                             x:Uid="SC_AuthorLiveTiles"
                             AutomationProperties.AutomationId="SettingsAuthorLiveTilesCard">
                             <controls:SettingsCard.HeaderIcon>
@@ -129,9 +173,6 @@
                                 <CheckBox
                                     x:Uid="Settings_ShowCoordinatesNav"
                                     IsChecked="{x:Bind ViewModel.ShowCoordinatesNav, Mode=TwoWay}" />
-                                <CheckBox
-                                    x:Uid="Settings_ShowScreenshotsNav"
-                                    IsChecked="{x:Bind ViewModel.ShowScreenshotsNav, Mode=TwoWay}" />
                             </appControls:WrapPanel>
                         </controls:SettingsCard>
 
@@ -330,55 +371,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Screenshot Folders -->
-                        <Border Padding="16" CornerRadius="8"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="8">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                        <TextBlock x:Uid="Settings_ScreenshotFoldersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                        <TextBlock Text="{x:Bind ViewModel.ScreenshotFolderPaths.Count, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Command="{x:Bind ViewModel.AddScreenshotFolderCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon FontSize="16" Glyph="&#xE8DA;" />
-                                            <TextBlock x:Uid="Settings_AddFolder" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                                <TextBlock x:Uid="Settings_ScreenshotFoldersDesc" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <ListView
-                                    x:Name="ScreenshotFolderListView"
-                                    ItemsSource="{x:Bind ViewModel.ScreenshotFolderPaths, Mode=OneWay}"
-                                    ItemContainerStyle="{StaticResource SettingsListItemStyle}"
-                                    ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                    ScrollViewer.VerticalScrollMode="Disabled"
-                                    SelectionMode="None">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Grid Padding="0,2" ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
-                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
-                                                <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveScreenshotFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                                                </Button>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
-                                <TextBlock x:Uid="Settings_NoFolders" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind ViewModel.HasNoScreenshotFolders, Mode=OneWay}" />
-                            </StackPanel>
-                        </Border>
 
                     </StackPanel>
                 </ScrollViewer>

@@ -51,7 +51,9 @@ public static class GalleryGrouping
             if (link.PixivArtworkId is { } pixiv)
                 return $"post:pixiv:{pixiv}";
             if (link.BepisDbId is { } bepis)
-                return $"post:bepisdb:{bepis}";
+                // Canonical, not as written: the plugin strips the padding when
+                // it parses the same name, and so does the artwork sidecar.
+                return $"post:bepisdb:{FilenameLinkParser.CanonicalBepisDbId(bepis)}";
         }
         var folder = Path.GetDirectoryName(filePath);
         if (string.IsNullOrEmpty(folder)) return $"file:{filePath}";

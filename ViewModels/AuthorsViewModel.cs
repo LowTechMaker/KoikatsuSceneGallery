@@ -114,6 +114,19 @@ public partial class AuthorsViewModel : ObservableObject
     /// </summary>
     public bool HasProviderTabs => ProviderTabs.Count > 0;
 
+    /// <summary>
+    /// The platforms this page can list authors for.
+    /// </summary>
+    /// <remarks>
+    /// Read from the installed providers rather than from whether any author
+    /// was actually found: having authors is a capability of the plugin, and a
+    /// platform with none yet is still the platform whose authors this page
+    /// would show. Waiting for the scan would make the entry appear late on
+    /// every launch.
+    /// </remarks>
+    public IReadOnlyList<string> ProvidersWithAuthors =>
+        [.. ProviderTabs.Select(tab => tab.ProviderId)];
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool HasAuthors { get; set; }

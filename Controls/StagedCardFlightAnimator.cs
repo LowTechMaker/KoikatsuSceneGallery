@@ -23,9 +23,10 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed class StagedCardFlightAnimator
 {
-    private static readonly TimeSpan FlyDuration = TimeSpan.FromMilliseconds(260);
-    private static readonly TimeSpan ReturnDuration = TimeSpan.FromMilliseconds(180);
-    private static readonly TimeSpan Stagger = TimeSpan.FromMilliseconds(18);
+    // Shared with the other card animations so the app keeps one tempo.
+    private static readonly TimeSpan FlyDuration = CardMotion.FlyDuration;
+    private static readonly TimeSpan ReturnDuration = CardMotion.ReturnDuration;
+    private static readonly TimeSpan Stagger = CardMotion.Stagger;
 
     private readonly FrameworkElement _strip;
     private readonly FrameworkElement _folder;
@@ -39,8 +40,7 @@ internal sealed class StagedCardFlightAnimator
         _folder = folder;
     }
 
-    private static bool AnimationsEnabled
-        => new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
+    private static bool AnimationsEnabled => CardMotion.AnimationsEnabled;
 
     /// <summary>Sends every visible thumbnail into the folder.</summary>
     public void FlyIn(IReadOnlyList<FrameworkElement> thumbnails)
@@ -54,9 +54,7 @@ internal sealed class StagedCardFlightAnimator
         }
 
         var compositor = ElementCompositionPreview.GetElementVisual(_folder).Compositor;
-        _easing ??= compositor.CreateCubicBezierEasingFunction(
-            new Vector2(0.4f, 0f),
-            new Vector2(0.2f, 1f));
+        _easing ??= CardMotion.Ease(compositor);
 
         for (var i = 0; i < thumbnails.Count; i++)
         {

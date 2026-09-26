@@ -53,6 +53,10 @@ public sealed partial class AuthorDetailPage : Page
     {
         if (_browsersInitialized) return;
         _browsersInitialized = true;
+        // The tabs above already say 場景 / 角色 / 服裝.
+        ScenesBrowser.ShowKindHeading = false;
+        CharactersBrowser.ShowKindHeading = false;
+        CoordinatesBrowser.ShowKindHeading = false;
         ScenesBrowser.Initialize(LibraryKind.Scenes, ViewModel.Scenes, ViewModel.Author?.Name);
         CharactersBrowser.Initialize(LibraryKind.Characters, ViewModel.Characters, ViewModel.Author?.Name);
         CoordinatesBrowser.Initialize(LibraryKind.Coordinates, ViewModel.Coordinates, ViewModel.Author?.Name);
@@ -86,7 +90,7 @@ public sealed partial class AuthorDetailPage : Page
             {
                 ViewModel.Load(navigationParameter.Summary);
                 UpdateTabPresence();
-                SelectTab(OverviewTabIndex);
+                SelectTab(ViewModel.ShowOverviewTab ? OverviewTabIndex : FirstPresentTabIndex());
                 RequestOverviewThumbnails();
             }
             else
@@ -652,6 +656,9 @@ public sealed partial class AuthorDetailPage : Page
 
     private void UpdateTabPresence()
     {
+        // Removed first: SetTabPresence inserts by counting the tabs already
+        // present, so the overview's own presence must settle before the rest.
+        SetTabPresence(OverviewPivotItem, ViewModel.ShowOverviewTab);
         SetTabPresence(ScenesPivotItem, ViewModel.HasScenes);
         SetTabPresence(CharactersPivotItem, ViewModel.HasCharacters);
         SetTabPresence(CoordinatesPivotItem, ViewModel.HasCoordinates);
@@ -687,6 +694,19 @@ public sealed partial class AuthorDetailPage : Page
         }
     }
 
+    /// <summary>
+    /// The logical index of the first tab still present, for the single-kind
+    /// author where the overview has been removed.
+    /// </summary>
+    private int FirstPresentTabIndex()
+    {
+        if (TabPivot.Items.Contains(ScenesPivotItem)) return ScenesTabIndex;
+        if (TabPivot.Items.Contains(CharactersPivotItem)) return CharactersTabIndex;
+        if (TabPivot.Items.Contains(CoordinatesPivotItem)) return CoordinatesTabIndex;
+        if (TabPivot.Items.Contains(PostsPivotItem)) return PostsTabIndex;
+        return OverviewTabIndex;
+    }
+
     private void SelectTab(int logicalTabIndex)
     {
         var tab = logicalTabIndex switch
@@ -699,9 +719,11 @@ public sealed partial class AuthorDetailPage : Page
             _ => OverviewPivotItem,
         };
 
+        // The overview is no longer guaranteed to be present, so fall back to
+        // whichever tab survived rather than to a removed item.
         TabPivot.SelectedItem = TabPivot.Items.Contains(tab)
             ? tab
-            : OverviewPivotItem;
+            : TabPivot.Items.FirstOrDefault();
     }
 
 }

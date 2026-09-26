@@ -94,96 +94,145 @@ public sealed class AuthorPostService
 
         var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
 
-        return await Task.Run(() =>
+        return await Task.Run(
+            () => Scan(config, authorProvider, authorKey.ProviderId, key => key == authorKey, deleteOrphans: true, ct),
+            ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Every author of one platform in a single walk of the library — the
+    /// same rules as <see cref="ScanAuthorPostDataAsync"/>, so a bulk re-fetch
+    /// finds exactly the posts the author pages show.
+    /// </summary>
+    /// <remarks>
+    /// Read-only, unlike the per-author scan: that one also deletes sidecars
+    /// whose files are all gone, and a scan whose purpose is to show the user
+    /// what a run would do must not already have changed anything.
+    /// </remarks>
+    public async Task<AuthorPostScanResult> ScanProviderPostDataAsync(
+        string providerId, CancellationToken ct)
+    {
+        var authorProvider = FindAuthorProvider(providerId);
+        if (authorProvider is null
+            || LocalSourceIdentity.IsLocal(providerId)
+            || FindProvider(providerId) is null)
         {
-            var posts = new Dictionary<string, PostAccumulator>(StringComparer.OrdinalIgnoreCase);
-            var scannedImages = new List<UnassignedAuthorImage>();
+            return new([], []);
+        }
 
-            var allRoots = config.FolderPaths
-                .Concat(config.CharacterFolderPaths)
-                .Concat(config.CoordinateFolderPaths)
-                .Distinct(StringComparer.OrdinalIgnoreCase);
+        var config = await _settingsService.LoadConfigAsync().ConfigureAwait(false);
 
-            var subfolder = config.ImportSubfolder.Trim();
-            var providerScopes = _importProviders
-                .Where(p => p.ProviderId.Equals(authorKey.ProviderId, StringComparison.OrdinalIgnoreCase))
-                .Select(GetProviderScope)
-                .Append((Folder: "", UsesRatingFolders: true))
-                .DistinctBy(s => s.Folder, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var gameVersionFolders = new[] { config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, "" };
-            var ratingFolders = new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName };
+        return await Task.Run(
+            () => Scan(
+                config,
+                authorProvider,
+                providerId,
+                key => key.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase),
+                deleteOrphans: false,
+                ct),
+            ct).ConfigureAwait(false);
+    }
 
-            foreach (var root in allRoots)
+    private AuthorPostScanResult Scan(
+        SettingsService.ConfigData config,
+        IFolderAuthorProvider authorProvider,
+        string providerId,
+        Func<AuthorKey, bool> include,
+        bool deleteOrphans,
+        CancellationToken ct)
+    {
+        var posts = new Dictionary<string, PostAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var scannedImages = new List<UnassignedAuthorImage>();
+        // Two scopes can name the same folder (the provider's own and the
+        // empty fallback); scanning it twice would count its files twice.
+        var visitedAuthorDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var allRoots = config.FolderPaths
+            .Concat(config.CharacterFolderPaths)
+            .Concat(config.CoordinateFolderPaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        var subfolder = config.ImportSubfolder.Trim();
+        var providerScopes = _importProviders
+            .Where(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase))
+            .Select(GetProviderScope)
+            .Append((Folder: "", UsesRatingFolders: true))
+            .DistinctBy(s => s.Folder, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var gameVersionFolders = new[] { config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, "" };
+        var ratingFolders = new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName };
+
+        foreach (var root in allRoots)
+        {
+            if (!Directory.Exists(root)) continue;
+
+            foreach (var providerScope in providerScopes)
             {
-                if (!Directory.Exists(root)) continue;
-
-                foreach (var providerScope in providerScopes)
+                foreach (var gvFolder in gameVersionFolders)
                 {
-                    foreach (var gvFolder in gameVersionFolders)
+                    foreach (var ratingFolder in providerScope.UsesRatingFolders ? ratingFolders : [""])
                     {
-                        foreach (var ratingFolder in providerScope.UsesRatingFolders ? ratingFolders : [""])
+                        var ratingDir = BuildPath(root, subfolder, providerScope.Folder, gvFolder, ratingFolder);
+                        if (!Directory.Exists(ratingDir)) continue;
+
+                        try
                         {
-                            var ratingDir = BuildPath(root, subfolder, providerScope.Folder, gvFolder, ratingFolder);
-                            if (!Directory.Exists(ratingDir)) continue;
-
-                            try
+                            foreach (var authorDir in Directory.EnumerateDirectories(ratingDir))
                             {
-                                foreach (var authorDir in Directory.EnumerateDirectories(ratingDir))
-                                {
-                                    ct.ThrowIfCancellationRequested();
-                                    var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
-                                    if (parsed is null || parsed.Key != authorKey) continue;
+                                ct.ThrowIfCancellationRequested();
+                                var parsed = authorProvider.TryParseFolderName(Path.GetFileName(authorDir));
+                                if (parsed is null || !include(parsed.Key)) continue;
+                                if (!visitedAuthorDirectories.Add(Path.GetFullPath(authorDir))) continue;
 
-                                    ScanAuthorDirectory(authorDir, authorKey, posts, scannedImages, ct);
-                                }
+                                ScanAuthorDirectory(authorDir, parsed.Key, posts, scannedImages, deleteOrphans, ct);
                             }
-                            catch (OperationCanceledException) { throw; }
-                            catch (Exception ex) { _logger.LogError("AuthorPosts.ScanRatingDirectory", ex, ratingDir); }
                         }
+                        catch (OperationCanceledException) { throw; }
+                        catch (Exception ex) { _logger.LogError("AuthorPosts.ScanRatingDirectory", ex, ratingDir); }
                     }
                 }
             }
+        }
 
-            var result = new List<AuthorPost>(posts.Count);
-            foreach (var post in posts.Values)
+        var result = new List<AuthorPost>(posts.Count);
+        foreach (var post in posts.Values)
+        {
+            var artworkId = new ArtworkId(post.ProviderId, post.ArtworkId);
+            var provider = FindProvider(post.ProviderId);
+            var distinctPaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var metadata = post.Metadata;
+            result.Add(new AuthorPost
             {
-                var artworkId = new ArtworkId(post.ProviderId, post.ArtworkId);
-                var provider = FindProvider(post.ProviderId);
-                var distinctPaths = post.FilePaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                var metadata = post.Metadata;
-                result.Add(new AuthorPost
-                {
-                    ArtworkId = artworkId,
-                    ArtworkUrl = provider?.GetArtworkUrl(artworkId) ?? "",
-                    Title = metadata?.Title ?? post.Title,
-                    Description = metadata?.Description,
-                    Rating = metadata is null
-                        ? ContentRating.AllAges
-                        : (ContentRating)metadata.Rating,
-                    Tags = metadata?.Tags
-                        .Select(static tag => new ArtworkTag(tag.Name, tag.TranslatedName))
-                        .ToList(),
-                    IsDetailLoaded = metadata is not null,
-                    IsSaved = metadata is not null,
-                    LocalFileCount = distinctPaths.Count,
-                    LocalFilePaths = distinctPaths,
-                    AuthorDirectories = [.. post.AuthorDirectories],
-                });
-            }
+                ArtworkId = artworkId,
+                ArtworkUrl = provider?.GetArtworkUrl(artworkId) ?? "",
+                Title = metadata?.Title ?? post.Title,
+                Description = metadata?.Description,
+                Rating = metadata is null
+                    ? ContentRating.AllAges
+                    : (ContentRating)metadata.Rating,
+                Tags = metadata?.Tags
+                    .Select(static tag => new ArtworkTag(tag.Name, tag.TranslatedName))
+                    .ToList(),
+                IsDetailLoaded = metadata is not null,
+                IsSaved = metadata is not null,
+                LocalFileCount = distinctPaths.Count,
+                LocalFilePaths = distinctPaths,
+                AuthorDirectories = [.. post.AuthorDirectories],
+                MetadataFetchedAt = metadata?.FetchedAt,
+            });
+        }
 
-            result.Sort((a, b) => string.Compare(b.ArtworkId.Id, a.ArtworkId.Id, StringComparison.Ordinal));
-            var assignedPaths = new HashSet<string>(
-                posts.Values.SelectMany(static post => post.FilePaths),
-                StringComparer.OrdinalIgnoreCase);
-            var unassigned = scannedImages
-                .Where(image => !assignedPaths.Contains(image.FilePath))
-                .GroupBy(image => image.FilePath, StringComparer.OrdinalIgnoreCase)
-                .Select(static group => group.First())
-                .OrderBy(image => image.FileName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            return new AuthorPostScanResult(result, unassigned);
-        }, ct).ConfigureAwait(false);
+        result.Sort((a, b) => string.Compare(b.ArtworkId.Id, a.ArtworkId.Id, StringComparison.Ordinal));
+        var assignedPaths = new HashSet<string>(
+            posts.Values.SelectMany(static post => post.FilePaths),
+            StringComparer.OrdinalIgnoreCase);
+        var unassigned = scannedImages
+            .Where(image => !assignedPaths.Contains(image.FilePath))
+            .GroupBy(image => image.FilePath, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .OrderBy(image => image.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return new AuthorPostScanResult(result, unassigned);
     }
 
     /// <summary>
@@ -316,6 +365,52 @@ public sealed class AuthorPostService
         if (info is null)
             return null;
 
+        await WritePostMetadataAsync(post, info, ct).ConfigureAwait(false);
+        return info;
+    }
+
+    /// <summary>
+    /// Whether the platform can fetch its artworks again past its own cache,
+    /// which is what a bulk re-fetch needs.
+    /// </summary>
+    public bool CanRefreshArtworks(string providerId)
+        => FindProvider(providerId) is IArtworkMetadataRefresher;
+
+    /// <summary>
+    /// Fetches the artwork again past the plugin's cache and rewrites its
+    /// sidecars when it is found. For any other answer the existing sidecars
+    /// are left exactly as they were.
+    /// </summary>
+    public async Task<ArtworkRefreshStatus> RefreshArtworkDetailAsync(AuthorPost post, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(post);
+        if (FindProvider(post.ArtworkId.ProviderId) is not IArtworkMetadataRefresher refresher)
+            return ArtworkRefreshStatus.Failed;
+
+        var result = await refresher.RefreshArtworkAsync(post.ArtworkId, ct).ConfigureAwait(false);
+        if (result is not { Status: ArtworkRefreshStatus.Found, Info: { } info })
+            return result.Status == ArtworkRefreshStatus.Found ? ArtworkRefreshStatus.Failed : result.Status;
+
+        await WritePostMetadataAsync(post, info, ct).ConfigureAwait(false);
+        return ArtworkRefreshStatus.Found;
+    }
+
+    /// <summary>
+    /// Every sidecar path <see cref="RefreshArtworkDetailAsync"/> may write for
+    /// this post — a superset, which is what a backup taken before it needs.
+    /// </summary>
+    public IEnumerable<string> SidecarPathsFor(AuthorPost post)
+        => post.AuthorDirectories
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(directory => _postMetadataStore.GetSidecarPath(
+                directory, post.ArtworkId.ProviderId, post.ArtworkId.Id));
+
+    /// <summary>
+    /// Persists <paramref name="info"/> next to every local copy of the post,
+    /// naming the files each author folder holds.
+    /// </summary>
+    private async Task WritePostMetadataAsync(AuthorPost post, ArtworkInfo info, CancellationToken ct)
+    {
         foreach (var authorDirectory in post.AuthorDirectories
                      .Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -355,8 +450,6 @@ public sealed class AuthorPostService
                         info.ArtworkId.Id));
             }
         }
-
-        return info;
     }
 
     private void ScanAuthorDirectory(
@@ -364,6 +457,7 @@ public sealed class AuthorPostService
         AuthorKey authorKey,
         Dictionary<string, PostAccumulator> posts,
         List<UnassignedAuthorImage> scannedImages,
+        bool deleteOrphans,
         CancellationToken ct)
     {
         var providerId = authorKey.ProviderId;
@@ -456,7 +550,7 @@ public sealed class AuthorPostService
             _logger.LogError("AuthorPosts.ScanAuthorDirectories", ex, authorDir);
         }
 
-        ReconcileSidecars(authorDir, authorKey, posts, scannedFileNames, scanSucceeded, ct);
+        ReconcileSidecars(authorDir, authorKey, posts, scannedFileNames, scanSucceeded && deleteOrphans, ct);
     }
 
     private void ReconcileSidecars(

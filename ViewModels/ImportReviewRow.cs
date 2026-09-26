@@ -11,5 +11,12 @@ public sealed partial class ImportReviewRow(string key, ImportReviewRowKind kind
     [ObservableProperty] public partial string Description { get; set; } = string.Empty;
     [ObservableProperty] public partial IReadOnlyList<ImportItemReviewState> Items { get; set; } = [];
     public ImportItemReviewState? Item => Items.FirstOrDefault();
-    partial void OnItemsChanged(IReadOnlyList<ImportItemReviewState> value) => OnPropertyChanged(nameof(Item));
+    public bool HasSelectableItems => Items.Any(item => item.CanSelect);
+    partial void OnItemsChanged(IReadOnlyList<ImportItemReviewState> value)
+    {
+        OnPropertyChanged(nameof(Item));
+        RefreshSelectionAvailability();
+    }
+
+    public void RefreshSelectionAvailability() => OnPropertyChanged(nameof(HasSelectableItems));
 }

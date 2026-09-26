@@ -68,8 +68,11 @@ compare/
 /.ignore
 /.mcp.json
 /opencode.json
-/AGENTS.md
 /CLAUDE.md
 /.agents/
 /.codex/
-/docs/
+/docs/*
+# Versioned plugin engineering contracts; unrelated local work notes remain ignored.
+!/docs/plugin-conventions.md
+!/docs/plugin-architecture.md
+!/docs/plugin-refactor-handoff.md

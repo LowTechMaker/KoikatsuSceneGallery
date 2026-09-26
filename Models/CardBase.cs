@@ -8,6 +8,13 @@ public abstract partial class CardBase : ObservableObject
     public string FileName => System.IO.Path.GetFileName(FilePath);
     public long FileSize { get; init; }
     public DateTime DateModified { get; init; }
+
+    /// <summary>
+    /// When the file appeared in the library. Import moves files, so
+    /// <see cref="DateModified"/> keeps the original author's timestamp and
+    /// only the creation time tracks "when I added this".
+    /// </summary>
+    public DateTime DateCreated { get; init; }
     public int Width { get; init; }
     public int Height { get; init; }
     public string Resolution => $"{Width}x{Height}";
