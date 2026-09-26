@@ -1,6 +1,6 @@
 # 四插件重構整體交接
 
-交接版本 v2，2026-09-26。先讀 [架構與決策](plugin-architecture.md) 和 [工程規範](plugin-conventions.md)。
+交接版本 v3，2026-09-27。先讀 [架構與決策](plugin-architecture.md) 和 [工程規範](plugin-conventions.md)。
 
 ## 結果與責任
 
@@ -62,12 +62,23 @@ Fanbox 使用最終全工作區 gate 的正式 Release DLL 與最新宿主 x64 r
 ## 人工驗證與剩餘限制
 
 - 尚未執行真實 WebView2 登入保存、challenge 成功/timeout/cancel、age gate、idle 重啟、匯入中關閉，以及 SauceNao／Pixiv tag endpoint 的真實服務互動與宿主語言切換；離線 seams、原語測試與無導覽 native smoke 不能取代這些操作。
-- 未執行遠端 GitHub Packages restore／CI／Release。local-feed 成功不等同遠端 source mapping、token 權限已驗證。
+- 宿主 v0.4.0 正式 Release ZIP 已發布，SHA256 與 GitHub asset digest 一致；ZIP 內實際 SDK 可載入四個候選新版插件。v0.3.0 宿主無法載入新版 Pixiv，因為舊 SDK 缺少 `IArtworkMetadataRefresher` 等型別。此載入 smoke 未驗證各插件的實際網路或瀏覽器工作流程。
 - 同步等待預算不能強制中止 COM 或 IO；逾時後仍追蹤 cleanup，文件不可宣稱所有 Dispose 一定在 10 秒內完成。
 - 既有使用者改動若導致不相關宿主測試失敗，須分開記錄，不能為讓插件 gate 變綠修改其他功能。
 
 ## 發布與回復
 
-需使用者另外同意後，先發布主程式擁有的 SDK1.3.0、Common/Secrets0.2.0，驗證各插件 repo 可用自己的 NuGet.config 和 CI token 讀取，再發布插件。Build 和 Release 使用相同 Verify-Plugin gate。不要把 local-feed 加入正式 config，也不要覆寫已發布版本。
+使用者於 2026-09-27 同意提交、推送與發布插件新版本。宿主 [v0.4.0](https://github.com/LowTechMaker/KoikatsuSceneGallery/releases/tag/v0.4.0) 發版來源包含本次共用基礎，遠端 [Build 工作流程](https://github.com/LowTechMaker/KoikatsuSceneGallery/actions/runs/36269424724) 已成功。套件已依序發布：[`sdk-v1.3.0`](https://github.com/LowTechMaker/KoikatsuSceneGallery/actions/runs/36269773418) 與 [`common-v0.2.0`](https://github.com/LowTechMaker/KoikatsuSceneGallery/actions/runs/36269874403) 工作流程均通過測試，GitHub Packages 日誌確認 SDK1.3.0、Common0.2.0、Secrets0.2.0 三個套件實際推送成功。
+
+四插件的 Build CI 均從正式 GitHub Packages 還原並執行各自的 Verify-Plugin gate，Release CI 再跑同一 gate；公開 DLL 已核對 GitHub asset SHA256、版本與宿主 v0.4.0 SDK 的載入相容性。發版後 HANDOFF 的文件提交與 Build CI 也均成功。
+
+| 插件 | 公開版本／來源 commit | Build／Release CI | HANDOFF 提交／Build CI |
+| --- | --- | --- | --- |
+| BepisDB | [v0.0.5](https://github.com/LowTechMaker/BepisDbPlugin/releases/tag/v0.0.5)／`781bc35` | [Build](https://github.com/LowTechMaker/BepisDbPlugin/actions/runs/36270003931)／[Release](https://github.com/LowTechMaker/BepisDbPlugin/actions/runs/36270117793) | `7c1ad11`／[Build](https://github.com/LowTechMaker/BepisDbPlugin/actions/runs/36270329810) |
+| Pixiv Authors | [v0.0.6](https://github.com/LowTechMaker/pixiv-data-plugin/releases/tag/v0.0.6)／`cd0c0a7` | [Build](https://github.com/LowTechMaker/pixiv-data-plugin/actions/runs/36270005031)／[Release](https://github.com/LowTechMaker/pixiv-data-plugin/actions/runs/36270118308) | `92c2a82`／[Build](https://github.com/LowTechMaker/pixiv-data-plugin/actions/runs/36270331243) |
+| Fanbox WebView2 | [v0.0.5](https://github.com/LowTechMaker/FanboxWebView2Plugin/releases/tag/v0.0.5)／`8c08ee6` | [Build](https://github.com/LowTechMaker/FanboxWebView2Plugin/actions/runs/36270008443)／[Release](https://github.com/LowTechMaker/FanboxWebView2Plugin/actions/runs/36270133018) | `1b6fdc9`／[Build](https://github.com/LowTechMaker/FanboxWebView2Plugin/actions/runs/36270384296) |
+| GitHub Release Updates | [v0.0.4](https://github.com/LowTechMaker/GitHubReleaseUpdatePlugin/releases/tag/v0.0.4)／`3fd3de2` | [Build](https://github.com/LowTechMaker/GitHubReleaseUpdatePlugin/actions/runs/36270019868)／[Release](https://github.com/LowTechMaker/GitHubReleaseUpdatePlugin/actions/runs/36270144789) | `95afbfe`／[Build](https://github.com/LowTechMaker/GitHubReleaseUpdatePlugin/actions/runs/36270395318) |
+
+Pixiv v0.0.6 使用 SDK1.3 新介面，最低需宿主 v0.4.0；公開 v0.3.0 宿主載入此插件會發生 `TypeLoadException`。不要把 local-feed 加入正式 config，也不要覆寫已發布版本。
 
 本次沒有資料遷移；需要回復時以各 repo 對應舊版插件/套件回復，保留使用者資料。新版 fixes 的行為契約與測試名稱詳見各插件本地交接。新 agent 修改前須重新記錄工作樹狀態，不能把本次 baseline 當作未來的 HEAD。
