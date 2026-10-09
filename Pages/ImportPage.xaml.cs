@@ -23,6 +23,9 @@ public sealed partial class ImportPage : Page
 
     public ImportViewModel ViewModel { get; }
 
+    // The auto-import switch is a saved setting, so it lives on the settings view model.
+    public SettingsViewModel Settings { get; } = App.Services.GetRequiredService<SettingsViewModel>();
+
     private readonly IReadOnlyList<ICookieSetupProvider> _cookieSetupProviders;
 
     public ImportPage()
@@ -358,6 +361,40 @@ public sealed partial class ImportPage : Page
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Lookup",
             () => ViewModel.FetchReviewArtworkCommand.ExecuteAsync(null));
     }
+
+    private void ConfirmImport_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Confirm", async () =>
+        {
+            if (!ViewModel.CanConfirmImport) return;
+            var unidentified = ViewModel.UnidentifiedImportableCount;
+            var includeUnidentified = true;
+            if (unidentified > 0)
+            {
+                var identified = ViewModel.ImportableCount - unidentified;
+                var warning = new ContentDialog
+                {
+                    XamlRoot = XamlRoot,
+                    Title = string.Format(ResLoader.GetString("Import_UnidentifiedWarnTitle"), unidentified),
+                    Content = new TextBlock
+                    {
+                        Text = ResLoader.GetString("Import_UnidentifiedWarnBody"),
+                        TextWrapping = TextWrapping.Wrap,
+                    },
+                    PrimaryButtonText = ResLoader.GetString("Import_UnidentifiedWarnImportAll"),
+                    CloseButtonText = ResLoader.GetString("Import_SauceNaoCancelButton"),
+                    DefaultButton = ContentDialogButton.Close,
+                };
+                if (identified > 0)
+                    warning.SecondaryButtonText = string.Format(
+                        ResLoader.GetString("Import_UnidentifiedWarnIdentifiedOnly"), identified);
+
+                var answer = await warning.ShowAsync();
+                if (answer == ContentDialogResult.None) return;
+                includeUnidentified = answer == ContentDialogResult.Primary;
+            }
+
+            await ViewModel.ImportAsync(includeUnidentified);
+        });
 
     private bool _pickReviewAuthor;
     private void PickReviewAuthor_Click(object sender, RoutedEventArgs e)

@@ -164,6 +164,14 @@
                                        SmallChange="1" SpinButtonPlacementMode="Compact"
                                        IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
                                        Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
+                            <StackPanel Spacing="4">
+                                <ToggleSwitch x:Uid="Import_AutoImportIdentified"
+                                              AutomationProperties.AutomationId="ImportAutoImportIdentifiedToggle"
+                                              IsOn="{x:Bind Settings.AutoImportIdentifiedPosts, Mode=TwoWay}" />
+                                <TextBlock x:Uid="Import_AutoImportIdentifiedHint" TextWrapping="Wrap"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
                             <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12"
                                                 Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
                                 <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
@@ -266,21 +274,9 @@
                                                                       HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                                                             <StackPanel x:Name="ReviewEditPanel" Width="320" Spacing="10">
                                                                 <TextBlock x:Uid="Import_EditSelectedMetadata" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                                                <TextBox x:Name="ReviewArtworkInput" x:Uid="Import_LookupInput"
-                                                                         HorizontalAlignment="Stretch"
-                                                                         Text="{x:Bind ViewModel.ReviewArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                         KeyDown="ReviewArtworkInput_KeyDown" />
-                                                                <ComboBox x:Uid="Import_LookupProvider" HorizontalAlignment="Stretch"
-                                                                          ItemsSource="{x:Bind ViewModel.ReviewArtworkProviderIds}"
-                                                                          SelectedItem="{x:Bind ViewModel.ReviewArtworkProviderId, Mode=TwoWay}" />
-                                                                <StackPanel Spacing="8">
-                                                                    <Button x:Uid="Import_LookupFetch" HorizontalAlignment="Stretch"
-                                                                            Command="{x:Bind ViewModel.FetchReviewArtworkCommand}"
-                                                                            IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                                                    <Button x:Uid="Import_SearchSelected" HorizontalAlignment="Stretch"
-                                                                            Click="SearchSelected_Click"
-                                                                            IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
-                                                                </StackPanel>
+                                                                <Button x:Uid="Import_SearchSelected" HorizontalAlignment="Stretch"
+                                                                        Click="SearchSelected_Click"
+                                                                        IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
                                                                 <TextBlock x:Uid="Import_EditSelectedDetails" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,6,0,0" />
                                                                 <ComboBox x:Uid="Import_Review_Rating" HorizontalAlignment="Stretch"
                                                                           SelectedIndex="{x:Bind ViewModel.ReviewRatingOverrideIndex, Mode=TwoWay}">
@@ -310,6 +306,24 @@
                                                     </Flyout>
                                                 </Button.Flyout>
                                             </Button>
+                                        </Grid>
+                                        <!-- Out of the edit flyout: entering a post URL is the most frequent edit. -->
+                                        <Grid ColumnSpacing="8"
+                                              Visibility="{x:Bind ViewModel.ReviewSelectionEditorVisibility, Mode=OneWay}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="ReviewArtworkInput" x:Uid="Import_LookupInput"
+                                                     Text="{x:Bind ViewModel.ReviewArtworkId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     KeyDown="ReviewArtworkInput_KeyDown" />
+                                            <ComboBox Grid.Column="1" x:Uid="Import_LookupProvider" MinWidth="140"
+                                                      ItemsSource="{x:Bind ViewModel.ReviewArtworkProviderIds}"
+                                                      SelectedItem="{x:Bind ViewModel.ReviewArtworkProviderId, Mode=TwoWay}" />
+                                            <Button Grid.Column="2" x:Uid="Import_LookupFetch"
+                                                    Command="{x:Bind ViewModel.FetchReviewArtworkCommand}"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
                                         </Grid>
                                         <TextBlock Text="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}"
                                                    TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
@@ -528,7 +542,7 @@
                 </Button.Flyout>
             </Button>
             <Button Grid.Column="3" Style="{StaticResource AccentButtonStyle}"
-                    Command="{x:Bind ViewModel.ConfirmImportCommand}"
+                    Click="ConfirmImport_Click"
                     IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}"
                     ToolTipService.ToolTip="{x:Bind ViewModel.ImportActionText, Mode=OneWay}"
                     AutomationProperties.HelpText="{x:Bind ViewModel.ImportActionText, Mode=OneWay}">

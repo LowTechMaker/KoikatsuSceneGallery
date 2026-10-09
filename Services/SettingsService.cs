@@ -157,6 +157,12 @@ public class SettingsService
 
         public bool UseVisualSimilarity { get; set; }
 
+        /// <summary>
+        /// Imports a card without review when its file name names a post and
+        /// that post was found: nothing about it is left for the user to decide.
+        /// </summary>
+        public bool AutoImportIdentifiedPosts { get; set; } = true;
+
         public bool AuthorLiveTilesEnabled { get; set; } = true;
 
         public List<string> HiddenNavItems { get; set; } = [];

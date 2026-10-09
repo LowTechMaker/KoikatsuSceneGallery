@@ -1781,4 +1781,31 @@
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>Update cloud</value>
   </data>
+  <data name="Import_AutoImportIdentified.Header" xml:space="preserve">
+    <value>Import recognized posts right away</value>
+  </data>
+  <data name="Import_AutoImportIdentifiedHint.Text" xml:space="preserve">
+    <value>Cards whose file name matches a platform pattern (such as pixiv's 12345678_p0) and whose post is found are imported as soon as analysis finishes, without waiting for you. Other cards stay below for review.</value>
+  </data>
+  <data name="Import_Summary_AutoSuccess" xml:space="preserve">
+    <value>Automatically imported {0} cards with recognized posts.</value>
+  </data>
+  <data name="Import_Action_LookupPending" xml:space="preserve">
+    <value>Post URL not applied: fetch it or clear it</value>
+  </data>
+  <data name="Import_Action_LookupPendingCompact" xml:space="preserve">
+    <value>URL not applied</value>
+  </data>
+  <data name="Import_UnidentifiedWarnTitle" xml:space="preserve">
+    <value>{0} cards are not identified</value>
+  </data>
+  <data name="Import_UnidentifiedWarnBody" xml:space="preserve">
+    <value>No author was found for these cards, so they will go to the unidentified folder. Import them as unidentified?</value>
+  </data>
+  <data name="Import_UnidentifiedWarnImportAll" xml:space="preserve">
+    <value>Import them as unidentified</value>
+  </data>
+  <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
+    <value>Import only the {0} identified</value>
+  </data>
 </root>

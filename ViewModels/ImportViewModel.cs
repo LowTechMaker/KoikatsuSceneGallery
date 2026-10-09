@@ -90,9 +90,33 @@ public partial class ImportViewModel : ObservableObject
     public bool IsReviewWorkspaceEnabled => IsIdle && !IsResolvingReview;
     [ObservableProperty]
     public partial bool IsResolvingReview { get; set; }
-    partial void OnIsResolvingReviewChanged(bool value) => NotifyReviewWorkspaceState();
+    partial void OnIsResolvingReviewChanged(bool value)
+    {
+        NotifyReviewWorkspaceState();
+        // A batch that finished during a review edit left its candidates waiting.
+        if (!value)
+            AutoImportIdentifiedAsync().Observe(_logger, "Import.AutoImport");
+    }
     public int ImportableCount => Items.Count(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath));
-    public bool CanConfirmImport => IsReviewWorkspaceEnabled && ImportableCount > 0;
+    public bool CanConfirmImport => IsReviewWorkspaceEnabled && ImportableCount > 0 && !IsArtworkLookupPending;
+
+    /// <summary>
+    /// A post URL typed but not yet applied. Importing then would file the
+    /// cards it was meant for without that post, so the import waits until a
+    /// fetch succeeds (which empties the box) or the user clears it. A failed
+    /// fetch leaves the text, and so the cards still unidentified, in place.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsArtworkLookupPending { get; set; }
+    partial void OnIsArtworkLookupPendingChanged(bool value) => NotifyReviewWorkspaceState();
+
+    /// <summary>
+    /// Importable cards with no identified author. They go to the unknown
+    /// folder, which the user should agree to rather than discover later.
+    /// </summary>
+    public int UnidentifiedImportableCount => Items.Count(item =>
+        ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)
+        && !ImportReviewPolicy.IsIdentified(item.Status, !string.IsNullOrWhiteSpace(item.AuthorId)));
     public Visibility AnalysisLoadingVisibility => IsAnalyzing ? Visibility.Visible : Visibility.Collapsed;
     public Visibility FlatReviewWorkspaceVisibility => ReviewStates.Count > 0
         ? Visibility.Visible
@@ -124,8 +148,12 @@ public partial class ImportViewModel : ObservableObject
 
     public string ReviewSummaryText => string.Format(GetLocalizedString("Import_Review_Summary"), Items.Count, ImportableCount);
     public string ReviewSelectionText => string.Format(GetLocalizedString("Import_Review_SelectionCount"), ReviewedItemsView.Count, SelectedReviewCount);
-    public string ImportActionText => string.Format(GetLocalizedString("Import_ActionCount"), ImportableCount);
-    public string ImportCompactActionText => string.Format(GetLocalizedString("Import_ActionCountCompact"), ImportableCount);
+    public string ImportActionText => IsArtworkLookupPending
+        ? GetLocalizedString("Import_Action_LookupPending")
+        : string.Format(GetLocalizedString("Import_ActionCount"), ImportableCount);
+    public string ImportCompactActionText => IsArtworkLookupPending
+        ? GetLocalizedString("Import_Action_LookupPendingCompact")
+        : string.Format(GetLocalizedString("Import_ActionCountCompact"), ImportableCount);
     public Visibility ReviewSelectionEditorVisibility => HasSelectedReviewItems
         ? Visibility.Visible
         : Visibility.Collapsed;
@@ -165,6 +193,9 @@ public partial class ImportViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string? ReviewArtworkId { get; set; }
+    // Only an empty box clears it: the user emptied it, or a fetch succeeded.
+    partial void OnReviewArtworkIdChanged(string? value)
+        => IsArtworkLookupPending = !string.IsNullOrWhiteSpace(value);
 
     [ObservableProperty]
     public partial int ReviewRatingOverrideIndex { get; set; }
@@ -917,6 +948,11 @@ public partial class ImportViewModel : ObservableObject
             // cards that already need manual identification.
             await ReResolveDestinationsAsync(batch.Token);
 
+            // Only an id read from the file name counts: the user has not
+            // touched these cards yet, so nothing about them came from a guess.
+            foreach (var item in newItems.Where(static item => item.ArtworkId is not null))
+                _autoImportCandidates.Add(item);
+
             if (rejected > 0)
                 ShowRejectedFiles(rejected);
         }
@@ -927,15 +963,76 @@ public partial class ImportViewModel : ObservableObject
             UpdateAnalysisProgress();
             UpdateCounts();
         }
+
+        await AutoImportIdentifiedAsync();
+    }
+
+    // Cards from finished batches whose file name gave an artwork id. Checked
+    // once nothing else runs, then cleared; whatever does not qualify stays
+    // in the review workspace like any other card.
+    private readonly HashSet<ImportItem> _autoImportCandidates = [];
+
+    /// <summary>
+    /// Imports the candidates whose post was found, without waiting for the
+    /// user to confirm them.
+    /// </summary>
+    /// <remarks>
+    /// Waits for every batch to finish, because another batch's destination
+    /// resolution would otherwise run over cards being moved. The last batch
+    /// to finish, or the import that was running, picks up the rest.
+    /// </remarks>
+    private async Task AutoImportIdentifiedAsync()
+    {
+        if (_autoImportCandidates.Count == 0 || !IsReviewWorkspaceEnabled)
+            return;
+
+        var config = await _settingsService.LoadConfigAsync();
+        if (!config.AutoImportIdentifiedPosts)
+        {
+            _autoImportCandidates.Clear();
+            return;
+        }
+        if (!IsReviewWorkspaceEnabled)
+            return;
+
+        var eligible = _autoImportCandidates
+            .Where(item => Items.Contains(item)
+                && ImportReviewPolicy.CanAutoImport(
+                    item.Status,
+                    item.DestinationPath,
+                    idFromFileName: item.ArtworkId is not null,
+                    postFound: item.FetchedArtworkInfo is not null,
+                    hasAuthor: !string.IsNullOrWhiteSpace(item.AuthorId)))
+            .ToArray();
+        _autoImportCandidates.Clear();
+        if (eligible.Length == 0)
+            return;
+
+        await ExecuteImportAsync(eligible, "Import_Summary_AutoSuccess");
     }
 
     [RelayCommand(CanExecute = nameof(CanConfirmImport))]
-    private async Task ConfirmImportAsync()
+    private Task ConfirmImportAsync() => ImportAsync(includeUnidentified: true);
+
+    /// <summary>
+    /// Imports every importable card, or only the identified ones; the rest
+    /// stay in the review workspace.
+    /// </summary>
+    public async Task ImportAsync(bool includeUnidentified)
     {
         if (!CanConfirmImport)
             return;
 
-        var importItems = Items.Where(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)).ToArray();
+        var importItems = Items
+            .Where(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)
+                && (includeUnidentified
+                    || ImportReviewPolicy.IsIdentified(item.Status, !string.IsNullOrWhiteSpace(item.AuthorId))))
+            .ToArray();
+        await ExecuteImportAsync(importItems, "Import_Summary_Success");
+    }
+
+    private async Task ExecuteImportAsync(ImportItem[] importItems, string successResource)
+    {
         var plans = BuildExecutionPlansFromWorkspace(importItems);
         if (plans.Count == 0)
         {
@@ -979,7 +1076,7 @@ public partial class ImportViewModel : ObservableObject
                 _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
                 RemoveCommittedItemsFromWorkspace(importItems);
                 TransactionStatusText = string.Format(
-                    GetLocalizedString("Import_Summary_Success"),
+                    GetLocalizedString(successResource),
                     plans.Count);
             }
             else
@@ -1001,6 +1098,9 @@ public partial class ImportViewModel : ObservableObject
         {
             IsImporting = false;
         }
+
+        // Batches that finished while this ran left their candidates waiting.
+        await AutoImportIdentifiedAsync();
     }
 
     [RelayCommand]

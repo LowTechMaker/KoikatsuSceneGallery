@@ -1781,4 +1781,31 @@
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>更新文字雲</value>
   </data>
+  <data name="Import_AutoImportIdentified.Header" xml:space="preserve">
+    <value>認得貼文就直接匯入</value>
+  </data>
+  <data name="Import_AutoImportIdentifiedHint.Text" xml:space="preserve">
+    <value>檔名符合平台格式（例如 pixiv 的 12345678_p0），而且找得到對應貼文的卡片，分析完就直接匯入，不用等你確認。其他卡片照常留在下方審核。</value>
+  </data>
+  <data name="Import_Summary_AutoSuccess" xml:space="preserve">
+    <value>已自動匯入 {0} 張認得貼文的卡片。</value>
+  </data>
+  <data name="Import_Action_LookupPending" xml:space="preserve">
+    <value>貼文網址尚未套用：請取得資料或清空網址</value>
+  </data>
+  <data name="Import_Action_LookupPendingCompact" xml:space="preserve">
+    <value>網址未套用</value>
+  </data>
+  <data name="Import_UnidentifiedWarnTitle" xml:space="preserve">
+    <value>有 {0} 張卡片尚未識別</value>
+  </data>
+  <data name="Import_UnidentifiedWarnBody" xml:space="preserve">
+    <value>這些卡片找不到作者，會匯入到未識別資料夾。要把它們匯入為未識別嗎？</value>
+  </data>
+  <data name="Import_UnidentifiedWarnImportAll" xml:space="preserve">
+    <value>一併匯入為未識別</value>
+  </data>
+  <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
+    <value>只匯入已識別的 {0} 張</value>
+  </data>
 </root>

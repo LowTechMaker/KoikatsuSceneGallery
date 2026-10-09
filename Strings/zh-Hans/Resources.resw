@@ -1781,4 +1781,31 @@
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>更新文字云</value>
   </data>
+  <data name="Import_AutoImportIdentified.Header" xml:space="preserve">
+    <value>认得帖子就直接导入</value>
+  </data>
+  <data name="Import_AutoImportIdentifiedHint.Text" xml:space="preserve">
+    <value>文件名符合平台格式（例如 pixiv 的 12345678_p0），而且找得到对应帖子的卡片，分析完就直接导入，不用等你确认。其他卡片照常留在下方审核。</value>
+  </data>
+  <data name="Import_Summary_AutoSuccess" xml:space="preserve">
+    <value>已自动导入 {0} 张认得帖子的卡片。</value>
+  </data>
+  <data name="Import_Action_LookupPending" xml:space="preserve">
+    <value>帖子网址尚未应用：请获取信息或清空网址</value>
+  </data>
+  <data name="Import_Action_LookupPendingCompact" xml:space="preserve">
+    <value>网址未应用</value>
+  </data>
+  <data name="Import_UnidentifiedWarnTitle" xml:space="preserve">
+    <value>有 {0} 张卡片尚未识别</value>
+  </data>
+  <data name="Import_UnidentifiedWarnBody" xml:space="preserve">
+    <value>这些卡片找不到作者，会导入到未识别文件夹。要把它们导入为未识别吗？</value>
+  </data>
+  <data name="Import_UnidentifiedWarnImportAll" xml:space="preserve">
+    <value>一并导入为未识别</value>
+  </data>
+  <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
+    <value>只导入已识别的 {0} 张</value>
+  </data>
 </root>

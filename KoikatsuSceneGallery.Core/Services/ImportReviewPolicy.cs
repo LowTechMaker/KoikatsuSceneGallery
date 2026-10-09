@@ -17,6 +17,15 @@ public static class ImportReviewPolicy
     public static bool CanExecute(ImportItemStatus status, string? destination)
         => status == ImportItemStatus.ReadyToImport && !string.IsNullOrWhiteSpace(destination);
 
+    /// <summary>
+    /// Whether a card can skip review: its file name named a post, that post
+    /// was found, and it named the author. Anything less leaves a decision to
+    /// the user, so the card waits for review instead.
+    /// </summary>
+    public static bool CanAutoImport(
+        ImportItemStatus status, string? destination, bool idFromFileName, bool postFound, bool hasAuthor)
+        => idFromFileName && postFound && hasAuthor && CanExecute(status, destination);
+
     public static string Category(ImportItemStatus status, string? destination, bool hasAuthor, bool hasArtwork) => status switch
     {
         ImportItemStatus.AlreadyInLibrary => "Existing",

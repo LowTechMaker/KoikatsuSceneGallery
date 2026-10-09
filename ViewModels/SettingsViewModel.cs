@@ -180,6 +180,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool UseVisualSimilarity { get; set; }
 
     [ObservableProperty]
+    public partial bool AutoImportIdentifiedPosts { get; set; } = true;
+
+    [ObservableProperty]
     public partial string AuthorFolderFormat { get; set; } = "{name} ({id})";
 
     [ObservableProperty]
@@ -387,6 +390,12 @@ public partial class SettingsViewModel : ObservableObject
             SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
     }
 
+    partial void OnAutoImportIdentifiedPostsChanged(bool value)
+    {
+        if (!_isLoading)
+            SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
     partial void OnImportSubfolderChanged(string value)
     {
         if (_isLoading)
@@ -537,6 +546,7 @@ public partial class SettingsViewModel : ObservableObject
             LocalFolderName = config.LocalFolderName;
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
+            AutoImportIdentifiedPosts = config.AutoImportIdentifiedPosts;
             AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
 
             AuthorFolderFormat = config.AuthorFolderFormat;
@@ -839,6 +849,7 @@ public partial class SettingsViewModel : ObservableObject
                 LocalFolderName = LocalFolderName,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
+                AutoImportIdentifiedPosts = AutoImportIdentifiedPosts,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
                 HiddenNavItems = GetHiddenNavItems(),
                 BrowseOrigin = BrowseOrigin.ToConfigValue(),
