@@ -97,6 +97,13 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         ApplyFilter();
     }
 
+    protected override async Task<int?> CountCardFilesOnDiskAsync()
+        => await _cardService.CountCardFilesAsync((await _settingsService.LoadConfigAsync()).CharacterFolderPaths);
+
+    protected override int UnreadableCardFileCount => _cardService.LastScanUnreadableCount;
+
+    protected override Task ReloadCardsAsync() => LoadCardsCommand.ExecuteAsync(null);
+
     [RelayCommand]
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>

@@ -139,7 +139,6 @@ public partial class AuthorDetailViewModel : ObservableObject
     public void Load(AuthorSummary summary)
     {
         Author = summary.Display;
-        var key = summary.Display.Key;
 
         // The author-detail page is cached so returning from a child page is
         // instant. When that cached instance is later reused for a different
@@ -151,6 +150,20 @@ public partial class AuthorDetailViewModel : ObservableObject
         PostCount = 0;
         UnassignedImages.Clear();
         UnassignedImageCount = 0;
+
+        RefreshCards();
+        OnPropertyChanged(nameof(CanLoadPosts));
+    }
+
+    /// <summary>
+    /// Re-reads this author's cards from the galleries, leaving the posts as
+    /// they are. For when a gallery finishes a rescan while the page is open.
+    /// </summary>
+    public void RefreshCards()
+    {
+        if (Author is not { } author)
+            return;
+        var key = author.Key;
 
         Scenes.Clear();
         foreach (var card in _galleryViewModel.Cards)
@@ -177,8 +190,6 @@ public partial class AuthorDetailViewModel : ObservableObject
         CoordinateCount = Coordinates.Count;
 
         RefreshOverviewPreviews();
-
-        OnPropertyChanged(nameof(CanLoadPosts));
     }
 
     public async Task LoadPostsAsync(AuthorPostService postService, CancellationToken ct)

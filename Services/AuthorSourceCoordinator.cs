@@ -76,6 +76,20 @@ public sealed class AuthorSourceCoordinator
         return _warmupTask;
     }
 
+    /// <summary>
+    /// Rescans each gallery whose file count no longer matches its folders,
+    /// and reports whether any did. Authors are counted from the galleries,
+    /// so a gallery left short by a cancelled load hides an author's cards.
+    /// </summary>
+    public async Task<bool> ReloadChangedGalleriesAsync()
+    {
+        var reloaded = await Task.WhenAll(
+            _galleryViewModel.ReloadIfFileCountChangedAsync(),
+            _characterGalleryViewModel.ReloadIfFileCountChangedAsync(),
+            _coordinateGalleryViewModel.ReloadIfFileCountChangedAsync());
+        return reloaded.Any(static r => r);
+    }
+
     private void OnFolderPathsChanged() => Refresh(reloadLoadedSources: true);
 
     private void ApplyLibraryRoots()

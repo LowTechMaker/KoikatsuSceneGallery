@@ -72,6 +72,13 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     protected override bool CardPassesFilter(object card) =>
         card is CoordinateCard cc && BaseFilterPasses(cc);
 
+    protected override async Task<int?> CountCardFilesOnDiskAsync()
+        => await _cardService.CountCardFilesAsync((await _settingsService.LoadConfigAsync()).CoordinateFolderPaths);
+
+    protected override int UnreadableCardFileCount => _cardService.LastScanUnreadableCount;
+
+    protected override Task ReloadCardsAsync() => LoadCardsCommand.ExecuteAsync(null);
+
     [RelayCommand]
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>

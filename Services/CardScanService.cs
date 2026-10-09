@@ -75,10 +75,53 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// How many files the last scan found but could not turn into a card. A
+    /// gallery holds one card per readable file, so these are the files its
+    /// count is expected to fall short by.
+    /// </summary>
+    public int LastScanUnreadableCount => Volatile.Read(ref _lastScanUnreadableCount);
+    private int _lastScanUnreadableCount;
+
+    /// <summary>
+    /// Counts the card files under <paramref name="folderPaths"/> without
+    /// opening any of them, or returns null when a folder cannot be listed.
+    /// </summary>
+    /// <remarks>
+    /// Paths are de-duplicated because overlapping roots list the same file
+    /// twice, while a gallery holds it once.
+    /// </remarks>
+    public Task<int?> CountCardFilesAsync(
+        IEnumerable<string> folderPaths,
+        CancellationToken cancellationToken = default)
+        => Task.Run<int?>(() =>
+        {
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var folder in folderPaths)
+                {
+                    if (!Directory.Exists(folder)) continue;
+                    foreach (var file in EnumerateCardFiles(folder))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        files.Add(file.FullName);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+
+            return files.Count;
+        }, cancellationToken);
+
     // Synchronous worker core: callers retain their own result collection/publication.
     private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept)
     {
         var cancellationToken = options.CancellationToken;
+        var unreadable = 0;
         foreach (var folder in folderPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -89,8 +132,12 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                 var card = TryCreateCard(file);
                 if (card != null)
                     accept(card);
+                else
+                    Interlocked.Increment(ref unreadable);
             });
         }
+
+        Volatile.Write(ref _lastScanUnreadableCount, unreadable);
     }
 
     private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)

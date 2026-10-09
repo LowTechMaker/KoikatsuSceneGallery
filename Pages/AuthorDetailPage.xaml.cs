@@ -49,6 +49,7 @@ public sealed partial class AuthorDetailPage : Page
     private GridView CharactersGrid => CharactersBrowser.ItemsGrid;
     private GridView CoordinatesGrid => CoordinatesBrowser.ItemsGrid;
     private bool _browsersInitialized;
+    private bool _isNavigatedTo;
     private void InitializeBrowsers()
     {
         if (_browsersInitialized) return;
@@ -81,6 +82,7 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _isNavigatedTo = true;
         if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
             var restoringSameAuthor = e.NavigationMode == NavigationMode.Back
@@ -108,6 +110,7 @@ public sealed partial class AuthorDetailPage : Page
                 ViewModel.LoadPostsAsync(postService, _postsCts.Token)
                     .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
             }
+            ReloadChangedGalleries();
         }
 
 
@@ -120,9 +123,31 @@ public sealed partial class AuthorDetailPage : Page
         });
     }
 
+    /// <summary>
+    /// The cards above come from the galleries, which can be short of their
+    /// folders when a load was cancelled. Posts are read from disk directly, so
+    /// the gap shows up as a post whose card has no tab.
+    /// </summary>
+    private void ReloadChangedGalleries()
+    {
+        var author = ViewModel.Author?.Key;
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.FileCountCheck", async () =>
+        {
+            var reloaded = await App.Services.GetRequiredService<AuthorSourceCoordinator>()
+                .ReloadChangedGalleriesAsync();
+            if (!reloaded || !_isNavigatedTo || ViewModel.Author?.Key != author)
+                return;
+
+            ViewModel.RefreshCards();
+            UpdateTabPresence();
+            RequestOverviewThumbnails();
+        });
+    }
+
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _isNavigatedTo = false;
         if (_navigationParameter is not null && _browsersInitialized)
             foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
                 _navigationParameter.BrowserStates[index] = browser.SaveState();

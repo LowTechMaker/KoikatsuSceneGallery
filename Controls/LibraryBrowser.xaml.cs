@@ -112,7 +112,12 @@ public sealed partial class LibraryBrowser : UserControl
         Refresh();
         if (_scope is null && (_adapter!.Cards.Count == 0 || _reload)) Load();
         else if (_detailContext?.ReturnPath is { } path) RestoreItem(path);
+        if (_scope is null) ReloadIfFileCountChanged();
     }
+    // A load cancelled by leaving the page leaves the gallery holding part of the folder.
+    private void ReloadIfFileCountChanged() =>
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Browser.FileCountCheck", async () =>
+        { if (await VM.ReloadIfFileCountChangedAsync()) QueueRefresh(); });
     public void Deactivate()
     {
         ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); _metadataOptionsTimer?.Stop();

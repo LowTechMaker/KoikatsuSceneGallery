@@ -49,9 +49,10 @@ public sealed partial class AuthorsPage : Page
         // startup, and folder-setting changes explicitly trigger a rebuild. Do not
         // rebuild every card here: it synchronously clears and reassigns authors
         // for the whole library and makes opening this page hitch.
-        App.Services.GetRequiredService<AuthorSourceCoordinator>()
-            .EnsureLoadedAsync()
-            .Observe(App.Services.GetRequiredService<IAppLogger>(), "Authors.EnsureLoaded");
+        var coordinator = App.Services.GetRequiredService<AuthorSourceCoordinator>();
+        var logger = App.Services.GetRequiredService<IAppLogger>();
+        coordinator.EnsureLoadedAsync().Observe(logger, "Authors.EnsureLoaded");
+        coordinator.ReloadChangedGalleriesAsync().Observe(logger, "Authors.FileCountCheck");
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

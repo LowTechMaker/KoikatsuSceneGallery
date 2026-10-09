@@ -131,6 +131,13 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         ApplyFilter();
     }
 
+    protected override async Task<int?> CountCardFilesOnDiskAsync()
+        => await _sceneCardService.CountCardFilesAsync((await _settingsService.LoadConfigAsync()).FolderPaths);
+
+    protected override int UnreadableCardFileCount => _sceneCardService.LastScanUnreadableCount;
+
+    protected override Task ReloadCardsAsync() => LoadCardsCommand.ExecuteAsync(null);
+
     [RelayCommand]
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>
