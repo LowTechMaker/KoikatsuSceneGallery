@@ -71,6 +71,8 @@ public class SettingsService
         public bool ResolutionFilterEnabled { get; set; } = true;
         public List<string> AllowedResolutions { get; set; } = ["320x180", "1600x900"];
         public bool ShowFileNames { get; set; } = true;
+        /// <summary>Rate scene cards by the user's own ratings instead of the platform's.</summary>
+        public bool UseUserRatings { get; set; }
         public bool ScrollToTopOnSort { get; set; } = true;
         public bool DiscoverySpreadEnabled { get; set; } = true;
 

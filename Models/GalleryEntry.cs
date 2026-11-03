@@ -25,7 +25,9 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public AuthorDisplay? Author => (Card as IAuthorOwner)?.Author;
     public string AuthorText => Author?.Name ?? UiText.Get("SceneGallery_UnknownAuthor");
     public bool IsR18 => Card is SceneCard { IsR18Content: true };
-    public string RatingText => Card is SceneCard ? (IsR18 ? "R-18" : "G") : string.Empty;
+    public string RatingText => Card is SceneCard scene
+        ? scene.Rating switch { SceneRating.R18G => "R-18G", SceneRating.R18 => "R-18", _ => "G" }
+        : string.Empty;
     public bool HasVersions => Card is CharacterCard { HasVersions: true };
     public string VersionText => Card is CharacterCard c ? UiText.Format("Browser_Versions", c.VersionCount) : "";
     // The tile only ever shows the character's representative, so the marker

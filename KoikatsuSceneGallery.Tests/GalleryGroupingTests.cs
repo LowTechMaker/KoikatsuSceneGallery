@@ -10,7 +10,8 @@ public sealed class GalleryGroupingTests
     {
         Assert.Equal("post:pixiv:123456", GalleryGrouping.ResolveKey(
             "C:/author (999999)/123456_p0.png", "pixiv", "999999", "123456", "999999"));
-        Assert.StartsWith("folder:", GalleryGrouping.ResolveKey(
+        // A card directly in its author's folder stands alone instead of folding the author into one tile.
+        Assert.Equal("file:C:/author (999999)/one.png", GalleryGrouping.ResolveKey(
             "C:/author (999999)/one.png", "pixiv", "999999", null, "999999"));
         Assert.Equal("post:pixiv:123456", GalleryGrouping.ResolveKey(
             "C:/post (123456)/one.png", "pixiv", "123456", "654321", "999999"));

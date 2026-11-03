@@ -93,8 +93,10 @@
    <GridView.ItemTemplate><DataTemplate x:DataType="models:GalleryEntry">
     <Grid Margin="4" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
      <Grid.ContextFlyout><MenuFlyout><MenuFlyoutItem x:Uid="Gallery_OpenFileLocation" Click="OpenFolder_Click" CommandParameter="{x:Bind}"/></MenuFlyout></Grid.ContextFlyout>
-     <Border Margin="14,0,14,8" CornerRadius="8" BorderThickness="1" Background="{ThemeResource ControlFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
-     <Border Margin="7,3,7,4" CornerRadius="8" BorderThickness="1" Background="{ThemeResource ControlFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
+     <Border Margin="14,0,14,8" CornerRadius="8" BorderThickness="1" Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
+     <Border Margin="7,3,7,4" CornerRadius="8" BorderThickness="1" Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
+     <!-- The face is translucent; without an opaque base the layers behind it show through. -->
+     <Border Margin="0,6,0,0" CornerRadius="8" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" Visibility="{x:Bind IsGroup}"/>
      <Grid Padding="4" Margin="0,6,0,0" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
       <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <Grid>

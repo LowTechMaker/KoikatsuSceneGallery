@@ -188,7 +188,7 @@ public sealed partial class LibraryBrowser : UserControl
         SearchBox.PlaceholderText = UiText.Get(_groupKey is null ? "SceneGallery_Search.PlaceholderText" : "Browser_GroupSearch");
         if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) SearchBox.PlaceholderText = UiText.Get("Metadata_SearchHint");
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
-        int filterCount = VM switch { GalleryViewModel vm => (vm.ShowR18Content ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
+        int filterCount = VM switch { GalleryViewModel vm => (vm.RatingFilter == RatingFilterOption.All ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
             + (VM.OriginFilter.IsAll ? 0 : 1);
         var (resolutionEnabled, resolutionCount) = VM switch
         {
@@ -244,13 +244,18 @@ public sealed partial class LibraryBrowser : UserControl
         _returnOffset = state.ReturnOffset; _localSort = state.Sort; _localAscending = state.Ascending;
         _detailContext = state.Context; _syncing = true; SelectSortItem(_localSort); _syncing = false;
     }
+    internal static string[] RatingFilterLabels() =>
+        [UiText.Get("Gallery_FilterAll.Content"), UiText.Get("Gallery_RatingGeneralOnly"), UiText.Get("Gallery_RatingR18AndR18G"),
+         UiText.Get("Gallery_RatingR18Only"), UiText.Get("Gallery_RatingR18GOnly")];
     private void BuildFilters()
     {
         if (VM is GalleryViewModel scene)
         {
-            var rating = new ToggleSwitch { Header = UiText.Get("SceneGallery_Rating.Header"), IsOn = scene.ShowR18Content, Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed };
-            rating.Toggled += (_, _) => scene.ShowR18Content = rating.IsOn;
-            scene.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(scene.ShowR18Content)) rating.IsOn = scene.ShowR18Content; if (e.PropertyName == nameof(scene.ShowR18FilterButton)) rating.Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed; };
+            var rating = new ComboBox { Header = UiText.Get("SceneGallery_Rating.Header"), HorizontalAlignment = HorizontalAlignment.Stretch, Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed };
+            foreach (var s in RatingFilterLabels()) rating.Items.Add(s);
+            rating.SelectedIndex = (int)scene.RatingFilter;
+            rating.SelectionChanged += (_, _) => { if (rating.SelectedIndex >= 0) scene.RatingFilter = (RatingFilterOption)rating.SelectedIndex; };
+            scene.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(scene.RatingFilter)) rating.SelectedIndex = (int)scene.RatingFilter; if (e.PropertyName == nameof(scene.ShowR18FilterButton)) rating.Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed; };
             SpecificFilters.Children.Add(rating);
             var game = new ComboBox { Header = UiText.Get("SceneGallery_Environment.Header"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (var s in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") }) game.Items.Add(s);

@@ -81,6 +81,17 @@ public partial class ImportViewModel : ObservableObject
     [ObservableProperty]
     public partial string TransactionStatusText { get; set; } = string.Empty;
 
+    // Why the last import was rolled back. The progress overlay that shows the phase text goes
+    // away when the rollback ends, so without this the user is left with no explanation.
+    [ObservableProperty]
+    public partial bool ShowImportFailure { get; set; }
+
+    [ObservableProperty]
+    public partial string ImportFailureTitle { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ImportFailureMessage { get; set; } = string.Empty;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool HasItems { get; set; }
@@ -195,7 +206,373 @@ public partial class ImportViewModel : ObservableObject
     public partial string? ReviewArtworkId { get; set; }
     // Only an empty box clears it: the user emptied it, or a fetch succeeded.
     partial void OnReviewArtworkIdChanged(string? value)
-        => IsArtworkLookupPending = !string.IsNullOrWhiteSpace(value);
+    {
+        IsArtworkLookupPending = !string.IsNullOrWhiteSpace(value);
+        if (_autoFilledValue is not null && value?.Trim() != _autoFilledValue) _autoFilledValue = null;
+        ScheduleLinkMatch(value);
+    }
+
+    // What the post's download links list, compared with the cards in the list.
+    [ObservableProperty]
+    public partial string LinkMatchText { get; set; } = string.Empty;
+    public Visibility LinkMatchVisibility => string.IsNullOrWhiteSpace(LinkMatchText) ? Visibility.Collapsed : Visibility.Visible;
+    partial void OnLinkMatchTextChanged(string value) => OnPropertyChanged(nameof(LinkMatchVisibility));
+
+    [ObservableProperty]
+    public partial string LinkMissingText { get; set; } = string.Empty;
+    public Visibility LinkMissingVisibility => string.IsNullOrWhiteSpace(LinkMissingText) ? Visibility.Collapsed : Visibility.Visible;
+    partial void OnLinkMissingTextChanged(string value) => OnPropertyChanged(nameof(LinkMissingVisibility));
+
+    // The files behind the two texts below, with their addresses, so the page can make each name a link.
+    [ObservableProperty]
+    public partial IReadOnlyList<ListedFile> LinkMissingFiles { get; set; } = [];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<ListedFile> LinkInLibraryFiles { get; set; } = [];
+
+    // Folders of the share that nothing has been taken from: episodes not being worked on.
+    [ObservableProperty]
+    public partial IReadOnlyList<UnstartedFolder> LinkUnstartedFolders { get; set; } = [];
+
+    [ObservableProperty]
+    public partial string LinkUnstartedText { get; set; } = string.Empty;
+    public Visibility LinkUnstartedVisibility => string.IsNullOrWhiteSpace(LinkUnstartedText) ? Visibility.Collapsed : Visibility.Visible;
+    partial void OnLinkUnstartedTextChanged(string value) => OnPropertyChanged(nameof(LinkUnstartedVisibility));
+
+    // Listed files that no dropped card covers but the library already holds identically.
+    [ObservableProperty]
+    public partial string LinkInLibraryText { get; set; } = string.Empty;
+    public Visibility LinkInLibraryVisibility => string.IsNullOrWhiteSpace(LinkInLibraryText) ? Visibility.Collapsed : Visibility.Visible;
+    partial void OnLinkInLibraryTextChanged(string value) => OnPropertyChanged(nameof(LinkInLibraryVisibility));
+
+    internal const int MissingNamesShown = 8;
+    private static readonly TimeSpan LinkMatchDebounce = TimeSpan.FromMilliseconds(400);
+    private static readonly TimeSpan LinkMatchFetchWait = TimeSpan.FromSeconds(3);
+    private readonly PostLinkLookup _postLinkLookup;
+    private CancellationTokenSource? _linkMatchCts;
+    private Task _linkMatchTask = Task.CompletedTask;
+
+    // The links of the post last looked up, so cards dropped in afterwards are matched at once.
+    private (string Input, string PostId, IReadOnlyList<PostLinkInfo> Links)? _linkCache;
+
+    // A fetch that succeeds empties the box, but the result of the match is still
+    // wanted afterwards, so only the user emptying the box clears it.
+    private bool _keepLinkMatchOnClear;
+
+    private void ScheduleLinkMatch(string? input)
+    {
+        _linkMatchCts?.Cancel();
+        _linkMatchCts?.Dispose();
+        _linkMatchCts = null;
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            if (!_keepLinkMatchOnClear) ClearLinkMatch();
+            return;
+        }
+        if (!_postLinkLookup.HasInspectors
+            || !Uri.TryCreate(input.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            return;
+
+        var cts = _linkMatchCts = new CancellationTokenSource();
+        _linkMatchTask = RunLinkMatchAsync(input.Trim(), cts.Token);
+    }
+
+    // The lookup found nothing to apply (no readable links, or no dropped card among the files).
+    // An address the clipboard put in the box would then sit there, hidden while no card is
+    // selected, with the import button waiting on it, so take it back and keep the answer.
+    private void TakeBackAutoFilledAddress(string input)
+    {
+        if (_autoFilledValue is null || _autoFilledValue != input || ReviewArtworkId?.Trim() != input) return;
+
+        _keepLinkMatchOnClear = true;
+        try { ReviewArtworkId = null; }
+        finally { _keepLinkMatchOnClear = false; }
+        _autoFilledValue = null;
+        _lastOfferedClipboardText = null; // copying the same address again is a new request
+    }
+
+    private void ClearLinkMatch()
+    {
+        _linkCache = null;
+        LinkMatchText = string.Empty;
+        LinkMissingFiles = [];
+        LinkInLibraryFiles = [];
+        LinkUnstartedFolders = [];
+        LinkUnstartedText = string.Empty;
+        LinkMissingText = string.Empty;
+        LinkInLibraryText = string.Empty;
+    }
+
+    // Runs in the background while the user looks at the post; nothing waits for it,
+    // and a post with no readable links leaves the page exactly as it was.
+    private async Task RunLinkMatchAsync(string input, CancellationToken ct)
+    {
+        try
+        {
+            string postId;
+            IReadOnlyList<PostLinkInfo> links;
+            if (_linkCache is { } cached && cached.Input == input)
+                (postId, links) = (cached.PostId, cached.Links);
+            else
+            {
+                await Task.Delay(LinkMatchDebounce, ct);
+                var artworkId = _importService.ResolveReviewArtworkInput(input, ReviewArtworkProviderId);
+                if (artworkId is null) return;
+
+                var info = await _importService.FetchArtworkInfoAsync(artworkId, ct);
+                if (info is null)
+                {
+                    ShowLinkStatus("Import_LinkMatch_NoPost", artworkId.Id);
+                    TakeBackAutoFilledAddress(input);
+                    return;
+                }
+                postId = info.ArtworkId.Id;
+                links = await _postLinkLookup.InspectAsync(info.Description, ct);
+                if (ct.IsCancellationRequested) return;
+                if (links.Count == 0)
+                {
+                    ShowLinkStatus("Import_LinkMatch_NoLinks", postId);
+                    TakeBackAutoFilledAddress(input);
+                    return;
+                }
+                _linkCache = (input, postId, links);
+            }
+
+            // The list can hold thousands of cards: take the names here, on the UI thread,
+            // and do the comparing, which runs a pattern per name, somewhere else.
+            var cardNames = ReviewStates.Where(state => state.CanSelect).Select(state => state.Item.FileName).ToList();
+        // Single-file links first: a big folder would otherwise fill the few names shown.
+            var listed = links.OrderBy(link => link.IsFolder).SelectMany(link => link.Files).Select(file => new ListedFile(file.Name, file.Size, file.Url, file.Folder, file.FolderUrl)).ToList();
+            var match = await Task.Run(() => PostLinkMatcher.MatchFiles(listed, cardNames, libraryHas: null), ct);
+            if (ct.IsCancellationRequested) return;
+            if (match.ListedCount == 0)
+            {
+                ShowLinkStatus("Import_LinkMatch_NoLinks", postId);
+                TakeBackAutoFilledAddress(input);
+                return;
+            }
+
+            if (match.Matched.Count > 0)
+            {
+                var matched = new HashSet<string>(match.Matched, StringComparer.OrdinalIgnoreCase);
+                _reviewWorkspace.SetSelection(state => matched.Contains(state.Item.FileName));
+            }
+
+            ShowLinkMatch(postId, match);
+
+            // The library scan can take a while the first time, so the selection and the
+            // first answer above do not wait for it; the answer is refined once it is in.
+            var inLibrary = await TryGetLibraryLookupAsync(ct);
+            if (inLibrary is not null && !ct.IsCancellationRequested)
+            {
+                // Asks the disk about each candidate's size, so also off the UI thread.
+                var refined = await Task.Run(() => PostLinkMatcher.MatchFiles(listed, cardNames, inLibrary), ct);
+                if (ct.IsCancellationRequested) return;
+                if (refined.InLibrary.Count > 0) ShowLinkMatch(postId, refined);
+            }
+
+            // Last, because emptying the box cancels this run. Nothing was selected, so
+            // there is nothing for the user to apply.
+            if (match.Matched.Count == 0) TakeBackAutoFilledAddress(input);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.LinkMatch", ex);
+        }
+    }
+
+    private async Task<Func<string, long?, bool>?> TryGetLibraryLookupAsync(CancellationToken ct)
+    {
+        try { return await _importService.GetLibraryLookupAsync(ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.LinkMatch.Library", ex);
+            return null;
+        }
+    }
+
+    internal static string NamesWithMore(IReadOnlyList<string> names)
+        => string.Join(", ", names.Take(MissingNamesShown))
+           + (names.Count > MissingNamesShown
+               ? string.Format(GetLocalizedString("Import_LinkMatch_MissingMore"), names.Count - MissingNamesShown)
+               : string.Empty);
+
+    // Says why nothing was matched: silence would look like the feature is broken.
+    private void ShowLinkStatus(string resourceKey, string postId)
+    {
+        LinkMatchText = string.Format(GetLocalizedString(resourceKey), postId);
+        LinkMissingFiles = [];
+        LinkInLibraryFiles = [];
+        LinkUnstartedFolders = [];
+        LinkUnstartedText = string.Empty;
+        LinkMissingText = string.Empty;
+        LinkInLibraryText = string.Empty;
+    }
+
+    private void ShowLinkMatch(string artworkId, PostLinkMatch match)
+    {
+        var missing = match.Missing.Count;
+        var inLibrary = match.InLibrary.Count;
+        LinkMatchText = match.Matched.Count == 0
+            ? string.Format(GetLocalizedString("Import_LinkMatch_NoMatch"), artworkId, match.ListedCount)
+            : missing == 0 && inLibrary == 0 && match.Unlisted.Count == 0 && match.UnstartedFolders.Count == 0
+                ? string.Format(GetLocalizedString("Import_LinkMatch_Complete"), artworkId, match.ListedCount, match.Matched.Count)
+                : string.Format(GetLocalizedString("Import_LinkMatch_Summary"),
+                    artworkId, match.ListedCount, match.Matched.Count, missing, match.Unlisted.Count);
+
+        // The files first: the page rebuilds its links when the text changes and reads them then.
+        LinkMissingFiles = match.MissingFiles;
+        LinkInLibraryFiles = match.InLibraryFiles;
+        LinkUnstartedFolders = match.UnstartedFolders;
+        LinkUnstartedText = match.UnstartedFolders.Count == 0 ? string.Empty : GetLocalizedString("Import_LinkMatch_Unstarted");
+        LinkMissingText = missing == 0 ? string.Empty : string.Format(
+            GetLocalizedString("Import_LinkMatch_Missing"), NamesWithMore(match.Missing));
+        LinkInLibraryText = inLibrary == 0 ? string.Empty : string.Format(
+            GetLocalizedString("Import_LinkMatch_InLibrary"), NamesWithMore(match.InLibrary));
+    }
+
+    // ── Checking an author's posts against the cards in the list ───────────────
+
+    /// <summary>Whether an author check can work: something lists an author's posts and something reads their links.</summary>
+    public bool CanCheckAuthors => _pluginService.AuthorPostListers.Count > 0 && _postLinkLookup.HasInspectors;
+    public Visibility AuthorCheckVisibility => CanCheckAuthors ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool HasReviewCards => Items.Count > 0;
+
+    /// <summary>File names of every card in the list, for the author check.</summary>
+    public IReadOnlyList<string> ReviewCardNames => Items.Select(item => item.FileName).ToList();
+
+    /// <summary>The author an address points at, or null when it is not an author page of any installed platform.</summary>
+    public AuthorKey? TryParseAuthorUrl(string? text)
+    {
+        var value = text?.Trim();
+        if (string.IsNullOrEmpty(value)) return null;
+        foreach (var lister in _pluginService.AuthorPostListers)
+        {
+            try { if (lister.TryParseAuthorUrl(value) is { } key) return key; }
+            catch (Exception ex) { _logger.LogError("Import.AuthorUrl", ex); }
+        }
+        return null;
+    }
+
+    internal async Task<AuthorCheckResult> CheckAuthorPostsAsync(
+        AuthorKey author, IProgress<AuthorCheckProgress> progress, CancellationToken ct)
+    {
+        var cards = ReviewCardNames; // taken before the first await, while still on the UI thread
+        var lister = _pluginService.AuthorPostListers.FirstOrDefault(candidate =>
+            candidate.ProviderId.Equals(author.ProviderId, StringComparison.OrdinalIgnoreCase));
+        if (lister is null)
+            return new AuthorCheckResult(AuthorCheckStatus.ListFailed, 0, 0, 0, 0, [], cards);
+
+        var libraryHas = await TryGetLibraryLookupAsync(ct);
+        var checker = new AuthorPostChecker(
+            lister.ListPostsAsync,
+            (id, token) => _importService.FetchArtworkInfoAsync(id, token),
+            (description, token) => _postLinkLookup.InspectAsync(description, token));
+        return await checker.CheckAsync(author, cards, libraryHas, progress, ct);
+    }
+
+    /// <summary>
+    /// Fetches each post an author check found and applies it to the dropped cards that post
+    /// lists: the same thing the post-address box does for the selected cards, for every post
+    /// of the check at once. Returns how many cards and how many posts were applied.
+    /// </summary>
+    internal async Task<(int Cards, int Posts)> ApplyAuthorCheckAsync(IReadOnlyList<AuthorPostCheckEntry> entries)
+    {
+        if (!IsReviewWorkspaceEnabled || entries.Count == 0) return (0, 0);
+
+        IsResolvingReview = true;
+        ReviewBatchStatusText = GetLocalizedString("Import_Review_Working");
+        int cards = 0, posts = 0;
+        try
+        {
+            foreach (var entry in entries)
+            {
+                // Only the cards this post owns: one that a more specific post also lists goes there,
+                // not to the post that links the whole archive.
+                var names = new HashSet<string>(entry.ClaimedCards ?? [], StringComparer.OrdinalIgnoreCase);
+                if (names.Count == 0) continue;
+                var items = Items
+                    .Where(item => !item.IsAlreadyInLibrary && names.Contains(item.FileName))
+                    .ToList();
+                if (items.Count == 0) continue;
+
+                var request = new ImportReviewEditRequest(
+                    true, false, false, entry.Post.Id, entry.Post.ProviderId, null, null, 0);
+                if (ImportReviewEditService.Validate(request) != ImportReviewEditStatus.Ready) continue;
+
+                var prepared = await _reviewEditService.PrepareAsync(request, CancellationToken.None);
+                if (prepared.Status != ImportReviewEditStatus.Ready) continue;
+
+                CaptureUndo(ManualAssignmentSource.FlatReview, items);
+                var applied = 0;
+                foreach (var item in items)
+                {
+                    if (!prepared.Edit!.Apply(item)) continue;
+                    RemoveItemFromManualContainers(item);
+                    item.ErrorMessage = null;
+                    item.Status = ImportItemStatus.ReadyToImport;
+                    PlaceItemInTree(item);
+                    applied++;
+                }
+                if (applied > 0) { cards += applied; posts++; }
+            }
+
+            await ReResolveDestinationsAsync();
+            UpdateCounts();
+            _reviewWorkspace.SetSelection(_ => false);
+            ReviewBatchStatusText = GetLocalizedString("Import_Review_BatchApplied");
+            ReconcileReviewStatesIfVisible();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.AuthorCheckApply", ex);
+            ReviewBatchStatusText = GetLocalizedString("Import_Review_ActionFailed");
+            throw;
+        }
+        finally { IsResolvingReview = false; }
+        return (cards, posts);
+    }
+
+    // Enter right after a paste: let the match that is already running finish, so the
+    // fetch applies to the cards it selected. Bounded, because the fetch must not stall.
+    private async Task WaitForLinkMatchAsync()
+    {
+        if (_linkMatchTask.IsCompleted) return;
+        try { await _linkMatchTask.WaitAsync(LinkMatchFetchWait); }
+        catch (TimeoutException) { }
+    }
+
+    // Remembered so a box the user has emptied is not refilled by the same clipboard text.
+    private string? _lastOfferedClipboardText;
+
+    // What the clipboard put in the box and nobody has touched since. Such text is ours to
+    // replace or take back; text the user typed or pasted is theirs and is left alone.
+    private string? _autoFilledValue;
+
+    // Fills the post-URL box from clipboard text. Fetching and applying stay with the user.
+    // Returns true when the box took the text.
+    public bool TryFillArtworkFromClipboard(string? text)
+    {
+        var value = text?.Trim();
+        if (string.IsNullOrEmpty(value) || value == _lastOfferedClipboardText) return false;
+        // A box holding an address the clipboard filled earlier does not block a newer one: the
+        // editor row that holds the box is only shown while cards are selected, so a stale
+        // address could otherwise sit there unseen and stop every later copy.
+        var boxIsOurs = _autoFilledValue is not null && ReviewArtworkId?.Trim() == _autoFilledValue;
+        if (!IsReviewWorkspaceEnabled || ReviewStates.Count == 0
+            || (!string.IsNullOrWhiteSpace(ReviewArtworkId) && !boxIsOurs)) return false;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return false;
+        if (_importService.ResolveReviewArtworkInput(value, null) is null) return false;
+
+        _lastOfferedClipboardText = value;
+        ReviewArtworkId = value;
+        _autoFilledValue = value; // after the assignment: changing the box resets it
+        return true;
+    }
 
     [ObservableProperty]
     public partial int ReviewRatingOverrideIndex { get; set; }
@@ -320,6 +697,7 @@ public partial class ImportViewModel : ObservableObject
         _dispatcher = dispatcher;
         _logger = logger;
 
+        _postLinkLookup = new PostLinkLookup(pluginService.PostLinkInspectors, logger);
         _reviewWorkspace = new ImportReviewWorkspace(GetLocalizedString,
             action => _dispatcher.TryEnqueue(() => action()));
         ReviewedItemsView = new AdvancedCollectionView(_reviewWorkspace.VisibleItems, false);
@@ -449,9 +827,11 @@ public partial class ImportViewModel : ObservableObject
             ClearReviewStates();
         }
         if (_suspendItemCollectionRefresh) return;
-        UpdateCounts();
+        // Adding files raises this once per file. The analysis state has to be right at once
+        // (it decides whether the loading indicator shows); the counts and the review list are
+        // refreshed once per dispatcher turn, not once per file.
         UpdateAnalysisProgress();
-        ReconcileReviewStatesIfVisible();
+        QueueItemRefresh();
     }
 
     private void PlaceNewItem(ImportItem item)
@@ -465,29 +845,45 @@ public partial class ImportViewModel : ObservableObject
         AnalyzingItems.Add(item);
     }
 
+    // Every property an import step sets on a card lands here. A step touches hundreds of
+    // cards and several properties on each, and each landing used to recount every card and
+    // re-reconcile the whole review list, which is quadratic and froze the page. The counts
+    // and the list are only read once the step is over, so one pass per dispatcher turn serves.
+    private bool _itemRefreshQueued;
+
+    private void QueueItemRefresh()
+    {
+        if (_itemRefreshQueued) return;
+        _itemRefreshQueued = true;
+        if (!_dispatcher.TryEnqueue(RunItemRefresh))
+            RunItemRefresh();
+    }
+
+    private void RunItemRefresh()
+    {
+        _itemRefreshQueued = false;
+        UpdateCounts();
+        ReconcileReviewStatesIfVisible();
+    }
+
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not ImportItem item) return;
         if (e.PropertyName == nameof(ImportItem.Rating))
         {
-            UpdateCounts();
-            ReconcileReviewStatesIfVisible();
+            QueueItemRefresh();
             return;
         }
         if (e.PropertyName != nameof(ImportItem.Status))
         {
             if (e.PropertyName is nameof(ImportItem.DestinationPath) or nameof(ImportItem.ArtworkId))
-            {
-                UpdateCounts();
-                ReconcileReviewStatesIfVisible();
-            }
+                QueueItemRefresh();
             return;
         }
-        UpdateCounts();
         UpdateAnalysisProgress();
         if (item.Status != ImportItemStatus.ReadyToImport)
         {
-            ReconcileReviewStatesIfVisible();
+            QueueItemRefresh();
             return;
         }
 
@@ -504,7 +900,7 @@ public partial class ImportViewModel : ObservableObject
         }
 
         DebouncedReResolveAsync().Observe(_logger, "Import.ReadyStateResolve");
-        ReconcileReviewStatesIfVisible();
+        QueueItemRefresh();
     }
 
     private void PlaceItemInTree(ImportItem item)
@@ -1031,9 +1427,47 @@ public partial class ImportViewModel : ObservableObject
         await ExecuteImportAsync(importItems, "Import_Summary_Success");
     }
 
+    // The rollback line used to say "conflict or cancelled" whatever had actually gone wrong.
+    // The failure type is known by then, so say it.
+    private static string RollingBackText(TransactionFailureType failure)
+    {
+        var text = GetLocalizedString("Import_Phase_RollingBack");
+        return failure is TransactionFailureType.None or TransactionFailureType.Cancelled
+            ? text
+            : text + Environment.NewLine + string.Format(GetLocalizedString("Import_Failure_" + failure), string.Empty);
+    }
+
+    // Names the file that stopped the import and why, and keeps the whole list in the log.
+    private void ReportImportFailure(ImportExecutionResult result)
+    {
+        var summary = ImportFailureSummary.From(result.Receipt.ItemReceipts);
+        if (summary is null) return; // cancelled by the user: nothing to explain
+
+        var first = summary.First;
+        var lines = new List<string>
+        {
+            string.Format(GetLocalizedString("Import_Failure_" + first.FailureType), first.TargetFilePath),
+            string.Format(GetLocalizedString("Import_Failure_Source"), first.SourceFilePath),
+            string.Format(GetLocalizedString("Import_Failure_Target"), first.TargetFilePath),
+            string.Format(GetLocalizedString("Import_Failure_Outcome"), result.SafelyRolledBackCount, result.ManualRecoveryCount),
+        };
+        if (summary.Total > 1)
+            lines.Add(string.Format(GetLocalizedString("Import_Failure_More"), summary.Total - 1));
+        lines.Add(GetLocalizedString("Import_Failure_Log"));
+
+        ImportFailureTitle = GetLocalizedString("Import_Failure_Title");
+        ImportFailureMessage = string.Join("\n", lines);
+        ShowImportFailure = true;
+
+        var everything = string.Join("; ", result.Receipt.ItemReceipts
+            .Where(r => r.FailureType is not (TransactionFailureType.None or TransactionFailureType.Cancelled))
+            .Select(r => $"{r.FailureType}: {r.SourceFilePath} -> {r.TargetFilePath}"));
+        _ = Task.Run(() => _logger.LogError("Import.TransactionFailed", new InvalidOperationException(everything)));
+    }
+
     private async Task ExecuteImportAsync(ImportItem[] importItems, string successResource)
     {
-        var plans = BuildExecutionPlansFromWorkspace(importItems);
+        var plans = await BuildExecutionPlansFromWorkspaceAsync(importItems);
         if (plans.Count == 0)
         {
             TransactionStatusText = GetLocalizedString("Import_Summary_NoEligible");
@@ -1052,6 +1486,7 @@ public partial class ImportViewModel : ObservableObject
             LastFailureType: TransactionFailureType.None,
             LastWarningType: ImportExecutionWarningType.None);
         TransactionStatusText = GetLocalizedString("Import_Phase_Preparing");
+        ShowImportFailure = false;
         IsImporting = true;
 
         try
@@ -1065,7 +1500,7 @@ public partial class ImportViewModel : ObservableObject
                         GetLocalizedString("Import_Phase_Executing"),
                         snapshot.CompletedCount,
                         snapshot.TotalCount),
-                    ImportExecutionPhase.RollingBack => GetLocalizedString("Import_Phase_RollingBack"),
+                    ImportExecutionPhase.RollingBack => RollingBackText(snapshot.LastFailureType),
                     ImportExecutionPhase.Completed => GetLocalizedString("Import_Phase_Completed"),
                     _ => TransactionStatusText,
                 };
@@ -1074,7 +1509,7 @@ public partial class ImportViewModel : ObservableObject
             if (result.Receipt.IsFullySuccessful)
             {
                 _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
-                RemoveCommittedItemsFromWorkspace(importItems);
+                RemoveItemsFromWorkspace(importItems);
                 TransactionStatusText = string.Format(
                     GetLocalizedString(successResource),
                     plans.Count);
@@ -1087,6 +1522,7 @@ public partial class ImportViewModel : ObservableObject
                     result.FailedCount,
                     result.WarningCount,
                     result.ManualRecoveryCount);
+                ReportImportFailure(result);
             }
         }
         catch (Exception ex)
@@ -1120,25 +1556,76 @@ public partial class ImportViewModel : ObservableObject
         }
     }
 
-    private IReadOnlyList<ImportItemPlan> BuildExecutionPlansFromWorkspace(IReadOnlyList<ImportItem> importItems)
+    /// <summary>
+    /// Turns the items into plans, giving a card a different name when another card
+    /// in the batch already claimed its destination.
+    /// </summary>
+    /// <remarks>
+    /// Two download folders often hold a card of the same name. Both resolve to one
+    /// destination, and the executor stops at the second: the whole batch rolled
+    /// back, and the user left to hunt the pair down by hand. So the clash is settled
+    /// here instead. The same card — same card data, whatever its preview — keeps the
+    /// shared destination, where the executor folds it as a duplicate; a different
+    /// card gets a suffixed name, as a local import already does.
+    ///
+    /// Only clashes inside the batch are renamed. A library file of that name with a
+    /// different card still stops the import, as before.
+    ///
+    /// Reads file contents for clashing names, so it runs off the UI thread.
+    /// </remarks>
+    private static Task<List<ImportItemPlan>> BuildExecutionPlansFromWorkspaceAsync(IReadOnlyList<ImportItem> importItems)
     {
-        var plans = new List<ImportItemPlan>();
-        foreach (var item in importItems)
-        {
-            var document = item.FetchedArtworkInfo is null
-                ? null
-                : PostMetadataMapper.ToDocument(item.FetchedArtworkInfo, []);
-            plans.Add(new ImportItemPlan(
+        var snapshot = importItems
+            .Select(item => (
                 item.SourceFilePath,
-                item.DestinationPath!,
+                Destination: item.DestinationPath!,
                 item.AuthorDirectoryPath,
-                document));
-        }
+                Document: PostMetadataMapper.ToImportDocument(item, [])))
+            .ToList();
 
-        return plans;
+        return Task.Run(() =>
+        {
+            var claimed = new Dictionary<string, string>(PathComparison.Comparer);
+            var plans = new List<ImportItemPlan>(snapshot.Count);
+            foreach (var (source, destination, authorDirectory, document) in snapshot)
+            {
+                var resolved = destination;
+                if (claimed.ContainsKey(destination))
+                {
+                    resolved = LocalDestinationNames.Resolve(
+                        source, destination, claimed, File.Exists, IsSameCard);
+                }
+                else
+                {
+                    claimed[destination] = source;
+                }
+
+                plans.Add(new ImportItemPlan(source, resolved, authorDirectory, document)
+                {
+                    MatchCardData = true,
+                });
+            }
+
+            return plans;
+        });
     }
 
-    private void RemoveCommittedItemsFromWorkspace(IReadOnlyList<ImportItem> committedItems)
+    private static bool IsSameCard(string left, string right)
+    {
+        try
+        {
+            return ImportDuplicateDetector.AreFilesIdentical(left, right)
+                   || CardPayloadHash.AreSameCard(left, right);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    // One recount for the whole batch: removing cards one at a time recounted and re-reconciled
+    // the list after each, which for a thousand cards is a thousand passes over a thousand cards.
+    private void RemoveItemsFromWorkspace(IReadOnlyList<ImportItem> committedItems)
     {
         _suspendItemCollectionRefresh = true;
         try
@@ -1391,11 +1878,23 @@ public partial class ImportViewModel : ObservableObject
 
     partial void OnIsAnalyzingChanged(bool value)
     {
+        if (value)
+        {
+            // New cards are coming: a result kept from the previous post no longer describes the list.
+            if (string.IsNullOrWhiteSpace(ReviewArtworkId)) ClearLinkMatch();
+        }
+
         OnPropertyChanged(nameof(AnalysisLoadingVisibility));
         OnPropertyChanged(nameof(UnknownEmptyVisibility));
         OnPropertyChanged(nameof(UnknownLoadingVisibility));
         if (!value)
+        {
             ReconcileReviewStates();
+            // After the reconcile: a match started earlier would see the list without the new cards.
+            // A URL is waiting, so match the cards that just arrived.
+            if (!string.IsNullOrWhiteSpace(ReviewArtworkId))
+                ScheduleLinkMatch(ReviewArtworkId);
+        }
         else
             NotifyReviewWorkspaceState();
     }
@@ -1407,12 +1906,16 @@ public partial class ImportViewModel : ObservableObject
     private void RemoveReviewSelection()
     {
         if (!IsIdle) return;
-        foreach (var state in ReviewedItemsView.OfType<ImportItemReviewState>().Where(s => s.IsSelected && s.CanSelect).ToArray())
-        {
-            RemoveItemFromManualContainers(state.Item);
-            Items.Remove(state.Item);
-        }
-        ReconcileReviewStates(); UpdateCounts();
+        var selected = ReviewedItemsView.OfType<ImportItemReviewState>()
+            .Where(s => s.IsSelected && s.CanSelect).Select(s => s.Item).ToArray();
+        RemoveItemsFromWorkspace(selected);
+    }
+
+    [RelayCommand]
+    private void RemoveReviewItem(ImportItemReviewState? state)
+    {
+        if (!IsIdle || state is null || !Items.Contains(state.Item)) return;
+        RemoveItemsFromWorkspace([state.Item]);
     }
 
     public async Task ApplySearchResultToSelectionAsync(IReadOnlyList<ImportItem> selected, ReverseImageSearchResult result, ContentRating rating)
@@ -1438,6 +1941,7 @@ public partial class ImportViewModel : ObservableObject
 
     private void ClearReviewStates()
     {
+        ClearLinkMatch();
         _reviewWorkspace.Clear();
         ReviewBatchStatusText = string.Empty;
         NotifyReviewWorkspaceState();
@@ -1500,7 +2004,12 @@ public partial class ImportViewModel : ObservableObject
         if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(group);
     }
 
-    [RelayCommand] private Task FetchReviewArtworkAsync() => ApplyReviewChangesAsync(true, false, false);
+    [RelayCommand]
+    private async Task FetchReviewArtworkAsync()
+    {
+        await WaitForLinkMatchAsync();
+        await ApplyReviewChangesAsync(true, false, false);
+    }
     [RelayCommand] private Task ApplyReviewAuthorAsync() => ApplyReviewChangesAsync(false, true, false);
     [RelayCommand] private Task ApplyReviewRatingAsync() => ApplyReviewChangesAsync(false, false, true);
 
@@ -1548,10 +2057,14 @@ public partial class ImportViewModel : ObservableObject
 
             await ReResolveDestinationsAsync();
             UpdateCounts();
-            foreach (var state in ReviewStates.Where(state => state.IsSelected))
-                state.IsSelected = false;
+            _reviewWorkspace.SetSelection(_ => false); // one recount, not one per selected card
             if (applyAuthor) { ReviewAuthorProviderId = null; ReviewAuthorId = null; }
-            if (applyArtwork) { ReviewArtworkProviderId = null; ReviewArtworkId = null; }
+            if (applyArtwork)
+            {
+                _keepLinkMatchOnClear = true;
+                try { ReviewArtworkProviderId = null; ReviewArtworkId = null; }
+                finally { _keepLinkMatchOnClear = false; }
+            }
             if (applyRating) ReviewRatingOverrideIndex = 0;
             ReviewBatchStatusText = GetLocalizedString("Import_Review_BatchApplied");
             ReconcileReviewStatesIfVisible();

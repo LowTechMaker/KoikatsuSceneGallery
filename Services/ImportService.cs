@@ -61,6 +61,7 @@ public sealed class ImportService
     private readonly LibraryFileCache _libraryFileCache;
     private readonly ImportLibraryIndexer _libraryIndexer;
     private readonly ImportResolutionCoordinator<ResolveDiagnosticResult> _resolution = new();
+    private readonly FeedHandoffManifest _feedHandoff = new();
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
@@ -99,6 +100,28 @@ public sealed class ImportService
             if (id is not null) return id;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Applies the post and creator provenance KoikatsuSceneFeed recorded for this card. The manifest remains useful
+    /// without a Gallery plugin: the card can still be organized under its provider, post, and creator. When a plugin
+    /// is installed, its URL parser may canonicalize the post id and phase 2 can enrich the remaining metadata.
+    /// </summary>
+    private bool TryApplyFeedHandoff(ImportItem item)
+    {
+        if (_feedHandoff.Find(item.SourceFilePath) is not { } source)
+            return false;
+
+        var provider = FindProvider(source.ProviderId);
+        var parsed = source.PostUrl is { } url && provider is not null ? provider.TryParseUrl(url) : null;
+        item.ArtworkId = parsed is not null
+                         && string.Equals(parsed.ProviderId, source.ProviderId, StringComparison.OrdinalIgnoreCase)
+            ? parsed
+            : new ArtworkId(source.ProviderId, source.PostId);
+        item.AuthorProviderId = source.ProviderId;
+        item.AuthorId = source.CreatorId;
+        item.AuthorName = source.CreatorName ?? source.CreatorId;
+        return true;
     }
 
     private ICardImportProvider? FindProvider(string providerId)
@@ -275,7 +298,10 @@ public sealed class ImportService
                 }
                 else
                 {
-                    item.ArtworkId = TryParseFilenameAll(item.FileName);
+                    // Feed's byte-hash provenance is stronger than a filename heuristic. This matters for archive
+                    // entries whose arbitrary names can look like another provider's artwork id.
+                    if (!TryApplyFeedHandoff(item))
+                        item.ArtworkId = TryParseFilenameAll(item.FileName);
                 }
 
                 valid.Add(item);
@@ -574,12 +600,56 @@ public sealed class ImportService
     /// library scan the next time an import workspace is re-resolved.
     /// </summary>
     public void RegisterCommittedLibraryFiles(IEnumerable<string> destinationPaths)
-        => _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+    {
+        _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+        ForgetLibraryNames();
+    }
 
     /// <summary>
     /// Causes the following resolution to rebuild its filename index from disk.
     /// </summary>
-    public void InvalidateLibraryFileCache() => _libraryFileCache.Invalidate();
+    public void InvalidateLibraryFileCache()
+    {
+        _libraryFileCache.Invalidate();
+        ForgetLibraryNames();
+    }
+
+    // The library's files by name across every configured root, for "does the library
+    // already hold this file?". Rebuilt when the roots change or an import commits.
+    private readonly object _libraryNamesGate = new();
+    private (string Key, LibraryNameIndex Index)? _libraryNames;
+
+    private void ForgetLibraryNames()
+    {
+        lock (_libraryNamesGate) _libraryNames = null;
+    }
+
+    /// <summary>
+    /// A question the import page can ask of the library: is there a file of this name,
+    /// and of this size when one is given? The first call scans the library.
+    /// </summary>
+    public async Task<Func<string, long?, bool>> GetLibraryLookupAsync(CancellationToken ct)
+    {
+        var config = await _loadConfig().ConfigureAwait(false);
+        var roots = (config.FolderPaths ?? [])
+            .Concat(config.CharacterFolderPaths ?? [])
+            .Concat(config.CoordinateFolderPaths ?? [])
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var key = string.Join("\n", roots);
+
+        lock (_libraryNamesGate)
+        {
+            if (_libraryNames is { } cached && cached.Key == key) return cached.Index.Has;
+        }
+
+        var index = await Task.Run(
+            () => LibraryNameIndex.Build(roots, _logger.LogError, ct), ct).ConfigureAwait(false);
+        lock (_libraryNamesGate) _libraryNames = (key, index);
+        return index.Has;
+    }
 
     private void ResolveDestinations(
         ObservableCollection<ImportItem> items,
@@ -760,7 +830,7 @@ public sealed class ImportService
                 : new[] { Path.GetFileName(item.DestinationPath) };
             await _postMetadataStore.WriteAsync(
                 authorDirectory,
-                PostMetadataMapper.ToDocument(info, localFileNames),
+                PostMetadataMapper.ToImportDocument(item, localFileNames)!,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

@@ -31,6 +31,79 @@ public sealed class ImportReviewWorkspaceTests
     }
 
     [Fact]
+    public void SetSelectionSelectsExactlyTheChosenCardsWithOneNotification()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 200).Select(i => Item($"card{i}")).ToArray();
+        h.Workspace.Reconcile(items);
+        h.Flush();
+        h.Workspace.States[0].IsSelected = true; // a stale selection that must be replaced
+        var changes = 0;
+        h.Workspace.Changed += () => changes++;
+        var wanted = new HashSet<ImportItem>(items.Skip(10).Take(50));
+
+        h.Workspace.SetSelection(state => wanted.Contains(state.Item));
+
+        Assert.Equal(1, changes);
+        Assert.Equal(50, h.Workspace.SelectedCount);
+        Assert.Equal(wanted, h.Workspace.SelectedItems.ToHashSet());
+        Assert.False(h.Workspace.States[0].IsSelected);
+    }
+
+    [Fact]
+    public void SetSelectionLeavesCardsAlreadyInTheLibraryUnselected()
+    {
+        using var h = new Harness();
+        var inLibrary = Item("owned");
+        inLibrary.Status = ImportItemStatus.AlreadyInLibrary;
+        var fresh = Item("fresh");
+        h.Workspace.Reconcile([inLibrary, fresh]);
+        h.Flush();
+
+        h.Workspace.SetSelection(_ => true);
+
+        Assert.Same(fresh, Assert.Single(h.Workspace.SelectedItems));
+    }
+
+    [Fact]
+    public void SettingAPropertyOnEveryCardOfALargeListIsNotQuadratic()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 2000).Select(i =>
+        {
+            var item = Item("big" + i);
+            item.DestinationPath = "C:/lib/a/" + i + ".png";
+            return item;
+        }).ToArray();
+        h.Workspace.Reconcile(items);
+        h.Flush();
+
+        // This took about six seconds before the visible list stopped being re-sorted for
+        // every property change; the bound is generous so a slow machine does not fail it.
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var item in items) item.DestinationPath = "C:/lib/b/" + item.FileName;
+        watch.Stop();
+
+        Assert.True(watch.ElapsedMilliseconds < 1500, $"took {watch.ElapsedMilliseconds} ms");
+        Assert.Equal(2000, h.Workspace.VisibleItems.Count);
+    }
+
+    [Fact]
+    public void ACardWhoseRatingNoLongerMatchesTheFilterLeavesTheVisibleListAtOnce()
+    {
+        using var h = new Harness();
+        var stays = Item("stays");
+        var leaves = Item("leaves");
+        h.Workspace.Reconcile([stays, leaves]);
+        h.Workspace.SetFilter("AllAges");
+        h.Flush();
+
+        leaves.Rating = ContentRating.R18;
+
+        Assert.Same(stays, Assert.Single(h.Workspace.VisibleItems).Item);
+    }
+
+    [Fact]
     public void ReconcilePreservesIdentityAndUnsubscribesRemovedStates()
     {
         using var h = new Harness();

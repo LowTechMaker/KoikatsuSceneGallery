@@ -980,7 +980,7 @@
     <value>正在执行批量导入：已处理 {0} / {1} 张卡片...</value>
   </data>
   <data name="Import_Phase_RollingBack" xml:space="preserve">
-    <value>侦测到冲突或用户取消。正在执行全批次回滚与 Sidecar 安全解绑...</value>
+    <value>导入中途失败或被取消，正在把已移动的文件全部放回原处…</value>
   </data>
   <data name="Import_Phase_Completed" xml:space="preserve">
     <value>导入交易流程结算完成。</value>
@@ -1182,7 +1182,13 @@
     <value>筛选内容与环境</value>
   </data>
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
-    <value>显示 R-18 内容</value>
+    <value>分级</value>
+  </data>
+  <data name="Gallery_RatingR18Only" xml:space="preserve">
+    <value>只显示 R-18（不含 R-18G）</value>
+  </data>
+  <data name="Gallery_RatingGeneralOnly" xml:space="preserve">
+    <value>只显示 G（全年龄）</value>
   </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>游戏环境</value>
@@ -1544,6 +1550,9 @@
   <data name="Platform_pixiv" xml:space="preserve">
     <value>pixiv</value>
   </data>
+  <data name="Platform_patreon" xml:space="preserve">
+    <value>Patreon</value>
+  </data>
   <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
     <value>记录模式</value>
   </data>
@@ -1807,5 +1816,122 @@
   </data>
   <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
     <value>只导入已识别的 {0} 张</value>
+  </data>
+  <data name="Import_RemoveItemMenu.Text" xml:space="preserve"><value>从本次工作区移除</value></data>
+  <data name="Import_RemoveCheckedQuick.Content" xml:space="preserve"><value>移除勾选</value></data>
+  <data name="Import_LinkMatch_Summary" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件．已拖入吻合 {2} 张、缺少 {3} 个、不在清单内 {4} 张</value></data>
+  <data name="Import_LinkMatch_Complete" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件，已全部拖入（吻合 {2} 张）</value></data>
+  <data name="Import_LinkMatch_NoMatch" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件，但没有任何已拖入的卡片吻合</value></data>
+  <data name="Import_LinkMatch_Missing" xml:space="preserve"><value>缺少：{0}</value></data>
+  <data name="Import_LinkMatch_MissingMore" xml:space="preserve"><value>…另外 {0} 个</value></data>
+  <data name="Import_LinkMatch_NoPost" xml:space="preserve"><value>帖子 {0}：无法取得帖子资料，没有比对链接</value></data>
+  <data name="Import_LinkMatch_NoLinks" xml:space="preserve"><value>帖子 {0}：说明栏没有可读取文件名的下载链接</value></data>
+  <data name="Import_LinkMatch_InLibrary" xml:space="preserve"><value>缺失，但收藏库已有一模一样的文件：{0}</value></data>
+  <data name="Import_AuthorCheckOpen.Content" xml:space="preserve"><value>检查作者帖子…</value></data>
+  <data name="Import_AuthorCheck_Title" xml:space="preserve"><value>检查作者帖子</value></data>
+  <data name="Import_AuthorCheck_UrlPlaceholder" xml:space="preserve"><value>粘贴作者网址，例如 https://www.pixiv.net/users/12345678</value></data>
+  <data name="Import_AuthorCheck_Start" xml:space="preserve"><value>开始检查</value></data>
+  <data name="Import_AuthorCheck_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Import_AuthorCheck_NotAuthor" xml:space="preserve"><value>这不是已安装平台的作者网址</value></data>
+  <data name="Import_AuthorCheck_NoCards" xml:space="preserve"><value>导入列表里没有卡片可以对照</value></data>
+  <data name="Import_AuthorCheck_Listing" xml:space="preserve"><value>正在取得作者的帖子清单…</value></data>
+  <data name="Import_AuthorCheck_Progress" xml:space="preserve"><value>已检查 {0} / {1} 篇帖子（每篇约需数秒，可随时关闭）</value></data>
+  <data name="Import_AuthorCheck_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Import_AuthorCheck_Failed" xml:space="preserve"><value>检查失败，详情已写入记录</value></data>
+  <data name="Import_AuthorCheck_PostHeader" xml:space="preserve"><value>帖子 {0}{1}：已拖入吻合 {2} 张（共 {3} 个文件）</value></data>
+  <data name="Import_AuthorCheck_PostComplete" xml:space="preserve"><value>完整，没有缺少</value></data>
+  <data name="Import_AuthorCheck_ListFailed" xml:space="preserve"><value>无法取得这位作者的帖子清单（找不到作者、离线，或被平台拒绝）</value></data>
+  <data name="Import_AuthorCheck_Summary" xml:space="preserve"><value>完成：检查 {0} 篇帖子，其中 {1} 篇有已拖入的卡片，{2} 篇缺少文件（{3} 篇无法取得、{4} 篇没有可读的下载链接）</value></data>
+  <data name="Import_AuthorCheck_Unclaimed" xml:space="preserve"><value>{0} 张已拖入的卡片不属于这位作者的任何帖子：{1}</value></data>
+  <data name="Import_AuthorCheck_StoppedEarly" xml:space="preserve"><value>已为所有已拖入的卡片找到帖子，更旧的帖子不会再检查。</value></data>
+  <data name="Import_Failure_Title" xml:space="preserve"><value>导入未完成，已回滚</value></data>
+  <data name="Import_Failure_SourceFileNotFound" xml:space="preserve"><value>源文件不见了（已被移动、删除或所在的磁盘已移除）。</value></data>
+  <data name="Import_Failure_TargetVolumeFull" xml:space="preserve"><value>目的地的磁盘空间不足。</value></data>
+  <data name="Import_Failure_FileMoveAccessDenied" xml:space="preserve"><value>没有权限移动这个文件（可能被其他程序使用，或文件夹是只读）。</value></data>
+  <data name="Import_Failure_DestinationContentMismatch" xml:space="preserve"><value>冲突：目的地已经有一个同名、但内容不同的文件，所以不敢覆盖。</value></data>
+  <data name="Import_Failure_AtomicRenameExhausted" xml:space="preserve"><value>无法为这个文件找到不冲突的名称。</value></data>
+  <data name="Import_Failure_SidecarWriteFault" xml:space="preserve"><value>写入帖子资料文件失败，或找不到作者文件夹。</value></data>
+  <data name="Import_Failure_Source" xml:space="preserve"><value>来源：{0}</value></data>
+  <data name="Import_Failure_Target" xml:space="preserve"><value>目的地：{0}</value></data>
+  <data name="Import_Failure_Outcome" xml:space="preserve"><value>已安全回滚 {0} 个，需人工恢复 {1} 个。</value></data>
+  <data name="Import_Failure_More" xml:space="preserve"><value>另有 {0} 个文件也失败。</value></data>
+  <data name="Import_Failure_Log" xml:space="preserve"><value>完整清单已写入日志文件。</value></data>
+  <data name="Import_AuthorCheck_Apply" xml:space="preserve"><value>取得资料并套用到卡片</value></data>
+  <data name="Import_AuthorCheck_Applying" xml:space="preserve"><value>正在取得帖子资料并套用到卡片…</value></data>
+  <data name="Import_AuthorCheck_Applied" xml:space="preserve"><value>已将 {0} 张卡片套用到 {1} 个帖子。</value></data>
+  <data name="Import_AuthorCheck_ApplyFailed" xml:space="preserve"><value>套用未完成，请重试。</value></data>
+  <data name="Import_LinkMatch_Unstarted" xml:space="preserve"><value>还没拖入的集数（共享文件夹里的其他子文件夹）：{0}</value></data>
+  <data name="Import_LinkMatch_UnstartedCount" xml:space="preserve"><value>（{0} 个文件）</value></data>
+  <data name="Import_LinkMatch_RootFolder" xml:space="preserve"><value>根目录</value></data>
+  <data name="Import_AuthorCheck_Collection" xml:space="preserve"><value>合集：它列出的 {0} 张已拖入卡片，都属于列出文件更少（更具体）的帖子，不会套用到这里</value></data>
+  <data name="Import_AuthorCheck_SharedNote" xml:space="preserve"><value>其中 {0} 张属于更具体的帖子，不会套用到这里</value></data>
+  <data name="Nav_Rating.Content" xml:space="preserve">
+    <value>分级评价</value>
+  </data>
+  <data name="Rating_Title.Text" xml:space="preserve">
+    <value>分级评价</value>
+  </data>
+  <data name="Rating_Previous.Content" xml:space="preserve">
+    <value>上一张</value>
+  </data>
+  <data name="Rating_KeyHint.Text" xml:space="preserve">
+    <value>也可以按 1、2、3 键</value>
+  </data>
+  <data name="Rating_Loading" xml:space="preserve">
+    <value>正在读取图库…</value>
+  </data>
+  <data name="Rating_NoCardsTitle" xml:space="preserve">
+    <value>图库里还没有场景卡片</value>
+  </data>
+  <data name="Rating_NoCardsDescription" xml:space="preserve">
+    <value>在设置中加入场景文件夹后，卡片就会出现在这里。</value>
+  </data>
+  <data name="Rating_DoneTitle" xml:space="preserve">
+    <value>全部评完了</value>
+  </data>
+  <data name="Rating_DoneDescription" xml:space="preserve">
+    <value>已评 {0} 张。之后加入图库的新卡片会出现在这里。</value>
+  </data>
+  <data name="Rating_Progress" xml:space="preserve">
+    <value>还有 {0} 张未评 · 已评 {1} 张</value>
+  </data>
+  <data name="Rating_RatedCount" xml:space="preserve">
+    <value>已评 {0} 张</value>
+  </data>
+  <data name="Rating_SaveFailed" xml:space="preserve">
+    <value>无法保存分级：评级文件可能被其他程序锁住，或卡片不在任何场景文件夹内。</value>
+  </data>
+  <data name="UserRating_ButtonName" xml:space="preserve">
+    <value>评为 {0}</value>
+  </data>
+  <data name="Detail_UserRating.Text" xml:space="preserve">
+    <value>我的分级</value>
+  </data>
+  <data name="Detail_ClearUserRating.Content" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Detail_UserRatingNone" xml:space="preserve">
+    <value>尚未评价（与平台分级分开）</value>
+  </data>
+  <data name="Detail_UserRatingUnavailable" xml:space="preserve">
+    <value>这个文件读不到卡片数据，无法评价。</value>
+  </data>
+  <data name="Gallery_RatingR18AndR18G" xml:space="preserve">
+    <value>R-18（含 R-18G）</value>
+  </data>
+  <data name="Gallery_RatingR18GOnly" xml:space="preserve">
+    <value>只显示 R-18G</value>
+  </data>
+  <data name="SC_RatingSource.Header" xml:space="preserve">
+    <value>分级来源</value>
+  </data>
+  <data name="SC_RatingSource.Description" xml:space="preserve">
+    <value>图库筛选与缩略图标签要依哪一种分级。选“我的分级”时，还没评过的卡片仍按平台分级。</value>
+  </data>
+  <data name="Settings_RatingSourcePlatform.Content" xml:space="preserve">
+    <value>平台分级</value>
+  </data>
+  <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
+    <value>我的分级</value>
   </data>
 </root>

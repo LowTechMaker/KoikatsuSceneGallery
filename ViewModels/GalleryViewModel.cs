@@ -18,6 +18,18 @@ public enum GameFilterOption
     Unknown
 }
 
+/// <summary>Order matches the filter combo boxes, which bind by index.</summary>
+public enum RatingFilterOption
+{
+    All,
+    GeneralOnly,
+    /// <summary>R-18 including R-18G.</summary>
+    R18AndR18G,
+    /// <summary>R-18 excluding R-18G.</summary>
+    R18Only,
+    R18GOnly
+}
+
 public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 {
     private readonly SceneCardService _sceneCardService;
@@ -27,14 +39,16 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly SceneCardCacheService _cardCacheService;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly PluginService _pluginService;
+    private readonly SceneRatingResolver _ratingResolver;
     private readonly IAppLogger _logger;
 
     public ObservableCollection<SceneCard> Cards { get; }
 
     [ObservableProperty]
-    public partial bool ShowR18Content { get; set; } = true;
+    public partial RatingFilterOption RatingFilter { get; set; } = RatingFilterOption.All;
 
-    public bool ShowR18FilterButton => _pluginService.ImportProviders
+    // The user's own ratings exist without any rating-folder provider.
+    public bool ShowR18FilterButton => _ratingResolver.UseUserRatings || _pluginService.ImportProviders
         .OfType<IImportDestinationProvider>()
         .Any(p => p.UsesRatingFolders);
 
@@ -56,6 +70,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         GameFilter != GameFilterOption.All;
 
     private HashSet<string> _r18FolderNames = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _r18GFolderNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SceneCard> _cardIndex = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly GalleryMetadataSession<SceneCard, SceneMetadata> _metadata;
@@ -63,7 +78,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public event Action<string>? CardRemovedNotification;
 
-    public GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, ThumbnailPriorityScheduler thumbnailScheduler, IAppLogger logger)
+    internal GalleryViewModel(SceneCardService sceneCardService, SettingsService settingsService, ThumbnailCacheService thumbnailCacheService, SceneMetadataService metadataService, SceneCardCacheService cardCacheService, SettingsViewModel settingsViewModel, PluginService pluginService, ThumbnailPriorityScheduler thumbnailScheduler, SceneRatingResolver ratingResolver, IAppLogger logger)
         : base(new ObservableCollection<SceneCard>(), thumbnailScheduler)
     {
         Cards = (ObservableCollection<SceneCard>)_cardsSource;
@@ -74,6 +89,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _cardCacheService = cardCacheService;
         _settingsViewModel = settingsViewModel;
         _pluginService = pluginService;
+        _ratingResolver = ratingResolver;
         _logger = logger;
         _metadata = new(
             new MetadataScanCoordinator<SceneCard, SceneMetadata>(
@@ -96,6 +112,56 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _settingsViewModel.ResolutionFilterChanged += OnResolutionFilterChanged;
         _settingsViewModel.ShowFileNamesChanged += OnShowFileNamesSettingChanged;
         _settingsViewModel.PluginAnalysisEnabledChanged += OnPluginAnalysisEnabledChanged;
+        _settingsViewModel.UseUserRatingsChanged += OnUseUserRatingsChanged;
+        _ratingResolver.UserRatings.RatingChanged += OnUserRatingChanged;
+    }
+
+    private void OnUseUserRatingsChanged(bool enabled) => _dispatcherQueue.TryEnqueue(() =>
+    {
+        _ratingResolver.UseUserRatings = enabled;
+        OnPropertyChanged(nameof(ShowR18FilterButton));
+        ApplyRatings();
+    });
+
+    // Raised from a background thread once the rating file is written.
+    private void OnUserRatingChanged(string path) => _dispatcherQueue.TryEnqueue(() =>
+    {
+        if (!_ratingResolver.UseUserRatings || !_cardIndex.TryGetValue(path, out var card)) return;
+        var rating = _ratingResolver.Resolve(card);
+        if (card.Rating == rating) return;
+        card.Rating = rating;
+        if (RatingFilter != RatingFilterOption.All) ApplyFilter();
+    });
+
+    private void AssignRating(SceneCard card)
+    {
+        card.FolderRating = SceneRating.FromFolders(card.FilePath, _r18FolderNames, _r18GFolderNames);
+        card.Rating = _ratingResolver.Resolve(card);
+    }
+
+    /// <summary>
+    /// Reads the platform and user ratings after a load and relabels every card.
+    /// Runs after the load has finished, so the grid is usable meanwhile with
+    /// the folder ratings.
+    /// </summary>
+    private async Task ReloadRatingsAsync(IReadOnlyList<string> roots, CancellationToken token)
+    {
+        await _ratingResolver.ReloadAsync(Cards.ToArray(), roots, token);
+        if (token.IsCancellationRequested) return;
+        ApplyRatings();
+    }
+
+    private void ApplyRatings()
+    {
+        foreach (var card in Cards)
+            card.Rating = _ratingResolver.Resolve(card);
+        if (RatingFilter != RatingFilterOption.All)
+        {
+            if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+            ApplyFilter();
+        }
+        // Random discovery keeps its own rating filter and listens for this.
+        RaiseViewRefreshed();
     }
 
     protected override bool CardPassesFilter(object card) =>
@@ -119,7 +185,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         });
     }
 
-    partial void OnShowR18ContentChanged(bool value)
+    partial void OnRatingFilterChanged(RatingFilterOption value)
     {
         if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
@@ -146,10 +212,12 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             _resolutionFilterEnabled = config.ResolutionFilterEnabled;
             _allowedResolutions = [.. config.AllowedResolutions];
-            _r18FolderNames = new HashSet<string>(
-                [config.R18FolderName, config.R18GFolderName],
-                StringComparer.OrdinalIgnoreCase);
+            _r18FolderNames = new HashSet<string>([config.R18FolderName], StringComparer.OrdinalIgnoreCase);
             _r18FolderNames.RemoveWhere(string.IsNullOrWhiteSpace);
+            _r18GFolderNames = new HashSet<string>([config.R18GFolderName], StringComparer.OrdinalIgnoreCase);
+            _r18GFolderNames.RemoveWhere(string.IsNullOrWhiteSpace);
+            _ratingResolver.UseUserRatings = config.UseUserRatings;
+            OnPropertyChanged(nameof(ShowR18FilterButton));
             ShowFileNames = config.ShowFileNames;
             _pluginAnalysisEnabled = config.PluginAnalysisEnabled;
             ShowMetadataFilters = config.PluginAnalysisEnabled;
@@ -199,7 +267,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                                 card.ThumbnailPath = entry.ThumbnailPath;
                                 _thumbnailPathCache[filePath] = entry.ThumbnailPath;
                             }
-                            card.IsR18Content = IsR18Path(card.FilePath);
+                            AssignRating(card);
                             if (_cardIndex.TryAdd(card.FilePath, card))
                                 Cards.Add(card);
                         }
@@ -233,7 +301,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                             Cards.Remove(existing);
                         }
 
-                        fresh.IsR18Content = IsR18Path(fresh.FilePath);
+                        AssignRating(fresh);
                         if (_cardIndex.TryAdd(fresh.FilePath, fresh))
                             Cards.Add(fresh);
                     }
@@ -268,6 +336,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             await Task.Run(() => _cardCacheService.UpdateAll(newCache), cancellationToken);
 
             ApplyFilter();
+            ReloadRatingsAsync([.. paths], cancellationToken).Observe(_logger, "Gallery.ReloadRatings");
             _sceneCardService.StartWatching(paths);
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
@@ -321,19 +390,19 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     private bool BaseFilterPasses(SceneCard card)
         => OriginPasses(card)
-           && SceneDiscoveryFilter.Matches(card, _searchKeywords, ShowR18Content, GameFilter,
+           && SceneDiscoveryFilter.Matches(card, _searchKeywords, RatingFilter, GameFilter,
                _resolutionFilterEnabled, _allowedResolutions);
 
     protected override void ApplyFilter()
     {
         if (TryApplyShuffleFilter()) return;
 
-        var showR18Content = ShowR18Content;
+        var hasRatingFilter = RatingFilter != RatingFilterOption.All;
         var hasSearch = _searchKeywords.Length > 0;
         var filterRes = HasResolutionFilter;
         var hasMetadataFilter = GameFilter != GameFilterOption.All;
 
-        if (showR18Content && !hasSearch && !filterRes && !hasMetadataFilter && !HasOriginFilter)
+        if (!hasRatingFilter && !hasSearch && !filterRes && !hasMetadataFilter && !HasOriginFilter)
         {
             CardsView.Filter = null!;
         }
@@ -356,7 +425,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;
-            card.IsR18Content = IsR18Path(card.FilePath);
+            AssignRating(card);
             Cards.Add(card);
             QueueMetadata(card);
             RaiseViewRefreshed();
@@ -389,28 +458,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         });
     }
 
-    private bool IsR18Path(string filePath)
-    {
-        if (_r18FolderNames.Count == 0) return false;
-
-        var directory = Path.GetDirectoryName(filePath);
-        if (string.IsNullOrEmpty(directory)) return false;
-
-        foreach (var segment in directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-        {
-            if (_r18FolderNames.Contains(segment))
-                return true;
-        }
-
-        return false;
-    }
-
     public void Dispose()
     {
         DisposeWorkCancellationSources();
         _metadata.Dispose();
         _sceneCardService.CardAdded -= OnCardAdded;
         _sceneCardService.CardRemoved -= OnCardRemoved;
+        _settingsViewModel.UseUserRatingsChanged -= OnUseUserRatingsChanged;
+        _ratingResolver.UserRatings.RatingChanged -= OnUserRatingChanged;
         _settingsViewModel.ResolutionFilterChanged -= OnResolutionFilterChanged;
         _settingsViewModel.ShowFileNamesChanged -= OnShowFileNamesSettingChanged;
         _settingsViewModel.PluginAnalysisEnabledChanged -= OnPluginAnalysisEnabledChanged;

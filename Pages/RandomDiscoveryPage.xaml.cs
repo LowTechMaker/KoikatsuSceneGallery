@@ -23,7 +23,7 @@ public sealed partial class RandomDiscoveryPage : Page
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _searchTimer;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _refreshTimer;
     private Dictionary<string, SceneCard> _candidates = new(StringComparer.OrdinalIgnoreCase);
-    private SceneDiscoveryFilter _filter = new([], true, GameFilterOption.All, false, []);
+    private SceneDiscoveryFilter _filter = new([], RatingFilterOption.All, GameFilterOption.All, false, []);
     private string[] _folders = [];
     private bool _initialized, _active, _syncing, _loading, _restorePosition, _reloadRequested;
     private string _appliedQuery = "";
@@ -52,6 +52,8 @@ public sealed partial class RandomDiscoveryPage : Page
         _refreshTimer.Tick += (_, _) => RefreshCandidates();
         foreach (var name in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") })
             GameFilter.Items.Add(name);
+        foreach (var name in Controls.LibraryBrowser.RatingFilterLabels())
+            RatingFilter.Items.Add(name);
         Loaded += (_, _) =>
         {
             _layout.OnLoaded(RequestVisible);
@@ -76,7 +78,7 @@ public sealed partial class RandomDiscoveryPage : Page
         {
             _syncing = true;
             SearchBox.Text = _gallery.SearchText;
-            RatingFilter.IsOn = _gallery.ShowR18Content;
+            RatingFilter.SelectedIndex = (int)_gallery.RatingFilter;
             GameFilter.SelectedIndex = (int)_gallery.GameFilter;
             ResolutionFilter.IsOn = _settings.ResolutionFilterEnabled;
             _syncing = false;
@@ -123,7 +125,7 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         _appliedQuery = SearchBox.Text;
         _filter = new(SearchBox.Text.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray(),
-            RatingFilter.IsOn, (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
+            (RatingFilterOption)Math.Max(0, RatingFilter.SelectedIndex), (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
             ResolutionFilter.IsOn, new(_settings.AllowedResolutions), _settings.EffectiveBrowseOrigin);
     }
 
@@ -371,7 +373,7 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         _syncing = true;
         SearchBox.Text = "";
-        RatingFilter.IsOn = true;
+        RatingFilter.SelectedIndex = 0;
         GameFilter.SelectedIndex = 0;
         ResolutionFilter.IsOn = false;
         _syncing = false;

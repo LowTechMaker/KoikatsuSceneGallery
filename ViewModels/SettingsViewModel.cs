@@ -63,6 +63,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowFileNames { get; set; } = true;
 
+    /// <summary>0 = platform ratings, 1 = the user's own; bound to the settings combo box by index.</summary>
+    [ObservableProperty]
+    public partial int RatingSourceIndex { get; set; }
+
+    public bool UseUserRatings => RatingSourceIndex == 1;
+
     [ObservableProperty]
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
@@ -217,6 +223,7 @@ public partial class SettingsViewModel : ObservableObject
     public event Action<bool, HashSet<string>>? CharacterResolutionFilterChanged;
     public event Action<bool, HashSet<string>>? CoordinateResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
+    public event Action<bool>? UseUserRatingsChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
     public event Action<ThumbnailSizePreference>? ThumbnailSizeChanged;
     public event Action? SceneFolderPathsChanged;
@@ -282,6 +289,15 @@ public partial class SettingsViewModel : ObservableObject
 
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
+    }
+
+    partial void OnRatingSourceIndexChanged(int value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        UseUserRatingsChanged?.Invoke(UseUserRatings);
     }
 
     partial void OnShowFileNamesChanged(bool value)
@@ -535,6 +551,7 @@ public partial class SettingsViewModel : ObservableObject
             CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             ShowFileNames = config.ShowFileNames;
+            RatingSourceIndex = config.UseUserRatings ? 1 : 0;
             ScrollToTopOnSort = config.ScrollToTopOnSort;
             DiscoverySpreadEnabled = config.DiscoverySpreadEnabled;
             PokerHandEnabled = config.PokerHandEnabled;
@@ -834,6 +851,7 @@ public partial class SettingsViewModel : ObservableObject
                 CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
                 ShowFileNames = ShowFileNames,
+                UseUserRatings = UseUserRatings,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 DiscoverySpreadEnabled = DiscoverySpreadEnabled,
                 PokerHandEnabled = PokerHandEnabled,

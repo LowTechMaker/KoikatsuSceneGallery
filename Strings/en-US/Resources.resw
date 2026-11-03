@@ -980,7 +980,7 @@
     <value>Importing assets: {0} / {1} items processed...</value>
   </data>
   <data name="Import_Phase_RollingBack" xml:space="preserve">
-    <value>Conflict or cancellation detected. Rolling back the batch and safely unbinding metadata...</value>
+    <value>The import failed or was cancelled part-way; putting every moved file back…</value>
   </data>
   <data name="Import_Phase_Completed" xml:space="preserve">
     <value>Import process completed.</value>
@@ -1182,7 +1182,13 @@
     <value>Filter content and environment</value>
   </data>
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
-    <value>Show R-18 content</value>
+    <value>Rating</value>
+  </data>
+  <data name="Gallery_RatingR18Only" xml:space="preserve">
+    <value>R-18 only (without R-18G)</value>
+  </data>
+  <data name="Gallery_RatingGeneralOnly" xml:space="preserve">
+    <value>G (all ages) only</value>
   </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>Game environment</value>
@@ -1544,6 +1550,9 @@
   <data name="Platform_pixiv" xml:space="preserve">
     <value>pixiv</value>
   </data>
+  <data name="Platform_patreon" xml:space="preserve">
+    <value>Patreon</value>
+  </data>
   <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
     <value>Record mode</value>
   </data>
@@ -1807,5 +1816,122 @@
   </data>
   <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
     <value>Import only the {0} identified</value>
+  </data>
+  <data name="Import_RemoveItemMenu.Text" xml:space="preserve"><value>Remove from this workspace</value></data>
+  <data name="Import_RemoveCheckedQuick.Content" xml:space="preserve"><value>Remove checked</value></data>
+  <data name="Import_LinkMatch_Summary" xml:space="preserve"><value>Post {0}: links list {1} files. {2} dropped cards match, {3} missing, {4} not in the list</value></data>
+  <data name="Import_LinkMatch_Complete" xml:space="preserve"><value>Post {0}: links list {1} files, and all of them were dropped ({2} cards match)</value></data>
+  <data name="Import_LinkMatch_NoMatch" xml:space="preserve"><value>Post {0}: links list {1} files, but none of the dropped cards match</value></data>
+  <data name="Import_LinkMatch_Missing" xml:space="preserve"><value>Missing: {0}</value></data>
+  <data name="Import_LinkMatch_MissingMore" xml:space="preserve"><value> ... and {0} more</value></data>
+  <data name="Import_LinkMatch_NoPost" xml:space="preserve"><value>Post {0}: could not fetch the post, so its links were not checked</value></data>
+  <data name="Import_LinkMatch_NoLinks" xml:space="preserve"><value>Post {0}: the description has no download link whose file names can be read</value></data>
+  <data name="Import_LinkMatch_InLibrary" xml:space="preserve"><value>Missing, but the library already has an identical file: {0}</value></data>
+  <data name="Import_AuthorCheckOpen.Content" xml:space="preserve"><value>Check author posts…</value></data>
+  <data name="Import_AuthorCheck_Title" xml:space="preserve"><value>Check an author's posts</value></data>
+  <data name="Import_AuthorCheck_UrlPlaceholder" xml:space="preserve"><value>Paste an author address, e.g. https://www.pixiv.net/users/12345678</value></data>
+  <data name="Import_AuthorCheck_Start" xml:space="preserve"><value>Start check</value></data>
+  <data name="Import_AuthorCheck_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Import_AuthorCheck_NotAuthor" xml:space="preserve"><value>That is not an author address for any installed platform</value></data>
+  <data name="Import_AuthorCheck_NoCards" xml:space="preserve"><value>There are no cards in the import list to compare with</value></data>
+  <data name="Import_AuthorCheck_Listing" xml:space="preserve"><value>Getting the author's post list…</value></data>
+  <data name="Import_AuthorCheck_Progress" xml:space="preserve"><value>Checked {0} of {1} posts (a few seconds each; close any time)</value></data>
+  <data name="Import_AuthorCheck_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Import_AuthorCheck_Failed" xml:space="preserve"><value>The check failed; details are in the log</value></data>
+  <data name="Import_AuthorCheck_PostHeader" xml:space="preserve"><value>Post {0}{1}: {2} dropped cards match (of {3} files)</value></data>
+  <data name="Import_AuthorCheck_PostComplete" xml:space="preserve"><value>Complete, nothing missing</value></data>
+  <data name="Import_AuthorCheck_ListFailed" xml:space="preserve"><value>Could not get this author's post list (author not found, offline, or refused)</value></data>
+  <data name="Import_AuthorCheck_Summary" xml:space="preserve"><value>Done: checked {0} posts; {1} list dropped cards, {2} are missing files ({3} could not be fetched, {4} have no readable download link)</value></data>
+  <data name="Import_AuthorCheck_Unclaimed" xml:space="preserve"><value>{0} dropped cards belong to none of this author's posts: {1}</value></data>
+  <data name="Import_AuthorCheck_StoppedEarly" xml:space="preserve"><value>Every dropped card has a post, so older posts were not checked.</value></data>
+  <data name="Import_Failure_Title" xml:space="preserve"><value>Import did not finish and was rolled back</value></data>
+  <data name="Import_Failure_SourceFileNotFound" xml:space="preserve"><value>The source file is gone (moved, deleted, or its drive was removed).</value></data>
+  <data name="Import_Failure_TargetVolumeFull" xml:space="preserve"><value>The destination drive is out of space.</value></data>
+  <data name="Import_Failure_FileMoveAccessDenied" xml:space="preserve"><value>No permission to move this file (another program may be using it, or the folder is read-only).</value></data>
+  <data name="Import_Failure_DestinationContentMismatch" xml:space="preserve"><value>Conflict: the destination already has a file with the same name but different content, so it was not overwritten.</value></data>
+  <data name="Import_Failure_AtomicRenameExhausted" xml:space="preserve"><value>No non-conflicting name could be found for this file.</value></data>
+  <data name="Import_Failure_SidecarWriteFault" xml:space="preserve"><value>Writing the post data file failed, or the author folder was not found.</value></data>
+  <data name="Import_Failure_Source" xml:space="preserve"><value>Source: {0}</value></data>
+  <data name="Import_Failure_Target" xml:space="preserve"><value>Destination: {0}</value></data>
+  <data name="Import_Failure_Outcome" xml:space="preserve"><value>{0} rolled back safely, {1} need manual recovery.</value></data>
+  <data name="Import_Failure_More" xml:space="preserve"><value>{0} more files also failed.</value></data>
+  <data name="Import_Failure_Log" xml:space="preserve"><value>The full list is in the log file.</value></data>
+  <data name="Import_AuthorCheck_Apply" xml:space="preserve"><value>Fetch data and apply to the cards</value></data>
+  <data name="Import_AuthorCheck_Applying" xml:space="preserve"><value>Fetching the posts and applying them to the cards…</value></data>
+  <data name="Import_AuthorCheck_Applied" xml:space="preserve"><value>Applied {1} posts to {0} cards.</value></data>
+  <data name="Import_AuthorCheck_ApplyFailed" xml:space="preserve"><value>Applying did not finish; please try again.</value></data>
+  <data name="Import_LinkMatch_Unstarted" xml:space="preserve"><value>Not started (other folders of the shared folder): {0}</value></data>
+  <data name="Import_LinkMatch_UnstartedCount" xml:space="preserve"><value> ({0} files)</value></data>
+  <data name="Import_LinkMatch_RootFolder" xml:space="preserve"><value>root</value></data>
+  <data name="Import_AuthorCheck_Collection" xml:space="preserve"><value>Collection: its {0} dropped cards all belong to posts that list fewer files (more specific ones), so nothing is applied here</value></data>
+  <data name="Import_AuthorCheck_SharedNote" xml:space="preserve"><value>{0} of them belong to more specific posts and are not applied here</value></data>
+  <data name="Nav_Rating.Content" xml:space="preserve">
+    <value>Rate cards</value>
+  </data>
+  <data name="Rating_Title.Text" xml:space="preserve">
+    <value>Rate cards</value>
+  </data>
+  <data name="Rating_Previous.Content" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Rating_KeyHint.Text" xml:space="preserve">
+    <value>Keys 1, 2 and 3 work too</value>
+  </data>
+  <data name="Rating_Loading" xml:space="preserve">
+    <value>Reading the library…</value>
+  </data>
+  <data name="Rating_NoCardsTitle" xml:space="preserve">
+    <value>No scene cards in the library yet</value>
+  </data>
+  <data name="Rating_NoCardsDescription" xml:space="preserve">
+    <value>Add a scene folder in Settings and its cards will show up here.</value>
+  </data>
+  <data name="Rating_DoneTitle" xml:space="preserve">
+    <value>All cards rated</value>
+  </data>
+  <data name="Rating_DoneDescription" xml:space="preserve">
+    <value>{0} cards rated. New cards added to the library will show up here.</value>
+  </data>
+  <data name="Rating_Progress" xml:space="preserve">
+    <value>{0} left to rate · {1} rated</value>
+  </data>
+  <data name="Rating_RatedCount" xml:space="preserve">
+    <value>{0} rated</value>
+  </data>
+  <data name="Rating_SaveFailed" xml:space="preserve">
+    <value>Could not save the rating: the rating file may be locked by another program, or the card is outside every scene folder.</value>
+  </data>
+  <data name="UserRating_ButtonName" xml:space="preserve">
+    <value>Rate as {0}</value>
+  </data>
+  <data name="Detail_UserRating.Text" xml:space="preserve">
+    <value>My rating</value>
+  </data>
+  <data name="Detail_ClearUserRating.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Detail_UserRatingNone" xml:space="preserve">
+    <value>Not rated yet (separate from the platform rating)</value>
+  </data>
+  <data name="Detail_UserRatingUnavailable" xml:space="preserve">
+    <value>This file holds no readable card data, so it cannot be rated.</value>
+  </data>
+  <data name="Gallery_RatingR18AndR18G" xml:space="preserve">
+    <value>R-18 (including R-18G)</value>
+  </data>
+  <data name="Gallery_RatingR18GOnly" xml:space="preserve">
+    <value>R-18G only</value>
+  </data>
+  <data name="SC_RatingSource.Header" xml:space="preserve">
+    <value>Rating source</value>
+  </data>
+  <data name="SC_RatingSource.Description" xml:space="preserve">
+    <value>Which rating the gallery filters and labels by. With your ratings, cards you have not rated yet still use the platform rating.</value>
+  </data>
+  <data name="Settings_RatingSourcePlatform.Content" xml:space="preserve">
+    <value>Platform rating</value>
+  </data>
+  <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
+    <value>My rating</value>
   </data>
 </root>

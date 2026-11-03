@@ -13,6 +13,16 @@ internal static class PackageProbe
         return (language, provider.TryGetCached("example", language));
     }
 
+    internal static async Task<IReadOnlyList<PostLinkFile>?> CompileSdk14AssetsAsync(
+        IPostLinkInspector inspector,
+        string url,
+        CancellationToken ct)
+    {
+        if (!inspector.CanInspect(url)) return null;
+        var info = await inspector.InspectAsync(url, ct).ConfigureAwait(false);
+        return info?.Files;
+    }
+
     internal static async Task<AuthorKey> CompileAllPackageAssetsAsync(
         string path,
         CancellationToken ct)

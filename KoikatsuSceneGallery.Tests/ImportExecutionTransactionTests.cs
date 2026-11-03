@@ -345,6 +345,79 @@ public sealed class ImportExecutionTransactionTests
         Assert.Empty(receipt.Warnings);
     }
 
+    // The same card downloaded into two folders, its preview re-encoded in one.
+    // Byte for byte the copies differ, which used to roll the batch back.
+    [Fact]
+    public async Task ExecuteTransactionAsync_SameCardFromTwoFolders_FoldsTheSecondAsADuplicate()
+    {
+        using var source = new TestDirectory();
+        using var destination = new TestDirectory();
+        var executor = new ImportTransactionExecutor(new PostMetadataStore());
+        var first = WriteCard(Path.Combine(source.Path, "a"), TinyPng, "the same character");
+        var second = WriteCard(Path.Combine(source.Path, "b"), OtherPng, "the same character");
+        var authorDirectory = Path.Combine(destination.Path, "author");
+        var target = Path.Combine(authorDirectory, "card.png");
+
+        var receipt = await executor.ExecuteTransactionAsync(
+            [
+                CreatePlan(first, target, authorDirectory, "pixiv", "66666", "Card") with { MatchCardData = true },
+                CreatePlan(second, target, authorDirectory, "pixiv", "66666", "Card") with { MatchCardData = true },
+            ]);
+
+        Assert.True(receipt.IsFullySuccessful);
+        Assert.True(File.Exists(target));
+        Assert.False(File.Exists(first));
+        Assert.False(File.Exists(second));
+        Assert.Equal(TransactionItemState.DuplicateSourceDeleted, receipt.ItemReceipts[1].FinalState);
+    }
+
+    // Without the plan's say-so, differing bytes stay a collision.
+    [Fact]
+    public async Task ExecuteTransactionAsync_SameCardDataWithoutMatchCardData_StillCollides()
+    {
+        using var source = new TestDirectory();
+        using var destination = new TestDirectory();
+        var executor = new ImportTransactionExecutor(new PostMetadataStore());
+        var first = WriteCard(Path.Combine(source.Path, "a"), TinyPng, "the same character");
+        var second = WriteCard(Path.Combine(source.Path, "b"), OtherPng, "the same character");
+        var authorDirectory = Path.Combine(destination.Path, "author");
+        var target = Path.Combine(authorDirectory, "card.png");
+
+        var receipt = await executor.ExecuteTransactionAsync(
+            [
+                CreatePlan(first, target, authorDirectory, "pixiv", "77777", "Card"),
+                CreatePlan(second, target, authorDirectory, "pixiv", "77777", "Card"),
+            ]);
+
+        Assert.False(receipt.IsFullySuccessful);
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(second));
+        Assert.Equal(TransactionFailureType.DestinationContentMismatch, receipt.ItemReceipts[1].FailureType);
+    }
+
+    // Different characters under one name are not folded, whatever the flag says.
+    [Fact]
+    public async Task ExecuteTransactionAsync_DifferentCardDataUnderOneName_StillCollides()
+    {
+        using var source = new TestDirectory();
+        using var destination = new TestDirectory();
+        var executor = new ImportTransactionExecutor(new PostMetadataStore());
+        var first = WriteCard(Path.Combine(source.Path, "a"), TinyPng, "one character");
+        var second = WriteCard(Path.Combine(source.Path, "b"), TinyPng, "another character");
+        var authorDirectory = Path.Combine(destination.Path, "author");
+        var target = Path.Combine(authorDirectory, "card.png");
+
+        var receipt = await executor.ExecuteTransactionAsync(
+            [
+                CreatePlan(first, target, authorDirectory, "pixiv", "88888", "Card") with { MatchCardData = true },
+                CreatePlan(second, target, authorDirectory, "pixiv", "88888", "Card") with { MatchCardData = true },
+            ]);
+
+        Assert.False(receipt.IsFullySuccessful);
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(second));
+    }
+
     [Fact]
     public async Task ExecuteTransactionAsync_SourceMissingBeforeMove_DoesNotRequireManualRecovery()
     {
@@ -401,6 +474,21 @@ public sealed class ImportExecutionTransactionTests
         {
             LocalFileNames = [],
         };
+
+    private static readonly byte[] TinyPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=");
+
+    private static readonly byte[] OtherPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGPgEpEDIgYIBQAGTgDxOGMygQAAAABJRU5ErkJggg==");
+
+    /// <summary>A card named card.png in <paramref name="directory"/>: a preview, then the card data.</summary>
+    private static string WriteCard(string directory, byte[] png, string payload)
+    {
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "card.png");
+        File.WriteAllBytes(path, [.. png, .. System.Text.Encoding.UTF8.GetBytes(payload)]);
+        return path;
+    }
 
     private static ImportItemPlan CreatePlan(
         string sourcePath,

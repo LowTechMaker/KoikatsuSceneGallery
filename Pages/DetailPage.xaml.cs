@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Controls;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
@@ -19,10 +20,19 @@ public sealed partial class DetailPage : Page
         App.Services.GetRequiredService<AuthorInfoService>(),
         App.Services.GetRequiredService<GalleryViewModel>());
 
+    private readonly UserCardRatingStore _ratings = App.Services.GetRequiredService<UserCardRatingStore>();
+    private readonly IAppLogger _logger = App.Services.GetRequiredService<IAppLogger>();
+    private readonly UserRatingPicker _ratingPicker = new(large: false);
+    private string? _ratingHash;
+    // Bumped per card shown, so a hash finishing late cannot label the next card.
+    private int _ratingVersion;
+
     public DetailPage()
     {
         InitializeComponent();
         _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((SceneCard)card));
+        UserRatingHost.Child = _ratingPicker;
+        _ratingPicker.RatingChosen += rating => UiEventGuard.Run(_logger, "Detail.SetUserRating", () => SetUserRatingAsync(rating));
     }
 
     private AuthorKey? _authorScope;
@@ -124,6 +134,61 @@ public sealed partial class DetailPage : Page
         bitmap.UriSource = card.FileUri;
         PreviewImage.Source = bitmap;
         UpdateNavigationButtons();
+        UiEventGuard.Run(_logger, "Detail.LoadUserRating", () => LoadUserRatingAsync(card));
+    }
+
+    private async Task LoadUserRatingAsync(SceneCard card)
+    {
+        var version = ++_ratingVersion;
+        _ratingHash = null;
+        _ratingPicker.SetEnabled(false);
+        ShowUserRating(null);
+        var roots = App.Services.GetRequiredService<SettingsViewModel>().FolderPaths.ToArray();
+        var hash = await Task.Run(() =>
+        {
+            _ratings.EnsureLoaded(roots);
+            return CardPayloadHash.TryCompute(card.FilePath);
+        });
+        if (version != _ratingVersion) return;
+        if (hash is null)
+        {
+            UserRatingStatus.Text = UiText.Get("Detail_UserRatingUnavailable");
+            return;
+        }
+
+        var rating = await _ratings.ResolveAsync(card.FilePath, hash);
+        if (version != _ratingVersion) return;
+        _ratingHash = hash;
+        _ratingPicker.SetEnabled(true);
+        ShowUserRating(rating);
+    }
+
+    private async Task SetUserRatingAsync(int rating)
+    {
+        if (ViewModel.Card is not { } card || _ratingHash is not { } hash) return;
+        var version = _ratingVersion;
+        var saved = await _ratings.SetAsync(card.FilePath, hash, rating);
+        if (version != _ratingVersion) return;
+        ShowUserRating(saved ? rating : _ratings.TryGetByHash(hash));
+        if (!saved) UserRatingStatus.Text = UiText.Get("Rating_SaveFailed");
+    }
+
+    private void ClearUserRating_Click(object sender, RoutedEventArgs e) =>
+        UiEventGuard.Run(_logger, "Detail.ClearUserRating", async () =>
+        {
+            if (ViewModel.Card is not { } card || _ratingHash is not { } hash) return;
+            var version = _ratingVersion;
+            var cleared = await _ratings.ClearAsync(card.FilePath, hash);
+            if (version != _ratingVersion) return;
+            ShowUserRating(_ratings.TryGetByHash(hash));
+            if (!cleared) UserRatingStatus.Text = UiText.Get("Rating_SaveFailed");
+        });
+
+    private void ShowUserRating(int? rating)
+    {
+        _ratingPicker.Rating = rating;
+        ClearUserRatingButton.Visibility = rating is null ? Visibility.Collapsed : Visibility.Visible;
+        UserRatingStatus.Text = rating is null && _ratingHash is not null ? UiText.Get("Detail_UserRatingNone") : "";
     }
 
     private void UpdateNavigationButtons()

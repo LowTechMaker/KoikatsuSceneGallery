@@ -85,10 +85,7 @@ internal sealed class ImportTransactionExecutor
             {
                 EnsureDestinationDirectory(plan.IdealDestinationPath, createdDestinationDirectories);
 
-                var conflict = TryClassifyConflict(
-                    plan.SourceFilePath,
-                    plan.IdealDestinationPath,
-                    cancellationToken);
+                var conflict = TryClassifyConflict(plan, cancellationToken);
                 if (conflict == ImportFileConflict.Duplicate)
                 {
                     receipts.Add(receipt);
@@ -121,10 +118,7 @@ internal sealed class ImportTransactionExecutor
                 catch (IOException) when (File.Exists(plan.IdealDestinationPath)
                     && File.Exists(plan.SourceFilePath))
                 {
-                    var raceConflict = TryClassifyConflict(
-                        plan.SourceFilePath,
-                        plan.IdealDestinationPath,
-                        cancellationToken);
+                    var raceConflict = TryClassifyConflict(plan, cancellationToken);
                     if (raceConflict == ImportFileConflict.Duplicate)
                     {
                         receipts.Add(receipt);
@@ -494,16 +488,19 @@ internal sealed class ImportTransactionExecutor
             TransactionFailureType.None, null);
 
     private static ImportFileConflict TryClassifyConflict(
-        string sourcePath,
-        string destinationPath,
+        ImportItemPlan plan,
         CancellationToken cancellationToken)
     {
+        var sourcePath = plan.SourceFilePath;
+        var destinationPath = plan.IdealDestinationPath;
         if (!File.Exists(destinationPath))
             return ImportFileConflict.Move;
 
         return ImportDestinationPolicy.ClassifyFileConflict(
             destinationExists: true,
-            ImportDuplicateDetector.AreFilesIdentical(sourcePath, destinationPath, cancellationToken));
+            ImportDuplicateDetector.AreFilesIdentical(sourcePath, destinationPath, cancellationToken)
+            || (plan.MatchCardData
+                && CardPayloadHash.AreSameCard(sourcePath, destinationPath, cancellationToken)));
     }
 
     private static void EnsureDestinationDirectory(

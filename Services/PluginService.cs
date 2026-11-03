@@ -129,6 +129,14 @@ public sealed class PluginService
     public IReadOnlyList<IPluginUpdateProvider> UpdateProviders => _updateProviders;
     private readonly List<IPluginUpdateProvider> _updateProviders = [];
 
+    /// <summary>All loaded post-link inspectors, which read the file names behind a post's download links.</summary>
+    public IReadOnlyList<IPostLinkInspector> PostLinkInspectors => _postLinkInspectors;
+    private readonly List<IPostLinkInspector> _postLinkInspectors = [];
+
+    /// <summary>All loaded author-post listers, which find every post an author has published.</summary>
+    public IReadOnlyList<IAuthorPostLister> AuthorPostListers => _authorPostListers;
+    private readonly List<IAuthorPostLister> _authorPostListers = [];
+
     private readonly Dictionary<string, ITagDictionaryProvider> _tagDictionaryProviders =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -305,6 +313,12 @@ public sealed class PluginService
 
             if (plugin is IPluginUpdateProvider updateProvider)
                 _updateProviders.Add(updateProvider);
+
+            if (plugin is IAuthorPostLister authorPostLister)
+                _authorPostListers.Add(authorPostLister);
+
+            if (plugin is IPostLinkInspector postLinkInspector)
+                _postLinkInspectors.Add(postLinkInspector);
 
             if (plugin is ITagDictionaryProvider tagDictionaryProvider)
                 _tagDictionaryProviders[tagDictionaryProvider.ProviderId] = tagDictionaryProvider;

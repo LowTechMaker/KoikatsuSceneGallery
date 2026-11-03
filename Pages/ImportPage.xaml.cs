@@ -42,6 +42,14 @@ public sealed partial class ImportPage : Page
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ImportViewModel.LinkMissingText))
+            FillLinkedNames(LinkMissingBlock, "Import_LinkMatch_Missing", ViewModel.LinkMissingFiles, CautionBrush);
+        else if (e.PropertyName == nameof(ImportViewModel.LinkUnstartedText))
+            FillUnstartedFolders(LinkUnstartedBlock, ViewModel.LinkUnstartedFolders,
+                (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]);
+        else if (e.PropertyName == nameof(ImportViewModel.LinkInLibraryText))
+            FillLinkedNames(LinkInLibraryBlock, "Import_LinkMatch_InLibrary", ViewModel.LinkInLibraryFiles, OrangeBrush);
+
         if (e.PropertyName == nameof(ImportViewModel.ShowRejectedWarning) && ViewModel.ShowRejectedWarning)
         {
             RejectedWarningBar.Message = string.Format(
@@ -311,7 +319,52 @@ public sealed partial class ImportPage : Page
         => ViewModel.SetReviewViewportWidth(e.NewSize.Width);
 
     private void ImportPage_Loaded(object sender, RoutedEventArgs e)
-        => UpdateCompactLayout(ActualWidth, ActualHeight);
+    {
+        UpdateCompactLayout(ActualWidth, ActualHeight);
+        Clipboard.ContentChanged += Clipboard_ContentChanged;
+        // Not an author check: a link copied before this page was opened is not a request.
+        FillArtworkFromClipboard(allowAuthorCheck: false);
+    }
+
+    private void ImportPage_Unloaded(object sender, RoutedEventArgs e)
+        => Clipboard.ContentChanged -= Clipboard_ContentChanged;
+
+    // Regaining focus covers a copy made in the browser, which cannot be read while
+    // this window is in the background.
+    private void ImportPage_GotFocus(object sender, RoutedEventArgs e)
+    {
+        // GotFocus fires for every control the user clicks in the list. Reading the clipboard
+        // is a call into another process that can stall the UI, so only do it when the
+        // clipboard has changed since it was last read.
+        if (_clipboardUnread) FillArtworkFromClipboard(allowAuthorCheck: true);
+    }
+
+    // Set by a clipboard change (and on first load); cleared once a read succeeded.
+    private bool _clipboardUnread = true;
+
+    private void Clipboard_ContentChanged(object? sender, object e)
+    {
+        _clipboardUnread = true;
+        DispatcherQueue.TryEnqueue(() => FillArtworkFromClipboard(allowAuthorCheck: true));
+    }
+
+    private void FillArtworkFromClipboard(bool allowAuthorCheck)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.ClipboardFill", async () =>
+        {
+            try
+            {
+                var content = Clipboard.GetContent();
+                if (!content.Contains(StandardDataFormats.Text)) { _clipboardUnread = false; return; }
+                var text = await content.GetTextAsync();
+                _clipboardUnread = false;
+                if (allowAuthorCheck && TryOfferAuthorCheck(text)) return;
+                ViewModel.TryFillArtworkFromClipboard(text);
+            }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+            {
+                // The clipboard is locked or this window is not allowed to read it yet.
+            }
+        });
 
     private void ImportPage_SizeChanged(object sender, SizeChangedEventArgs e)
         => UpdateCompactLayout(e.NewSize.Width, e.NewSize.Height);
@@ -840,6 +893,12 @@ public sealed partial class ImportPage : Page
     {
         if (sender is Button { CommandParameter: ImportUnknownGroup group })
             ViewModel.RemoveUnknownGroupCommand.Execute(group);
+    }
+
+    private void RemoveReviewItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportItemReviewState state })
+            ViewModel.RemoveReviewItemCommand.Execute(state);
     }
 
     private void RemoveUnknownItem_Click(object sender, RoutedEventArgs e)

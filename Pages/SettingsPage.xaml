@@ -86,6 +86,21 @@
                         </controls:SettingsCard>
 
                         <controls:SettingsCard
+                            x:Uid="SC_RatingSource"
+                            AutomationProperties.AutomationId="SettingsRatingSourceCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE734;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ComboBox
+                                MinWidth="160"
+                                AutomationProperties.AutomationId="SettingsRatingSourceCombo"
+                                SelectedIndex="{x:Bind ViewModel.RatingSourceIndex, Mode=TwoWay}">
+                                <ComboBoxItem x:Uid="Settings_RatingSourcePlatform" />
+                                <ComboBoxItem x:Uid="Settings_RatingSourceUser" />
+                            </ComboBox>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard
                             x:Uid="SC_ScrollToTop"
                             AutomationProperties.AutomationId="SettingsScrollToTopCard">
                             <controls:SettingsCard.HeaderIcon>

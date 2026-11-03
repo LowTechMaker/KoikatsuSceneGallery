@@ -14,6 +14,8 @@
     DragOver="Page_DragOver"
     Drop="Page_Drop"
     Loaded="ImportPage_Loaded"
+    Unloaded="ImportPage_Unloaded"
+    GotFocus="ImportPage_GotFocus"
     SizeChanged="ImportPage_SizeChanged">
 
     <Page.Resources>
@@ -198,9 +200,16 @@
             </Button>
         </Grid>
 
-        <InfoBar x:Name="RejectedWarningBar" Grid.Row="1"
-                 IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
-                 Severity="Warning" IsClosable="True" />
+        <StackPanel Grid.Row="1" Spacing="8">
+            <InfoBar x:Name="RejectedWarningBar"
+                     IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
+                     Severity="Warning" IsClosable="True" />
+            <InfoBar x:Name="ImportFailureBar"
+                     IsOpen="{x:Bind ViewModel.ShowImportFailure, Mode=TwoWay}"
+                     Title="{x:Bind ViewModel.ImportFailureTitle, Mode=OneWay}"
+                     Message="{x:Bind ViewModel.ImportFailureMessage, Mode=OneWay}"
+                     Severity="Error" IsClosable="True" />
+        </StackPanel>
 
         <Border x:Name="DropZone" Grid.Row="2" CornerRadius="16" Margin="0,0,0,16"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="2"
@@ -257,6 +266,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{x:Bind ViewModel.ReviewSelectionText, Mode=OneWay}"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -266,7 +276,10 @@
                                                 <ComboBoxItem x:Uid="Import_AllRatings" />
                                                 <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
                                             </ComboBox>
-                                            <Button x:Name="ReviewEditButton" Grid.Column="2" x:Uid="Import_EditSelected"
+                                            <Button Grid.Column="2" x:Uid="Import_RemoveCheckedQuick"
+                                                    Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}"
+                                                    IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
+                                            <Button x:Name="ReviewEditButton" Grid.Column="3" x:Uid="Import_EditSelected"
                                                     Visibility="{x:Bind ViewModel.ReviewSelectionEditorVisibility, Mode=OneWay}">
                                                 <Button.Flyout>
                                                     <Flyout x:Name="ReviewEditFlyout" Placement="BottomEdgeAlignedRight">
@@ -298,6 +311,9 @@
                                                                         Command="{x:Bind ViewModel.ApplyReviewAuthorCommand}"
                                                                         IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}">
                                                                 </Button>
+                                                                <Button x:Uid="Import_AuthorCheckOpen" HorizontalAlignment="Stretch"
+                                                                        Visibility="{x:Bind ViewModel.AuthorCheckVisibility}"
+                                                                        Click="OpenAuthorCheck_Click" />
                                                                 <Button x:Uid="Import_RemoveSelected" HorizontalAlignment="Stretch"
                                                                         Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}"
                                                                         IsEnabled="{x:Bind ViewModel.HasSelectedReviewItems, Mode=OneWay}" />
@@ -331,6 +347,25 @@
                                                    Visibility="{x:Bind ViewModel.ReviewBatchStatusVisibility, Mode=OneWay}"
                                                    AutomationProperties.LiveSetting="Polite"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{x:Bind ViewModel.LinkMatchText, Mode=OneWay}"
+                                                   TextWrapping="Wrap"
+                                                   Visibility="{x:Bind ViewModel.LinkMatchVisibility, Mode=OneWay}"
+                                                   AutomationProperties.LiveSetting="Polite"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock x:Name="LinkMissingBlock"
+                                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                   Visibility="{x:Bind ViewModel.LinkMissingVisibility, Mode=OneWay}"
+                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                        <!-- Episodes of the share nothing was taken from: not missing, just not started. -->
+                                        <TextBlock x:Name="LinkUnstartedBlock" TextWrapping="Wrap"
+                                                   Visibility="{x:Bind ViewModel.LinkUnstartedVisibility, Mode=OneWay}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <!-- Orange rather than the caution yellow: not lost, the library has it. -->
+                                        <TextBlock x:Name="LinkInLibraryBlock"
+                                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                   Visibility="{x:Bind ViewModel.LinkInLibraryVisibility, Mode=OneWay}">
+                                            <TextBlock.Foreground><SolidColorBrush Color="#E8892B" /></TextBlock.Foreground>
+                                        </TextBlock>
                                     </StackPanel>
 
                                     <Grid Grid.Row="1" ColumnSpacing="12">
@@ -362,7 +397,13 @@
                                                         <ColumnDefinition Width="72" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
+                                                    <Grid.ContextFlyout>
+                                                        <MenuFlyout>
+                                                            <MenuFlyoutItem x:Uid="Import_RemoveItemMenu" Tag="{x:Bind}" Click="RemoveReviewItem_Click" />
+                                                        </MenuFlyout>
+                                                    </Grid.ContextFlyout>
                                                     <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" IsEnabled="{x:Bind CanSelect, Mode=OneWay}"
                                                               VerticalAlignment="Center" MinWidth="0" Padding="0"
                                                               AutomationProperties.Name="{x:Bind Item.FileName}" />
@@ -396,6 +437,12 @@
                                                     </StackPanel>
                                                     <controls:RatingBadge Grid.Column="3" VerticalAlignment="Center"
                                                                           Text="{x:Bind Item.RatingText, Mode=OneWay}" />
+                                                    <Button Grid.Column="4" x:Uid="Import_RemoveItem" VerticalAlignment="Center"
+                                                            Padding="6" Background="Transparent" BorderThickness="0"
+                                                            Tag="{x:Bind}" Click="RemoveReviewItem_Click"
+                                                            AutomationProperties.Name="{x:Bind Item.FileName}">
+                                                        <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                                    </Button>
                                                 </Grid>
                                             </DataTemplate>
                                             <DataTemplate x:Key="ReviewSectionTemplate" x:DataType="vm:ImportReviewRow">
@@ -441,6 +488,11 @@
                                                                           AutomationProperties.Name="{x:Bind Item.FileName}"
                                                                           AutomationProperties.HelpText="{x:Bind StatusText, Mode=OneWay}"
                                                                           ToolTipService.ToolTip="{x:Bind Item.SourceFilePath}">
+                                                                <ToggleButton.ContextFlyout>
+                                                                    <MenuFlyout>
+                                                                        <MenuFlyoutItem x:Uid="Import_RemoveItemMenu" Tag="{x:Bind}" Click="RemoveReviewItem_Click" />
+                                                                    </MenuFlyout>
+                                                                </ToggleButton.ContextFlyout>
                                                                 <Grid RowSpacing="6">
                                                                     <Grid.RowDefinitions><RowDefinition Height="120" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                                                                     <Border Background="{ThemeResource ControlFillColorDefaultBrush}" CornerRadius="4">

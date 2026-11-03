@@ -128,6 +128,29 @@
                     </StackPanel>
                 </Button>
 
+                <!-- The user's own rating, separate from the platform's. -->
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        x:Uid="Detail_UserRating"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                    <Border x:Name="UserRatingHost" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <HyperlinkButton
+                            x:Name="ClearUserRatingButton"
+                            x:Uid="Detail_ClearUserRating"
+                            Padding="0"
+                            Click="ClearUserRating_Click"
+                            Visibility="Collapsed" />
+                        <TextBlock
+                            x:Name="UserRatingStatus"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
                 <TextBlock
                     x:Uid="Detail_FileInfo"
                     Style="{StaticResource SubtitleTextBlockStyle}" />

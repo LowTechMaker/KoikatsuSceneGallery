@@ -561,6 +561,8 @@ public sealed partial class MainWindow : Window
             NavView.SelectedItem = TagsNavItem;
         else if (e.SourcePageType == typeof(UsageHistoryPage))
             NavView.SelectedItem = UsageNavItem;
+        else if (e.SourcePageType == typeof(CardRatingPage))
+            NavView.SelectedItem = RatingNavItem;
         var isLibraryPage = IsLibraryPage(e.SourcePageType);
         LibrarySelectorBar.Visibility = isLibraryPage
             ? Visibility.Visible
@@ -711,6 +713,10 @@ public sealed partial class MainWindow : Window
             case "discovery":
                 if (NavFrame.CurrentSourcePageType != typeof(RandomDiscoveryPage))
                     NavFrame.Navigate(typeof(RandomDiscoveryPage));
+                break;
+            case "rating":
+                if (NavFrame.CurrentSourcePageType != typeof(CardRatingPage))
+                    NavFrame.Navigate(typeof(CardRatingPage));
                 break;
             case "library":
                 NavigateToSelectedLibraryPage();

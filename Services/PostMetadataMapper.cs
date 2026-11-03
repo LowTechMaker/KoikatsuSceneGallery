@@ -27,4 +27,25 @@ internal static class PostMetadataMapper
             LocalFileNames = localFileNames,
         };
     }
+
+    /// <summary>
+    /// The sidecar an import writes for <paramref name="item"/>, or null when
+    /// nothing was fetched for it. The platform rating stays in
+    /// <see cref="PostMetadataDocument.Rating"/>; the rating the user settled on
+    /// in review is recorded as <see cref="PostMetadataDocument.UserRating"/>
+    /// only when it differs, so an untouched card keeps following the platform.
+    /// </summary>
+    public static PostMetadataDocument? ToImportDocument(
+        ImportItem item,
+        IReadOnlyList<string> localFileNames)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.FetchedArtworkInfo is not { } info)
+            return null;
+
+        var document = ToDocument(info, localFileNames);
+        return item.Rating == info.Rating
+            ? document
+            : document with { UserRating = (int)item.Rating };
+    }
 }

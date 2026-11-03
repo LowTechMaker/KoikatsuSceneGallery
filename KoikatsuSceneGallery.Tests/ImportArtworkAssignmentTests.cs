@@ -128,4 +128,30 @@ public sealed class ImportArtworkAssignmentTests
         Assert.Equal(new ArtworkId("old", "old"), item.ArtworkId);
         Assert.Equal(ContentRating.R18, item.Rating);
     }
+
+    [Fact]
+    public void ImportDocument_RecordsTheReviewRatingOnlyWhenTheUserChangedIt()
+    {
+        var item = Item();
+        item.FetchedArtworkInfo = Info("p");
+        item.Rating = ContentRating.R18G;
+
+        var untouched = PostMetadataMapper.ToImportDocument(item, [])!;
+        Assert.Equal((int)ContentRating.R18G, untouched.Rating);
+        Assert.Null(untouched.UserRating);
+
+        item.Rating = ContentRating.R18;
+        var overridden = PostMetadataMapper.ToImportDocument(item, [])!;
+        Assert.Equal((int)ContentRating.R18G, overridden.Rating);
+        Assert.Equal((int)ContentRating.R18, overridden.UserRating);
+    }
+
+    [Fact]
+    public void ImportDocument_IsNullWhenNothingWasFetched()
+    {
+        var item = Item();
+        item.FetchedArtworkInfo = null;
+
+        Assert.Null(PostMetadataMapper.ToImportDocument(item, []));
+    }
 }

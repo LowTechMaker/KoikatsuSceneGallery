@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Security.Cryptography;
 using System.Threading.Channels;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
@@ -181,6 +182,44 @@ public sealed class ImportServiceTests
         Assert.NotNull(item.FetchedArtworkInfo);
         Assert.Equal(Path.Combine(f.Library, "Organized", "test", "Koikatsu", "R-18", "Author (42)", "card.png"), item.DestinationPath);
         Assert.True(File.Exists(source)); // Analysis never moves input.
+    }
+
+    [Fact]
+    public async Task FeedHandoffIdentifiesPatreonCardWithoutAGalleryProvider()
+    {
+        await using var f = new Fixture();
+        f.Provider.Parse = _ => new("test", "wrong-filename-match");
+        var source = f.Card("scene-123456789");
+        var sha = Convert.ToHexStringLower(SHA256.HashData(await File.ReadAllBytesAsync(source)));
+        var manifestDirectory = Directory.CreateDirectory(Path.Combine(f.Root, ".scenefeed"));
+        await File.WriteAllTextAsync(Path.Combine(manifestDirectory.FullName, "handoff.json"), $$"""
+            {
+              "format": "scenefeed-handoff",
+              "version": 1,
+              "files": [{
+                "sha256": "{{sha}}",
+                "sources": [{
+                  "providerId": "patreon",
+                  "postId": "123456789",
+                  "postUrl": "https://www.patreon.com/posts/scene-pack-123456789",
+                  "creatorId": "42",
+                  "creatorName": "Test Creator"
+                }]
+              }]
+            }
+            """);
+
+        var task = f.Analyze(source);
+        await f.Ui.DrainUntil(task);
+
+        var item = Assert.Single(f.Items);
+        Assert.Equal(new ArtworkId("patreon", "123456789"), item.ArtworkId);
+        Assert.Equal("42", item.AuthorId);
+        Assert.Equal("Test Creator", item.AuthorName);
+        Assert.Equal("patreon", item.AuthorProviderId);
+        Assert.Equal(Path.Combine(f.Library, "Organized", "patreon", "Koikatsu", "G",
+            "Test Creator (42)", "scene-123456789.png"), item.DestinationPath);
+        Assert.Null(item.FetchedArtworkInfo);
     }
 
     [Fact]

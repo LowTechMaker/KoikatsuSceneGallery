@@ -239,6 +239,68 @@ public sealed class PostMetadataStoreTests
         Assert.Equal(["manual-name.png"], loaded.LocalFileNames);
     }
 
+    [Fact]
+    public async Task UserRating_RoundTripsBesidePlatformRatingAndEffectiveRatingIsNotStored()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var document = CreateDocument("t") with { Rating = 0, UserRating = 2 };
+
+        Assert.True(await store.WriteAsync(directory.Path, document));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345")!;
+        Assert.Equal(0, loaded.Rating);
+        Assert.Equal(2, loaded.UserRating);
+        Assert.Equal(2, loaded.EffectiveRating);
+        using var json = JsonDocument.Parse(File.ReadAllText(
+            store.GetSidecarPath(directory.Path, "pixiv", "12345")));
+        Assert.Equal(2, json.RootElement.GetProperty("userRating").GetInt32());
+        Assert.False(json.RootElement.TryGetProperty("effectiveRating", out _));
+    }
+
+    [Fact]
+    public async Task UserRating_SurvivesANewerFetchThatOnlyKnowsThePlatformRating()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        Assert.True(await store.WriteAsync(directory.Path, CreateDocument("old") with { Rating = 0, UserRating = 1 }));
+
+        var refetch = CreateDocument("new") with { Rating = 2, FetchedAt = FetchedAt.AddDays(1) };
+        Assert.True(await store.WriteAsync(directory.Path, refetch));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345")!;
+        Assert.Equal("new", loaded.Title);
+        Assert.Equal(2, loaded.Rating);
+        Assert.Equal(1, loaded.UserRating);
+        Assert.Equal(1, loaded.EffectiveRating);
+    }
+
+    [Fact]
+    public async Task UserRating_IsWrittenEvenWhenTheStoredFetchIsNewer()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+        var newer = CreateDocument("newer") with { FetchedAt = FetchedAt.AddDays(1) };
+        Assert.True(await store.WriteAsync(directory.Path, newer));
+
+        Assert.True(await store.WriteAsync(directory.Path, CreateDocument("older") with { UserRating = 0 }));
+
+        var loaded = store.Read(directory.Path, "pixiv", "12345")!;
+        Assert.Equal("newer", loaded.Title);
+        Assert.Equal(0, loaded.UserRating);
+        Assert.False(await store.WriteAsync(directory.Path, CreateDocument("older") with { UserRating = 0 }));
+    }
+
+    [Fact]
+    public async Task Write_RejectsAnOutOfRangeUserRating()
+    {
+        using var directory = new TestDirectory();
+        var store = new PostMetadataStore();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => store.WriteAsync(directory.Path, CreateDocument("t") with { UserRating = 3 }));
+    }
+
     private static PostMetadataDocument CreateDocument(string title) => new(
         PostMetadataDocument.CurrentSchemaVersion,
         "pixiv",

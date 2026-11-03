@@ -14,6 +14,7 @@ public partial class App : Application
     public static AppServiceRegistry Services { get; } = new();
 
     private readonly IAppLogger _logger = new CrashLogLogger();
+    private readonly UserCardRatingStore _userCardRatings = new();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
     private readonly CharacterAnnotationStore _characterAnnotations = new();
@@ -155,6 +156,7 @@ public partial class App : Application
             settingsViewModel,
             _pluginService,
             _thumbnailScheduler,
+            new SceneRatingResolver(_pluginService, _userCardRatings, _logger),
             _logger);
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
@@ -350,6 +352,7 @@ public partial class App : Application
         Services.Add(new TagCloudService(
             Services.GetRequiredService<LibraryRegistry>(), _pluginService, _logger));
         Services.Add(new TagDictionaryService(_pluginService, _logger));
+        Services.Add(_userCardRatings);
         Services.Add(new UsageRecordService(
             settingsViewModel,
             () => Services.GetRequiredService<LibraryRegistry>().All

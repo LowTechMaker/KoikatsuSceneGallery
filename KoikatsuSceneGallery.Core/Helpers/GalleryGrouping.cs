@@ -24,7 +24,8 @@ public static class GalleryGrouping
         // degraded below; local cards are exempt from that sink by design and
         // so would otherwise all share the source folder.
         return key.StartsWith("folder:", StringComparison.Ordinal)
-               && IsOwnAuthorFolder(filePath, authorId)
+               && (IsOwnAuthorFolder(filePath, authorId)
+                   || (folderPostId is not null && folderPostId == authorId))
             ? $"file:{filePath}"
             : key;
     }

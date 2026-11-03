@@ -90,6 +90,10 @@
                                     Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B1;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Name="RatingNavItem" x:Uid="Nav_Rating"
+                                    Tag="rating" AutomationProperties.AutomationId="RatingNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <!--  Shown only when an author plugin is installed (see ctor).  -->
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"

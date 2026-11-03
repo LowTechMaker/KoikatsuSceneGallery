@@ -36,9 +36,11 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
             stale.Dispose();
             States.Remove(stale);
         }
+        // A set, not a scan per card: with a few thousand cards the scan alone was a few million comparisons.
+        var known = States.Select(state => state.Item).ToHashSet(ReferenceEqualityComparer.Instance);
         foreach (var item in eligible)
         {
-            if (States.Any(state => ReferenceEquals(state.Item, item))) continue;
+            if (known.Contains(item)) continue;
             var state = new ImportItemReviewState(item, _text("Import_Review_Unassigned"), _text);
             state.PropertyChanged += OnStateChanged;
             States.Add(state);
@@ -67,14 +69,19 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
     private void RefreshVisible()
     {
         var desired = States.Where(Matches).ToArray();
-        var set = desired.ToHashSet();
-        foreach (var stale in VisibleItems.Where(state => !set.Contains(state)).ToArray())
-            VisibleItems.Remove(stale);
-        for (int index = 0; index < desired.Length; index++)
+        // Usually nothing changed; settling that is one pass, where the reordering below is
+        // quadratic in the number of cards.
+        if (!VisibleItems.SequenceEqual(desired))
         {
-            var current = VisibleItems.IndexOf(desired[index]);
-            if (current < 0) VisibleItems.Insert(index, desired[index]);
-            else if (current != index) VisibleItems.Move(current, index);
+            var set = desired.ToHashSet();
+            foreach (var stale in VisibleItems.Where(state => !set.Contains(state)).ToArray())
+                VisibleItems.Remove(stale);
+            for (int index = 0; index < desired.Length; index++)
+            {
+                var current = VisibleItems.IndexOf(desired[index]);
+                if (current < 0) VisibleItems.Insert(index, desired[index]);
+                else if (current != index) VisibleItems.Move(current, index);
+            }
         }
         UpdateSelection();
         QueueRows();
@@ -113,6 +120,25 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         UpdateSelection();
     }
 
+    /// <summary>
+    /// Sets the selection of every selectable card at once: those for which
+    /// <paramref name="isSelected"/> is true end up selected, the others not. One recount and one
+    /// change notification for the whole list, where setting each card's flag on its own would
+    /// rescan the list and refresh the page once per card.
+    /// </summary>
+    public void SetSelection(Func<ImportItemReviewState, bool> isSelected)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _updating = true;
+        try
+        {
+            foreach (var state in States.Where(state => state.CanSelect))
+                state.IsSelected = isSelected(state);
+        }
+        finally { _updating = false; }
+        UpdateSelection();
+    }
+
     private void Select(IEnumerable<ImportItemReviewState> items, bool value)
     {
         _updating = true;
@@ -135,8 +161,41 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
     private void OnStateChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_disposed || _updating) return;
-        if (e.PropertyName == nameof(ImportItemReviewState.Category)) RefreshVisible();
+        if (e.PropertyName == nameof(ImportItemReviewState.Category)) OnCategoryChanged((ImportItemReviewState)sender!);
         else if (e.PropertyName == nameof(ImportItemReviewState.IsSelected)) UpdateSelection();
+    }
+
+    // A card's state raises Category for every property of the card that changes, whether or
+    // not its category did. Re-sorting the visible list each time made setting one property on
+    // every card a quadratic job: seconds on the UI thread for a couple of thousand cards.
+    // Only a card that has to appear or disappear needs the list re-sorted; for every other
+    // change the selection count and the rows are refreshed once per dispatcher turn.
+    private void OnCategoryChanged(ImportItemReviewState state)
+    {
+        if (Matches(state) != VisibleItems.Contains(state))
+        {
+            RefreshVisible();
+            return;
+        }
+        // A selected card that can no longer be selected changes the count right now, as the
+        // user can see it; everything else about the selection can wait for the turn's refresh.
+        if (state.IsSelected && !state.CanSelect) UpdateSelection();
+        QueueRefresh();
+    }
+
+    private bool _refreshQueued;
+
+    private void QueueRefresh()
+    {
+        if (_disposed || _refreshQueued) return;
+        _refreshQueued = true;
+        _dispatch(() =>
+        {
+            _refreshQueued = false;
+            if (_disposed) return;
+            UpdateSelection();
+            QueueRows();
+        });
     }
 
     private void QueueRows()
