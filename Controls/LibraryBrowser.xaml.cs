@@ -78,6 +78,8 @@ public sealed partial class LibraryBrowser : UserControl
     internal GridView CardGrid => GalleryGrid;
 
     public static BitmapImage? Thumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 400, UriSource = uri };
+    // Only a few pixels of a stack layer show, so a small decode is plenty.
+    public static BitmapImage? StackThumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 96, UriSource = uri };
     public void Initialize(LibraryKind kind, IReadOnlyList<CardBase>? scope = null, string? title = null)
     {
         _scope = scope; _scopeTitle = title;

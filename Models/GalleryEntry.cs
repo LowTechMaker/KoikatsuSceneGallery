@@ -19,6 +19,8 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public IReadOnlyList<CardBase> Members { get; }
     public CardBase Card => Members[0];
     public bool IsGroup => Members.Count > 1;
+    /// <summary>A third card peeks out of the stack only when there is a third card.</summary>
+    public bool HasThirdLayer => Members.Count > 2;
     public bool ShowTitle { get; }
     public double MetadataHeight => ShowTitle ? 52 : 32;
     public string CountText => UiText.Format("SceneGallery_GroupCount", Members.Count);
