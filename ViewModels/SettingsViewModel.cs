@@ -142,6 +142,78 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string LocalFolderName { get; set; } = "Local";
 
+    // ── Mods ───────────────────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KoikatsuGameFolderDisplay), nameof(KoikatsuGameFolderStatus))]
+    public partial string KoikatsuGameFolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KoikatsuSunshineGameFolderDisplay), nameof(KoikatsuSunshineGameFolderStatus))]
+    public partial string KoikatsuSunshineGameFolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ModInstallFolderName { get; set; } = "SceneGallery";
+
+    public string KoikatsuGameFolderDisplay => GameFolderDisplay(KoikatsuGameFolder);
+    public string KoikatsuSunshineGameFolderDisplay => GameFolderDisplay(KoikatsuSunshineGameFolder);
+    public string KoikatsuGameFolderStatus => GameFolderStatus(KoikatsuGameFolder);
+    public string KoikatsuSunshineGameFolderStatus => GameFolderStatus(KoikatsuSunshineGameFolder);
+
+    private static string GameFolderDisplay(string folder)
+        => string.IsNullOrWhiteSpace(folder) ? ResLoader.GetString("Settings_Mods_NotSet") : folder;
+
+    // A folder without mods or BepInEx is most likely one level off; said, not refused.
+    private static string GameFolderStatus(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder)) return string.Empty;
+        if (!Directory.Exists(folder)) return ResLoader.GetString("Settings_Mods_FolderMissing");
+        if (!Directory.Exists(Path.Combine(folder, "mods")) && !Directory.Exists(Path.Combine(folder, "BepInEx")))
+            return ResLoader.GetString("Settings_Mods_NotAGameFolder");
+        return string.Empty;
+    }
+
+    partial void OnKoikatsuGameFolderChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    partial void OnKoikatsuSunshineGameFolderChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    partial void OnModInstallFolderNameChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    [RelayCommand]
+    private async Task PickKoikatsuGameFolderAsync()
+    {
+        if (await PickFolderPathAsync() is { } path) KoikatsuGameFolder = path;
+    }
+
+    [RelayCommand]
+    private async Task PickKoikatsuSunshineGameFolderAsync()
+    {
+        if (await PickFolderPathAsync() is { } path) KoikatsuSunshineGameFolder = path;
+    }
+
+    [RelayCommand]
+    private void ClearKoikatsuGameFolder() => KoikatsuGameFolder = string.Empty;
+
+    [RelayCommand]
+    private void ClearKoikatsuSunshineGameFolder() => KoikatsuSunshineGameFolder = string.Empty;
+
+    private async Task<string?> PickFolderPathAsync()
+    {
+        var picker = new FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, GetWindowHandle());
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    }
+
     [ObservableProperty]
     public partial double ArtworkSubfolderThreshold { get; set; } = 1;
 
@@ -561,6 +633,9 @@ public partial class SettingsViewModel : ObservableObject
 
             ImportSubfolder = config.ImportSubfolder;
             LocalFolderName = config.LocalFolderName;
+            KoikatsuGameFolder = config.KoikatsuGameFolder ?? string.Empty;
+            KoikatsuSunshineGameFolder = config.KoikatsuSunshineGameFolder ?? string.Empty;
+            ModInstallFolderName = config.ModInstallFolderName ?? "SceneGallery";
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
             AutoImportIdentifiedPosts = config.AutoImportIdentifiedPosts;
@@ -865,6 +940,9 @@ public partial class SettingsViewModel : ObservableObject
                 Language = SelectedLanguage,
                 ImportSubfolder = ImportSubfolder,
                 LocalFolderName = LocalFolderName,
+                KoikatsuGameFolder = KoikatsuGameFolder,
+                KoikatsuSunshineGameFolder = KoikatsuSunshineGameFolder,
+                ModInstallFolderName = ModInstallFolderName,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
                 AutoImportIdentifiedPosts = AutoImportIdentifiedPosts,

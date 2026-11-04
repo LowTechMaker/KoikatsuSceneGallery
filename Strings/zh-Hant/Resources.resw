@@ -1934,4 +1934,28 @@
   <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
     <value>我的分級</value>
   </data>
+  <data name="Import_Mods_NoGameBody" xml:space="preserve"><value>請到「設定」→「資料夾」→「Mod」指定戀活或戀活 Sunshine 的安裝資料夾（含 mods 與 BepInEx 的那一層）。</value></data>
+  <data name="Import_Mods_Game_Koikatsu" xml:space="preserve"><value>戀活</value></data>
+  <data name="Import_Mods_Game_KoikatsuSunshine" xml:space="preserve"><value>戀活 Sunshine</value></data>
+  <data name="Import_Mods_Action_Install" xml:space="preserve"><value>新安裝</value></data>
+  <data name="Import_Mods_Action_Update" xml:space="preserve"><value>更新（已安裝 {0}）</value></data>
+  <data name="Import_Mods_Action_AlreadyInstalled" xml:space="preserve"><value>已安裝相同版本</value></data>
+  <data name="Import_Mods_Action_NewerInstalled" xml:space="preserve"><value>已安裝較新的版本（{0}）</value></data>
+  <data name="Import_Mods_Action_NotForThisGame" xml:space="preserve"><value>不是這個遊戲的 mod</value></data>
+  <data name="Import_Mods_Action_Superseded" xml:space="preserve"><value>同一批裡有較新的版本</value></data>
+  <data name="Import_Mods_Action_NotAMod" xml:space="preserve"><value>不是可讀取的 mod</value></data>
+  <data name="Import_Mods_Detail_BackUp" xml:space="preserve"><value>舊版 {0} 會移到備份：{1}</value></data>
+  <data name="Import_Mods_Detail_KeptOld" xml:space="preserve"><value>舊版 {0} 保留在原處，Sideloader 會載入較新的版本：{1}</value></data>
+  <data name="Settings_ModsHeader.Text" xml:space="preserve"><value>Mod</value></data>
+  <data name="SC_KoikatsuGameFolder.Header" xml:space="preserve"><value>戀活遊戲資料夾</value></data>
+  <data name="SC_KoikatsuGameFolder.Description" xml:space="preserve"><value>匯入時附帶的 zipmod 安裝到這裡：含 mods 與 BepInEx 的資料夾。</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Header" xml:space="preserve"><value>戀活 Sunshine 遊戲資料夾</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Description" xml:space="preserve"><value>匯入時附帶的 zipmod 安裝到這裡：含 mods 與 BepInEx 的資料夾。</value></data>
+  <data name="SC_ModInstallFolderName.Header" xml:space="preserve"><value>mod 安裝資料夾</value></data>
+  <data name="SC_ModInstallFolderName.Description" xml:space="preserve"><value>收藏庫在 mods 裡的專屬資料夾，mod 只會寫到這裡。</value></data>
+  <data name="Settings_Mods_Pick.Content" xml:space="preserve"><value>選擇…</value></data>
+  <data name="Settings_Mods_Clear.Content" xml:space="preserve"><value>清除</value></data>
+  <data name="Settings_Mods_NotSet" xml:space="preserve"><value>未設定</value></data>
+  <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>這個資料夾已不存在。</value></data>
+  <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>這裡沒有 mods 或 BepInEx 資料夾，確定是遊戲資料夾嗎？</value></data>
 </root>

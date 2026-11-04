@@ -386,6 +386,53 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Mods Section -->
+                        <TextBlock
+                            x:Uid="Settings_ModsHeader"
+                            Margin="1,20,0,4"
+                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                        <controls:SettingsCard x:Uid="SC_KoikatsuGameFolder">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE7FC;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <StackPanel Spacing="6" HorizontalAlignment="Right">
+                                <TextBlock MaxWidth="400" IsTextSelectionEnabled="True" TextWrapping="Wrap" HorizontalAlignment="Right"
+                                           Text="{x:Bind ViewModel.KoikatsuGameFolderDisplay, Mode=OneWay}" />
+                                <TextBlock MaxWidth="400" TextWrapping="Wrap" HorizontalAlignment="Right"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                           Text="{x:Bind ViewModel.KoikatsuGameFolderStatus, Mode=OneWay}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button x:Uid="Settings_Mods_Pick" Command="{x:Bind ViewModel.PickKoikatsuGameFolderCommand}" />
+                                    <Button x:Uid="Settings_Mods_Clear" Command="{x:Bind ViewModel.ClearKoikatsuGameFolderCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard x:Uid="SC_KoikatsuSunshineGameFolder">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE7FC;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <StackPanel Spacing="6" HorizontalAlignment="Right">
+                                <TextBlock MaxWidth="400" IsTextSelectionEnabled="True" TextWrapping="Wrap" HorizontalAlignment="Right"
+                                           Text="{x:Bind ViewModel.KoikatsuSunshineGameFolderDisplay, Mode=OneWay}" />
+                                <TextBlock MaxWidth="400" TextWrapping="Wrap" HorizontalAlignment="Right"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                           Text="{x:Bind ViewModel.KoikatsuSunshineGameFolderStatus, Mode=OneWay}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button x:Uid="Settings_Mods_Pick" Command="{x:Bind ViewModel.PickKoikatsuSunshineGameFolderCommand}" />
+                                    <Button x:Uid="Settings_Mods_Clear" Command="{x:Bind ViewModel.ClearKoikatsuSunshineGameFolderCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard x:Uid="SC_ModInstallFolderName">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE8B7;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <TextBox MinWidth="200" Text="{x:Bind ViewModel.ModInstallFolderName, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
 
                     </StackPanel>
                 </ScrollViewer>

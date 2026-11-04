@@ -186,5 +186,13 @@ public class SettingsService
         public string GFolderName { get; set; } = "G";
         public string R18FolderName { get; set; } = "R-18";
         public string R18GFolderName { get; set; } = "R-18G";
+
+        // ── Mods ────────────────────────────────────────────────────
+        /// <summary>Koikatsu install folder (the one holding <c>mods</c> and <c>BepInEx</c>). Empty = not set.</summary>
+        public string KoikatsuGameFolder { get; set; } = "";
+        /// <summary>Koikatsu Sunshine install folder. Empty = not set.</summary>
+        public string KoikatsuSunshineGameFolder { get; set; } = "";
+        /// <summary>The gallery's own folder inside each game's <c>mods</c> folder; mods it installs go only there.</summary>
+        public string ModInstallFolderName { get; set; } = "SceneGallery";
     }
 }

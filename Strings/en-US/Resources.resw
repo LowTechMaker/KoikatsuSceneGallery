@@ -1934,4 +1934,28 @@
   <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
     <value>My rating</value>
   </data>
+  <data name="Import_Mods_NoGameBody" xml:space="preserve"><value>Go to Settings → Folders → Mods and choose the Koikatsu or Koikatsu Sunshine install folder (the one that holds mods and BepInEx).</value></data>
+  <data name="Import_Mods_Game_Koikatsu" xml:space="preserve"><value>Koikatsu</value></data>
+  <data name="Import_Mods_Game_KoikatsuSunshine" xml:space="preserve"><value>Koikatsu Sunshine</value></data>
+  <data name="Import_Mods_Action_Install" xml:space="preserve"><value>new</value></data>
+  <data name="Import_Mods_Action_Update" xml:space="preserve"><value>update (installed: {0})</value></data>
+  <data name="Import_Mods_Action_AlreadyInstalled" xml:space="preserve"><value>this version is already installed</value></data>
+  <data name="Import_Mods_Action_NewerInstalled" xml:space="preserve"><value>a newer version is installed ({0})</value></data>
+  <data name="Import_Mods_Action_NotForThisGame" xml:space="preserve"><value>not a mod for this game</value></data>
+  <data name="Import_Mods_Action_Superseded" xml:space="preserve"><value>a newer copy is in the same batch</value></data>
+  <data name="Import_Mods_Action_NotAMod" xml:space="preserve"><value>not a readable mod</value></data>
+  <data name="Import_Mods_Detail_BackUp" xml:space="preserve"><value>Old version {0} is moved to a backup: {1}</value></data>
+  <data name="Import_Mods_Detail_KeptOld" xml:space="preserve"><value>Old version {0} stays where it is; Sideloader loads the newer one: {1}</value></data>
+  <data name="Settings_ModsHeader.Text" xml:space="preserve"><value>Mods</value></data>
+  <data name="SC_KoikatsuGameFolder.Header" xml:space="preserve"><value>Koikatsu game folder</value></data>
+  <data name="SC_KoikatsuGameFolder.Description" xml:space="preserve"><value>Where zipmods from imports are installed: the folder that holds mods and BepInEx.</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Header" xml:space="preserve"><value>Koikatsu Sunshine game folder</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Description" xml:space="preserve"><value>Where zipmods from imports are installed: the folder that holds mods and BepInEx.</value></data>
+  <data name="SC_ModInstallFolderName.Header" xml:space="preserve"><value>Mod install folder</value></data>
+  <data name="SC_ModInstallFolderName.Description" xml:space="preserve"><value>The gallery's own folder inside mods. Mods are only ever written here.</value></data>
+  <data name="Settings_Mods_Pick.Content" xml:space="preserve"><value>Choose…</value></data>
+  <data name="Settings_Mods_Clear.Content" xml:space="preserve"><value>Clear</value></data>
+  <data name="Settings_Mods_NotSet" xml:space="preserve"><value>Not set</value></data>
+  <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>This folder no longer exists.</value></data>
+  <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>No mods or BepInEx folder here — is this the game folder?</value></data>
 </root>
