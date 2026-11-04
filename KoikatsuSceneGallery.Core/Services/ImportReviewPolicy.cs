@@ -5,7 +5,8 @@ namespace KoikatsuSceneGallery.Services;
 public static class ImportReviewPolicy
 {
     public static Helpers.ImportReviewSection Section(ImportItemStatus status, bool hasAuthor, bool hasArtwork)
-        => IsIdentified(status, hasAuthor) ? Helpers.ImportReviewSection.Identified
+        => status is ImportItemStatus.AlreadyInLibrary ? Helpers.ImportReviewSection.Skipped
+            : IsIdentified(status, hasAuthor) ? Helpers.ImportReviewSection.Identified
             : hasArtwork && status is not (ImportItemStatus.Pending or ImportItemStatus.Analyzing)
                 ? Helpers.ImportReviewSection.Unavailable : Helpers.ImportReviewSection.Unidentified;
 

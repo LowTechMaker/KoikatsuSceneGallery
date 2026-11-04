@@ -12,8 +12,9 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
     private readonly Action<Action> _dispatch = dispatch;
     private bool _updating, _disposed, _queued;
     private long _generation;
-    private int _reviewColumns = 4;
-    private double _reviewTileWidth = 208;
+    // What is left alone is out of the way until asked for.
+    private readonly HashSet<Helpers.ImportReviewSection> _collapsed = [Helpers.ImportReviewSection.Skipped];
+    private IReadOnlyList<ModReviewItem> _mods = [];
     public ObservableCollection<ImportItemReviewState> States { get; } = [];
     public ObservableCollection<ImportItemReviewState> VisibleItems { get; } = [];
     public ObservableCollection<ImportReviewRow> Rows { get; } = [];
@@ -155,6 +156,9 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         var selectable = VisibleItems.Where(state => state.CanSelect).ToArray();
         SelectedCount = selectable.Count(state => state.IsSelected);
         AllSelected = SelectedCount == 0 ? false : SelectedCount == selectable.Length ? true : null;
+        foreach (var row in Rows)
+            if (row.Kind is Helpers.ImportReviewRowKind.Section or Helpers.ImportReviewRowKind.Group)
+                row.RefreshSelectionAvailability();
         Changed?.Invoke();
     }
 
@@ -211,11 +215,48 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         });
     }
 
+    /// <summary>The mods in the batch, shown as their own section between the identified and the skipped cards.</summary>
+    public void SetMods(IReadOnlyList<ModReviewItem> mods)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _mods = mods.ToArray();
+        QueueRows();
+    }
+
+    /// <summary>Called when a mod's install box changes, so its section header follows.</summary>
+    public void RefreshModSelection()
+    {
+        foreach (var row in Rows.Where(row => row.Section == Helpers.ImportReviewSection.Mods && row.Kind == Helpers.ImportReviewRowKind.Section))
+            row.RefreshSelectionAvailability();
+    }
+
+    public bool IsCollapsed(Helpers.ImportReviewSection section) => _collapsed.Contains(section);
+
+    public void ToggleCollapsed(Helpers.ImportReviewSection section)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_collapsed.Remove(section)) _collapsed.Add(section);
+        QueueRows();
+    }
+
     private void RefreshReviewGroups()
     {
         var visible = VisibleItems.ToArray();
-        foreach (var state in visible) state.TileWidth = _reviewTileWidth;
-        var desired = Helpers.ImportReviewLayout.Build(visible, s => s.Section, s => s.GroupKey, _reviewColumns);
+        var cardRows = Helpers.ImportReviewLayout.Build(visible, s => s.Section, s => s.GroupKey, _collapsed);
+        var desired = new List<(string Key, Helpers.ImportReviewRowKind Kind, Helpers.ImportReviewSection Section,
+            IReadOnlyList<ImportItemReviewState> Items, IReadOnlyList<ModReviewItem> Mods)>();
+        foreach (var row in cardRows.Where(r => r.Section < Helpers.ImportReviewSection.Mods))
+            desired.Add((row.Key, row.Kind, row.Section, row.Items, []));
+        if (_mods.Count > 0)
+        {
+            desired.Add(("Mods:", Helpers.ImportReviewRowKind.Section, Helpers.ImportReviewSection.Mods, [], _mods));
+            if (!_collapsed.Contains(Helpers.ImportReviewSection.Mods))
+                foreach (var mod in _mods)
+                    desired.Add(("Mods:item:" + mod.SourcePath, Helpers.ImportReviewRowKind.ModItem, Helpers.ImportReviewSection.Mods, [], [mod]));
+        }
+        foreach (var row in cardRows.Where(r => r.Section > Helpers.ImportReviewSection.Mods))
+            desired.Add((row.Key, row.Kind, row.Section, row.Items, []));
+
         var keys = desired.Select(r => r.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var stale in Rows.Where(r => !keys.Contains(r.Key)).ToArray()) Rows.Remove(stale);
         var existing = Rows.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
@@ -223,8 +264,10 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         {
             var source = desired[index];
             var found = existing.TryGetValue(source.Key, out var row);
-            row ??= new ImportReviewRow(source.Key, source.Kind);
+            row ??= new ImportReviewRow(source.Key, source.Kind) { Section = source.Section };
             if (!row.Items.SequenceEqual(source.Items)) row.Items = source.Items;
+            if (!row.Mods.SequenceEqual(source.Mods)) row.Mods = source.Mods;
+            row.IsCollapsed = _collapsed.Contains(source.Section);
             row.RefreshSelectionAvailability();
             if (source.Kind == Helpers.ImportReviewRowKind.Section)
             {
@@ -232,10 +275,13 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
                 {
                     Helpers.ImportReviewSection.Identified => "Import_Mixed_Identified",
                     Helpers.ImportReviewSection.Unavailable => "Import_Mixed_Unavailable",
+                    Helpers.ImportReviewSection.Mods => "Import_Mixed_Mods",
+                    Helpers.ImportReviewSection.Skipped => "Import_Mixed_Skipped",
                     _ => "Import_Mixed_Attention"
                 };
-                row.Title = string.Format(_text(resourcePrefix + "Count"), source.Items.Count);
-                row.Description = _text(resourcePrefix + (source.Items.Count == 0 ? "Empty" : "Hint"));
+                var count = source.Section == Helpers.ImportReviewSection.Mods ? source.Mods.Count : source.Items.Count;
+                row.Title = string.Format(_text(resourcePrefix + "Count"), count);
+                row.Description = _text(resourcePrefix + "Hint");
             }
             else if (source.Kind == Helpers.ImportReviewRowKind.Group)
                 row.Title = string.Format(_text("Import_Review_GroupTitle"), source.Items[0].GroupTitle, source.Items.Count);
@@ -244,20 +290,6 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         }
         RowsChanged?.Invoke();
     }
-
-    public void SetReviewViewportWidth(double width)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        if (!double.IsFinite(width) || width <= 32) return;
-        var available = width - 32; // item padding plus the vertical scrollbar
-        var columns = Helpers.ImportReviewLayout.ColumnsForWidth(available);
-        var tileWidth = Math.Floor((available - (columns - 1) * 12) / columns);
-        if (columns == _reviewColumns && Math.Abs(tileWidth - _reviewTileWidth) < 1) return;
-        _reviewColumns = columns;
-        _reviewTileWidth = tileWidth;
-        QueueRows();
-    }
-
 
     public void Clear()
     {
@@ -272,6 +304,7 @@ internal sealed class ImportReviewWorkspace(Func<string, string> text, Action<Ac
         States.Clear();
         VisibleItems.Clear();
         Rows.Clear();
+        _mods = [];
         Filter = "All";
         UpdateSelection();
         RowsChanged?.Invoke();

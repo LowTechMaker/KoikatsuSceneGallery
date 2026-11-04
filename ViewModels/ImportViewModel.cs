@@ -109,7 +109,8 @@ public partial class ImportViewModel : ObservableObject
             AutoImportIdentifiedAsync().Observe(_logger, "Import.AutoImport");
     }
     public int ImportableCount => Items.Count(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath));
-    public bool CanConfirmImport => IsReviewWorkspaceEnabled && ImportableCount > 0 && !IsArtworkLookupPending;
+    public bool CanConfirmImport => IsReviewWorkspaceEnabled && !IsArtworkLookupPending
+        && (CardsToImportCount > 0 || ModsToInstallCount > 0);
 
     /// <summary>
     /// A post URL typed but not yet applied. Importing then would file the
@@ -150,11 +151,6 @@ public partial class ImportViewModel : ObservableObject
         set => SelectedReviewFilter = value switch { 1 => "AllAges", 2 => "R18", 3 => "R18G", _ => "All" };
     }
     public ObservableCollection<ImportReviewRow> ReviewRows => _reviewWorkspace.Rows;
-    public string UnidentifiedNavigationText => ReviewNavigationText("Unidentified", "Import_Mixed_JumpUnidentified");
-    public string UnavailableNavigationText => ReviewNavigationText("Unavailable", "Import_Mixed_JumpUnavailable");
-    public string IdentifiedNavigationText => ReviewNavigationText("Identified", "Import_Mixed_JumpIdentified");
-    private string ReviewNavigationText(string section, string resource)
-        => string.Format(GetLocalizedString(resource), ReviewRows.FirstOrDefault(r => r.Key == section + ":")?.Items.Count ?? 0);
     public IReadOnlyList<ImportItem> SelectedVisibleReviewItems => _reviewWorkspace.SelectedItems;
 
     public string ReviewSummaryText => string.Format(GetLocalizedString("Import_Review_Summary"), Items.Count, ImportableCount);
@@ -182,6 +178,7 @@ public partial class ImportViewModel : ObservableObject
 
     public int SelectedReviewCount => _reviewWorkspace.SelectedCount;
     public bool HasSelectedReviewItems => SelectedReviewCount > 0;
+    public string SelectedReviewCountText => string.Format(GetLocalizedString("Import_SelectionCount"), SelectedReviewCount);
     public bool? IsAllReviewSelected
     {
         get => _reviewWorkspace.AllSelected;
@@ -385,13 +382,26 @@ public partial class ImportViewModel : ObservableObject
 
     private async Task<Func<string, long?, bool>?> TryGetLibraryLookupAsync(CancellationToken ct)
     {
-        try { return await _importService.GetLibraryLookupAsync(ct); }
+        Func<string, long?, bool> library;
+        try { library = await _importService.GetLibraryLookupAsync(ct); }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger.LogError("Import.LinkMatch.Library", ex);
             return null;
         }
+
+        // A zipmod the post links lives in the game, not in the library: it is not missing when
+        // it is installed, or when it was dropped in to be installed.
+        var pendingMods = _mods.Select(mod => LibraryNameIndex.KeyOf(mod.Candidate.FileName)).ToHashSet(StringComparer.Ordinal);
+        Func<string, bool> installedMods = _ => false;
+        try { installedMods = await _modInstallService.GetInstalledNameLookupAsync(ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { _logger.LogError("Import.LinkMatch.Mods", ex); }
+
+        return (name, size) => library(name, size)
+            || (ZipmodManifestReader.HasModExtension(name)
+                && (pendingMods.Contains(LibraryNameIndex.KeyOf(name)) || installedMods(name)));
     }
 
     internal static string NamesWithMore(IReadOnlyList<string> names)
@@ -670,6 +680,259 @@ public partial class ImportViewModel : ObservableObject
     [ObservableProperty] public partial bool ShowRejectedWarning { get; set; }
     [ObservableProperty] public partial int RejectedCount { get; set; }
 
+    // ── Mods and archives ───────────────────────────────────────────
+    // Zipmods dropped with the cards get their own section of the list. They are not part of
+    // the library: their box means "install", and the import button installs the checked ones
+    // into the gallery's folder under each game's mods folder.
+    private readonly ModInstallService _modInstallService;
+    private readonly List<ModReviewItem> _mods = [];
+    public IReadOnlyList<ModReviewItem> Mods => _mods;
+
+    // Cards and mods unpacked from an archive, by staged path: the archive they came from.
+    private readonly Dictionary<string, string> _archiveOrigins = new(StringComparer.OrdinalIgnoreCase);
+
+    private static string StagingRoot => Path.Combine(AppPaths.LocalFolder, "import-staging");
+
+    /// <summary>The outcome of the last import: cards, mods, links and what was skipped, in one place.</summary>
+    [ObservableProperty] public partial bool ShowImportResult { get; set; }
+    [ObservableProperty] public partial string ImportResultTitle { get; set; } = string.Empty;
+    [ObservableProperty] public partial string ImportResultMessage { get; set; } = string.Empty;
+    [ObservableProperty] public partial Microsoft.UI.Xaml.Controls.InfoBarSeverity ImportResultSeverity { get; set; }
+
+    /// <summary>Whether unidentified cards go to the unknown folder with the rest. Shown, with their count, beside the import button.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ImportPlanText), nameof(CanConfirmImport))]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmImportCommand))]
+    public partial bool IncludeUnidentified { get; set; } = true;
+
+    public int ModsToInstallCount => _mods.Count(mod => mod.Install && mod.CanInstall);
+    public int CardsToImportCount => IncludeUnidentified ? ImportableCount : ImportableCount - UnidentifiedImportableCount;
+    public string IncludeUnidentifiedText => string.Format(GetLocalizedString("Import_IncludeUnidentified"), UnidentifiedImportableCount);
+    public Visibility IncludeUnidentifiedVisibility => UnidentifiedImportableCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>What pressing Import will do, in a sentence.</summary>
+    public string ImportPlanText
+    {
+        get
+        {
+            if (IsArtworkLookupPending) return GetLocalizedString("Import_Action_LookupPending");
+            var cards = CardsToImportCount;
+            var mods = ModsToInstallCount;
+            return (cards, mods) switch
+            {
+                (0, 0) => GetLocalizedString("Import_Plan_Nothing"),
+                (_, 0) => string.Format(GetLocalizedString("Import_Plan_Cards"), cards),
+                (0, _) => string.Format(GetLocalizedString("Import_Plan_Mods"), mods),
+                _ => string.Format(GetLocalizedString("Import_Plan_CardsAndMods"), cards, mods),
+            };
+        }
+    }
+
+    /// <summary>
+    /// Unpacks the archives among <paramref name="filePaths"/> that are not mods, and returns
+    /// the list with each such archive replaced by what came out of it.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> ExpandArchivesAsync(IReadOnlyList<string> filePaths)
+    {
+        var archives = filePaths.Where(ArchiveExtractor.IsCandidateArchive).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (archives.Count == 0) return filePaths;
+
+        var expanded = await Task.Run(() =>
+        {
+            var result = new List<string>();
+            foreach (var archive in archives)
+            {
+                if (ZipmodManifestReader.TryRead(archive) is not null) { result.Add(archive); continue; } // a mod, not a pack
+                var staging = Path.Combine(StagingRoot, $"{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}"[..24],
+                    PathSanitizer.SanitizeFolderName(Path.GetFileNameWithoutExtension(archive)));
+                try
+                {
+                    var extraction = ArchiveExtractor.Extract(archive, staging);
+                    foreach (var file in extraction.Files)
+                    {
+                        lock (_archiveOrigins) _archiveOrigins[file.Path] = file.ArchivePath;
+                        result.Add(file.Path);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+                {
+                    _logger.LogError("Import.ExtractArchive", ex, archive);
+                }
+            }
+            return result;
+        });
+
+        var archiveSet = archives.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return filePaths.Where(path => !archiveSet.Contains(path)).Concat(expanded).ToList();
+    }
+
+    private string? ArchiveNameOf(string path)
+    {
+        lock (_archiveOrigins)
+            return _archiveOrigins.TryGetValue(path, out var archive) ? Path.GetFileName(archive) : null;
+    }
+
+    private async Task StageModsAsync(IReadOnlyList<string> filePaths)
+    {
+        var paths = filePaths
+            .Where(ZipmodManifestReader.HasModExtension)
+            .Where(path => _mods.All(mod => !string.Equals(mod.SourcePath, path, StringComparison.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (paths.Count == 0) return;
+
+        IReadOnlyList<ModInstallCandidate> candidates;
+        try { candidates = await _modInstallService.ReadCandidatesAsync(paths, CancellationToken.None); }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.Mods.Read", ex);
+            return;
+        }
+
+        // A .zip without a manifest that got here is not a mod (packs were unpacked before).
+        var added = candidates.Where(candidate => candidate.Manifest is not null)
+            .Select(candidate => new ModReviewItem(candidate, ArchiveNameOf(candidate.SourcePath)))
+            .ToList();
+        if (added.Count == 0) return;
+        foreach (var mod in added)
+        {
+            mod.PropertyChanged += OnModPropertyChanged;
+            _mods.Add(mod);
+        }
+        PublishMods();
+        await PlanModsAsync();
+    }
+
+    /// <summary>Works out, for every mod in the list, what installing it would do. Reading the mods folders can take a moment.</summary>
+    private async Task PlanModsAsync()
+    {
+        if (_mods.Count == 0) return;
+        var mods = _mods.ToList();
+        try
+        {
+            var targets = await _modInstallService.GetTargetsAsync();
+            if (targets.Count == 0)
+            {
+                foreach (var mod in mods)
+                    mod.ApplyPlan([], GetLocalizedString("Import_Mods_Status_NoGame"), GetLocalizedString("Import_Mods_NoGameBody"));
+                NotifyReviewWorkspaceState();
+                return;
+            }
+
+            var steps = await _modInstallService.PlanAsync(mods.Select(mod => mod.Candidate).ToList(), targets, CancellationToken.None);
+            foreach (var mod in mods)
+            {
+                var own = steps.Where(step => ReferenceEquals(step.Candidate, mod.Candidate)).ToList();
+                mod.ApplyPlan(own, DescribeModSteps(own), DescribeModCopies(own));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.Mods.Plan", ex);
+            foreach (var mod in mods.Where(mod => mod.IsChecking))
+                mod.ApplyPlan([], GetLocalizedString("Import_Mods_Status_CheckFailed"), ex.Message);
+        }
+        NotifyReviewWorkspaceState();
+    }
+
+    private static string GameName(ModGame? game) => game is { } g ? GetLocalizedString($"Import_Mods_Game_{g}") : string.Empty;
+
+    private static string ModActionText(ModInstallStep step) => step.Action switch
+    {
+        ModInstallAction.Install => GetLocalizedString("Import_Mods_Action_Install"),
+        ModInstallAction.Update => string.Format(GetLocalizedString("Import_Mods_Action_Update"), step.ExistingCopy?.Manifest.Version ?? "?"),
+        ModInstallAction.AlreadyInstalled => GetLocalizedString("Import_Mods_Action_AlreadyInstalled"),
+        ModInstallAction.NewerInstalled => string.Format(GetLocalizedString("Import_Mods_Action_NewerInstalled"), step.ExistingCopy?.Manifest.Version ?? "?"),
+        ModInstallAction.NotForThisGame => GetLocalizedString("Import_Mods_Action_NotForThisGame"),
+        ModInstallAction.SupersededInBatch => GetLocalizedString("Import_Mods_Action_Superseded"),
+        _ => GetLocalizedString("Import_Mods_Action_NotAMod"),
+    };
+
+    // "Koikatsu: new · Sunshine: already installed"
+    private static string DescribeModSteps(IReadOnlyList<ModInstallStep> steps)
+        => string.Join("  ·  ", steps.Select(step => step.Game is null
+            ? ModActionText(step)
+            : $"{GameName(step.Game)}：{ModActionText(step)}"));
+
+    private static string DescribeModCopies(IReadOnlyList<ModInstallStep> steps)
+        => string.Join("\n", steps.SelectMany(step => step.OlderCopies.Select(copy => string.Format(
+            GetLocalizedString(step.ToBackUp.Contains(copy) ? "Import_Mods_Detail_BackUp" : "Import_Mods_Detail_KeptOld"),
+            copy.Manifest.Version ?? "?", copy.Path))).Distinct());
+
+    private void OnModPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ModReviewItem.Install) or nameof(ModReviewItem.CanInstall))
+        {
+            _reviewWorkspace.RefreshModSelection();
+            NotifyReviewWorkspaceState();
+        }
+    }
+
+    private void PublishMods()
+    {
+        _reviewWorkspace.SetMods(_mods);
+        UpdateCounts();
+        NotifyReviewWorkspaceState();
+    }
+
+    internal void RemoveMod(ModReviewItem mod)
+    {
+        if (!IsReviewWorkspaceEnabled || !_mods.Remove(mod)) return;
+        mod.PropertyChanged -= OnModPropertyChanged;
+        PublishMods();
+    }
+
+    /// <summary>The Mods header's box: install every installable mod, or none.</summary>
+    internal void ToggleAllMods()
+    {
+        if (!IsReviewWorkspaceEnabled) return;
+        var installable = _mods.Where(mod => mod.CanInstall).ToList();
+        var install = !installable.All(mod => mod.Install);
+        foreach (var mod in installable) mod.Install = install;
+    }
+
+    private void ClearMods()
+    {
+        foreach (var mod in _mods) mod.PropertyChanged -= OnModPropertyChanged;
+        _mods.Clear();
+        _reviewWorkspace.SetMods(_mods);
+    }
+
+    private async Task<(int Installed, List<string> Failures)> InstallCheckedModsAsync()
+    {
+        var chosen = _mods.Where(mod => mod.Install && mod.CanInstall).ToList();
+        var steps = chosen.SelectMany(mod => mod.StepsToRun).ToList();
+        if (steps.Count == 0) return (0, []);
+
+        IReadOnlyList<ModInstallOutcome> outcomes;
+        try { outcomes = await _modInstallService.InstallAsync(steps, CancellationToken.None); }
+        catch (Exception ex)
+        {
+            _logger.LogError("Import.Mods.Install", ex);
+            return (0, [ex.Message]);
+        }
+
+        var failures = outcomes.Where(outcome => !outcome.Succeeded)
+            .Select(outcome => $"{outcome.Step.Candidate.FileName}: {outcome.Error}").ToList();
+        var failedSources = outcomes.Where(outcome => !outcome.Succeeded)
+            .Select(outcome => outcome.Step.Candidate.SourcePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Installed mods leave the list; a mod with any failed copy stays, so it can be tried again.
+        foreach (var mod in chosen.Where(mod => !failedSources.Contains(mod.SourcePath)))
+        {
+            mod.PropertyChanged -= OnModPropertyChanged;
+            _mods.Remove(mod);
+        }
+        PublishMods();
+        return (outcomes.Count(outcome => outcome.Succeeded), failures);
+    }
+
+    /// <summary>Nothing is pending when the app starts, so what an earlier run unpacked can go.</summary>
+    private static void DeleteStaging()
+    {
+        try { if (Directory.Exists(StagingRoot)) Directory.Delete(StagingRoot, recursive: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UndoManualAssignmentCommand))]
     public partial bool CanUndoManualAssignment { get; set; }
@@ -696,6 +959,8 @@ public partial class ImportViewModel : ObservableObject
         _pluginService = pluginService;
         _dispatcher = dispatcher;
         _logger = logger;
+        _modInstallService = new ModInstallService(settingsService.LoadConfigAsync, logger);
+        _ = Task.Run(DeleteStaging);
 
         _postLinkLookup = new PostLinkLookup(pluginService.PostLinkInspectors, logger);
         _reviewWorkspace = new ImportReviewWorkspace(GetLocalizedString,
@@ -1311,6 +1576,9 @@ public partial class ImportViewModel : ObservableObject
     {
         if (filePaths.Count == 0) return;
 
+        filePaths = await ExpandArchivesAsync(filePaths);
+        await StageModsAsync(filePaths);
+
         var newPaths = filePaths
             .Where(p => Path.GetExtension(p).Equals(".png", StringComparison.OrdinalIgnoreCase))
             .Where(p => Items.All(existing => !string.Equals(existing.SourceFilePath, p, StringComparison.OrdinalIgnoreCase)))
@@ -1334,6 +1602,9 @@ public partial class ImportViewModel : ObservableObject
             // Compute fingerprints for subfolder decisions and optional unknown visual grouping.
             var newPathSet = new HashSet<string>(newPaths, StringComparer.OrdinalIgnoreCase);
             var newItems = Items.Where(i => newPathSet.Contains(i.SourceFilePath)).ToList();
+            lock (_archiveOrigins)
+                foreach (var item in newItems)
+                    if (_archiveOrigins.TryGetValue(item.SourceFilePath, out var archive)) item.ArchivePath = archive;
             await _importService.ComputeFingerprintsAsync(newItems, batch.Token);
 
             // Flush buffered unknowns into groups (fingerprints already computed above)
@@ -1407,24 +1678,190 @@ public partial class ImportViewModel : ObservableObject
         await ExecuteImportAsync(eligible, "Import_Summary_AutoSuccess");
     }
 
+    /// <summary>
+    /// Asks the user what to do with each conflict, after everything else was imported. Null
+    /// means the question was dismissed: the conflicting cards stay in the list, undecided.
+    /// </summary>
+    public Func<IReadOnlyList<ImportConflict>, Task<IReadOnlyDictionary<ImportConflict, ImportConflictChoice>?>>? ResolveConflicts { get; set; }
+
     [RelayCommand(CanExecute = nameof(CanConfirmImport))]
-    private Task ConfirmImportAsync() => ImportAsync(includeUnidentified: true);
+    private Task ConfirmImportAsync() => ImportAllAsync();
 
     /// <summary>
-    /// Imports every importable card, or only the identified ones; the rest
-    /// stay in the review workspace.
+    /// Imports every importable card (the unidentified ones too when <see cref="IncludeUnidentified"/>),
+    /// then asks about the conflicts that were held back, then installs the checked mods, and
+    /// reports all of it in one place.
     /// </summary>
-    public async Task ImportAsync(bool includeUnidentified)
+    public async Task ImportAllAsync()
     {
         if (!CanConfirmImport)
             return;
 
+        var includeUnidentified = IncludeUnidentified;
         var importItems = Items
             .Where(item => ImportReviewPolicy.CanExecute(item.Status, item.DestinationPath)
                 && (includeUnidentified
                     || ImportReviewPolicy.IsIdentified(item.Status, !string.IsNullOrWhiteSpace(item.AuthorId))))
             .ToArray();
-        await ExecuteImportAsync(importItems, "Import_Summary_Success");
+        var report = new ImportReport();
+        ShowImportResult = false;
+        IsResolvingReview = true; // keeps the list still while the steps below run
+        try
+        {
+            var conflicts = new List<ImportConflict>();
+            if (importItems.Length > 0)
+            {
+                var batch = await ExecuteImportAsync(importItems, "Import_Summary_Success", autoContinue: false);
+                report.Imported += batch.Imported;
+                report.TransactionFailed |= batch.Failed;
+                conflicts.AddRange(batch.Conflicts);
+            }
+
+            if (!report.TransactionFailed)
+            {
+                conflicts.AddRange(Items
+                    .Where(item => item.IsInLibraryElsewhere && !item.ElsewhereDecided)
+                    .Select(item => new ImportConflict(item, ImportConflictKind.InLibraryElsewhere, item.DestinationPath!, item.ExistingLibraryPath!)));
+                if (conflicts.Count > 0 && ResolveConflicts is { } ask)
+                    await ApplyConflictChoicesAsync(conflicts, await ask(conflicts), report);
+            }
+
+            var (installed, failures) = await InstallCheckedModsAsync();
+            report.ModsInstalled += installed;
+            report.Failures.AddRange(failures);
+        }
+        finally
+        {
+            IsResolvingReview = false;
+        }
+        ShowReport(report);
+    }
+
+    private sealed class ImportReport
+    {
+        public int Imported, Linked, Skipped, ModsInstalled;
+        public bool TransactionFailed;
+        public List<string> Failures { get; } = [];
+    }
+
+    private void ShowReport(ImportReport report)
+    {
+        var lines = new List<string>();
+        if (report.Imported > 0) lines.Add(string.Format(GetLocalizedString("Import_Result_Imported"), report.Imported));
+        if (report.Linked > 0) lines.Add(string.Format(GetLocalizedString("Import_Result_Linked"), report.Linked));
+        if (report.ModsInstalled > 0) lines.Add(string.Format(GetLocalizedString("Import_Result_ModsInstalled"), report.ModsInstalled));
+        if (report.Skipped > 0) lines.Add(string.Format(GetLocalizedString("Import_Result_Skipped"), report.Skipped));
+        lines.AddRange(report.Failures.Take(5));
+        if (report.Failures.Count > 5) lines.Add(string.Format(GetLocalizedString("Import_Failure_More"), report.Failures.Count - 5));
+        if (lines.Count == 0) return; // a rolled-back transaction has its own error bar
+
+        var problems = report.Failures.Count > 0 || report.TransactionFailed;
+        ImportResultTitle = GetLocalizedString(problems ? "Import_Result_TitleWithProblems" : "Import_Result_Title");
+        ImportResultMessage = string.Join("\n", lines);
+        ImportResultSeverity = problems ? Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning : Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success;
+        ShowImportResult = true;
+    }
+
+    private static ImportItemPlan PlanFor(ImportItem item, string destination)
+        => new(item.SourceFilePath, destination, item.AuthorDirectoryPath, PostMetadataMapper.ToImportDocument(item, []))
+        {
+            MatchCardData = true,
+        };
+
+    private async Task ApplyConflictChoicesAsync(
+        IReadOnlyList<ImportConflict> conflicts,
+        IReadOnlyDictionary<ImportConflict, ImportConflictChoice>? choices,
+        ImportReport report)
+    {
+        if (choices is null) return; // dismissed: decide another time
+
+        var plans = new List<ImportItemPlan>();
+        var planItems = new List<ImportItem>();
+        var claimed = new Dictionary<string, string>(PathComparison.Comparer);
+        var backup = new OverwriteBackup(Path.Combine(AppPaths.LocalFolder, "import-overwritten", DateTime.Now.ToString("yyyyMMdd-HHmmss")));
+        var linked = new List<ImportItem>();
+
+        foreach (var conflict in conflicts)
+        {
+            var item = conflict.Item;
+            var choice = choices.GetValueOrDefault(conflict, ImportConflictRules.DefaultFor(conflict.Kind));
+            try
+            {
+                switch (choice)
+                {
+                    case ImportConflictChoice.Rename:
+                        var renamed = await Task.Run(() => ImportConflictRules.RenamedDestination(item.SourceFilePath, conflict.Destination, claimed));
+                        plans.Add(PlanFor(item, renamed));
+                        planItems.Add(item);
+                        break;
+                    case ImportConflictChoice.Overwrite:
+                        await Task.Run(() => backup.Move(conflict.ExistingPath));
+                        plans.Add(PlanFor(item, conflict.Destination));
+                        planItems.Add(item);
+                        break;
+                    case ImportConflictChoice.Copy:
+                        plans.Add(PlanFor(item, conflict.Destination));
+                        planItems.Add(item);
+                        break;
+                    case ImportConflictChoice.HardLink:
+                    case ImportConflictChoice.SymbolicLink:
+                        var error = await _importService.LinkToExistingAsync(item, conflict.Destination, conflict.ExistingPath,
+                            symbolic: choice == ImportConflictChoice.SymbolicLink);
+                        if (error is null) { linked.Add(item); report.Linked++; }
+                        else report.Failures.Add($"{item.FileName}: {error}");
+                        break;
+                    default:
+                        report.Skipped++;
+                        if (conflict.Kind == ImportConflictKind.NameClash)
+                        {
+                            item.Status = ImportItemStatus.Skipped;
+                            item.UserSkipped = true;
+                            item.ErrorMessage = GetLocalizedString("Import_Conflict_SkippedNameClash");
+                        }
+                        else item.ElsewhereDecided = true;
+                        break;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                report.Failures.Add($"{item.FileName}: {ex.Message}");
+            }
+        }
+
+        if (linked.Count > 0) RemoveItemsFromWorkspace(linked);
+        if (plans.Count > 0)
+        {
+            var (imported, failed) = await RunTransactionAsync(plans, planItems, "Import_Summary_Success");
+            report.Imported += imported;
+            report.TransactionFailed |= failed;
+            if (failed)
+            {
+                foreach (var path in backup.Restore())
+                    report.Failures.Add(string.Format(GetLocalizedString("Import_Conflict_RestoreFailed"), path));
+            }
+            else
+            {
+                foreach (var path in backup.BackupPaths) RecycleQuietly(path);
+            }
+        }
+        UpdateCounts();
+        ReconcileReviewStatesIfVisible();
+    }
+
+    // The replaced file was moved aside before the import; it goes to the recycle bin rather
+    // than away for good, so an overwrite can still be undone by hand.
+    private void RecycleQuietly(string path)
+    {
+        try
+        {
+            Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(path,
+                Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException)
+        {
+            _logger.LogError("Import.RecycleOverwritten", ex, path);
+        }
     }
 
     // The rollback line used to say "conflict or cancelled" whatever had actually gone wrong.
@@ -1438,6 +1875,8 @@ public partial class ImportViewModel : ObservableObject
     }
 
     // Names the file that stopped the import and why, and keeps the whole list in the log.
+    // File names, not paths: the full paths are in the tooltip-free log, and on screen they
+    // filled the page.
     private void ReportImportFailure(ImportExecutionResult result)
     {
         var summary = ImportFailureSummary.From(result.Receipt.ItemReceipts);
@@ -1446,9 +1885,9 @@ public partial class ImportViewModel : ObservableObject
         var first = summary.First;
         var lines = new List<string>
         {
-            string.Format(GetLocalizedString("Import_Failure_" + first.FailureType), first.TargetFilePath),
-            string.Format(GetLocalizedString("Import_Failure_Source"), first.SourceFilePath),
-            string.Format(GetLocalizedString("Import_Failure_Target"), first.TargetFilePath),
+            string.Format(GetLocalizedString("Import_Failure_" + first.FailureType), Path.GetFileName(first.TargetFilePath)),
+            string.Format(GetLocalizedString("Import_Failure_Source"), Path.GetFileName(first.SourceFilePath)),
+            string.Format(GetLocalizedString("Import_Failure_Target"), Path.GetDirectoryName(first.TargetFilePath)),
             string.Format(GetLocalizedString("Import_Failure_Outcome"), result.SafelyRolledBackCount, result.ManualRecoveryCount),
         };
         if (summary.Total > 1)
@@ -1465,15 +1904,35 @@ public partial class ImportViewModel : ObservableObject
         _ = Task.Run(() => _logger.LogError("Import.TransactionFailed", new InvalidOperationException(everything)));
     }
 
-    private async Task ExecuteImportAsync(ImportItem[] importItems, string successResource)
-    {
-        var plans = await BuildExecutionPlansFromWorkspaceAsync(importItems);
-        if (plans.Count == 0)
-        {
-            TransactionStatusText = GetLocalizedString("Import_Summary_NoEligible");
-            return;
-        }
+    private sealed record ImportBatchOutcome(int Imported, bool Failed, IReadOnlyList<ImportConflict> Conflicts);
 
+    /// <summary>
+    /// Imports the cards whose destination is free, and holds back each card whose destination
+    /// holds a different card of the same name: that one used to roll the whole batch back.
+    /// </summary>
+    private async Task<ImportBatchOutcome> ExecuteImportAsync(ImportItem[] importItems, string successResource, bool autoContinue = true)
+    {
+        var (plans, conflicts) = await BuildExecutionPlansFromWorkspaceAsync(importItems);
+        var held = conflicts.Select(conflict => conflict.Item).ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var conflict in conflicts)
+            conflict.Item.ErrorMessage = GetLocalizedString("Import_Conflict_Pending");
+
+        var imported = 0;
+        var failed = false;
+        if (plans.Count > 0)
+            (imported, failed) = await RunTransactionAsync(plans, importItems.Where(item => !held.Contains(item)).ToArray(), successResource);
+        else if (conflicts.Count == 0)
+            TransactionStatusText = GetLocalizedString("Import_Summary_NoEligible");
+
+        // Batches that finished while this ran left their candidates waiting.
+        if (autoContinue)
+            await AutoImportIdentifiedAsync();
+        return new ImportBatchOutcome(imported, failed, conflicts);
+    }
+
+    private async Task<(int Imported, bool Failed)> RunTransactionAsync(
+        IReadOnlyList<ImportItemPlan> plans, IReadOnlyList<ImportItem> planItems, string successResource)
+    {
         ExecutionProgress = new ImportExecutionProgressSnapshot(
             ImportExecutionPhase.Executing,
             CompletedCount: 0,
@@ -1509,34 +1968,30 @@ public partial class ImportViewModel : ObservableObject
             if (result.Receipt.IsFullySuccessful)
             {
                 _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
-                RemoveItemsFromWorkspace(importItems);
-                TransactionStatusText = string.Format(
-                    GetLocalizedString(successResource),
-                    plans.Count);
+                RemoveItemsFromWorkspace(planItems);
+                TransactionStatusText = string.Format(GetLocalizedString(successResource), plans.Count);
+                return (plans.Count, false);
             }
-            else
-            {
-                TransactionStatusText = string.Format(
-                    GetLocalizedString("Import_Summary_Failed"),
-                    result.SafelyRolledBackCount,
-                    result.FailedCount,
-                    result.WarningCount,
-                    result.ManualRecoveryCount);
-                ReportImportFailure(result);
-            }
+
+            TransactionStatusText = string.Format(
+                GetLocalizedString("Import_Summary_Failed"),
+                result.SafelyRolledBackCount,
+                result.FailedCount,
+                result.WarningCount,
+                result.ManualRecoveryCount);
+            ReportImportFailure(result);
+            return (0, true);
         }
         catch (Exception ex)
         {
             _logger.LogError("Import.Transaction", ex);
             TransactionStatusText = GetLocalizedString("Import_Summary_UnexpectedError");
+            return (0, true);
         }
         finally
         {
             IsImporting = false;
         }
-
-        // Batches that finished while this ran left their candidates waiting.
-        await AutoImportIdentifiedAsync();
     }
 
     [RelayCommand]
@@ -1558,7 +2013,8 @@ public partial class ImportViewModel : ObservableObject
 
     /// <summary>
     /// Turns the items into plans, giving a card a different name when another card
-    /// in the batch already claimed its destination.
+    /// in the batch already claimed its destination, and holding back a card whose
+    /// destination already holds a different card in the library.
     /// </summary>
     /// <remarks>
     /// Two download folders often hold a card of the same name. Both resolve to one
@@ -1568,15 +2024,16 @@ public partial class ImportViewModel : ObservableObject
     /// shared destination, where the executor folds it as a duplicate; a different
     /// card gets a suffixed name, as a local import already does.
     ///
-    /// Only clashes inside the batch are renamed. A library file of that name with a
-    /// different card still stops the import, as before.
+    /// A library file of that name with a different card is a question for the user
+    /// (rename, overwrite or skip), asked once the rest is in; see <see cref="ImportAllAsync"/>.
     ///
     /// Reads file contents for clashing names, so it runs off the UI thread.
     /// </remarks>
-    private static Task<List<ImportItemPlan>> BuildExecutionPlansFromWorkspaceAsync(IReadOnlyList<ImportItem> importItems)
+    private static Task<(List<ImportItemPlan> Plans, List<ImportConflict> Conflicts)> BuildExecutionPlansFromWorkspaceAsync(IReadOnlyList<ImportItem> importItems)
     {
         var snapshot = importItems
             .Select(item => (
+                Item: item,
                 item.SourceFilePath,
                 Destination: item.DestinationPath!,
                 item.AuthorDirectoryPath,
@@ -1587,7 +2044,8 @@ public partial class ImportViewModel : ObservableObject
         {
             var claimed = new Dictionary<string, string>(PathComparison.Comparer);
             var plans = new List<ImportItemPlan>(snapshot.Count);
-            foreach (var (source, destination, authorDirectory, document) in snapshot)
+            var conflicts = new List<ImportConflict>();
+            foreach (var (item, source, destination, authorDirectory, document) in snapshot)
             {
                 var resolved = destination;
                 if (claimed.ContainsKey(destination))
@@ -1600,13 +2058,19 @@ public partial class ImportViewModel : ObservableObject
                     claimed[destination] = source;
                 }
 
+                if (ImportConflictRules.IsNameClash(source, resolved))
+                {
+                    conflicts.Add(new ImportConflict(item, ImportConflictKind.NameClash, resolved, resolved));
+                    continue;
+                }
+
                 plans.Add(new ImportItemPlan(source, resolved, authorDirectory, document)
                 {
                     MatchCardData = true,
                 });
             }
 
-            return plans;
+            return (plans, conflicts);
         });
     }
 
@@ -1768,6 +2232,10 @@ public partial class ImportViewModel : ObservableObject
         _manualHistory.Clear();
         CanUndoManualAssignment = false;
         Items.Clear();
+        ClearMods();
+        lock (_archiveOrigins) _archiveOrigins.Clear();
+        _ = Task.Run(DeleteStaging);
+        ShowImportResult = false;
         HasItems = false;
         UpdateCounts();
     }
@@ -1952,6 +2420,7 @@ public partial class ImportViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedReviewFilter));
         OnPropertyChanged(nameof(ReviewFilterIndex));
         OnPropertyChanged(nameof(SelectedReviewCount));
+        OnPropertyChanged(nameof(SelectedReviewCountText));
         OnPropertyChanged(nameof(IsAllReviewSelected));
         OnPropertyChanged(nameof(HasSelectedReviewItems));
         OnPropertyChanged(nameof(SelectedVisibleReviewItems));
@@ -1960,12 +2429,7 @@ public partial class ImportViewModel : ObservableObject
         NotifyReviewWorkspaceState();
     }
 
-    private void OnReviewRowsChanged()
-    {
-        OnPropertyChanged(nameof(UnidentifiedNavigationText));
-        OnPropertyChanged(nameof(UnavailableNavigationText));
-        OnPropertyChanged(nameof(IdentifiedNavigationText));
-    }
+    private void OnReviewRowsChanged() { }
 
     private void NotifyReviewWorkspaceState()
     {
@@ -1981,27 +2445,35 @@ public partial class ImportViewModel : ObservableObject
         OnPropertyChanged(nameof(ReviewSummaryText));
         OnPropertyChanged(nameof(ImportActionText));
         OnPropertyChanged(nameof(ImportCompactActionText));
+        OnPropertyChanged(nameof(ImportPlanText));
+        OnPropertyChanged(nameof(CardsToImportCount));
+        OnPropertyChanged(nameof(ModsToInstallCount));
+        OnPropertyChanged(nameof(IncludeUnidentifiedText));
+        OnPropertyChanged(nameof(IncludeUnidentifiedVisibility));
         OnPropertyChanged(nameof(ReviewSelectionText));
         OnPropertyChanged(nameof(ReviewEmptyTitle));
         OnPropertyChanged(nameof(ReviewEmptyDescription));
     }
-
-    public void SetReviewViewportWidth(double width) => _reviewWorkspace.SetReviewViewportWidth(width);
 
     public void ToggleReviewRow(ImportReviewRow row)
     {
         if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(row.Items);
     }
 
-    public void ToggleReviewSection(ImportReviewRow row)
+    /// <summary>A section or group header's box: selects or clears its cards; for the Mods section, install all or none.</summary>
+    public void ToggleReviewHeader(ImportReviewRow row)
     {
-        if (IsReviewWorkspaceEnabled && row.Kind == ImportReviewRowKind.Section)
-            _reviewWorkspace.ToggleSectionOnly(row.Items);
+        if (!IsReviewWorkspaceEnabled) return;
+        if (row.Section == ImportReviewSection.Mods) ToggleAllMods();
+        else _reviewWorkspace.Toggle(row.Items);
     }
 
-    public void ToggleReviewGroup(ImportReviewGroup group)
+    public void ToggleReviewCollapsed(ImportReviewRow row) => _reviewWorkspace.ToggleCollapsed(row.Section);
+
+    /// <summary>The box above the list: everything selectable, or nothing.</summary>
+    public void SelectAllReview(bool select)
     {
-        if (IsReviewWorkspaceEnabled) _reviewWorkspace.Toggle(group);
+        if (IsReviewWorkspaceEnabled) _reviewWorkspace.SelectAll(select);
     }
 
     [RelayCommand]
@@ -2088,7 +2560,7 @@ public partial class ImportViewModel : ObservableObject
 
     private void UpdateCounts()
     {
-        HasItems = Items.Count > 0;
+        HasItems = Items.Count > 0 || _mods.Count > 0;
         var ready = Items.Where(i => i.Status is ImportItemStatus.ReadyToImport or ImportItemStatus.Completed).ToList();
         R18GCount = ready.Count(i => i.Rating == ContentRating.R18G);
         R18Count = ready.Count(i => i.Rating == ContentRating.R18);

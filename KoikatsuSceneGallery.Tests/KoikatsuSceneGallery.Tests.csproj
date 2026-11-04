@@ -37,6 +37,7 @@
     <Compile Include="..\ViewModels\ImportReviewWorkspace.cs" Link="ViewModels\ImportReviewWorkspace.cs" />
     <Compile Include="..\ViewModels\ImportReviewRow.cs" Link="ViewModels\ImportReviewRow.cs" />
     <Compile Include="..\ViewModels\ImportReviewGroup.cs" Link="ViewModels\ImportReviewGroup.cs" />
+    <Compile Include="..\ViewModels\ModReviewItem.cs" Link="ViewModels\ModReviewItem.cs" />
     <Compile Include="..\Services\ThumbnailPriorityScheduler.cs" Link="Services\ThumbnailPriorityScheduler.cs" />
   </ItemGroup>
 

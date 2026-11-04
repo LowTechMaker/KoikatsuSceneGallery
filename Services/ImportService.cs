@@ -516,7 +516,7 @@ public sealed class ImportService
                 // Never apply an old snapshot's index to newly added or removed items.
                 var current = new ObservableCollection<ImportItem>(snapshot.Items.Where(items.Contains));
                 ResolveDestinations(current, config, libraryIndex.IdenticalSourcePaths,
-                    libraryIndex.FolderIndex, threshold, visual, diagnostics);
+                    libraryIndex.FolderIndex, threshold, visual, diagnostics, libraryIndex.ExistingLibraryPaths);
                 var result = diagnostics.ToResult(backgroundStopwatch.ElapsedMilliseconds,
                     queueStopwatch.ElapsedMilliseconds, libraryIndex);
                 RecordSlowResolution(result, snapshot.Sources.Length);
@@ -599,6 +599,49 @@ public sealed class ImportService
     /// Registers files committed by the transaction executor, avoiding a full
     /// library scan the next time an import workspace is re-resolved.
     /// </summary>
+    /// <summary>
+    /// Puts a link at <paramref name="destination"/> to the library's own copy of the card,
+    /// binds the name to the post as an import would, and deletes the source as a consumed
+    /// duplicate. Returns why it failed, or null.
+    /// </summary>
+    internal async Task<string?> LinkToExistingAsync(ImportItem item, string destination, string existing, bool symbolic)
+    {
+        var document = PostMetadataMapper.ToImportDocument(item, []);
+        var authorDirectory = item.AuthorDirectoryPath;
+        var source = item.SourceFilePath;
+        try
+        {
+            await Task.Run(() =>
+            {
+                if (symbolic) FileLinks.CreateSymbolicLink(destination, existing);
+                else FileLinks.CreateHardLink(destination, existing);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ex.Message;
+        }
+
+        try
+        {
+            if (document is not null && authorDirectory is not null)
+                await _postMetadataStore.WriteAsync(authorDirectory,
+                    document with { LocalFileNames = [Path.GetFileName(destination)] }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError("Import.LinkSidecar", ex, destination);
+        }
+
+        RegisterCommittedLibraryFiles([destination]);
+        try { await Task.Run(() => File.Delete(source)).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError("Import.LinkDeleteSource", ex, source);
+        }
+        return null;
+    }
+
     public void RegisterCommittedLibraryFiles(IEnumerable<string> destinationPaths)
     {
         _libraryFileCache.RegisterCommittedFiles(destinationPaths);
@@ -658,7 +701,8 @@ public sealed class ImportService
         Dictionary<string, Dictionary<string, string>> folderIndex,
         int artworkThreshold = 1,
         bool useVisualSimilarity = false,
-        ResolveDiagnosticCollector? diagnostics = null)
+        ResolveDiagnosticCollector? diagnostics = null,
+        IReadOnlyDictionary<string, string>? existingLibraryPaths = null)
     {
         var subfolder = config.ImportSubfolder.Trim();
         // Invariant across the whole pass: materialized once instead of being
@@ -674,8 +718,10 @@ public sealed class ImportService
             SetAuthorDirectoryPath(item, null, diagnostics);
             if (identicalSourcePaths.Contains(item.SourceFilePath))
             {
+                // Still given the destination it would have had: when that is not where the
+                // library keeps it, the user can link the card there or copy it (see ImportConflict).
                 SetStatus(item, ImportItemStatus.AlreadyInLibrary, diagnostics);
-                continue;
+                item.ExistingLibraryPath = existingLibraryPaths?.GetValueOrDefault(item.SourceFilePath);
             }
 
             var roots = GetRootsForCardType(item.CardType, config);

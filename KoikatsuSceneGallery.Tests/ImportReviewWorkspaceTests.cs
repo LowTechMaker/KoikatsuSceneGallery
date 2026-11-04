@@ -232,9 +232,9 @@ public sealed class ImportReviewWorkspaceTests
         foreach (var item in items) item.AuthorId = "author";
         h.Workspace.Reconcile(items);
         h.Flush();
-        var row = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow);
+        var row = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.ListItem);
         h.Workspace.Toggle(row.Items);
-        Assert.Equal(4, h.Workspace.SelectedCount);
+        Assert.Equal(1, h.Workspace.SelectedCount);
         var group = h.Workspace.Rows.Single(row => row.Kind == ImportReviewRowKind.Group);
         h.Workspace.Toggle(group.Items);
         Assert.Equal(5, h.Workspace.SelectedCount);
@@ -251,7 +251,6 @@ public sealed class ImportReviewWorkspaceTests
         b.AuthorId = "author";
         h.Workspace.Reconcile([a, b]);
         h.Workspace.Reconcile([a, b]);
-        h.Workspace.SetReviewViewportWidth(1000);
         Assert.Single(h.Queue);
         h.Flush();
         var section = h.Workspace.Rows.Single(row => row.Key == "Identified:");
@@ -267,24 +266,44 @@ public sealed class ImportReviewWorkspaceTests
     }
 
     [Fact]
-    public void WidthChangesRechunkAndReuseMatchingRows()
+    public void ModsGetTheirOwnSectionBeforeTheSkippedCards()
     {
         using var h = new Harness();
-        var items = Enumerable.Range(0, 5).Select(i => Item(i.ToString())).ToArray();
-        foreach (var item in items) item.AuthorId = "author";
+        var skipped = Item("owned");
+        skipped.Status = ImportItemStatus.AlreadyInLibrary;
+        var ready = Item("ready");
+        ready.AuthorId = "author";
+        h.Workspace.Reconcile([skipped, ready]);
+        var mod = new ModReviewItem(new Services.ModInstallCandidate("m.zipmod", new Services.ZipmodManifest("g", "Mod", "1", null, [])), null);
+        h.Workspace.SetMods([mod]);
+        h.Flush();
+
+        Assert.Equal(
+            [ImportReviewSection.Identified, ImportReviewSection.Mods, ImportReviewSection.Skipped],
+            h.Workspace.Rows.Where(r => r.Kind == ImportReviewRowKind.Section).Select(r => r.Section));
+        Assert.Same(mod, h.Workspace.Rows.Single(r => r.Kind == ImportReviewRowKind.ModItem).Mod);
+        // The skipped section starts collapsed: header only.
+        Assert.DoesNotContain(h.Workspace.Rows, r => r.Section == ImportReviewSection.Skipped && r.Kind == ImportReviewRowKind.ListItem);
+
+        h.Workspace.ToggleCollapsed(ImportReviewSection.Skipped);
+        h.Flush();
+        Assert.Contains(h.Workspace.Rows, r => r.Section == ImportReviewSection.Skipped && r.Kind == ImportReviewRowKind.ListItem);
+    }
+
+    [Fact]
+    public void ASectionHeaderReportsAllSomeOrNoneSelected()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 3).Select(i => Item(i.ToString())).ToArray();
         h.Workspace.Reconcile(items);
         h.Flush();
-        var first = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow);
-        h.Workspace.SetReviewViewportWidth(double.NaN);
-        h.Workspace.SetReviewViewportWidth(32);
-        Assert.Empty(h.Queue);
-        h.Workspace.SetReviewViewportWidth(472);
-        h.Flush();
-        Assert.Same(first, h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow));
-        Assert.Equal(3, h.Workspace.Rows.Count(row => row.Kind == ImportReviewRowKind.GridRow));
-        Assert.All(h.Workspace.States, state => Assert.Equal(214, state.TileWidth));
-        h.Workspace.SetReviewViewportWidth(472);
-        Assert.Empty(h.Queue);
+        var header = h.Workspace.Rows.Single(r => r.Kind == ImportReviewRowKind.Section);
+
+        Assert.False(header.SelectionState);
+        h.Workspace.States[0].IsSelected = true;
+        Assert.Null(header.SelectionState);
+        h.Workspace.SelectAll(true);
+        Assert.True(header.SelectionState);
     }
 
     [Fact]

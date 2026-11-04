@@ -720,12 +720,8 @@
   <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
     <value>加入檔案：將 Koikatsu 卡片拖放到此處</value>
   </data>
-  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
-    <value>將 Koikatsu 卡片拖放到此處</value>
-  </data>
-  <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>拖放從 pixiv 或 BepisDB 下載的 PNG 檔案</value>
-  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve"><value>將戀活卡片、mod 或壓縮包拖放到此處</value></data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve"><value>PNG 卡片、.zipmod 與 .zip 壓縮包（會自動解開）</value></data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>全年齡</value>
   </data>
@@ -1054,7 +1050,6 @@
   <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>可切換至「已識別」檢閱匯入清單，也可以繼續拖入其他 PNG 卡片。</value></data>
   <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>這些卡片已在收藏庫中</value></data>
   <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>不需要重複匯入。可以清除清單，或繼續拖入其他 PNG 卡片。</value></data>
-  <data name="Import_Options.Content" xml:space="preserve"><value>匯入選項</value></data>
   <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>匯入選項</value></data>
   <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>全選</value></data>
   <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>選取目前清單</value></data>
@@ -1067,7 +1062,6 @@
   <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>調整分級與作者</value></data>
   <data name="Import_SelectSection.Content" xml:space="preserve"><value>選取／取消本區</value></data>
   <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>選取或取消本區卡片</value></data>
-  <data name="Import_More.Content" xml:space="preserve"><value>更多</value></data>
   <data name="Import_More_Undo.Text" xml:space="preserve"><value>復原上次編輯</value></data>
   <data name="Import_More_Clear.Text" xml:space="preserve"><value>清空待匯入清單</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
@@ -1266,8 +1260,8 @@
   <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>缺少資料</value></data>
   <data name="Import_StatusFailed.Content" xml:space="preserve"><value>取得失敗</value></data>
   <data name="Import_StatusExisting.Content" xml:space="preserve"><value>已在收藏庫</value></data>
-  <data name="Import_Status_Ready" xml:space="preserve"><value>待確認</value></data>
-  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>缺少資料</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>準備好</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>未識別</value></data>
   <data name="Import_Status_Failed" xml:space="preserve"><value>取得失敗</value></data>
   <data name="Import_Status_Existing" xml:space="preserve"><value>已在收藏庫</value></data>
   <data name="Import_Status_Analyzing" xml:space="preserve"><value>分析中</value></data>
@@ -1278,7 +1272,6 @@
   <data name="PostDetail_Unsaved" xml:space="preserve"><value>詳細資料尚未儲存</value></data>
   <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} 張本機圖片</value></data>
   <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>選擇檔案</value></data>
-  <data name="Import_AddFiles.Content" xml:space="preserve"><value>加入檔案</value></data>
   <data name="Import_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
   <data name="Import_UnidentifiedCount" xml:space="preserve"><value>未識別（{0}）</value></data>
   <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>貼文網址或作品 ID</value></data>
@@ -1305,18 +1298,12 @@
   <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>本次分級統計</value></data>
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>統計待匯入與已完成的圖片，不受目前分頁或篩選影響。</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>未識別（{0}）</value></data>
-  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>已識別（{0}）</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>選取需要補齊資料的圖片，再開啟「編輯所選」取得資料、反向搜尋或指定作者。</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>逐張確認圖片、作者與分級；選取卡片後可編輯，準備好再匯入。</value></data>
-  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>目前沒有符合篩選的待處理圖片。</value></data>
-  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>目前沒有符合篩選的已識別圖片。</value></data>
-  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>匯入圖片：未識別清單、貼文無法取得清單、已識別圖片網格</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>準備好了（{0}）</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>找不到作者。選取後貼上貼文網址、指定作者或以圖搜圖。</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>已找到作者與貼文。確認分級後即可匯入。</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>匯入清單</value></data>
   <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>貼文無法取得（{0}）</value></data>
-  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>已辨識網址或作品 ID，但未能取得貼文資料。可重試取得資料、反向搜尋或指定作者。</value></data>
-  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>目前沒有符合篩選的無法取得貼文。</value></data>
-  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>未識別 · {0}</value></data>
-  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>無法取得 · {0}</value></data>
-  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>已識別 · {0}</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>認得貼文但取不到資料。可重試或指定作者。</value></data>
   <data name="Nav_Discovery.Content" xml:space="preserve"><value>隨機探索</value></data>
   <data name="Discovery_Title.Text" xml:space="preserve"><value>隨機探索</value></data>
   <data name="Discovery_Description.Text" xml:space="preserve"><value>換個順序探索場景。持續往下捲動，每輪不重複。</value></data>
@@ -1958,4 +1945,62 @@
   <data name="Settings_Mods_NotSet" xml:space="preserve"><value>未設定</value></data>
   <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>這個資料夾已不存在。</value></data>
   <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>這裡沒有 mods 或 BepInEx 資料夾，確定是遊戲資料夾嗎？</value></data>
+  <data name="Import_SelectionCount" xml:space="preserve"><value>已選 {0} 張</value></data>
+  <data name="Import_Mixed_ModsCount" xml:space="preserve"><value>Mod（{0}）</value></data>
+  <data name="Import_Mixed_ModsHint" xml:space="preserve"><value>勾選的 mod 會在匯入時安裝到遊戲的 mods 資料夾。</value></data>
+  <data name="Import_Mixed_SkippedCount" xml:space="preserve"><value>略過（{0}）</value></data>
+  <data name="Import_Mixed_SkippedHint" xml:space="preserve"><value>收藏庫已有或已略過，不會處理。</value></data>
+  <data name="Import_Status_Skipped" xml:space="preserve"><value>已略過</value></data>
+  <data name="Import_Status_ExistingElsewhere" xml:space="preserve"><value>收藏庫已有（在別的資料夾）</value></data>
+  <data name="Import_Review_InLibraryAt" xml:space="preserve"><value>收藏庫的位置：{0}</value></data>
+  <data name="Import_Review_FromArchive" xml:space="preserve"><value>來自 {0}</value></data>
+  <data name="Import_IncludeUnidentified" xml:space="preserve"><value>包含 {0} 張未識別</value></data>
+  <data name="Import_IncludeUnidentifiedBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>未識別的卡片會放到 Unknown 資料夾。</value></data>
+  <data name="Import_Plan_Nothing" xml:space="preserve"><value>沒有可匯入的項目</value></data>
+  <data name="Import_Plan_Cards" xml:space="preserve"><value>將匯入 {0} 張卡片</value></data>
+  <data name="Import_Plan_Mods" xml:space="preserve"><value>將安裝 {0} 個 mod</value></data>
+  <data name="Import_Plan_CardsAndMods" xml:space="preserve"><value>將匯入 {0} 張卡片、安裝 {1} 個 mod</value></data>
+  <data name="Import_ConfirmButtonText.Text" xml:space="preserve"><value>匯入</value></data>
+  <data name="Import_OptionsLabel.Text" xml:space="preserve"><value>選項</value></data>
+  <data name="Import_AddFilesLabel.Text" xml:space="preserve"><value>加入檔案</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>全選</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>全選</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>收合或展開</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>收合或展開</value></data>
+  <data name="Import_SelectionAuthor.Text" xml:space="preserve"><value>作者</value></data>
+  <data name="Import_SelectionAuthorTitle.Text" xml:space="preserve"><value>為所選指定作者</value></data>
+  <data name="Import_SelectionRating.Text" xml:space="preserve"><value>分級</value></data>
+  <data name="Import_SelectionSearch.Text" xml:space="preserve"><value>以圖搜圖</value></data>
+  <data name="Import_SelectionAuthorCheck.Text" xml:space="preserve"><value>檢查作者貼文</value></data>
+  <data name="Import_SelectionRemove.Text" xml:space="preserve"><value>移除</value></data>
+  <data name="Import_SelectionClear.Text" xml:space="preserve"><value>取消選取</value></data>
+  <data name="Import_Mods_InstallBox.Content" xml:space="preserve"><value>安裝</value></data>
+  <data name="Import_Mods_Status_NoGame" xml:space="preserve"><value>尚未設定遊戲資料夾</value></data>
+  <data name="Import_Mods_Status_CheckFailed" xml:space="preserve"><value>無法檢查 mods 資料夾</value></data>
+  <data name="Import_Result_Title" xml:space="preserve"><value>完成</value></data>
+  <data name="Import_Result_TitleWithProblems" xml:space="preserve"><value>完成，但有問題</value></data>
+  <data name="Import_Result_Imported" xml:space="preserve"><value>已匯入 {0} 張卡片。</value></data>
+  <data name="Import_Result_Linked" xml:space="preserve"><value>{0} 張卡片已連結到收藏庫的那份。</value></data>
+  <data name="Import_Result_ModsInstalled" xml:space="preserve"><value>已安裝 {0} 個 mod。</value></data>
+  <data name="Import_Result_Skipped" xml:space="preserve"><value>略過 {0} 個。</value></data>
+  <data name="Import_Conflict_Pending" xml:space="preserve"><value>收藏庫有同名的不同卡片：匯入時會詢問。</value></data>
+  <data name="Import_Conflict_SkippedNameClash" xml:space="preserve"><value>已略過：收藏庫有同名的不同卡片。</value></data>
+  <data name="Import_Conflict_RestoreFailed" xml:space="preserve"><value>無法放回 {0}，它在 import-overwritten 資料夾裡。</value></data>
+  <data name="Import_Conflict_Title" xml:space="preserve"><value>這些卡片要怎麼處理？</value></data>
+  <data name="Import_Conflict_Intro" xml:space="preserve"><value>其他都已匯入。這 {0} 張卡片需要你決定。</value></data>
+  <data name="Import_Conflict_ApplyAll" xml:space="preserve"><value>全部設為</value></data>
+  <data name="Import_Conflict_ApplyAllEach" xml:space="preserve"><value>（逐張選擇）</value></data>
+  <data name="Import_Conflict_LinkHint" xml:space="preserve"><value>硬連結必須和收藏庫的那份在同一個磁碟。軟連結需要開啟開發人員模式或系統管理員權限。</value></data>
+  <data name="Import_Conflict_Apply" xml:space="preserve"><value>套用</value></data>
+  <data name="Import_Conflict_Later" xml:space="preserve"><value>稍後再說</value></data>
+  <data name="Import_Conflict_Kind_NameClash" xml:space="preserve"><value>收藏庫有同名、但內容不同的卡片：</value></data>
+  <data name="Import_Conflict_Kind_InLibraryElsewhere" xml:space="preserve"><value>收藏庫已有這張卡，在別的資料夾：</value></data>
+  <data name="Import_Conflict_Choice_Rename" xml:space="preserve"><value>兩張都保留（改名）</value></data>
+  <data name="Import_Conflict_Choice_Overwrite" xml:space="preserve"><value>覆蓋（舊的進資源回收筒）</value></data>
+  <data name="Import_Conflict_Choice_Skip" xml:space="preserve"><value>略過</value></data>
+  <data name="Import_Conflict_Choice_HardLink" xml:space="preserve"><value>硬連結</value></data>
+  <data name="Import_Conflict_Choice_SymbolicLink" xml:space="preserve"><value>軟連結</value></data>
+  <data name="Import_Conflict_Choice_Copy" xml:space="preserve"><value>照樣複製一份</value></data>
 </root>

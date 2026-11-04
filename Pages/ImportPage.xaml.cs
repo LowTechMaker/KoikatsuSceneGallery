@@ -7,6 +7,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -38,6 +39,8 @@ public sealed partial class ImportPage : Page
 
         if (_cookieSetupProviders.Count > 0)
             CookieSetupButton.Visibility = Visibility.Visible;
+
+        ViewModel.ResolveConflicts = ShowConflictDialogAsync;
     }
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -246,12 +249,14 @@ public sealed partial class ImportPage : Page
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.PickFiles", async () =>
         {
             if (ViewModel.IsImporting) return;
-            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            // The Windows App SDK picker: the old Windows.Storage one failed (E_FAIL) when
+            // several files with long paths were picked at once.
+            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
             picker.FileTypeFilter.Add(".png");
-            WinRT.Interop.InitializeWithWindow.Initialize(picker,
-                Microsoft.UI.Win32Interop.GetWindowFromWindowId(XamlRoot.ContentIslandEnvironment.AppWindowId));
+            picker.FileTypeFilter.Add(".zipmod");
+            picker.FileTypeFilter.Add(".zip");
             var files = await picker.PickMultipleFilesAsync();
-            var paths = files.Select(f => f.Path).ToArray();
+            var paths = (files ?? []).Select(f => f.Path).Where(path => !string.IsNullOrEmpty(path)).ToArray();
             if (paths.Length == 0) return; // Cancelled picker leaves the overlay open.
             await PlayAddFilesAcceptedAsync();
             if (await EnsureRequiredCookieSetupAsync(paths))
@@ -293,11 +298,13 @@ public sealed partial class ImportPage : Page
                 {
                     try
                     {
-                        return Directory.EnumerateFiles(folderPath, "*.png", new EnumerationOptions
+                        // Cards, and the zipmods authors ship beside them.
+                        return Directory.EnumerateFiles(folderPath, "*", new EnumerationOptions
                         {
                             RecurseSubdirectories = true,
                             IgnoreInaccessible = true,
-                        }).ToArray();
+                        }).Where(path => Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)
+                                         || ZipmodManifestReader.HasModExtension(path)).ToArray();
                     }
                     catch (Exception ex)
                     {
@@ -314,9 +321,6 @@ public sealed partial class ImportPage : Page
         if (await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
         });
-
-    private void ReviewListHost_SizeChanged(object sender, SizeChangedEventArgs e)
-        => ViewModel.SetReviewViewportWidth(e.NewSize.Width);
 
     private void ImportPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -371,40 +375,175 @@ public sealed partial class ImportPage : Page
 
     private void UpdateCompactLayout(double width, double height)
     {
-        var compact = width < 760;
-        if (ReviewJumpPanel is not null)
-            ReviewJumpPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        if (ImportFullActionText is not null && ImportCompactActionText is not null)
+        // Below this the plan sentence would crowd the buttons; the button's name still says it.
+        if (ImportPlanBlock is not null)
+            ImportPlanBlock.Visibility = width < 720 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // ── Review list ─────────────────────────────────────────────────
+
+    private void ReviewHeaderBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewHeader(row);
+        // The box shows the selection, not its own click: put it back to what the rows say.
+        if (sender is CheckBox { Tag: ImportReviewRow shown } box) box.IsChecked = shown.SelectionState;
+    }
+
+    private void ReviewCollapse_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewCollapsed(row);
+    }
+
+    private void SelectAllBox_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SelectAllReview(ViewModel.IsAllReviewSelected != true);
+        SelectAllBox.IsChecked = ViewModel.IsAllReviewSelected;
+    }
+
+    private void ClearSelection_Click(object sender, RoutedEventArgs e) => ViewModel.SelectAllReview(false);
+
+    private void RemoveMod_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ModReviewItem mod }) ViewModel.RemoveMod(mod);
+    }
+
+    private void ApplySelectionRating_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SelectionRating", async () =>
         {
-            ImportFullActionText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-            ImportCompactActionText.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+            if (sender is not FrameworkElement { Tag: string tag } || !int.TryParse(tag, out var index)) return;
+            ViewModel.ReviewRatingOverrideIndex = index;
+            await ViewModel.ApplyReviewRatingCommand.ExecuteAsync(null);
+        });
+
+    // Status chips: attention in the caution colour, ready in the success colour, the rest neutral.
+    public static Brush ToneBackground(string tone) => (Brush)Application.Current.Resources[tone switch
+    {
+        "Attention" => "SystemFillColorCautionBackgroundBrush",
+        "Ready" => "SystemFillColorSuccessBackgroundBrush",
+        "Busy" => "SystemFillColorAttentionBackgroundBrush",
+        _ => "ControlFillColorSecondaryBrush",
+    }];
+
+    public static Brush ToneForeground(string tone) => (Brush)Application.Current.Resources[tone switch
+    {
+        "Attention" => "SystemFillColorCautionBrush",
+        "Ready" => "SystemFillColorSuccessBrush",
+        "Busy" => "SystemFillColorAttentionBrush",
+        _ => "TextFillColorSecondaryBrush",
+    }];
+
+    // ── Conflicts ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// One row per held-back card: the card coming in beside the one the library has, and
+    /// a choice. A box at the top sets every row at once.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<ImportConflict, ImportConflictChoice>?> ShowConflictDialogAsync(
+        IReadOnlyList<ImportConflict> conflicts)
+    {
+        var secondary = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        var caption = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+        var pickers = new List<(ImportConflict Conflict, ComboBox Box)>();
+        var list = new StackPanel { Spacing = 14 };
+
+        static string ChoiceText(ImportConflictChoice choice) => ResLoader.GetString("Import_Conflict_Choice_" + choice);
+
+        foreach (var conflict in conflicts)
+        {
+            var choices = ImportConflictRules.ChoicesFor(conflict.Kind);
+            var box = new ComboBox { MinWidth = 170, VerticalAlignment = VerticalAlignment.Center };
+            foreach (var choice in choices) box.Items.Add(new ComboBoxItem { Content = ChoiceText(choice), Tag = choice });
+            box.SelectedIndex = 0;
+            AutomationProperties.SetName(box, conflict.Item.FileName);
+            pickers.Add((conflict, box));
+
+            Image Thumb(string path) => new()
+            {
+                Width = 96, Height = 72, Stretch = Stretch.Uniform,
+                Source = new BitmapImage { DecodePixelWidth = 192, UriSource = new Uri(path) },
+            };
+
+            var pictures = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            pictures.Children.Add(Thumb(conflict.Item.SourceFilePath));
+            pictures.Children.Add(new FontIcon { Glyph = "", FontSize = 12, Foreground = secondary });
+            pictures.Children.Add(Thumb(conflict.ExistingPath));
+
+            var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(new TextBlock { Text = conflict.Item.FileName, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+            text.Children.Add(new TextBlock
+            {
+                Text = ResLoader.GetString("Import_Conflict_Kind_" + conflict.Kind),
+                Style = caption, Foreground = secondary, TextWrapping = TextWrapping.Wrap,
+            });
+            text.Children.Add(new TextBlock
+            {
+                Text = conflict.ExistingPath, Style = caption, Foreground = secondary,
+                TextTrimming = TextTrimming.CharacterEllipsis, IsTextSelectionEnabled = true,
+            });
+            ToolTipService.SetToolTip(text, conflict.ExistingPath);
+
+            var row = new Grid { ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(text, 1);
+            Grid.SetColumn(box, 2);
+            row.Children.Add(pictures);
+            row.Children.Add(text);
+            row.Children.Add(box);
+            list.Children.Add(row);
         }
-        if (ReviewEditScrollViewer is not null)
-            ReviewEditScrollViewer.MaxHeight = Math.Max(180, Math.Min(440, height - 140));
-        if (ReviewEditPanel is not null)
-            ReviewEditPanel.Width = Math.Max(180, Math.Min(320, width - 80));
-    }
 
-    private void JumpToReviewSection_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string section }) return;
-        var row = ViewModel.ReviewRows.FirstOrDefault(r => r.Key == section + ":");
-        if (row is not null) ReviewListHost.ScrollIntoView(row, ScrollIntoViewAlignment.Leading);
-    }
+        // "Apply to all": the choices every row offers.
+        var common = Enum.GetValues<ImportConflictChoice>()
+            .Where(choice => conflicts.All(c => ImportConflictRules.ChoicesFor(c.Kind).Contains(choice))).ToList();
+        var header = new StackPanel { Spacing = 10 };
+        header.Children.Add(new TextBlock
+        {
+            Text = string.Format(ResLoader.GetString("Import_Conflict_Intro"), conflicts.Count),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        if (conflicts.Count > 1)
+        {
+            var all = new ComboBox { Header = ResLoader.GetString("Import_Conflict_ApplyAll"), MinWidth = 200 };
+            all.Items.Add(new ComboBoxItem { Content = ResLoader.GetString("Import_Conflict_ApplyAllEach") });
+            foreach (var choice in common) all.Items.Add(new ComboBoxItem { Content = ChoiceText(choice), Tag = choice });
+            all.SelectedIndex = 0;
+            all.SelectionChanged += (_, _) =>
+            {
+                if (all.SelectedItem is not ComboBoxItem { Tag: ImportConflictChoice chosen }) return;
+                foreach (var (_, box) in pickers)
+                    box.SelectedItem = box.Items.OfType<ComboBoxItem>().First(item => (ImportConflictChoice)item.Tag == chosen);
+            };
+            if (common.Count > 0) header.Children.Add(all);
+        }
+        if (conflicts.Any(c => c.Kind == ImportConflictKind.InLibraryElsewhere))
+            header.Children.Add(new TextBlock
+            {
+                Text = ResLoader.GetString("Import_Conflict_LinkHint"),
+                Style = caption, Foreground = secondary, TextWrapping = TextWrapping.Wrap,
+            });
 
-    private void SelectMixedReviewGroup_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewRow(row);
-    }
+        var content = new StackPanel { Spacing = 14, MinWidth = 560 };
+        content.Children.Add(header);
+        content.Children.Add(new ScrollViewer { Content = list, MaxHeight = 380, Padding = new Thickness(0, 0, 12, 0) });
 
-    private void SelectReviewSection_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewSection(row);
-    }
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = ResLoader.GetString("Import_Conflict_Title"),
+            Content = content,
+            PrimaryButtonText = ResLoader.GetString("Import_Conflict_Apply"),
+            CloseButtonText = ResLoader.GetString("Import_Conflict_Later"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        dialog.Resources["ContentDialogMaxWidth"] = 900.0;
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
 
-    private void SelectReviewGroup_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: ImportReviewGroup group }) ViewModel.ToggleReviewGroup(group);
+        return pickers.ToDictionary(
+            pair => pair.Conflict,
+            pair => pair.Box.SelectedItem is ComboBoxItem { Tag: ImportConflictChoice choice }
+                ? choice : ImportConflictRules.DefaultFor(pair.Conflict.Kind));
     }
 
     private void ReviewArtworkInput_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
@@ -416,38 +555,8 @@ public sealed partial class ImportPage : Page
     }
 
     private void ConfirmImport_Click(object sender, RoutedEventArgs e)
-        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Confirm", async () =>
-        {
-            if (!ViewModel.CanConfirmImport) return;
-            var unidentified = ViewModel.UnidentifiedImportableCount;
-            var includeUnidentified = true;
-            if (unidentified > 0)
-            {
-                var identified = ViewModel.ImportableCount - unidentified;
-                var warning = new ContentDialog
-                {
-                    XamlRoot = XamlRoot,
-                    Title = string.Format(ResLoader.GetString("Import_UnidentifiedWarnTitle"), unidentified),
-                    Content = new TextBlock
-                    {
-                        Text = ResLoader.GetString("Import_UnidentifiedWarnBody"),
-                        TextWrapping = TextWrapping.Wrap,
-                    },
-                    PrimaryButtonText = ResLoader.GetString("Import_UnidentifiedWarnImportAll"),
-                    CloseButtonText = ResLoader.GetString("Import_SauceNaoCancelButton"),
-                    DefaultButton = ContentDialogButton.Close,
-                };
-                if (identified > 0)
-                    warning.SecondaryButtonText = string.Format(
-                        ResLoader.GetString("Import_UnidentifiedWarnIdentifiedOnly"), identified);
-
-                var answer = await warning.ShowAsync();
-                if (answer == ContentDialogResult.None) return;
-                includeUnidentified = answer == ContentDialogResult.Primary;
-            }
-
-            await ViewModel.ImportAsync(includeUnidentified);
-        });
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Confirm",
+            () => ViewModel.ImportAllAsync());
 
     private bool _pickReviewAuthor;
     private void PickReviewAuthor_Click(object sender, RoutedEventArgs e)

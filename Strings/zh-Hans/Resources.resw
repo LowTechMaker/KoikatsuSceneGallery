@@ -720,12 +720,8 @@
   <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
     <value>加入文件：将 Koikatsu 卡片拖放到此处</value>
   </data>
-  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
-    <value>将 Koikatsu 卡片拖放到此处</value>
-  </data>
-  <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>拖放从 pixiv 或 BepisDB 下载的 PNG 文件</value>
-  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve"><value>将恋活卡片、mod 或压缩包拖放到此处</value></data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve"><value>PNG 卡片、.zipmod 与 .zip 压缩包（会自动解开）</value></data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>全年龄</value>
   </data>
@@ -1054,7 +1050,6 @@
   <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>可切换至“已识别”查看导入列表，也可以继续拖入其他 PNG 卡片。</value></data>
   <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>这些卡片已在收藏库中</value></data>
   <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>不需要重复导入。可以清空列表，或继续拖入其他 PNG 卡片。</value></data>
-  <data name="Import_Options.Content" xml:space="preserve"><value>导入选项</value></data>
   <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>导入选项</value></data>
   <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>全选</value></data>
   <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>选择当前列表</value></data>
@@ -1067,7 +1062,6 @@
   <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>调整分级与作者</value></data>
   <data name="Import_SelectSection.Content" xml:space="preserve"><value>选择／取消本区</value></data>
   <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>选择或取消本区卡片</value></data>
-  <data name="Import_More.Content" xml:space="preserve"><value>更多</value></data>
   <data name="Import_More_Undo.Text" xml:space="preserve"><value>撤销上次编辑</value></data>
   <data name="Import_More_Clear.Text" xml:space="preserve"><value>清空待导入列表</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
@@ -1266,8 +1260,8 @@
   <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>缺少资料</value></data>
   <data name="Import_StatusFailed.Content" xml:space="preserve"><value>获取失败</value></data>
   <data name="Import_StatusExisting.Content" xml:space="preserve"><value>已在收藏库</value></data>
-  <data name="Import_Status_Ready" xml:space="preserve"><value>待确认</value></data>
-  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>缺少资料</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>准备好</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>未识别</value></data>
   <data name="Import_Status_Failed" xml:space="preserve"><value>获取失败</value></data>
   <data name="Import_Status_Existing" xml:space="preserve"><value>已在收藏库</value></data>
   <data name="Import_Status_Analyzing" xml:space="preserve"><value>分析中</value></data>
@@ -1278,7 +1272,6 @@
   <data name="PostDetail_Unsaved" xml:space="preserve"><value>详细资料尚未保存</value></data>
   <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} 张本机图片</value></data>
   <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>选择文件</value></data>
-  <data name="Import_AddFiles.Content" xml:space="preserve"><value>添加文件</value></data>
   <data name="Import_IdentifiedCount" xml:space="preserve"><value>已识别（{0}）</value></data>
   <data name="Import_UnidentifiedCount" xml:space="preserve"><value>未识别（{0}）</value></data>
   <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>帖子网址或作品 ID</value></data>
@@ -1305,18 +1298,12 @@
   <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>本次分级统计</value></data>
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>统计待导入与已完成的图片，不受当前分页或筛选影响。</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>未识别（{0}）</value></data>
-  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>已识别（{0}）</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>选取需要补齐资料的图片，再打开「编辑所选」获取资料、反向搜索或指定作者。</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>逐张确认图片、作者与分级；选择卡片后可编辑，准备好再导入。</value></data>
-  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>目前没有符合筛选的待处理图片。</value></data>
-  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>目前没有符合筛选的已识别图片。</value></data>
-  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>导入图片：未识别列表、帖子无法获取列表、已识别图片网格</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>准备好了（{0}）</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>找不到作者。选取后贴上帖子网址、指定作者或以图搜图。</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>已找到作者与帖子。确认分级后即可导入。</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>导入列表</value></data>
   <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>帖子无法获取（{0}）</value></data>
-  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>已识别网址或作品 ID，但未能获取帖子资料。可重试获取资料、反向搜索或指定作者。</value></data>
-  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>目前没有符合筛选的无法获取帖子。</value></data>
-  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>未识别 · {0}</value></data>
-  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>无法获取 · {0}</value></data>
-  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>已识别 · {0}</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>认得帖子但取不到资料。可重试或指定作者。</value></data>
   <data name="Nav_Discovery.Content" xml:space="preserve"><value>随机探索</value></data>
   <data name="Discovery_Title.Text" xml:space="preserve"><value>随机探索</value></data>
   <data name="Discovery_Description.Text" xml:space="preserve"><value>换个顺序探索场景。持续向下滚动，每轮不重复。</value></data>
@@ -1958,4 +1945,62 @@
   <data name="Settings_Mods_NotSet" xml:space="preserve"><value>未设置</value></data>
   <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>这个文件夹已不存在。</value></data>
   <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>这里没有 mods 或 BepInEx 文件夹，确定是游戏文件夹吗？</value></data>
+  <data name="Import_SelectionCount" xml:space="preserve"><value>已选 {0} 张</value></data>
+  <data name="Import_Mixed_ModsCount" xml:space="preserve"><value>Mod（{0}）</value></data>
+  <data name="Import_Mixed_ModsHint" xml:space="preserve"><value>勾选的 mod 会在导入时安装到游戏的 mods 文件夹。</value></data>
+  <data name="Import_Mixed_SkippedCount" xml:space="preserve"><value>略过（{0}）</value></data>
+  <data name="Import_Mixed_SkippedHint" xml:space="preserve"><value>收藏库已有或已略过，不会处理。</value></data>
+  <data name="Import_Status_Skipped" xml:space="preserve"><value>已略过</value></data>
+  <data name="Import_Status_ExistingElsewhere" xml:space="preserve"><value>收藏库已有（在别的文件夹）</value></data>
+  <data name="Import_Review_InLibraryAt" xml:space="preserve"><value>收藏库的位置：{0}</value></data>
+  <data name="Import_Review_FromArchive" xml:space="preserve"><value>来自 {0}</value></data>
+  <data name="Import_IncludeUnidentified" xml:space="preserve"><value>包含 {0} 张未识别</value></data>
+  <data name="Import_IncludeUnidentifiedBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>未识别的卡片会放到 Unknown 文件夹。</value></data>
+  <data name="Import_Plan_Nothing" xml:space="preserve"><value>没有可导入的项目</value></data>
+  <data name="Import_Plan_Cards" xml:space="preserve"><value>将导入 {0} 张卡片</value></data>
+  <data name="Import_Plan_Mods" xml:space="preserve"><value>将安装 {0} 个 mod</value></data>
+  <data name="Import_Plan_CardsAndMods" xml:space="preserve"><value>将导入 {0} 张卡片、安装 {1} 个 mod</value></data>
+  <data name="Import_ConfirmButtonText.Text" xml:space="preserve"><value>导入</value></data>
+  <data name="Import_OptionsLabel.Text" xml:space="preserve"><value>选项</value></data>
+  <data name="Import_AddFilesLabel.Text" xml:space="preserve"><value>加入文件</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>全选</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>全选</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>收合或展开</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>收合或展开</value></data>
+  <data name="Import_SelectionAuthor.Text" xml:space="preserve"><value>作者</value></data>
+  <data name="Import_SelectionAuthorTitle.Text" xml:space="preserve"><value>为所选指定作者</value></data>
+  <data name="Import_SelectionRating.Text" xml:space="preserve"><value>分级</value></data>
+  <data name="Import_SelectionSearch.Text" xml:space="preserve"><value>以图搜图</value></data>
+  <data name="Import_SelectionAuthorCheck.Text" xml:space="preserve"><value>检查作者帖子</value></data>
+  <data name="Import_SelectionRemove.Text" xml:space="preserve"><value>移除</value></data>
+  <data name="Import_SelectionClear.Text" xml:space="preserve"><value>取消选取</value></data>
+  <data name="Import_Mods_InstallBox.Content" xml:space="preserve"><value>安装</value></data>
+  <data name="Import_Mods_Status_NoGame" xml:space="preserve"><value>尚未设置游戏文件夹</value></data>
+  <data name="Import_Mods_Status_CheckFailed" xml:space="preserve"><value>无法检查 mods 文件夹</value></data>
+  <data name="Import_Result_Title" xml:space="preserve"><value>完成</value></data>
+  <data name="Import_Result_TitleWithProblems" xml:space="preserve"><value>完成，但有问题</value></data>
+  <data name="Import_Result_Imported" xml:space="preserve"><value>已导入 {0} 张卡片。</value></data>
+  <data name="Import_Result_Linked" xml:space="preserve"><value>{0} 张卡片已链接到收藏库的副本。</value></data>
+  <data name="Import_Result_ModsInstalled" xml:space="preserve"><value>已安装 {0} 个 mod。</value></data>
+  <data name="Import_Result_Skipped" xml:space="preserve"><value>略过 {0} 个。</value></data>
+  <data name="Import_Conflict_Pending" xml:space="preserve"><value>收藏库有同名的不同卡片：导入时会询问。</value></data>
+  <data name="Import_Conflict_SkippedNameClash" xml:space="preserve"><value>已略过：收藏库有同名的不同卡片。</value></data>
+  <data name="Import_Conflict_RestoreFailed" xml:space="preserve"><value>无法放回 {0}，它在 import-overwritten 文件夹里。</value></data>
+  <data name="Import_Conflict_Title" xml:space="preserve"><value>这些卡片要怎么处理？</value></data>
+  <data name="Import_Conflict_Intro" xml:space="preserve"><value>其他都已导入。这 {0} 张卡片需要你决定。</value></data>
+  <data name="Import_Conflict_ApplyAll" xml:space="preserve"><value>全部设为</value></data>
+  <data name="Import_Conflict_ApplyAllEach" xml:space="preserve"><value>（逐张选择）</value></data>
+  <data name="Import_Conflict_LinkHint" xml:space="preserve"><value>硬链接必须与收藏库的副本在同一个磁盘。符号链接需要开启开发人员模式或系统管理员权限。</value></data>
+  <data name="Import_Conflict_Apply" xml:space="preserve"><value>套用</value></data>
+  <data name="Import_Conflict_Later" xml:space="preserve"><value>稍后再说</value></data>
+  <data name="Import_Conflict_Kind_NameClash" xml:space="preserve"><value>收藏库有同名、但内容不同的卡片：</value></data>
+  <data name="Import_Conflict_Kind_InLibraryElsewhere" xml:space="preserve"><value>收藏库已有这张卡，在别的文件夹：</value></data>
+  <data name="Import_Conflict_Choice_Rename" xml:space="preserve"><value>两张都保留（改名）</value></data>
+  <data name="Import_Conflict_Choice_Overwrite" xml:space="preserve"><value>覆盖（旧的进回收站）</value></data>
+  <data name="Import_Conflict_Choice_Skip" xml:space="preserve"><value>略过</value></data>
+  <data name="Import_Conflict_Choice_HardLink" xml:space="preserve"><value>硬链接</value></data>
+  <data name="Import_Conflict_Choice_SymbolicLink" xml:space="preserve"><value>符号链接</value></data>
+  <data name="Import_Conflict_Choice_Copy" xml:space="preserve"><value>照样复制一份</value></data>
 </root>
