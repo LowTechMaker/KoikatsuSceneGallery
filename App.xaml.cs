@@ -379,7 +379,14 @@ public partial class App : Application
         Services.Add(authorsViewModel);
         Services.Add(localImportViewModel);
         Services.Add(authorSourceCoordinator);
-        if (importService is not null) Services.Add(importService);
+        if (importService is not null)
+        {
+            Services.Add(importService);
+            // Giving a library card its source later uses the import rules for
+            // where it goes, so it exists only when import does.
+            Services.Add(new LibraryCardReidentifier(
+                importService, settingsViewModel, _userCardRatings, cardStates, _logger));
+        }
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null)
         {

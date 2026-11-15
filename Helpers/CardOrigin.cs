@@ -20,6 +20,20 @@ internal static class CardOrigin
         => LocalSourceIdentity.IsLocal(ProviderIdOf(card));
 
     /// <summary>
+    /// Whether the card is still waiting for its post or author: it has no
+    /// resolved author, or it sits in an unrecognized sink (an author's, or
+    /// the Unknown folder's). Decides where "add source" is offered.
+    /// </summary>
+    /// <remarks>
+    /// The author is resolved after the scan, so a card can read as needing a
+    /// source for a moment before its author arrives.
+    /// </remarks>
+    public static bool NeedsSource(CardBase card)
+        => (card as IAuthorOwner)?.Author is null
+           || string.Equals(Path.GetFileName(Path.GetDirectoryName(card.FilePath)),
+               GalleryGrouping.UnrecognizedFolderName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Outbound links derived from a file name, or none for a local card.
     /// </summary>
     /// <remarks>

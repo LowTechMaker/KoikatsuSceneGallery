@@ -2279,4 +2279,26 @@
   <data name="CardState_UnhiddenToast" xml:space="preserve"><value>已恢复显示。</value></data>
   <data name="Browser_ShowHiddenToggle.Header" xml:space="preserve"><value>显示“不要了”的卡片</value></data>
   <data name="CardState_Used" xml:space="preserve"><value>玩过</value></data>
+  <data name="CardMenu_AddSource" xml:space="preserve"><value>补上来源…</value></data>
+  <data name="Reidentify_Title" xml:space="preserve"><value>补上来源</value></data>
+  <data name="Reidentify_UrlHeader" xml:space="preserve"><value>帖子网址或编号</value></data>
+  <data name="Reidentify_UrlPlaceholder" xml:space="preserve"><value>粘贴这张卡的帖子网址</value></data>
+  <data name="Reidentify_Fetch" xml:space="preserve"><value>获取资料</value></data>
+  <data name="Reidentify_AuthorHeader" xml:space="preserve"><value>或只指定作者</value></data>
+  <data name="Reidentify_SearchByImage" xml:space="preserve"><value>以图搜图</value></data>
+  <data name="Reidentify_RatingHeader" xml:space="preserve"><value>分级</value></data>
+  <data name="Reidentify_Destination" xml:space="preserve"><value>这张卡会移到：{0}</value></data>
+  <data name="Reidentify_Confirm" xml:space="preserve"><value>移动并保存</value></data>
+  <data name="Reidentify_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Reidentify_NotFound" xml:space="preserve"><value>找不到这篇帖子。</value></data>
+  <data name="Reidentify_NeedPostOrAuthor" xml:space="preserve"><value>请提供帖子或作者。</value></data>
+  <data name="Reidentify_NotInLibrary" xml:space="preserve"><value>这个文件不在收藏库文件夹内。</value></data>
+  <data name="Reidentify_AlreadyInPlace" xml:space="preserve"><value>这张卡已经在正确的位置。</value></data>
+  <data name="Reidentify_Collision" xml:space="preserve"><value>目的地已有同名但内容不同的文件，没有移动。</value></data>
+  <data name="Reidentify_Duplicate" xml:space="preserve"><value>目的地已有同一张卡，没有移动。</value></data>
+  <data name="Reidentify_SourceMissing" xml:space="preserve"><value>找不到原本的文件，可能已被移走。</value></data>
+  <data name="Reidentify_Done" xml:space="preserve"><value>已补上来源，卡片已移到作者文件夹。</value></data>
+  <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>卡片已移动，但帖子资料没有保存。</value></data>
+  <data name="Reidentify_Failed" xml:space="preserve"><value>无法移动文件：{0}</value></data>
+  <data name="Origin_NoSource" xml:space="preserve"><value>来源不明</value></data>
 </root>

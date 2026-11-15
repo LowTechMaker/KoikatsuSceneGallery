@@ -37,9 +37,21 @@ public sealed class FeedHandoffManifest
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The post the card at <paramref name="cardPath"/> came from, or null when no manifest above it names it.</summary>
-    public FeedHandoffSource? Find(string cardPath)
+    public FeedHandoffSource? Find(string cardPath) => Find(FilesFor(cardPath), cardPath);
+
+    /// <summary>
+    /// The post the card at <paramref name="cardPath"/> came from, by the manifest of the Feed folder
+    /// <paramref name="manifestDirectory"/> (the folder holding <c>.scenefeed</c>), wherever the card is now.
+    /// </summary>
+    /// <remarks>
+    /// For a card that has already left Feed's Downloads, such as one in the library: there is no manifest above it
+    /// any more, but Feed's still names it by its bytes. Only that one manifest is read.
+    /// </remarks>
+    public FeedHandoffSource? Find(string manifestDirectory, string cardPath)
+        => Find(Cached(new FileInfo(Path.Combine(Path.GetFullPath(manifestDirectory), FolderName, FileName))), cardPath);
+
+    private static FeedHandoffSource? Find(IReadOnlyDictionary<string, FeedHandoffSource>? files, string cardPath)
     {
-        var files = FilesFor(cardPath);
         if (files is null || files.Count == 0)
             return null;
 
@@ -61,23 +73,29 @@ public sealed class FeedHandoffManifest
     {
         for (var folder = Path.GetDirectoryName(Path.GetFullPath(cardPath)); !string.IsNullOrEmpty(folder); folder = Path.GetDirectoryName(folder))
         {
-            var manifest = new FileInfo(Path.Combine(folder, FolderName, FileName));
-            if (!manifest.Exists)
-                continue;
-
-            lock (_gate)
-            {
-                if (_manifests.TryGetValue(manifest.FullName, out var cached)
-                    && cached.WrittenAt == manifest.LastWriteTimeUtc && cached.Length == manifest.Length)
-                    return cached.Files;
-
-                var files = Read(manifest.FullName);
-                _manifests[manifest.FullName] = (manifest.LastWriteTimeUtc, manifest.Length, files);
+            if (Cached(new FileInfo(Path.Combine(folder, FolderName, FileName))) is { } files)
                 return files;
-            }
         }
 
         return null;
+    }
+
+    /// <summary>The manifest's entries, parsed once and again only after Feed rewrites it; null when there is none.</summary>
+    private IReadOnlyDictionary<string, FeedHandoffSource>? Cached(FileInfo manifest)
+    {
+        if (!manifest.Exists)
+            return null;
+
+        lock (_gate)
+        {
+            if (_manifests.TryGetValue(manifest.FullName, out var cached)
+                && cached.WrittenAt == manifest.LastWriteTimeUtc && cached.Length == manifest.Length)
+                return cached.Files;
+
+            var files = Read(manifest.FullName);
+            _manifests[manifest.FullName] = (manifest.LastWriteTimeUtc, manifest.Length, files);
+            return files;
+        }
     }
 
     private static IReadOnlyDictionary<string, FeedHandoffSource> Read(string path)

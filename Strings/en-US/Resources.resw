@@ -2279,4 +2279,26 @@
   <data name="CardState_UnhiddenToast" xml:space="preserve"><value>Showing again.</value></data>
   <data name="Browser_ShowHiddenToggle.Header" xml:space="preserve"><value>Show cards marked &quot;not for me&quot;</value></data>
   <data name="CardState_Used" xml:space="preserve"><value>Used</value></data>
+  <data name="CardMenu_AddSource" xml:space="preserve"><value>Add a source…</value></data>
+  <data name="Reidentify_Title" xml:space="preserve"><value>Add a source</value></data>
+  <data name="Reidentify_UrlHeader" xml:space="preserve"><value>Post URL or id</value></data>
+  <data name="Reidentify_UrlPlaceholder" xml:space="preserve"><value>Paste the post this card came from</value></data>
+  <data name="Reidentify_Fetch" xml:space="preserve"><value>Fetch</value></data>
+  <data name="Reidentify_AuthorHeader" xml:space="preserve"><value>Or just pick the author</value></data>
+  <data name="Reidentify_SearchByImage" xml:space="preserve"><value>Search by image</value></data>
+  <data name="Reidentify_RatingHeader" xml:space="preserve"><value>Rating</value></data>
+  <data name="Reidentify_Destination" xml:space="preserve"><value>This card will move to: {0}</value></data>
+  <data name="Reidentify_Confirm" xml:space="preserve"><value>Move and save</value></data>
+  <data name="Reidentify_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Reidentify_NotFound" xml:space="preserve"><value>That post could not be found.</value></data>
+  <data name="Reidentify_NeedPostOrAuthor" xml:space="preserve"><value>Give a post or an author.</value></data>
+  <data name="Reidentify_NotInLibrary" xml:space="preserve"><value>This file is not inside a library folder.</value></data>
+  <data name="Reidentify_AlreadyInPlace" xml:space="preserve"><value>This card is already where it belongs.</value></data>
+  <data name="Reidentify_Collision" xml:space="preserve"><value>A different file with the same name is already there. Nothing was moved.</value></data>
+  <data name="Reidentify_Duplicate" xml:space="preserve"><value>The same card is already there. Nothing was moved.</value></data>
+  <data name="Reidentify_SourceMissing" xml:space="preserve"><value>The file is no longer there; it may have been moved.</value></data>
+  <data name="Reidentify_Done" xml:space="preserve"><value>Source added. The card is now in the author's folder.</value></data>
+  <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>The card was moved, but the post data could not be saved.</value></data>
+  <data name="Reidentify_Failed" xml:space="preserve"><value>Could not move the file: {0}</value></data>
+  <data name="Origin_NoSource" xml:space="preserve"><value>No source</value></data>
 </root>

@@ -68,6 +68,20 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
     }
 
     /// <summary>
+    /// The app just moved this card (its hash is known): point its state at
+    /// the new path now rather than waiting for the next reconcile.
+    /// </summary>
+    public Task ResolveMovedAsync(string newPath, string hash)
+    {
+        var roots = Roots();
+        return Task.Run(async () =>
+        {
+            store.EnsureLoaded(roots);
+            await store.ResolveAsync(newPath, hash).ConfigureAwait(false);
+        });
+    }
+
+    /// <summary>
     /// Re-attaches states whose card was moved or renamed outside the app to
     /// the card in <paramref name="livePaths"/> with the same hash, off the UI
     /// thread. Each re-attached card raises <see cref="StateChanged"/>.

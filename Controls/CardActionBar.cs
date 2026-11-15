@@ -101,6 +101,14 @@ public sealed partial class CardActionBar : StackPanel
         AddState(menu, path, CardFlag.Queued, "\uE710", "CardAction_Queue");
         AddState(menu, path, CardFlag.Liked, "\uEB51", "CardAction_Like");
         AddState(menu, path, CardFlag.Hidden, "\uED1A", "CardAction_Hide");
+        var addSource = new MenuFlyoutItem
+        {
+            Text = UiText.Get("CardMenu_AddSource"),
+            Icon = new FontIcon { Glyph = "\uE71B" },
+        };
+        AutomationProperties.SetAutomationId(addSource, "CardAction_AddSource");
+        addSource.Click += (_, _) => _ = ReidentifyDialog.ShowAsync(XamlRoot, path);
+        menu.Items.Add(addSource);
         menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "", "CardAction_CopyPath", () => CardFileActions.CopyPath(path, "Detail.CopyFilePath"));
         if (Path.GetDirectoryName(path) is { } folder)

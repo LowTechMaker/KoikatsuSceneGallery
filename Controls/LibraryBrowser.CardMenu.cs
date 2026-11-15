@@ -70,6 +70,13 @@ public sealed partial class LibraryBrowser
         menu.Items.Add(StateItem(entry.Card.FilePath, paths, CardFlag.Liked, "\uEB51", "CardMenu_Like"));
         menu.Items.Add(StateItem(entry.Card.FilePath, paths, CardFlag.Hidden, "\uED1A", "CardMenu_Hide"));
 
+        if (count == 1 && CardOrigin.NeedsSource(entry.Card))
+        {
+            var addSource = Item("CardMenu_AddSource", "\uE71B", () => Controls.ReidentifyDialog.ShowAsync(XamlRoot, entry.Card.FilePath));
+            AutomationProperties.SetAutomationId(addSource, "CardMenu_AddSource");
+            menu.Items.Add(addSource);
+        }
+
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item(count > 1 ? "CardMenu_CopyFiles" : "CardMenu_CopyFile", "",
             () => CardFileActions.CopyFilesAsync([.. entry.Members.Select(card => card.FilePath)], "Browser.CopyFile"), count));

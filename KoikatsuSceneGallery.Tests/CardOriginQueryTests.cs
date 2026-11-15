@@ -70,4 +70,46 @@ public class CardOriginQueryTests
     [InlineData(null, null)]
     public void OldStoredValuesStillRead(string? stored, string? expected)
         => Assert.Equal(expected, CardOriginSelection.Parse(stored).ProviderId);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void NoSourceShowsOnlyCardsWithNoResolvedAuthor(string? providerId)
+    {
+        Assert.True(CardOriginQuery.Passes(providerId, CardOriginSelection.NoSource));
+        foreach (var platform in new[] { "pixiv", "local", "bepisdb" })
+            Assert.False(CardOriginQuery.Passes(platform, CardOriginSelection.NoSource));
+    }
+
+    [Fact]
+    public void NoSourceIsAFilterNotAPlatform()
+    {
+        var noSource = CardOriginSelection.NoSource;
+
+        // Not All, or the galleries' "no filter" fast path would skip it.
+        Assert.False(noSource.IsAll);
+        Assert.False(noSource.IsLocal);
+        Assert.True(noSource.IsNoSource);
+        // No provider id, so nothing treats it as a platform to link or colour.
+        Assert.Null(noSource.ProviderId);
+        Assert.False(CardOriginSelection.For("pixiv").IsNoSource);
+        Assert.False(CardOriginSelection.All.IsNoSource);
+    }
+
+    [Fact]
+    public void NoSourceSurvivesARoundTripThroughConfig()
+    {
+        var parsed = CardOriginSelection.Parse(CardOriginSelection.NoSource.ToConfigValue());
+
+        Assert.True(parsed.IsNoSource);
+        Assert.Equal(CardOriginSelection.NoSource, parsed);
+    }
+
+    [Fact]
+    public void NoSourceCannotBeMadeFromAProviderId()
+    {
+        // The stored word is not a provider: For() must not turn it into the
+        // filter, or a provider named like it would hide every sourced card.
+        Assert.False(CardOriginSelection.For(CardOriginSelection.NoSource.ToConfigValue()).IsNoSource);
+    }
 }

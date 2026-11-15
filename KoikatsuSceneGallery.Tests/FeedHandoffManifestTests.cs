@@ -117,6 +117,63 @@ public sealed class FeedHandoffManifestTests : IDisposable
         Assert.Equal(new FeedHandoffSource("pixiv", "2", "https://example.test/2", "1", "Author"), manifests.Find(card));
     }
 
+    [Fact]
+    public void AGivenManifestFolderFindsACardStoredAnywhere()
+    {
+        // The card has already left Feed's Downloads (say, imported into the
+        // library on another disk): there is no manifest above it any more.
+        var downloads = Path.Combine(_root, "Downloads");
+        WriteManifest(downloads, Sha(Card), "pixiv", "123456789");
+        var card = WriteCard(Path.Combine(_root, "library", "Unknown", "a.png"));
+
+        Assert.Null(new FeedHandoffManifest().Find(card));
+        Assert.Equal("123456789", new FeedHandoffManifest().Find(downloads, card)?.PostId);
+    }
+
+    [Fact]
+    public void AGivenManifestFolderIsTheOnlyOneRead()
+    {
+        // A manifest above the card is not consulted when the folder is given.
+        WriteManifest(_root, Sha(Card), "pixiv", "above");
+        var given = Path.Combine(_root, "given");
+        WriteManifest(given, Sha([9, 9]), "pixiv", "other");
+        var card = WriteCard(Path.Combine(_root, "a.png"));
+
+        Assert.Null(new FeedHandoffManifest().Find(given, card));
+    }
+
+    [Fact]
+    public void AGivenFolderWithoutAManifestFindsNothing()
+    {
+        var card = WriteCard(Path.Combine(_root, "a.png"));
+
+        Assert.Null(new FeedHandoffManifest().Find(Path.Combine(_root, "nothing-here"), card));
+    }
+
+    [Fact]
+    public void AGivenManifestIsReadAgainAfterFeedRewritesIt()
+    {
+        var downloads = Path.Combine(_root, "Downloads");
+        WriteManifest(downloads, Sha([9, 9]), "pixiv", "old");
+        var card = WriteCard(Path.Combine(_root, "a.png"));
+        var manifest = new FeedHandoffManifest();
+        Assert.Null(manifest.Find(downloads, card));
+
+        WriteManifest(downloads, Sha(Card), "pixiv", "123456789-new");
+        File.SetLastWriteTimeUtc(ManifestPath(downloads), DateTime.UtcNow.AddMinutes(1));
+
+        Assert.Equal("123456789-new", manifest.Find(downloads, card)?.PostId);
+    }
+
+    [Fact]
+    public void AMissingCardWithAGivenManifestFindsNothing()
+    {
+        var downloads = Path.Combine(_root, "Downloads");
+        WriteManifest(downloads, Sha(Card), "pixiv", "1");
+
+        Assert.Null(new FeedHandoffManifest().Find(downloads, Path.Combine(_root, "gone.png")));
+    }
+
     public void Dispose()
     {
         try

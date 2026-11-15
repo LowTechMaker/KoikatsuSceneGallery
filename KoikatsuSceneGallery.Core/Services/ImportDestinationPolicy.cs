@@ -15,8 +15,114 @@ internal sealed record ImportPathOptions(
     string AuthorFolderFormat,
     string ArtworkFolderFormat);
 
+/// <summary>What <see cref="ImportDestinationPolicy.ResolveTarget"/> needs to know about one card.</summary>
+/// <param name="Roots">The library roots for the card's type; the first is where new folders go.</param>
+/// <param name="ProviderId">The post's provider, else the author's; null when neither is known.</param>
+/// <param name="Scope">The card's provider folder, or <c>("", true)</c> when it has no provider.</param>
+/// <param name="RatingFolder">The folder name for the card's rating; ignored when the scope has no rating folders.</param>
+/// <param name="ProviderScopes">Every provider's scope, to find an author filed under another game version.</param>
+/// <param name="FormatAuthorFolder">Turns (name, id) into the author's folder name, from the user's format.</param>
+internal sealed record ImportTargetInput(
+    IReadOnlyList<string> Roots,
+    string ImportSubfolder,
+    string UnknownFolderName,
+    string GameVersionFolder,
+    IReadOnlyList<string> GameVersionFolderNames,
+    (string Folder, bool UsesRatingFolders) Scope,
+    string RatingFolder,
+    IReadOnlyList<(string Folder, bool UsesRatingFolders)> ProviderScopes,
+    bool HasArtwork,
+    string? ProviderId,
+    string? AuthorId,
+    string? AuthorName,
+    string? AuthorProviderId,
+    Func<string, string, string> FormatAuthorFolder);
+
+/// <param name="Folder">The folder the card goes in, before any artwork subfolder.</param>
+/// <param name="AuthorDirectory">Where the post sidecar is written; null when the card has no post.</param>
+internal sealed record ImportTarget(string Folder, string? AuthorDirectory);
+
 internal static class ImportDestinationPolicy
 {
+    /// <summary>
+    /// The folder a card goes to. Import and "give this card its source"
+    /// both come here, so a change to the library layout is made once.
+    /// </summary>
+    /// <remarks>
+    /// Null when there is no library root for the card's type. A card that
+    /// ends up with no author folder at all goes to the Unknown folder's
+    /// unrecognized sink: those cards are unrelated, and the sink is what
+    /// makes <see cref="GalleryGrouping.GetKey"/> give each its own tile
+    /// instead of folding every one of them into a single stack.
+    /// </remarks>
+    public static ImportTarget? ResolveTarget(
+        ImportTargetInput input,
+        Dictionary<string, Dictionary<string, string>> folderIndex)
+    {
+        var roots = input.Roots;
+        if (roots.Count == 0) return null;
+
+        var subfolder = input.ImportSubfolder.Trim();
+        var scope = input.Scope;
+        var ratingFolder = scope.UsesRatingFolders ? input.RatingFolder : "";
+        var gameVersionFolder = input.GameVersionFolder;
+        string? targetFolder = null;
+        var useUnrecognizedSubfolder = UsesUnrecognizedSink(
+            hasArtwork: input.HasArtwork,
+            hasAuthor: input.AuthorId is not null,
+            input.AuthorProviderId);
+
+        if (input.AuthorId is { } authorId)
+        {
+            targetFolder = ImportAuthorDirectoryLookup.FindExact(
+                roots, scope.Folder, gameVersionFolder, ratingFolder, authorId, folderIndex);
+
+            if (targetFolder is null && !input.HasArtwork)
+            {
+                var match = ImportAuthorDirectoryLookup.FindFallback(
+                    roots, input.ProviderScopes,
+                    input.GameVersionFolderNames, gameVersionFolder, ratingFolder, authorId, folderIndex);
+                targetFolder = match.Directory;
+                var matchedProvider = match.ProviderFolder;
+
+                if (targetFolder is null && matchedProvider is not null && input.AuthorName is not null)
+                {
+                    var safeName = input.FormatAuthorFolder(input.AuthorName, authorId);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, matchedProvider, gameVersionFolder, ratingFolder, safeName);
+                }
+            }
+
+            if (targetFolder is null && input.AuthorName is not null)
+            {
+                if (input.ProviderId is not null)
+                {
+                    var safeName = input.FormatAuthorFolder(input.AuthorName, authorId);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
+                }
+                else
+                {
+                    targetFolder = BuildTargetBase(
+                        roots[0], subfolder, input.UnknownFolderName, gameVersionFolder, "",
+                        PathSanitizer.SanitizeFolderName(authorId));
+                    useUnrecognizedSubfolder = false;
+                }
+            }
+        }
+
+        if (targetFolder is null)
+        {
+            targetFolder = BuildTargetBase(roots[0], subfolder, input.UnknownFolderName, gameVersionFolder, "", null);
+            // No author folder: the card would sit loose in Unknown\<game>,
+            // where every such card shares one gallery key.
+            useUnrecognizedSubfolder = true;
+        }
+
+        var authorDirectory = input.HasArtwork ? targetFolder : null;
+        if (useUnrecognizedSubfolder)
+            targetFolder = Path.Combine(targetFolder, GalleryGrouping.UnrecognizedFolderName);
+        return new ImportTarget(targetFolder, authorDirectory);
+    }
+
     public static string FormatAuthorFolder(
         ImportPathOptions options,
         string authorName,
