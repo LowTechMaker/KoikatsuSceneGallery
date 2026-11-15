@@ -26,29 +26,22 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+        <!--  No back button of its own: the title bar's is the one way back
+              (and Esc, Alt+Left, the mouse's back button).  -->
         <Grid ColumnSpacing="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button
-                x:Uid="Detail_GoBack"
-                Click="GoBack_Click"
-                Style="{StaticResource SubtleButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE72B;" />
-            </Button>
-
             <TextBlock
-                Grid.Column="1"
                 Margin="0,0,12,0"
                 VerticalAlignment="Center"
                 Style="{StaticResource TitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}" />
 
             <StackPanel
-                Grid.Column="2"
+                Grid.Column="1"
                 VerticalAlignment="Center"
                 Orientation="Horizontal"
                 Spacing="8">
@@ -110,6 +103,13 @@
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     Spacing="16">
+
+                <!--  Visible file actions; the path and link gestures below still work.  -->
+                <controls:CardActionBar
+                    AutomationProperties.AutomationId="DetailActionBar"
+                    BepisDbUrl="{x:Bind ViewModel.BepisDbUrl, Mode=OneWay}"
+                    FilePath="{x:Bind ViewModel.Card.FilePath, Mode=OneWay}"
+                    PixivUrl="{x:Bind ViewModel.PixivUrl, Mode=OneWay}" />
 
                 <TextBlock
                     x:Uid="Detail_CharaInfo"

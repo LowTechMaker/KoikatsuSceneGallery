@@ -8,18 +8,14 @@
         <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
         <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="Top_Invoked" />
     </Page.KeyboardAccelerators>
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <StackPanel Spacing="4">
-            <TextBlock x:Uid="Discovery_Title" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1" />
-            <TextBlock x:Uid="Discovery_Description" TextWrapping="Wrap"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
+        <controls:PageHeader x:Uid="Discovery_Header" />
         <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="8" RowSpacing="8" SizeChanged="Toolbar_SizeChanged">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -90,11 +86,11 @@
                                        Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
                             </Border>
                             <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                    Margin="6" Padding="6,3" CornerRadius="4" Background="#E6202020"
+                                    Style="{StaticResource MediaOverlayBadgeStyle}"
                                     Visibility="{x:Bind IsJoker}">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon Glyph="&#xE8EF;" FontSize="12" Foreground="White" />
-                                    <TextBlock Text="{x:Bind JokerText}" Foreground="White"
+                                    <FontIcon Glyph="&#xE8EF;" FontSize="12" Foreground="{ThemeResource MediaOverlayForegroundBrush}" />
+                                    <TextBlock Text="{x:Bind JokerText}" Foreground="{ThemeResource MediaOverlayForegroundBrush}"
                                                FontSize="11" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Border>

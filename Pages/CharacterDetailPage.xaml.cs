@@ -21,9 +21,13 @@ public sealed partial class CharacterDetailPage : Page
     private CancellationTokenSource? _metadataCts;
     private AuthorKey? _authorScope;
 
+    private readonly ProgressivePreview _preview;
+
     public CharacterDetailPage()
     {
         InitializeComponent();
+        _preview = new ProgressivePreview(PreviewImage);
+        BackNavigation.EscapeGoesBack(this);
         _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((CharacterCard)card));
 
         // A version opened from the list below is not in the gallery list the
@@ -118,9 +122,7 @@ public sealed partial class CharacterDetailPage : Page
         var metadataCts = PageCancellation.Restart(ref _metadataCts);
         ViewModel.Card = card;
         LoadAnnotationInto(card);
-        var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
-        bitmap.UriSource = card.FileUri;
-        PreviewImage.Source = bitmap;
+        _preview.Show(card, card.Width);
         UpdateNavigationButtons();
         LoadMetadataAsync(card, metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
@@ -390,7 +392,7 @@ public sealed partial class CharacterDetailPage : Page
 
         if (survivors.Length == 0)
         {
-            GoBack_Click(this, new RoutedEventArgs());
+            if (Frame.CanGoBack) Frame.GoBack();
             return;
         }
 
@@ -430,7 +432,6 @@ public sealed partial class CharacterDetailPage : Page
         if (next != null) ShowCard(next);
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
     private void PrevButton_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void NextButton_Click(object sender, RoutedEventArgs e) => Navigate(1);
 

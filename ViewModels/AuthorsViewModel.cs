@@ -156,6 +156,21 @@ public partial class AuthorsViewModel : ObservableObject
     [ObservableProperty]
     public partial string RefreshProgress { get; set; } = string.Empty;
 
+    /// <summary>Authors refreshed so far in the running refresh-all.</summary>
+    public int RefreshDone { get; private set; }
+
+    /// <summary>Authors the running refresh-all will visit.</summary>
+    public int RefreshTotal { get; private set; }
+
+    private bool _refreshCancelRequested;
+
+    /// <summary>
+    /// Stops a refresh-all after the author it is on. Each author is one paced
+    /// request to the platform, so a library with hundreds of authors runs for
+    /// minutes, and until now the only way out was to close the app.
+    /// </summary>
+    public void CancelRefreshAll() => _refreshCancelRequested = true;
+
     public AuthorsViewModel(
         AuthorInfoService authorInfoService,
         DispatcherQueue dispatcher,
@@ -256,6 +271,8 @@ public partial class AuthorsViewModel : ObservableObject
     private async Task RefreshAllAsync()
     {
         if (IsRefreshing) return;
+        _refreshCancelRequested = false;
+        RefreshDone = 0;
         IsRefreshing = true;
         try
         {
@@ -265,10 +282,12 @@ public partial class AuthorsViewModel : ObservableObject
                 .SelectMany(t => t.Authors)
                 .Select(s => s.Display.Key)
                 .ToList();
-            for (var i = 0; i < keys.Count; i++)
+            RefreshTotal = keys.Count;
+            for (var i = 0; i < keys.Count && !_refreshCancelRequested; i++)
             {
                 RefreshProgress = $"{i + 1} / {keys.Count}";
                 await _authorInfoService.RefreshAuthorAsync(keys[i]);
+                RefreshDone = i + 1;
             }
         }
         finally

@@ -73,10 +73,17 @@ internal sealed partial class UserRatingPicker : Grid
     {
         for (var i = 0; i < _buttons.Length; i++)
         {
-            _buttons[i].KeyboardAccelerators.Add(new Microsoft.UI.Xaml.Input.KeyboardAccelerator
+            var accelerator = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
             {
                 Key = Windows.System.VirtualKey.Number1 + i,
-            });
+            };
+            // A digit typed into a text box - the command palette's query, a
+            // note - is not a rating. Handled here stops the button's click.
+            accelerator.Invoked += (_, args) =>
+            {
+                if (XamlRoot is { } root && ViewerChrome.IsEditing(root)) args.Handled = true;
+            };
+            _buttons[i].KeyboardAccelerators.Add(accelerator);
         }
     }
 

@@ -201,15 +201,13 @@ public sealed partial class LibraryBrowser : UserControl
         };
         var hasResolutionFilter = resolutionEnabled && resolutionCount > 0;
         if (hasResolutionFilter) filterCount++;
-        ResolutionFilterStatus.Visibility = hasResolutionFilter ? Visibility.Visible : Visibility.Collapsed;
-        if (hasResolutionFilter)
-            ResolutionFilterStatus.Text = UiText.Format("Browser_ResolutionFilterActive", resolutionCount);
         if (_sourceFilterCombo is not null && VM is CharacterGalleryViewModel characterFilters)
             _sourceFilterCombo.SelectedIndex = (int)characterFilters.SourceFilter;
         var metadataFilters = GetMetadataFilters();
         if (metadataFilters is not null)
             filterCount += metadataFilters.ActiveCount;
         SetFilterCount(filterCount);
+        UpdateFilterChips();
         RandomButton.IsEnabled = visible.Length > 0;
         UpdateSortButton();
         bool busy = VM.IsLoading || VM.IsGeneratingThumbnails || _adapter.IsParsing;
@@ -303,7 +301,12 @@ public sealed partial class LibraryBrowser : UserControl
     }
     private void Item_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not GalleryEntry entry) return;
+        if (e.ClickedItem is GalleryEntry entry) OpenEntry(entry);
+    }
+
+    /// <summary>Opens a tile: a group drills down, a single card opens its details.</summary>
+    private void OpenEntry(GalleryEntry entry)
+    {
         _collapse.Finish();
         if (entry.IsGroup)
         {
@@ -316,9 +319,22 @@ public sealed partial class LibraryBrowser : UserControl
     }
     private void OpenDetail(CardBase card)
     {
-        _detailContext = new(_scopeTitle is null ? Heading.Text : $"{_scopeTitle} › {Heading.Text}", _items.SelectMany(i => i.Members), _groupKey is not null);
+        _detailContext = new(_scopeTitle is null ? Heading.Text : $"{_scopeTitle} › {Heading.Text}", _items.SelectMany(i => i.Members), _groupKey is not null)
+        {
+            Outer = _groupKey is not null && _adapter!.GroupingEnabled ? OuterContext() : null,
+        };
         OpeningDetail?.Invoke();
         _detailContext.Open(_frame!, card);
+    }
+    /// <summary>
+    /// The list the gallery shows outside the open folder, in the same order as
+    /// its tiles, each group's cards together. Built the way Refresh builds the
+    /// top level.
+    /// </summary>
+    private BrowseContext OuterContext()
+    {
+        var cards = _scope is null ? VM.CardsView.OfType<CardBase>().ToArray() : ScopedCards();
+        return new(_scopeTitle ?? _adapter!.Title, GalleryGrouping.Create(cards, Key).SelectMany(g => g.Members));
     }
     private void Back_Click(object sender, RoutedEventArgs e)
     {
@@ -465,11 +481,6 @@ public sealed partial class LibraryBrowser : UserControl
         for (var i = Math.Max(0, panel.FirstVisibleIndex); i <= panel.LastVisibleIndex && i < _items.Count; i++) _adapter?.Thumbnail(_items[i].Card);
     }
     private void Settings_Click(object sender, RoutedEventArgs e) => _frame?.Navigate(typeof(SettingsPage), "filters");
-    private void OpenFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuFlyoutItem { CommandParameter: GalleryEntry entry }) UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Browser.OpenFolder", async () =>
-        { var folder = Path.GetDirectoryName(entry.Card.FilePath); if (folder is not null) await Launcher.LaunchFolderPathAsync(folder); });
-    }
     private void Drag_Starting(object sender, DragItemsStartingEventArgs e)
         => DragFilePayload.Attach(e, "Browser.Drag",
             e.Items.OfType<GalleryEntry>().SelectMany(entry => entry.Members).Select(c => c.FilePath));

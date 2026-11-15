@@ -41,6 +41,8 @@ public sealed partial class ImportPage : Page
             CookieSetupButton.Visibility = Visibility.Visible;
 
         ViewModel.ResolveConflicts = ShowConflictDialogAsync;
+        UpdateSteps();
+        UpdateMessageBar();
     }
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -53,12 +55,84 @@ public sealed partial class ImportPage : Page
         else if (e.PropertyName == nameof(ImportViewModel.LinkInLibraryText))
             FillLinkedNames(LinkInLibraryBlock, "Import_LinkMatch_InLibrary", ViewModel.LinkInLibraryFiles, OrangeBrush);
 
-        if (e.PropertyName == nameof(ImportViewModel.ShowRejectedWarning) && ViewModel.ShowRejectedWarning)
+        switch (e.PropertyName)
         {
-            RejectedWarningBar.Message = string.Format(
-                ResLoader.GetString("Import_RejectedWarningMessage"),
-                ViewModel.RejectedCount);
+            case nameof(ImportViewModel.ShowRejectedWarning) or nameof(ImportViewModel.RejectedCount)
+                or nameof(ImportViewModel.ShowImportFailure) or nameof(ImportViewModel.ImportFailureTitle)
+                or nameof(ImportViewModel.ImportFailureMessage) or nameof(ImportViewModel.ShowImportResult)
+                or nameof(ImportViewModel.ImportResultTitle) or nameof(ImportViewModel.ImportResultMessage)
+                or nameof(ImportViewModel.ImportResultSeverity):
+                UpdateMessageBar();
+                break;
+            case nameof(ImportViewModel.HasItems) or nameof(ImportViewModel.IsAnalyzing) or nameof(ImportViewModel.IsImporting):
+                UpdateSteps();
+                break;
         }
+    }
+
+    private StepIndicator? _steps;
+    private ImportMessageKind? _shownMessage;
+
+    private void UpdateSteps()
+    {
+        if (_steps is null)
+        {
+            _steps = new StepIndicator(
+                ResLoader.GetString("Import_StepAdd"),
+                ResLoader.GetString("Import_StepReview"),
+                ResLoader.GetString("Import_StepImport"));
+            StepsHost.Child = _steps;
+        }
+        _steps.SetCurrent((int)ImportPagePolicy.CurrentStep(ViewModel.HasItems, ViewModel.IsAnalyzing, ViewModel.IsImporting));
+    }
+
+    /// <summary>Shows the most urgent open message; the rest wait behind it.</summary>
+    private void UpdateMessageBar()
+    {
+        var open = ImportPagePolicy.OpenMessages(ViewModel.ShowImportFailure, ViewModel.ShowRejectedWarning, ViewModel.ShowImportResult);
+        if (open.Count == 0)
+        {
+            _shownMessage = null;
+            ImportMessageBar.IsOpen = false;
+            return;
+        }
+
+        var kind = open[0];
+        _shownMessage = kind;
+        switch (kind)
+        {
+            case ImportMessageKind.Failure:
+                ImportMessageBar.Severity = InfoBarSeverity.Error;
+                ImportMessageBar.Title = ViewModel.ImportFailureTitle;
+                ImportMessageBar.Message = ViewModel.ImportFailureMessage;
+                break;
+            case ImportMessageKind.Rejected:
+                ImportMessageBar.Severity = InfoBarSeverity.Warning;
+                ImportMessageBar.Title = ResLoader.GetString("Import_RejectedWarningTitle");
+                ImportMessageBar.Message = string.Format(ResLoader.GetString("Import_RejectedWarningMessage"), ViewModel.RejectedCount);
+                break;
+            default:
+                ImportMessageBar.Severity = ViewModel.ImportResultSeverity;
+                ImportMessageBar.Title = ViewModel.ImportResultTitle;
+                ImportMessageBar.Message = ViewModel.ImportResultMessage;
+                break;
+        }
+
+        ImportMessageMore.Text = string.Format(ResLoader.GetString("Import_MessagesMore"), open.Count - 1);
+        ImportMessageMore.Visibility = open.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        ImportMessageBar.IsOpen = true;
+    }
+
+    private void ImportMessageBar_CloseButtonClick(InfoBar sender, object args)
+    {
+        switch (_shownMessage)
+        {
+            case ImportMessageKind.Failure: ViewModel.ShowImportFailure = false; break;
+            case ImportMessageKind.Rejected: ViewModel.ShowRejectedWarning = false; break;
+            case ImportMessageKind.Result: ViewModel.ShowImportResult = false; break;
+        }
+        // The bar closes itself on this click; the next message, if any, reopens it.
+        DispatcherQueue.TryEnqueue(UpdateMessageBar);
     }
 
     // Translate, scale and opacity are all composition-driven, so these storyboards
@@ -276,9 +350,38 @@ public sealed partial class ImportPage : Page
     private void Page_Drop(object sender, DragEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Drop", async () =>
         {
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+            if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+            await AddDroppedItemsAsync(await e.DataView.GetStorageItemsAsync());
+        });
 
-        var storageItems = await e.DataView.GetStorageItemsAsync();
+    /// <summary>
+    /// Files dropped anywhere in the window arrive here: the window opens this
+    /// page with them as the parameter (see MainWindow.Drop.cs).
+    /// </summary>
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is not ImportDropRequest request) return;
+
+        void Add() => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.WindowDrop",
+            () => AddDroppedItemsAsync(request.Items));
+
+        // The accepted-files animation needs the page on screen.
+        if (IsLoaded) Add();
+        else
+        {
+            void OnLoaded(object sender, RoutedEventArgs args)
+            {
+                Loaded -= OnLoaded;
+                Add();
+            }
+
+            Loaded += OnLoaded;
+        }
+    }
+
+    private async Task AddDroppedItemsAsync(IReadOnlyList<Windows.Storage.IStorageItem> storageItems)
+    {
         var paths = new List<string>();
 
         foreach (var item in storageItems)
@@ -320,7 +423,7 @@ public sealed partial class ImportPage : Page
         await PlayAddFilesAcceptedAsync();
         if (await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
-        });
+    }
 
     private void ImportPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -1073,3 +1176,6 @@ public sealed partial class ImportPage : Page
             ResLoader.GetString("Import_SauceNaoCloseButton"),
             App.Services.GetRequiredService<IAppLogger>());
 }
+
+/// <summary>Files dropped on the window outside this page, to be added on arrival.</summary>
+public sealed record ImportDropRequest(IReadOnlyList<Windows.Storage.IStorageItem> Items);

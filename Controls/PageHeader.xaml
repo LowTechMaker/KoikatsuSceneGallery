@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--  The line every page starts with: its title, an optional line under it,
+      and the page's own actions on the right. Pages used to build this row
+      themselves, and each spelt it slightly differently - title alone in a
+      StackPanel on one page, in a three-column grid with the progress in the
+      middle on the next, body text under it here and caption text there.  -->
+<UserControl
+    x:Class="KoikatsuSceneGallery.Controls.PageHeader"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:KoikatsuSceneGallery.Controls">
+    <Grid ColumnSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel VerticalAlignment="Center" Spacing="4">
+            <TextBlock
+                x:Name="TitleText"
+                AutomationProperties.HeadingLevel="Level1"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="{x:Bind Title, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis" />
+            <TextBlock
+                x:Name="SubtitleText"
+                AutomationProperties.AutomationId="PageHeaderSubtitle"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind Subtitle, Mode=OneWay}"
+                TextWrapping="Wrap"
+                Visibility="{x:Bind local:PageHeader.VisibleWhenText(Subtitle), Mode=OneWay}" />
+        </StackPanel>
+        <ContentPresenter
+            Grid.Column="1"
+            VerticalAlignment="Center"
+            Content="{x:Bind Actions, Mode=OneWay}" />
+    </Grid>
+</UserControl>

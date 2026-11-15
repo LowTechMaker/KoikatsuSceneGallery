@@ -1,3 +1,4 @@
+using KoikatsuSceneGallery.Controls;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -23,6 +24,7 @@ internal sealed class ViewerChrome
     private readonly TextBlock _position = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _breadcrumb = new() { TextTrimming = TextTrimming.CharacterEllipsis, Margin = new(0,0,0,8) };
     private readonly ToggleButton _info = new();
+    private readonly Filmstrip _strip;
     private bool _fit = true, _wide = true, _refreshQueued;
     public BrowseContext? Context { get; private set; }
     public ViewerChrome(Page page, Image image, Func<CardBase?> current, Action<CardBase> show)
@@ -52,6 +54,13 @@ internal sealed class ViewerChrome
         foreach (var text in header.Children.OfType<TextBlock>().Where(t => t != _breadcrumb)) { text.TextTrimming = TextTrimming.CharacterEllipsis; text.MaxLines = 1; }
         _body.SizeChanged += (_, _) => { bool wide = _body.ActualWidth >= 900; if (wide != _wide) { _wide = wide; _info.IsChecked = wide; } Layout(); };
         _scroll.SizeChanged += (_, _) => { if (_fit) Fit(); };
+        // The filmstrip sits under the image only; the inspector keeps the
+        // full height, and in the narrow layout still floats over both.
+        _strip = new Filmstrip(OpenFromStrip);
+        _body.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
+        _body.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        Grid.SetRowSpan(_inspector, 2);
+        Grid.SetRow(_strip, 1); _body.Children.Add(_strip);
         var libraries = App.Services.GetRequiredService<KoikatsuSceneGallery.Services.LibraryRegistry>().All;
         page.Loaded += (_, _) => { foreach (var library in libraries) library.CardsChanged += CardsChanged; };
         page.Unloaded += (_, _) => { foreach (var library in libraries) library.CardsChanged -= CardsChanged; };
@@ -82,6 +91,7 @@ internal sealed class ViewerChrome
                 ? UiText.Format("Viewer_Position", position.Index, position.Total)
                 : "";
             if (_current() is { } offList) Context.ReturnPath = offList.FilePath;
+            _strip.Show(cards, -1);
             _page.DispatcherQueue.TryEnqueue(() => { if (_fit) Fit(); });
             return false;
         }
@@ -89,8 +99,22 @@ internal sealed class ViewerChrome
         _position.Text = UiText.Format("Viewer_Position", index + 1, cards.Count);
         _previous.IsEnabled = index > 0; _next.IsEnabled = index >= 0 && index < cards.Count - 1;
         if (_current() is { } card) Context.ReturnPath = card.FilePath;
+        // Inside a folder the strip shows the gallery around it, so the folder's
+        // edges (and what lies past them) are visible.
+        if (Context.Outer?.CurrentCards() is { } outer && Index(outer) is var outerIndex and >= 0) _strip.Show(outer, outerIndex);
+        else _strip.Show(cards, index);
         _page.DispatcherQueue.TryEnqueue(() => { if (_fit) Fit(); });
         return true;
+    }
+    private void OpenFromStrip(CardBase card)
+    {
+        if (Context is null || card.FilePath.Equals(_current()?.FilePath, StringComparison.OrdinalIgnoreCase)) return;
+        _fit = true;
+        var inside = Context.CurrentCards().Any(c => c.FilePath.Equals(card.FilePath, StringComparison.OrdinalIgnoreCase));
+        // A card past the folder's edge: carry on in the gallery's own list.
+        if (!inside && Context.Outer is { } outer) outer.Open(_page.Frame, card, true);
+        else if (card.GetType() == _current()?.GetType()) _show(card);
+        else Context.Open(_page.Frame, card, true);
     }
     private int Index(IReadOnlyList<CardBase> cards)
     {
@@ -136,8 +160,11 @@ internal sealed class ViewerChrome
     private void Layout()
     {
         bool visible = _info.IsChecked == true;
-        Grid.SetRow(_actions, _wide ? 1 : 2); Grid.SetColumn(_actions, _wide ? 2 : 0);
-        Grid.SetColumnSpan(_actions, _wide ? 1 : 3);
+        // The last column, whatever the header has: the pages dropped their own
+        // back button, which took the first of three.
+        var last = Math.Max(0, _header.ColumnDefinitions.Count - 1);
+        Grid.SetRow(_actions, _wide ? 1 : 2); Grid.SetColumn(_actions, _wide ? last : 0);
+        Grid.SetColumnSpan(_actions, _wide ? 1 : last + 1);
         _actions.HorizontalAlignment = _wide ? HorizontalAlignment.Right : HorizontalAlignment.Left;
         _actions.Margin = _wide ? new Thickness(0) : new Thickness(0, 8, 0, 0);
         _body.ColumnDefinitions[1].Width = new(_wide && visible ? 320 : 0);

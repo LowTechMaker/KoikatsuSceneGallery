@@ -497,7 +497,7 @@
   <data name="Nav_Authors.Content" xml:space="preserve">
     <value>作者</value>
   </data>
-  <data name="Authors_Title.Text" xml:space="preserve">
+  <data name="Authors_Header.Title" xml:space="preserve">
     <value>作者</value>
   </data>
   <data name="Authors_Empty.Text" xml:space="preserve">
@@ -1190,9 +1190,6 @@
   <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
     <value>解析度與外掛分析可在設定中調整。</value>
   </data>
-  <data name="Browser_ResolutionFilterActive" xml:space="preserve">
-    <value>圖片尺寸篩選已啟用 · 已在設定選取 {0} 種尺寸</value>
-  </data>
   <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
     <value>開啟圖庫設定</value>
   </data>
@@ -1306,7 +1303,7 @@
   <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>認得貼文但取不到資料。可重試或指定作者。</value></data>
   <data name="Nav_Discovery.Content" xml:space="preserve"><value>隨機探索</value></data>
   <data name="Discovery_Title.Text" xml:space="preserve"><value>隨機探索</value></data>
-  <data name="Discovery_Description.Text" xml:space="preserve"><value>換個順序探索場景。持續往下捲動，每輪不重複。</value></data>
+  <data name="Discovery_Header.Subtitle" xml:space="preserve"><value>換個順序探索場景。持續往下捲動，每輪不重複。</value></data>
   <data name="Discovery_Filters.Content" xml:space="preserve"><value>篩選</value></data>
   <data name="Discovery_Reset.Content" xml:space="preserve"><value>重新洗牌</value></data>
   <data name="Discovery_Reset.ToolTipService.ToolTip" xml:space="preserve"><value>重新產生隨機順序，並回到頂部。</value></data>
@@ -1564,12 +1561,6 @@
   <data name="SC_PokerHand.Header" xml:space="preserve">
     <value>隨機探索改為發一手牌</value>
   </data>
-  <data name="SC_RecordMode.Description" xml:space="preserve">
-    <value>記錄每張從 app 拖出或複製出去的卡片的原始頁面。本地收藏的卡片會被忽略</value>
-  </data>
-  <data name="SC_RecordMode.Header" xml:space="preserve">
-    <value>記錄模式</value>
-  </data>
   <data name="TagCloud_ArticleLink.Content" xml:space="preserve">
     <value>在 pixiv 百科查看</value>
   </data>
@@ -1645,7 +1636,7 @@
   <data name="Usage_NoOrigin" xml:space="preserve">
     <value>沒有原始頁面</value>
   </data>
-  <data name="Usage_Title.Text" xml:space="preserve">
+  <data name="Usage_Header.Title" xml:space="preserve">
     <value>使用紀錄</value>
   </data>
   <data name="Refetch_SectionTitle" xml:space="preserve">
@@ -1711,9 +1702,6 @@
   <data name="Refetch_BannerTitle" xml:space="preserve">
     <value>重新抓取 {0} 作品資料</value>
   </data>
-  <data name="Refetch_BannerStop.Content" xml:space="preserve">
-    <value>停止</value>
-  </data>
   <data name="Refetch_BackingUp" xml:space="preserve">
     <value>正在備份會被覆寫的作品資料檔…</value>
   </data>
@@ -1776,12 +1764,6 @@
   </data>
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>更新文字雲</value>
-  </data>
-  <data name="Import_AutoImportIdentified.Header" xml:space="preserve">
-    <value>認得貼文就直接匯入</value>
-  </data>
-  <data name="Import_AutoImportIdentifiedHint.Text" xml:space="preserve">
-    <value>檔名符合平台格式（例如 pixiv 的 12345678_p0），而且找得到對應貼文的卡片，分析完就直接匯入，不用等你確認。其他卡片照常留在下方審核。</value>
   </data>
   <data name="Import_Summary_AutoSuccess" xml:space="preserve">
     <value>已自動匯入 {0} 張認得貼文的卡片。</value>
@@ -1855,7 +1837,7 @@
   <data name="Nav_Rating.Content" xml:space="preserve">
     <value>分級評價</value>
   </data>
-  <data name="Rating_Title.Text" xml:space="preserve">
+  <data name="Rating_Header.Title" xml:space="preserve">
     <value>分級評價</value>
   </data>
   <data name="Rating_Previous.Content" xml:space="preserve">
@@ -1969,13 +1951,7 @@
   <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>全選</value></data>
   <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>收合或展開</value></data>
   <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>收合或展開</value></data>
-  <data name="Import_SelectionAuthor.Text" xml:space="preserve"><value>作者</value></data>
   <data name="Import_SelectionAuthorTitle.Text" xml:space="preserve"><value>為所選指定作者</value></data>
-  <data name="Import_SelectionRating.Text" xml:space="preserve"><value>分級</value></data>
-  <data name="Import_SelectionSearch.Text" xml:space="preserve"><value>以圖搜圖</value></data>
-  <data name="Import_SelectionAuthorCheck.Text" xml:space="preserve"><value>檢查作者貼文</value></data>
-  <data name="Import_SelectionRemove.Text" xml:space="preserve"><value>移除</value></data>
-  <data name="Import_SelectionClear.Text" xml:space="preserve"><value>取消選取</value></data>
   <data name="Import_Mods_InstallBox.Content" xml:space="preserve"><value>安裝</value></data>
   <data name="Import_Mods_Status_NoGame" xml:space="preserve"><value>尚未設定遊戲資料夾</value></data>
   <data name="Import_Mods_Status_CheckFailed" xml:space="preserve"><value>無法檢查 mods 資料夾</value></data>
@@ -2003,4 +1979,280 @@
   <data name="Import_Conflict_Choice_HardLink" xml:space="preserve"><value>硬連結</value></data>
   <data name="Import_Conflict_Choice_SymbolicLink" xml:space="preserve"><value>軟連結</value></data>
   <data name="Import_Conflict_Choice_Copy" xml:space="preserve"><value>照樣複製一份</value></data>
+  <data name="Toast_Copied" xml:space="preserve">
+    <value>已複製到剪貼簿。</value>
+  </data>
+  <data name="Usage_Copied" xml:space="preserve">
+    <value>已將 {0} 筆紀錄複製到剪貼簿。</value>
+  </data>
+  <data name="Usage_Cleared" xml:space="preserve">
+    <value>已清空使用紀錄。</value>
+  </data>
+  <data name="Discovery_Header.Title" xml:space="preserve">
+    <value>隨機探索</value>
+  </data>
+  <data name="Nav_Explore.Content" xml:space="preserve">
+    <value>探索</value>
+  </data>
+  <data name="Record_NavToggleOn" xml:space="preserve">
+    <value>記錄模式已開啟：每張拖出或複製出去的卡片都會記到「使用紀錄」。</value>
+  </data>
+  <data name="Record_NavToggleOff" xml:space="preserve">
+    <value>記錄模式已關閉。開啟後會記錄每張拖出或複製出去的卡片。</value>
+  </data>
+  <data name="FeatureUnavailable_PluginHint.Text" xml:space="preserve">
+    <value>外掛是放在 Plugins 資料夾裡的 DLL 檔。外掛頁會列出已安裝的外掛，並說明如何加入新的外掛。</value>
+  </data>
+  <data name="FeatureUnavailable_OpenPlugins.Content" xml:space="preserve">
+    <value>前往外掛設定</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsTitle" xml:space="preserve">
+    <value>作者功能需要平台外掛</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsDescription" xml:space="preserve">
+    <value>安裝 pixiv、FANBOX 或 BepisDB 外掛後，這一頁會依作者整理你的卡片，並顯示每位作者的頭像、個人頁連結與貼文。</value>
+  </data>
+  <data name="FeatureUnavailable_TagsTitle" xml:space="preserve">
+    <value>標籤功能需要平台外掛</value>
+  </data>
+  <data name="FeatureUnavailable_TagsDescription" xml:space="preserve">
+    <value>標籤來自每張卡片匯入時的原貼文。安裝平台外掛後，這一頁會把標籤排成文字雲，點標籤就能瀏覽對應的卡片。</value>
+  </data>
+  <data name="FeatureUnavailable_ImportTitle" xml:space="preserve">
+    <value>匯入功能需要平台外掛</value>
+  </data>
+  <data name="FeatureUnavailable_ImportDescription" xml:space="preserve">
+    <value>匯入會查出每張卡片的來源，依作者歸檔，並保留貼文的標題、標籤與分級。需要先安裝卡片來源平台的外掛。</value>
+  </data>
+  <data name="Palette_Query.PlaceholderText" xml:space="preserve">
+    <value>搜尋頁面、指令、設定、作者與卡片</value>
+  </data>
+  <data name="Palette_Query.AutomationProperties.Name" xml:space="preserve">
+    <value>指令面板搜尋</value>
+  </data>
+  <data name="Palette_NoResults.Text" xml:space="preserve">
+    <value>找不到符合的項目。試著少打幾個字，或只輸入檔名的一部分。</value>
+  </data>
+  <data name="Palette_KeyHint.Text" xml:space="preserve">
+    <value>↑ ↓ 選擇 · Enter 開啟 · Esc 關閉</value>
+  </data>
+  <data name="Palette_OpenButton.AutomationProperties.Name" xml:space="preserve">
+    <value>搜尋（Ctrl+K）</value>
+  </data>
+  <data name="Palette_OpenButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>搜尋頁面、指令、設定、作者與卡片（Ctrl+K）</value>
+  </data>
+  <data name="Palette_CategoryPage" xml:space="preserve">
+    <value>頁面</value>
+  </data>
+  <data name="Palette_CategoryCommand" xml:space="preserve">
+    <value>指令</value>
+  </data>
+  <data name="Palette_CategorySetting" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Palette_CategoryAuthor" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Palette_CategoryCard" xml:space="preserve">
+    <value>卡片</value>
+  </data>
+  <data name="Palette_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Palette_RecordOn" xml:space="preserve">
+    <value>開啟記錄模式</value>
+  </data>
+  <data name="Palette_RecordOff" xml:space="preserve">
+    <value>關閉記錄模式</value>
+  </data>
+  <data name="Palette_SwitchPlatform" xml:space="preserve">
+    <value>切換平台：{0}</value>
+  </data>
+  <data name="Activity_Title.Text" xml:space="preserve">
+    <value>背景工作</value>
+  </data>
+  <data name="Activity_Cancel.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Activity_ButtonName" xml:space="preserve">
+    <value>{0} 項背景工作進行中</value>
+  </data>
+  <data name="Activity_LibraryScan" xml:space="preserve">
+    <value>正在掃描{0}</value>
+  </data>
+  <data name="Activity_AuthorsRefresh" xml:space="preserve">
+    <value>正在重新整理作者資料</value>
+  </data>
+  <data name="Activity_AuthorsDone" xml:space="preserve">
+    <value>已重新整理 {0}／{1} 位作者。</value>
+  </data>
+  <data name="Activity_Import" xml:space="preserve">
+    <value>匯入中</value>
+  </data>
+  <data name="Activity_ImportAnalysis" xml:space="preserve">
+    <value>正在查詢待匯入檔案的來源</value>
+  </data>
+  <data name="Drop_Caption" xml:space="preserve">
+    <value>匯入</value>
+  </data>
+  <data name="Drop_OverlayTitle.Text" xml:space="preserve">
+    <value>放開以匯入</value>
+  </data>
+  <data name="Drop_OverlayDescription.Text" xml:space="preserve">
+    <value>檔案會加入匯入頁，確認後再匯入。</value>
+  </data>
+  <data name="CardMenu_Open" xml:space="preserve">
+    <value>開啟</value>
+  </data>
+  <data name="CardMenu_OpenGroup" xml:space="preserve">
+    <value>開啟群組</value>
+  </data>
+  <data name="CardMenu_Rate" xml:space="preserve">
+    <value>我的分級</value>
+  </data>
+  <data name="CardMenu_RateMany" xml:space="preserve">
+    <value>我的分級（{0} 張）</value>
+  </data>
+  <data name="CardMenu_RateClear" xml:space="preserve">
+    <value>未評價</value>
+  </data>
+  <data name="CardMenu_RatedOne" xml:space="preserve">
+    <value>已設為 {0}。</value>
+  </data>
+  <data name="CardMenu_RatedMany" xml:space="preserve">
+    <value>已將 {0} 張卡片設為 {1}。</value>
+  </data>
+  <data name="CardMenu_CopyFile" xml:space="preserve">
+    <value>複製檔案</value>
+  </data>
+  <data name="CardMenu_CopyFiles" xml:space="preserve">
+    <value>複製 {0} 個檔案</value>
+  </data>
+  <data name="CardMenu_FilesCopied" xml:space="preserve">
+    <value>已複製 {0} 個檔案到剪貼簿。</value>
+  </data>
+  <data name="CardMenu_CopyPath" xml:space="preserve">
+    <value>複製路徑</value>
+  </data>
+  <data name="CardMenu_GoToAuthor" xml:space="preserve">
+    <value>前往 {0}</value>
+  </data>
+  <data name="CardMenu_RatedPlatformHint" xml:space="preserve">
+    <value>卡片上目前顯示平台分級；在設定把分級來源改為「我的分級」即可顯示你的評價。</value>
+  </data>
+  <data name="Chip_Search" xml:space="preserve">
+    <value>搜尋：{0}</value>
+  </data>
+  <data name="Chip_Resolution" xml:space="preserve">
+    <value>圖片尺寸：{0} 種</value>
+  </data>
+  <data name="Chip_RemoveName" xml:space="preserve">
+    <value>移除篩選：{0}</value>
+  </data>
+  <data name="Chips_ClearAll" xml:space="preserve">
+    <value>清除全部</value>
+  </data>
+  <data name="Browser_ResolutionToggle.Header" xml:space="preserve">
+    <value>圖片尺寸篩選</value>
+  </data>
+  <data name="Browser_ResolutionListCount" xml:space="preserve">
+    <value>清單中有 {0} 種尺寸，可在設定中編輯。</value>
+  </data>
+  <data name="Browser_ResolutionListEmpty" xml:space="preserve">
+    <value>尚未選擇任何尺寸；先到設定選好尺寸才能使用。</value>
+  </data>
+  <data name="CardAction_OpenFolder" xml:space="preserve">
+    <value>開啟位置</value>
+  </data>
+  <data name="CardAction_CopyFile" xml:space="preserve">
+    <value>複製檔案</value>
+  </data>
+  <data name="CardAction_More" xml:space="preserve">
+    <value>更多動作</value>
+  </data>
+  <data name="CardAction_CopyPath" xml:space="preserve">
+    <value>複製路徑</value>
+  </data>
+  <data name="CardAction_CopyFolder" xml:space="preserve">
+    <value>複製資料夾路徑</value>
+  </data>
+  <data name="CardAction_CopyPixiv" xml:space="preserve">
+    <value>複製 pixiv 網址</value>
+  </data>
+  <data name="CardAction_CopyBepisDb" xml:space="preserve">
+    <value>複製 BepisDB 網址</value>
+  </data>
+  <data name="AuthorDetail_EditLocalLabel.Text" xml:space="preserve">
+    <value>編輯</value>
+  </data>
+  <data name="AuthorDetail_ShuffleLabel.Text" xml:space="preserve">
+    <value>隨機一張</value>
+  </data>
+  <data name="AuthorDetail_RefreshLabel.Text" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="Import_AutoImportShort.Text" xml:space="preserve">
+    <value>認得貼文就直接匯入</value>
+  </data>
+  <data name="Import_AutoImportToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>認得貼文就直接匯入</value>
+  </data>
+  <data name="Import_AutoImportHost.ToolTipService.ToolTip" xml:space="preserve">
+    <value>檔名符合平台格式（例如 pixiv 的 12345678_p0），而且找得到對應貼文的卡片，分析完就直接匯入，不用等你確認。其他卡片照常留在下方審核。</value>
+  </data>
+  <data name="Settings_Search.PlaceholderText" xml:space="preserve">
+    <value>搜尋設定</value>
+  </data>
+  <data name="Settings_Search.AutomationProperties.Name" xml:space="preserve">
+    <value>搜尋設定</value>
+  </data>
+  <data name="Filmstrip_Name" xml:space="preserve">
+    <value>前後的卡片</value>
+  </data>
+  <data name="Filmstrip_Current" xml:space="preserve">
+    <value>目前的卡片</value>
+  </data>
+  <data name="Steps_Position" xml:space="preserve">
+    <value>第 {0} 步，共 {1} 步：{2}</value>
+  </data>
+  <data name="Import_StepAdd" xml:space="preserve">
+    <value>加入檔案</value>
+  </data>
+  <data name="Import_StepReview" xml:space="preserve">
+    <value>檢查</value>
+  </data>
+  <data name="Import_StepImport" xml:space="preserve">
+    <value>匯入</value>
+  </data>
+  <data name="Import_RejectedWarningTitle" xml:space="preserve">
+    <value>有檔案沒有加入</value>
+  </data>
+  <data name="Import_MessagesMore" xml:space="preserve">
+    <value>關閉這則訊息後，還有 {0} 則。</value>
+  </data>
+  <data name="Import_SelAuthor.Label" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Import_SelRating.Label" xml:space="preserve">
+    <value>分級</value>
+  </data>
+  <data name="Import_SelSearch.Label" xml:space="preserve">
+    <value>以圖搜圖</value>
+  </data>
+  <data name="Import_SelAuthorCheck.Label" xml:space="preserve">
+    <value>檢查作者貼文</value>
+  </data>
+  <data name="Import_SelRemove.Label" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Import_SelClear.Label" xml:space="preserve">
+    <value>取消選取</value>
+  </data>
+  <data name="Settings_Categories.AutomationProperties.Name" xml:space="preserve">
+    <value>設定分類</value>
+  </data>
+  <data name="Settings_CategoryPicker.AutomationProperties.Name" xml:space="preserve">
+    <value>設定分類</value>
+  </data>
 </root>

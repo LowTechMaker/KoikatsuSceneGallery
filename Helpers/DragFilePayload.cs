@@ -19,6 +19,7 @@ internal static class DragFilePayload
         // exactly this one hook rather than six.
         App.Services.GetService<UsageRecordService>()?.Record(paths, operation);
         e.Data.RequestedOperation = DataPackageOperation.Copy;
+        InternalDrag.Mark(e.Data);
         e.Data.SetDataProvider(StandardDataFormats.StorageItems, async request =>
         {
             var deferral = request.GetDeferral();

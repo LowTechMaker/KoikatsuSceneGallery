@@ -105,7 +105,7 @@
         </DataTemplate>
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -113,38 +113,26 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid ColumnSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBlock
-                x:Uid="Authors_Title"
-                Style="{StaticResource TitleTextBlockStyle}" />
-
-            <StackPanel
-                Grid.Column="1"
-                Orientation="Horizontal"
-                VerticalAlignment="Center"
-                Spacing="8"
-                Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}">
-                <ProgressRing
-                    Width="16"
-                    Height="16"
-                    IsActive="True" />
-                <TextBlock
+        <controls:PageHeader x:Uid="Authors_Header">
+            <controls:PageHeader.Actions>
+                <!--  Progress beside the button that started it, not floating
+                      in the gap between the title and the actions.  -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                <StackPanel
+                    Orientation="Horizontal"
                     VerticalAlignment="Center"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    Text="{x:Bind ViewModel.RefreshProgress, Mode=OneWay}" />
-            </StackPanel>
-
-            <StackPanel
-                Grid.Column="2"
-                Orientation="Horizontal"
-                Spacing="8">
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}">
+                    <ProgressRing
+                        Width="16"
+                        Height="16"
+                        IsActive="True" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ViewModel.RefreshProgress, Mode=OneWay}" />
+                </StackPanel>
                 <Button
                     x:Uid="Authors_RefreshAll"
                     AutomationProperties.AutomationId="AuthorsRefreshAllButton"
@@ -155,8 +143,9 @@
                         <TextBlock x:Uid="Authors_RefreshAllLabel" />
                     </StackPanel>
                 </Button>
-            </StackPanel>
-        </Grid>
+                </StackPanel>
+            </controls:PageHeader.Actions>
+        </controls:PageHeader>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>

@@ -34,20 +34,18 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/AppIcon.ico");
-
+        AppToast.Attach(ToastHost);
+        BackNavigation.Attach(RootLayout, NavFrame);
+        InitializePalette();
+        InitializeWindowDrop();
 
         if (App.Services.GetService<ImportViewModel>() is { } importViewModel)
         {
-            ImportNavItem.Visibility = Visibility.Visible;
             importViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
             UpdateImportNavBadge();
         }
 
-        if (App.Services.GetService<ArtworkRefetchService>() is { } refetch)
-        {
-            refetch.PropertyChanged += (_, _) => UpdateRefetchBanner(refetch);
-            UpdateRefetchBanner(refetch);
-        }
+        InitializeActivity();
 
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
 
@@ -85,6 +83,7 @@ public sealed partial class MainWindow : Window
             (_, _) => DispatcherQueue.TryEnqueue(ApplyNavVisibility);
         settings.BrowseOriginChanged += OnBrowseOriginChanged;
         RecordModeNavToggle.IsOn = settings.RecordModeEnabled;
+        ShowRecordModeState(settings.RecordModeEnabled);
         settings.RecordModeEnabledChanged += OnRecordModeEnabledChanged;
 
         NavigateToSelectedLibraryPage();
@@ -100,69 +99,6 @@ public sealed partial class MainWindow : Window
             UpdateImportNavBadge();
         }
     }
-
-    // The phase the user closed the banner in. Closing hides it for the rest
-    // of that phase only: a run that then stops or finishes still says so.
-    private ArtworkRefetchPhase? _refetchBannerDismissedIn;
-    private bool _refetchBannerWired;
-
-    private void UpdateRefetchBanner(ArtworkRefetchService refetch)
-    {
-        if (!DispatcherQueue.HasThreadAccess)
-        {
-            DispatcherQueue.TryEnqueue(() => UpdateRefetchBanner(refetch));
-            return;
-        }
-
-        if (!_refetchBannerWired)
-        {
-            _refetchBannerWired = true;
-            RefetchBanner.CloseButtonClick += (_, _) => _refetchBannerDismissedIn = refetch.Phase;
-            // The close button closes the InfoBar itself; its host would stay
-            // behind as an empty card.
-            RefetchBanner.Closed += (_, _) => RefetchBannerHost.Visibility = Visibility.Collapsed;
-        }
-
-        var platform = refetch.ProviderId is { } id ? PlatformDisplayName.For(id) : "";
-        RefetchBanner.Title = UiText.Format("Refetch_BannerTitle", platform);
-        var (show, severity, message) = refetch.Phase switch
-        {
-            ArtworkRefetchPhase.Scanning => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_Scanning")),
-            ArtworkRefetchPhase.BackingUp => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_BackingUp")),
-            ArtworkRefetchPhase.Restoring => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_Restoring")),
-            ArtworkRefetchPhase.Running => (true, InfoBarSeverity.Informational,
-                UiText.Format("Refetch_Progress", refetch.RunDone, refetch.RunTotal, refetch.Updated, refetch.Gone, refetch.Failed)),
-            ArtworkRefetchPhase.Completed => (true, InfoBarSeverity.Success,
-                UiText.Format("Refetch_Completed", refetch.Updated, refetch.Gone, refetch.Failed)),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.TooManyFailures =>
-                (true, InfoBarSeverity.Warning,
-                    UiText.Format("Refetch_TooManyFailures", ArtworkRefetchPolicy.MaxConsecutiveFailures)),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.BackupFailed =>
-                (true, InfoBarSeverity.Error, UiText.Get("Refetch_BackupFailed")),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.Error =>
-                (true, InfoBarSeverity.Error, UiText.Get("Refetch_Error")),
-            _ => (false, InfoBarSeverity.Informational, ""),
-        };
-
-        if (_refetchBannerDismissedIn is { } dismissed && dismissed != refetch.Phase)
-            _refetchBannerDismissedIn = null;
-
-        RefetchBanner.Severity = severity;
-        RefetchBanner.Message = message;
-        RefetchBannerStop.Visibility = refetch.IsBusy && refetch.Phase != ArtworkRefetchPhase.Restoring
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        RefetchBannerProgress.Visibility = refetch.IsBusy ? Visibility.Visible : Visibility.Collapsed;
-        RefetchBannerProgress.IsIndeterminate = refetch.Phase != ArtworkRefetchPhase.Running;
-        RefetchBannerProgress.Maximum = Math.Max(1, refetch.RunTotal);
-        RefetchBannerProgress.Value = refetch.RunDone;
-        var open = show && _refetchBannerDismissedIn is null;
-        RefetchBanner.IsOpen = open;
-        RefetchBannerHost.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void RefetchBannerStop_Click(object sender, RoutedEventArgs e)
-        => App.Services.GetService<ArtworkRefetchService>()?.Stop();
 
     private void UpdateImportNavBadge()
     {
@@ -231,12 +167,26 @@ public sealed partial class MainWindow : Window
         // — a plugin that resolves authors, whether or not any were found yet —
         // while tags exist only as sidecars on disk, so they go by what is
         // actually there.
+        // Without the plugin at all, the entry stays and explains itself
+        // instead (CardOriginNavPolicy.Authors).
+        var plugins = App.Services.GetRequiredService<PluginService>();
+        var tagCloud = App.Services.GetRequiredService<TagCloudService>();
         var authors = App.Services.GetRequiredService<AuthorsViewModel>().ProvidersWithAuthors;
-        SetNavItemVisibility("authors", CardOriginNavPolicy.ShowAuthors(vm.EffectiveBrowseOrigin, authors));
+        _authorsEntry = CardOriginNavPolicy.Authors(
+            vm.EffectiveBrowseOrigin,
+            PlatformAvailability.HasAny(plugins.AuthorProviders.Select(provider => provider.ProviderId)),
+            authors);
+        _tagsEntry = CardOriginNavPolicy.Tags(
+            vm.EffectiveBrowseOrigin, tagCloud.HasAnyPlatform, tagCloud.PlatformsOfferingTags);
+        _importEntry = CardOriginNavPolicy.Import(App.Services.GetService<ImportViewModel>() is not null);
+        SetNavItemVisibility("authors", _authorsEntry != NavEntryState.Hidden);
         SetNavItemVisibility("localsources", CardOriginNavPolicy.ShowLocalSources(vm.EffectiveBrowseOrigin));
-        var tags = App.Services.GetRequiredService<TagCloudService>().PlatformsOfferingTags;
-        SetNavItemVisibility("tags", CardOriginNavPolicy.ShowTags(vm.EffectiveBrowseOrigin, tags));
+        SetNavItemVisibility("tags", _tagsEntry != NavEntryState.Hidden);
     }
+
+    private NavEntryState _authorsEntry = NavEntryState.Hidden;
+    private NavEntryState _tagsEntry = NavEntryState.Hidden;
+    private NavEntryState _importEntry = NavEntryState.Hidden;
 
     private void OnNavItemVisibilityChanged(string tag, bool visible)
     {
@@ -277,7 +227,23 @@ public sealed partial class MainWindow : Window
         => DispatcherQueue.TryEnqueue(() =>
         {
             RecordModeNavToggle.IsOn = enabled;
+            ShowRecordModeState(enabled);
         });
+
+    /// <summary>
+    /// The switch is the only place recording is turned on, so it also has to
+    /// say that it is on - including with the pane collapsed to icons, where
+    /// the switch itself is not drawn.
+    /// </summary>
+    private void ShowRecordModeState(bool enabled)
+    {
+        var tip = UiText.Get(enabled ? "Record_NavToggleOn" : "Record_NavToggleOff");
+        ToolTipService.SetToolTip(RecordModeNavToggle, tip);
+        ToolTipService.SetToolTip(UsageNavItem, enabled ? tip : null);
+        UsageNavItem.InfoBadge = enabled
+            ? new InfoBadge { Style = (Style)Application.Current.Resources["AttentionDotInfoBadgeStyle"] }
+            : null;
+    }
 
     /// <summary>
     /// Keeps a tap on the switch from also selecting the row. Without this the
@@ -427,7 +393,9 @@ public sealed partial class MainWindow : Window
         var stranded =
             (current == typeof(AuthorsPage) && AuthorsNavItem.Visibility != Visibility.Visible)
             || (current == typeof(LocalSourcesPage) && LocalSourcesNavItem.Visibility != Visibility.Visible)
-            || (current == typeof(TagCloudPage) && TagsNavItem.Visibility != Visibility.Visible);
+            || (current == typeof(TagCloudPage) && TagsNavItem.Visibility != Visibility.Visible)
+            || (NavFrame?.Content is FeatureUnavailablePage { Feature: "authors" } && AuthorsNavItem.Visibility != Visibility.Visible)
+            || (NavFrame?.Content is FeatureUnavailablePage { Feature: "tags" } && TagsNavItem.Visibility != Visibility.Visible);
         if (stranded) NavigateToSelectedLibraryPage();
     }
 
@@ -549,7 +517,20 @@ public sealed partial class MainWindow : Window
 
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
-        if (e.SourcePageType == typeof(RandomDiscoveryPage))
+        if (e.SourcePageType == typeof(SettingsPage))
+            NavView.SelectedItem = NavView.SettingsItem;
+        else if (e.SourcePageType == typeof(FeatureUnavailablePage))
+            NavView.SelectedItem = e.Parameter switch
+            {
+                "authors" => AuthorsNavItem,
+                "tags" => TagsNavItem,
+                _ => ImportNavItem,
+            };
+        else if (e.SourcePageType == typeof(AuthorsPage))
+            NavView.SelectedItem = AuthorsNavItem;
+        else if (e.SourcePageType == typeof(ImportPage))
+            NavView.SelectedItem = ImportNavItem;
+        else if (e.SourcePageType == typeof(RandomDiscoveryPage))
             NavView.SelectedItem = DiscoveryNavItem;
         // Both pages navigate to AuthorDetailPage, so returning from one has to
         // restore the item the user actually came from.
@@ -671,8 +652,14 @@ public sealed partial class MainWindow : Window
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
+        // Not unconditional: a page that navigates to settings itself (the
+        // filter link, the plugin page's button) selects this entry afterwards,
+        // and navigating again here would drop the parameter it was opened with.
         if (args.IsSettingsSelected)
-            NavFrame.Navigate(typeof(SettingsPage));
+        {
+            if (NavFrame.CurrentSourcePageType != typeof(SettingsPage))
+                NavFrame.Navigate(typeof(SettingsPage));
+        }
         else if (args.SelectedItem is NavigationViewItem item)
             NavigateToNavItem(item);
     }
@@ -706,6 +693,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ShowFeatureUnavailable(string feature)
+    {
+        if (NavFrame.Content is FeatureUnavailablePage { Feature: var shown } && shown == feature) return;
+        NavFrame.Navigate(typeof(FeatureUnavailablePage), feature);
+    }
+
     private void NavigateToNavItem(NavigationViewItem item)
     {
         switch (item.Tag)
@@ -720,6 +713,11 @@ public sealed partial class MainWindow : Window
                 break;
             case "library":
                 NavigateToSelectedLibraryPage();
+                break;
+            case "authors" when _authorsEntry == NavEntryState.NeedsPlugin:
+            case "tags" when _tagsEntry == NavEntryState.NeedsPlugin:
+            case "import" when _importEntry == NavEntryState.NeedsPlugin:
+                ShowFeatureUnavailable((string)item.Tag);
                 break;
             case "authors" when App.Services.GetRequiredService<AuthorsViewModel>().HasProviderTabs:
                 if (NavFrame.CurrentSourcePageType != typeof(AuthorsPage))

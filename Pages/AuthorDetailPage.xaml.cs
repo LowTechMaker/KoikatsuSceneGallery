@@ -73,6 +73,7 @@ public sealed partial class AuthorDetailPage : Page
     public AuthorDetailPage()
     {
         InitializeComponent();
+        BackNavigation.EscapeGoesBack(this);
         // This page is parameterized by author. Reusing one required cache entry
         // for every author lets Pivot retain visual state from the previous
         // author, so keep the visual tree scoped to one navigation entry.
@@ -363,7 +364,6 @@ public sealed partial class AuthorDetailPage : Page
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>

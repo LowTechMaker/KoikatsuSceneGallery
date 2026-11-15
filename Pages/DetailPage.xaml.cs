@@ -27,9 +27,14 @@ public sealed partial class DetailPage : Page
     // Bumped per card shown, so a hash finishing late cannot label the next card.
     private int _ratingVersion;
 
+    private readonly ProgressivePreview _preview;
+
     public DetailPage()
     {
         InitializeComponent();
+        _preview = new ProgressivePreview(PreviewImage);
+        _ratingPicker.AddNumberKeys();
+        BackNavigation.EscapeGoesBack(this);
         _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((SceneCard)card));
         UserRatingHost.Child = _ratingPicker;
         _ratingPicker.RatingChosen += rating => UiEventGuard.Run(_logger, "Detail.SetUserRating", () => SetUserRatingAsync(rating));
@@ -130,9 +135,7 @@ public sealed partial class DetailPage : Page
     private void ShowCard(SceneCard card)
     {
         ViewModel.Card = card;
-        var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
-        bitmap.UriSource = card.FileUri;
-        PreviewImage.Source = bitmap;
+        _preview.Show(card, card.Width);
         UpdateNavigationButtons();
         UiEventGuard.Run(_logger, "Detail.LoadUserRating", () => LoadUserRatingAsync(card));
     }
@@ -170,7 +173,7 @@ public sealed partial class DetailPage : Page
         var saved = await _ratings.SetAsync(card.FilePath, hash, rating);
         if (version != _ratingVersion) return;
         ShowUserRating(saved ? rating : _ratings.TryGetByHash(hash));
-        if (!saved) UserRatingStatus.Text = UiText.Get("Rating_SaveFailed");
+        if (!saved) AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
     }
 
     private void ClearUserRating_Click(object sender, RoutedEventArgs e) =>
@@ -181,7 +184,7 @@ public sealed partial class DetailPage : Page
             var cleared = await _ratings.ClearAsync(card.FilePath, hash);
             if (version != _ratingVersion) return;
             ShowUserRating(_ratings.TryGetByHash(hash));
-            if (!cleared) UserRatingStatus.Text = UiText.Get("Rating_SaveFailed");
+            if (!cleared) AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
         });
 
     private void ShowUserRating(int? rating)
@@ -208,7 +211,6 @@ public sealed partial class DetailPage : Page
         if (next != null) ShowCard(next);
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
     private void PrevButton_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void NextButton_Click(object sender, RoutedEventArgs e) => Navigate(1);
 

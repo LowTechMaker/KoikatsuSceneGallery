@@ -24,6 +24,7 @@ public sealed partial class PostDetailPage : Page
     public PostDetailPage()
     {
         InitializeComponent();
+        BackNavigation.EscapeGoesBack(this);
         NavigationCacheMode = NavigationCacheMode.Required;
         ContentGrid.SizeChanged += (_, _) => UpdateLayoutForWidth();
         SizeChanged += (_, _) => UpdateLayoutForWidth();
@@ -60,7 +61,6 @@ public sealed partial class PostDetailPage : Page
         _cts = null;
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
     private void LocalImage_ItemClick(object sender, ItemClickEventArgs e)
     {

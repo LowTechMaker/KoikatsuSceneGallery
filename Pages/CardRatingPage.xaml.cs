@@ -120,7 +120,7 @@ public sealed partial class CardRatingPage : Page
             if (!await _ratings.SetAsync(current.Card.FilePath, current.Hash, rating))
             {
                 _picker.Rating = _ratings.TryGetByHash(current.Hash);
-                ProgressText.Text = UiText.Get("Rating_SaveFailed");
+                AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
                 return;
             }
 
@@ -154,7 +154,7 @@ public sealed partial class CardRatingPage : Page
         CardPanel.Visibility = Visibility.Visible;
         StatusPanel.Visibility = Visibility.Collapsed;
         BusyRing.IsActive = false;
-        ProgressText.Text = UiText.Format("Rating_Progress", _queue.Count + (rating is null ? 1 : 0), _ratings.Count);
+        Header.Subtitle = UiText.Format("Rating_Progress", _queue.Count + (rating is null ? 1 : 0), _ratings.Count);
     }
 
     private void ShowStatus(bool busy, string title, string description)
@@ -168,6 +168,6 @@ public sealed partial class CardRatingPage : Page
         StatusDescription.Text = description;
         StatusDescription.Visibility = description.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         StatusPreviousButton.Visibility = !busy && _history.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        ProgressText.Text = busy ? "" : UiText.Format("Rating_RatedCount", _ratings.Count);
+        Header.Subtitle = busy ? "" : UiText.Format("Rating_RatedCount", _ratings.Count);
     }
 }

@@ -21,9 +21,13 @@ public sealed partial class CoordinateDetailPage : Page
     private CancellationTokenSource? _metadataCts;
     private AuthorKey? _authorScope;
 
+    private readonly ProgressivePreview _preview;
+
     public CoordinateDetailPage()
     {
         InitializeComponent();
+        _preview = new ProgressivePreview(PreviewImage);
+        BackNavigation.EscapeGoesBack(this);
         _viewer = new(this, PreviewImage, () => ViewModel.Card, card => ShowCard((CoordinateCard)card));
     }
 
@@ -74,9 +78,7 @@ public sealed partial class CoordinateDetailPage : Page
     {
         var metadataCts = PageCancellation.Restart(ref _metadataCts);
         ViewModel.Card = card;
-        var bitmap = new BitmapImage { DecodePixelWidth = Math.Min(card.Width, 1920) };
-        bitmap.UriSource = card.FileUri;
-        PreviewImage.Source = bitmap;
+        _preview.Show(card, card.Width);
         UpdateNavigationButtons();
         LoadMetadataAsync(card, metadataCts.Token).Observe(
             App.Services.GetRequiredService<IAppLogger>(),
@@ -120,7 +122,6 @@ public sealed partial class CoordinateDetailPage : Page
         if (next != null) ShowCard(next);
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
     private void PrevButton_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void NextButton_Click(object sender, RoutedEventArgs e) => Navigate(1);
 

@@ -11,6 +11,11 @@ public sealed class BrowseContext(string title, IEnumerable<CardBase> cards, boo
     public bool ShowRelatedImages { get; } = showRelatedImages;
     public IReadOnlyList<CardBase> Cards { get; } = cards.DistinctBy(c => c.FilePath, StringComparer.OrdinalIgnoreCase).ToArray();
     public string? ReturnPath { get; set; }
+    /// <summary>
+    /// For a folder opened from the gallery: the gallery's own list, which the
+    /// filmstrip shows around the folder (darkened) and opens into.
+    /// </summary>
+    public BrowseContext? Outer { get; init; }
     public IReadOnlyList<CardBase> CurrentCards()
     {
         var live = App.Services.GetRequiredService<LibraryRegistry>().All.SelectMany(library => library.Cards)

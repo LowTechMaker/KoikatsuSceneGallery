@@ -53,6 +53,12 @@
         <StackPanel Spacing="6">
             <TextBlock x:Uid="Settings_Title" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="Settings_Subtitle" Style="{StaticResource SettingsIntroStyle}" Margin="0" />
+            <!-- Finds a setting on any tab: the same index the Ctrl+K palette uses. -->
+            <AutoSuggestBox x:Name="SettingsSearch" x:Uid="Settings_Search" Width="360" MaxWidth="480" HorizontalAlignment="Left"
+                            Margin="0,6,0,0" QueryIcon="Find" AutomationProperties.AutomationId="SettingsSearch"
+                            DisplayMemberPath="Display" TextMemberPath="Label"
+                            TextChanged="SettingsSearch_TextChanged"
+                            QuerySubmitted="SettingsSearch_QuerySubmitted" />
             <InfoBar x:Uid="Settings_SaveError" IsOpen="{x:Bind ViewModel.HasSaveError, Mode=OneWay}"
                      IsClosable="False" Severity="Error" AutomationProperties.AutomationId="SettingsSaveError">
                 <InfoBar.ActionButton>
@@ -61,10 +67,29 @@
             </InfoBar>
         </StackPanel>
 
-        <Pivot x:Name="SettingsCategories" Grid.Row="1" AutomationProperties.AutomationId="SettingsCategories">
+        <!-- Categories on the left, one shown at a time. Narrow windows swap the list
+             for a drop-down above the content (code-behind, by width). -->
+        <Grid x:Name="SettingsBody" Grid.Row="1" ColumnSpacing="24" SizeChanged="SettingsBody_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="CategoryColumn" Width="200" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <ListView x:Name="SettingsCategories" Grid.RowSpan="2" Margin="-4,12,0,0" SelectionMode="Single"
+                      x:Uid="Settings_Categories"
+                      AutomationProperties.AutomationId="SettingsCategories"
+                      SelectionChanged="SettingsCategories_SelectionChanged" />
+            <ComboBox x:Name="SettingsCategoryPicker" Grid.Column="1" Margin="0,8,0,0" MinWidth="200"
+                      x:Uid="Settings_CategoryPicker" Visibility="Collapsed"
+                      AutomationProperties.AutomationId="SettingsCategoryPicker"
+                      SelectionChanged="SettingsCategoryPicker_SelectionChanged" />
+            <Grid x:Name="SettingsTabs" Grid.Column="1" Grid.Row="1">
 
             <!-- General Tab -->
-            <PivotItem x:Uid="Settings_TabGeneral">
+            <appControls:SettingsTab x:Uid="Settings_TabGeneral" Glyph="&#xE713;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
 
@@ -131,17 +156,6 @@
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsPokerHandToggle"
                                 IsOn="{x:Bind ViewModel.PokerHandEnabled, Mode=TwoWay}" />
-                        </controls:SettingsCard>
-
-                        <controls:SettingsCard
-                            x:Uid="SC_RecordMode"
-                            AutomationProperties.AutomationId="SettingsRecordModeCard">
-                            <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE7C8;" />
-                            </controls:SettingsCard.HeaderIcon>
-                            <ToggleSwitch
-                                AutomationProperties.AutomationId="SettingsRecordModeToggle"
-                                IsOn="{x:Bind ViewModel.RecordModeEnabled, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
                         <controls:SettingsCard
@@ -228,10 +242,10 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
             <!-- Folders Tab -->
-            <PivotItem x:Uid="Settings_TabFolders">
+            <appControls:SettingsTab x:Uid="Settings_TabFolders" Glyph="&#xE8B7;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
 
@@ -436,10 +450,10 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
             <!-- Filters Tab -->
-            <PivotItem x:Uid="Settings_TabFilters">
+            <appControls:SettingsTab x:Uid="Settings_TabFilters" Glyph="&#xE71C;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
                         <TextBlock x:Uid="Settings_SizeFiltersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
@@ -659,10 +673,10 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
             <!-- Advanced Tab -->
-            <PivotItem x:Uid="Settings_TabAdvanced">
+            <appControls:SettingsTab x:Uid="Settings_TabAdvanced" Glyph="&#xE9F5;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
 
@@ -767,10 +781,10 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
             <!-- Plugins Tab -->
-            <PivotItem x:Uid="Settings_TabPlugins">
+            <appControls:SettingsTab x:Uid="Settings_TabPlugins" Glyph="&#xEA86;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="20">
 
@@ -910,10 +924,10 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
             <!-- Experimental Tab -->
-            <PivotItem x:Uid="Settings_TabOcd">
+            <appControls:SettingsTab x:Uid="Settings_TabOcd" Glyph="&#xE7BE;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
 
@@ -937,8 +951,9 @@
 
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </appControls:SettingsTab>
 
-        </Pivot>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>

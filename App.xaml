@@ -8,36 +8,9 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <!--  After the controls resources: the tokens refer to their brushes.  -->
+                <ResourceDictionary Source="ms-appx:///Styles/Tokens.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#FF4060" />
-                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#FF4060" />
-                    <SolidColorBrush x:Key="RatingAllAgesBadgeBrush" Color="#2E7D32" />
-                    <SolidColorBrush x:Key="RatingBadgeForegroundBrush" Color="White" />
-                    <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
-                    <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
-                    <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#FF4060" />
-                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="#FF4060" />
-                    <SolidColorBrush x:Key="RatingAllAgesBadgeBrush" Color="#2E7D32" />
-                    <SolidColorBrush x:Key="RatingBadgeForegroundBrush" Color="White" />
-                    <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
-                    <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
-                    <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="HighContrast">
-                    <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
-                    <SolidColorBrush x:Key="RatingR18BadgeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
-                    <SolidColorBrush x:Key="RatingAllAgesBadgeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
-                    <SolidColorBrush x:Key="RatingBadgeForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                    <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                    <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                    <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

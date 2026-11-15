@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--  Ctrl+K: one box that finds pages, commands, settings, authors and cards.
+      An overlay rather than a ContentDialog: a dialog takes the whole window's
+      input modally and animates in and out, which is too heavy for something
+      opened and dismissed several times a minute.  -->
+<UserControl
+    x:Class="KoikatsuSceneGallery.Controls.CommandPalette"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:KoikatsuSceneGallery.Controls"
+    Visibility="Collapsed">
+    <Grid>
+        <Border
+            x:Name="Scrim"
+            Background="{ThemeResource SmokeFillColorDefaultBrush}"
+            Tapped="Scrim_Tapped" />
+        <Border
+            x:Name="Card"
+            MaxWidth="640"
+            MaxHeight="560"
+            Margin="16,64,16,16"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Top"
+            Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}"
+            BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
+            BorderThickness="1"
+            CornerRadius="{ThemeResource OverlayCornerRadius}"
+            Translation="0,0,48">
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
+            <Grid RowSpacing="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBox
+                    x:Name="QueryBox"
+                    x:Uid="Palette_Query"
+                    Margin="12,12,12,4"
+                    AutomationProperties.AutomationId="PaletteQueryBox"
+                    PreviewKeyDown="QueryBox_PreviewKeyDown"
+                    TextChanged="QueryBox_TextChanged" />
+                <ListView
+                    x:Name="ResultsList"
+                    Grid.Row="1"
+                    Padding="4,0,4,4"
+                    AutomationProperties.AutomationId="PaletteResults"
+                    IsItemClickEnabled="True"
+                    ItemClick="ResultsList_ItemClick"
+                    SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:PaletteEntry">
+                            <Grid Padding="4,8" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon VerticalAlignment="Center" FontSize="16" Glyph="{x:Bind Glyph}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock MaxLines="1" Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        MaxLines="1"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Bind Detail}"
+                                        TextTrimming="CharacterEllipsis"
+                                        Visibility="{x:Bind local:PageHeader.VisibleWhenText(Detail)}" />
+                                </StackPanel>
+                                <TextBlock
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind CategoryLabel}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <TextBlock
+                    x:Name="EmptyText"
+                    x:Uid="Palette_NoResults"
+                    Grid.Row="1"
+                    Margin="16,8,16,16"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed" />
+                <TextBlock
+                    x:Uid="Palette_KeyHint"
+                    Grid.Row="2"
+                    Margin="16,4,16,10"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

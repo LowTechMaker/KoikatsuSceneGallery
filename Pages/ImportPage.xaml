@@ -221,6 +221,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="2">
                 <TextBlock x:Uid="Import_Title" Style="{StaticResource TitleTextBlockStyle}" />
@@ -228,8 +229,22 @@
                            Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}"
                            Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <!-- Add, review, import: filled in code-behind from the page's state. -->
+                <Border x:Name="StepsHost" Margin="0,6,0,0" HorizontalAlignment="Left"
+                        AutomationProperties.AutomationId="ImportSteps" />
             </StackPanel>
-            <Button Grid.Column="1" VerticalAlignment="Center" AutomationProperties.AutomationId="ImportOptionsButton"
+            <!-- Out of the options flyout: it decides whether recognised cards wait for
+                 review or go straight in, which is worth seeing before dropping files. -->
+            <StackPanel x:Uid="Import_AutoImportHost" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                        VerticalAlignment="Center">
+                <TextBlock x:Uid="Import_AutoImportShort" VerticalAlignment="Center"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <ToggleSwitch x:Uid="Import_AutoImportToggle" MinWidth="0" OnContent="" OffContent=""
+                              AutomationProperties.AutomationId="ImportAutoImportIdentifiedToggle"
+                              IsOn="{x:Bind Settings.AutoImportIdentifiedPosts, Mode=TwoWay}" />
+            </StackPanel>
+            <Button Grid.Column="2" VerticalAlignment="Center" AutomationProperties.AutomationId="ImportOptionsButton"
                     x:Uid="Import_OptionsButton">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon FontSize="14" Glyph="&#xE713;" />
@@ -258,14 +273,6 @@
                                        SmallChange="1" SpinButtonPlacementMode="Compact"
                                        IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
                                        Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
-                            <StackPanel Spacing="4">
-                                <ToggleSwitch x:Uid="Import_AutoImportIdentified"
-                                              AutomationProperties.AutomationId="ImportAutoImportIdentifiedToggle"
-                                              IsOn="{x:Bind Settings.AutoImportIdentifiedPosts, Mode=TwoWay}" />
-                                <TextBlock x:Uid="Import_AutoImportIdentifiedHint" TextWrapping="Wrap"
-                                           Style="{StaticResource CaptionTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
                             <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12"
                                                 Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
                                 <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
@@ -292,22 +299,15 @@
             </Button>
         </Grid>
 
-        <!-- Messages: at most a warning, a rollback error and the last result. -->
-        <StackPanel Grid.Row="1" Spacing="8">
-            <InfoBar x:Name="RejectedWarningBar"
-                     IsOpen="{x:Bind ViewModel.ShowRejectedWarning, Mode=TwoWay}"
-                     Severity="Warning" IsClosable="True" />
-            <InfoBar x:Name="ImportFailureBar"
-                     IsOpen="{x:Bind ViewModel.ShowImportFailure, Mode=TwoWay}"
-                     Title="{x:Bind ViewModel.ImportFailureTitle, Mode=OneWay}"
-                     Message="{x:Bind ViewModel.ImportFailureMessage, Mode=OneWay}"
-                     Severity="Error" IsClosable="True" />
-            <InfoBar x:Name="ImportResultBar"
-                     IsOpen="{x:Bind ViewModel.ShowImportResult, Mode=TwoWay}"
-                     Title="{x:Bind ViewModel.ImportResultTitle, Mode=OneWay}"
-                     Message="{x:Bind ViewModel.ImportResultMessage, Mode=OneWay}"
-                     Severity="{x:Bind ViewModel.ImportResultSeverity, Mode=OneWay}" IsClosable="True" />
-        </StackPanel>
+        <!-- Messages: a rollback error, the rejected-files warning and the last result
+             share one bar, most urgent first; closing it brings up the next. -->
+        <InfoBar x:Name="ImportMessageBar" Grid.Row="1" IsClosable="True"
+                 AutomationProperties.AutomationId="ImportMessageBar"
+                 CloseButtonClick="ImportMessageBar_CloseButtonClick">
+            <TextBlock x:Name="ImportMessageMore" Margin="0,0,0,12" Visibility="Collapsed"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </InfoBar>
 
         <Border x:Name="DropZone" Grid.Row="2" CornerRadius="16" Margin="0,0,0,16"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="2"
@@ -441,13 +441,14 @@
                         <Button Grid.Column="3" x:Uid="Import_LookupFetch" Style="{StaticResource AccentButtonStyle}"
                                 Command="{x:Bind ViewModel.FetchReviewArtworkCommand}" />
                     </Grid>
-                    <controls:WrapPanel Spacing="6">
-                        <Button x:Name="ReviewEditButton" x:Uid="Import_SelectionAuthorButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE77B;" />
-                                <TextBlock x:Uid="Import_SelectionAuthor" />
-                            </StackPanel>
-                            <Button.Flyout>
+                    <!-- A command bar rather than a row of buttons: it keeps one line and folds
+                         what does not fit into "More" when the window is narrow. -->
+                    <CommandBar x:Name="SelectionCommands" HorizontalAlignment="Left" Background="Transparent"
+                                DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" OverflowButtonVisibility="Auto"
+                                AutomationProperties.AutomationId="ImportSelectionCommands">
+                        <AppBarButton x:Name="ReviewEditButton" x:Uid="Import_SelAuthor">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE77B;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
                                 <Flyout x:Name="ReviewEditFlyout" Placement="TopEdgeAlignedLeft">
                                     <StackPanel Width="300" Spacing="10">
                                         <TextBlock x:Uid="Import_SelectionAuthorTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
@@ -464,47 +465,33 @@
                                                 Command="{x:Bind ViewModel.ApplyReviewAuthorCommand}" />
                                     </StackPanel>
                                 </Flyout>
-                            </Button.Flyout>
-                        </Button>
-                        <DropDownButton x:Uid="Import_SelectionRatingButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE7BA;" />
-                                <TextBlock x:Uid="Import_SelectionRating" />
-                            </StackPanel>
-                            <DropDownButton.Flyout>
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="Import_SelRating">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE7BA;" /></AppBarButton.Icon>
+                            <AppBarButton.Flyout>
                                 <MenuFlyout Placement="TopEdgeAlignedLeft">
                                     <MenuFlyoutItem Text="G" Tag="1" Click="ApplySelectionRating_Click" />
                                     <MenuFlyoutItem Text="R-18" Tag="2" Click="ApplySelectionRating_Click" />
                                     <MenuFlyoutItem Text="R-18G" Tag="3" Click="ApplySelectionRating_Click" />
                                 </MenuFlyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-                        <Button Click="SearchSelected_Click" x:Uid="Import_SelectionSearchButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE721;" />
-                                <TextBlock x:Uid="Import_SelectionSearch" />
-                            </StackPanel>
-                        </Button>
-                        <Button Click="OpenAuthorCheck_Click" Visibility="{x:Bind ViewModel.AuthorCheckVisibility}"
-                                x:Uid="Import_SelectionAuthorCheckButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE8FD;" />
-                                <TextBlock x:Uid="Import_SelectionAuthorCheck" />
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}" x:Uid="Import_SelectionRemoveButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE74D;" />
-                                <TextBlock x:Uid="Import_SelectionRemove" />
-                            </StackPanel>
-                        </Button>
-                        <Button Click="ClearSelection_Click" x:Uid="Import_SelectionClearButton">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="13" Glyph="&#xE894;" />
-                                <TextBlock x:Uid="Import_SelectionClear" />
-                            </StackPanel>
-                        </Button>
-                    </controls:WrapPanel>
+                            </AppBarButton.Flyout>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="Import_SelSearch" Click="SearchSelected_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE721;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="Import_SelAuthorCheck" Click="OpenAuthorCheck_Click"
+                                      Visibility="{x:Bind ViewModel.AuthorCheckVisibility}">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE8FD;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarSeparator />
+                        <AppBarButton x:Uid="Import_SelRemove" Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                        <AppBarButton x:Uid="Import_SelClear" Click="ClearSelection_Click">
+                            <AppBarButton.Icon><FontIcon Glyph="&#xE894;" /></AppBarButton.Icon>
+                        </AppBarButton>
+                    </CommandBar>
                     <TextBlock Text="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}"
                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
                                ToolTipService.ToolTip="{x:Bind ViewModel.ReviewBatchStatusText, Mode=OneWay}"

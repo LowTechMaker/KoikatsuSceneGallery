@@ -162,6 +162,7 @@ internal static class DetailNavigationHelper
             var file = await StorageFile.GetFileFromPathAsync(card.FilePath);
             e.Data.SetStorageItems([file]);
             e.Data.RequestedOperation = DataPackageOperation.Copy;
+            InternalDrag.Mark(e.Data);
         }
         finally
         {
@@ -169,10 +170,16 @@ internal static class DetailNavigationHelper
         }
     }
 
-    public static void CopyText(string text)
+    /// <summary>
+    /// Puts <paramref name="text"/> on the clipboard and says so. Copying has no
+    /// visible effect of its own, and several callers copy on a tap or a right
+    /// click that the user may not have known was a copy.
+    /// </summary>
+    public static void CopyText(string text, string? notice = null)
     {
         var package = new DataPackage();
         package.SetText(text);
         Clipboard.SetContent(package);
+        AppToast.Show(notice ?? UiText.Get("Toast_Copied"), InfoBarSeverity.Success, key: "clipboard");
     }
 }
