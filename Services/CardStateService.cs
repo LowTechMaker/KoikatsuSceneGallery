@@ -10,6 +10,13 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 internal sealed class CardStateService(CardStateStore store, SettingsViewModel settings, IAppLogger logger)
 {
+    // One for the app's lifetime: it remembers what it hashed, so a reconcile
+    // after every library reload only reads cards it has not seen before.
+    private readonly CardStateReconciler _reconciler = new(store, CardPayloadHash.TryCompute);
+    // Reloads can come in quick succession; overlapping runs would hash the
+    // same cards twice before either remembered them.
+    private readonly SemaphoreSlim _reconcileGate = new(1, 1);
+
     /// <summary>Raised with the card's full path, on a background thread.</summary>
     public event Action<string>? StateChanged
     {
@@ -58,6 +65,30 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
     {
         var value = !Has(filePath, flag);
         return await SetAsync([filePath], flag, value) == 0 ? value : null;
+    }
+
+    /// <summary>
+    /// Re-attaches states whose card was moved or renamed outside the app to
+    /// the card in <paramref name="livePaths"/> with the same hash, off the UI
+    /// thread. Each re-attached card raises <see cref="StateChanged"/>.
+    /// Returns how many were re-attached.
+    /// </summary>
+    public Task<int> ReconcileAsync(IReadOnlyCollection<string> livePaths, CancellationToken cancellationToken = default)
+    {
+        var roots = Roots();
+        return Task.Run(async () =>
+        {
+            await _reconcileGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                store.EnsureLoaded(roots);
+                return await _reconciler.ReconcileAsync(livePaths, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _reconcileGate.Release();
+            }
+        }, cancellationToken);
     }
 
     /// <summary>

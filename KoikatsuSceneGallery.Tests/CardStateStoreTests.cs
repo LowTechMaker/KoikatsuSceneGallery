@@ -41,6 +41,48 @@ public sealed class CardStateStoreTests
     }
 
     [Fact]
+    public async Task OnlyStoredFieldsAreWrittenNotComputedOnes()
+    {
+        using var directory = new TestDirectory();
+        var store = Store();
+        store.EnsureLoaded([directory.Path]);
+        await store.SetFlagAsync(Path.Combine(directory.Path, "a.png"), "hash-a", CardFlag.Queued, true);
+        await store.MarkUsedAsync(Path.Combine(directory.Path, "b.png"), "hash-b");
+
+        using var json = JsonDocument.Parse(File.ReadAllText(CardStateStore.GetFilePath(directory.Path)));
+        foreach (var entry in json.RootElement.GetProperty("states").EnumerateArray())
+        {
+            // Exactly the record's positional fields: IsEmpty is derived from
+            // them and would only go stale or be trusted by another reader.
+            Assert.Equal(
+                new[] { "hash", "relativePath", "queued", "liked", "hidden", "lastUsedAt", "useCount", "updatedAt" }
+                    .Order(StringComparer.Ordinal),
+                entry.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
+            Assert.False(entry.TryGetProperty("isEmpty", out _));
+        }
+    }
+
+    [Fact]
+    public void AFileWrittenWithIsEmptyStillLoads()
+    {
+        // Wave 1 wrote the computed property; those files must keep working.
+        using var directory = new TestDirectory();
+        var file = CardStateStore.GetFilePath(directory.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, """
+            { "schemaVersion": 1, "states": [ { "hash": "hash-a", "relativePath": "a.png", "queued": true,
+              "liked": false, "hidden": false, "lastUsedAt": null, "useCount": 0,
+              "updatedAt": "2026-11-15T12:00:00+00:00", "isEmpty": false } ] }
+            """);
+        var store = Store();
+
+        store.EnsureLoaded([directory.Path]);
+
+        Assert.True(store.TryGetByPath(Path.Combine(directory.Path, "a.png"))?.Queued);
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(file)!, "*.unreadable-*"));
+    }
+
+    [Fact]
     public async Task EnsureLoadedAddsRootsInsteadOfReplacingThem()
     {
         using var directory = new TestDirectory();

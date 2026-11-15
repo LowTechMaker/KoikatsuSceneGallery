@@ -109,7 +109,7 @@ public sealed class HomeDealTests
         var visible = library.Where(c => !hidden.Contains(c.Path)).ToArray();
 
         for (var i = 0; i < 5; i++)
-            Assert.Empty(Paths(Deal(dealer, visible, [])).Where(hidden.Contains));
+            Assert.DoesNotContain(Paths(Deal(dealer, visible, [])), hidden.Contains);
     }
 
     [Fact]

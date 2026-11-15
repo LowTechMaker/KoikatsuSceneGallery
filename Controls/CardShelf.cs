@@ -273,6 +273,14 @@ internal sealed class CardShelf : Grid
                 _flags.Children.Add(button);
             }
 
+            // The tick is named for UI Automation, but a Border has no automation
+            // peer and an icon is easy to skip; UpdateState also puts the same
+            // word in the open button's item status, which a screen reader
+            // announces with the card's name.
+            var usedText = UiText.Get("CardState_Used");
+            AutomationProperties.SetName(_used, usedText);
+            AutomationProperties.SetName(_used.Child, usedText);
+
             // The flag buttons come after the open button in the tree, so Tab
             // from a focused tile walks into them once focus has shown them.
             var picture = new Grid { Children = { _open, _used, _flags } };
@@ -329,6 +337,7 @@ internal sealed class CardShelf : Grid
             AutomationProperties.SetAutomationId(_queue, $"{id}_Queue");
             AutomationProperties.SetAutomationId(_like, $"{id}_Like");
             AutomationProperties.SetAutomationId(_hide, $"{id}_Hide");
+            AutomationProperties.SetAutomationId(_used.Child, $"{id}_Used");
         }
 
         /// <summary>Re-reads the card's state: the flag glyphs and the used tick.</summary>
@@ -338,7 +347,9 @@ internal sealed class CardShelf : Grid
             _queue.Show(_states.Has(path, CardFlag.Queued));
             _like.Show(_states.Has(path, CardFlag.Liked));
             _hide.Show(_states.Has(path, CardFlag.Hidden));
-            _used.Visibility = _states.Get(path)?.LastUsedAt is null ? Visibility.Collapsed : Visibility.Visible;
+            var used = _states.Get(path)?.LastUsedAt is not null;
+            _used.Visibility = used ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetItemStatus(_open, used ? UiText.Get("CardState_Used") : "");
         }
 
         private void ShowFlags(bool show) => _flags.Visibility = show ? Visibility.Visible : Visibility.Collapsed;

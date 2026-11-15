@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
@@ -32,6 +33,8 @@ internal sealed record CardState(
     DateTimeOffset UpdatedAt)
 {
     /// <summary>Nothing worth keeping on disk: no flag and never used.</summary>
+    /// <remarks>Derived, so not written: a stored copy could only disagree with the fields.</remarks>
+    [JsonIgnore]
     public bool IsEmpty => !Queued && !Liked && !Hidden && LastUsedAt is null;
 
     public bool Has(CardFlag flag) => flag switch
@@ -155,6 +158,12 @@ internal sealed class CardStateStore
     {
         lock (_gate)
             return [.. _byHash.Values.Select(v => (FullPathOf(v.Root, v.Entry), v.Entry))];
+    }
+
+    /// <summary>The loaded library root holding <paramref name="fullPath"/>, or null when none does.</summary>
+    public string? RootOf(string fullPath)
+    {
+        lock (_gate) return FindRoot(fullPath);
     }
 
     /// <summary>

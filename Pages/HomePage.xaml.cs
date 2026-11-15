@@ -45,6 +45,7 @@ public sealed partial class HomePage : Page
     {
         base.OnNavigatedTo(e);
         _gallery.CardsReloaded += QueueRefresh;
+        _gallery.CardsReloaded += Reconcile;
         _states.StateChanged += State_Changed;
         // The shelves ask for thumbnails of cards the gallery may not have
         // shown, and leaving the gallery cancelled its thumbnail session.
@@ -52,13 +53,30 @@ public sealed partial class HomePage : Page
         if (_gallery.Cards.Count == 0) _ = _gallery.LoadCardsCommand.ExecuteAsync(null);
         await _states.EnsureLoadedAsync();
         _viewModel.Refresh();
+        Reconcile();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         _gallery.CardsReloaded -= QueueRefresh;
+        _gallery.CardsReloaded -= Reconcile;
         _states.StateChanged -= State_Changed;
         base.OnNavigatedFrom(e);
+    }
+
+    // Finds states whose card was moved or renamed outside the app. Runs in
+    // the background; whatever it re-attaches comes back through StateChanged,
+    // which refreshes the shelves. Skipped while the scene library is still
+    // loading: half-loaded, most states would look orphaned, and CardsReloaded
+    // calls this again when the load is done.
+    private void Reconcile()
+    {
+        if (_gallery.IsLoading) return;
+        string[] paths = [.. App.Services.GetRequiredService<LibraryRegistry>().All
+            .SelectMany(library => library.Cards)
+            .Select(card => card.FilePath)];
+        _states.ReconcileAsync(paths).Observe(
+            App.Services.GetRequiredService<IAppLogger>(), "CardState.Reconcile");
     }
 
     // Raised off the UI thread, once per card: a batch of ten changes should
