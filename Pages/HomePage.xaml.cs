@@ -81,7 +81,7 @@ public sealed partial class HomePage : Page
 
     private async void ToggleFlag(CardBase card, CardFlag flag)
     {
-        if (await _states.ToggleAsync(card, flag) is null)
+        if (await _states.ToggleAsync(card.FilePath, flag) is null)
             AppToast.Show(UiText.Get("CardState_SaveFailed"), InfoBarSeverity.Error, key: "card-state");
     }
 }

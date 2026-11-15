@@ -94,7 +94,7 @@ internal sealed class HomeViewModel
     public void DealAgain()
     {
         var candidates = _scenes.Cards
-            .Where(card => !_states.Has(card, CardFlag.Hidden))
+            .Where(card => !_states.Has(card.FilePath, CardFlag.Hidden))
             .ToArray();
         var hand = HomeDeal.Deal(candidates, _dealt);
         _dealt = [.. hand.Select(card => card.FilePath)];

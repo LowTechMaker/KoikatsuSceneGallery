@@ -1,5 +1,4 @@
 using KoikatsuSceneGallery.Helpers;
-using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.ViewModels;
 
 namespace KoikatsuSceneGallery.Services;
@@ -31,34 +30,34 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
     /// <summary>The stored state of the card at this path; null when it has none or nothing is loaded yet.</summary>
     public CardState? Get(string filePath) => store.TryGetByPath(filePath);
 
-    public bool Has(CardBase card, CardFlag flag) => Get(card.FilePath)?.Has(flag) == true;
+    public bool Has(string filePath, CardFlag flag) => Get(filePath)?.Has(flag) == true;
 
     public IReadOnlyList<(string FullPath, CardState State)> Snapshot() => store.Snapshot();
 
     /// <summary>Sets <paramref name="flag"/> on every card; returns how many could not be saved.</summary>
-    public async Task<int> SetAsync(IReadOnlyList<CardBase> cards, CardFlag flag, bool value)
+    public async Task<int> SetAsync(IReadOnlyList<string> filePaths, CardFlag flag, bool value)
     {
         var roots = Roots();
         var hashed = await Task.Run(() =>
         {
             store.EnsureLoaded(roots);
-            return cards.Select(card => (card, hash: CardPayloadHash.TryCompute(card.FilePath))).ToArray();
+            return filePaths.Select(path => (path, hash: CardPayloadHash.TryCompute(path))).ToArray();
         });
 
         var failed = 0;
-        foreach (var (card, hash) in hashed)
+        foreach (var (path, hash) in hashed)
         {
-            if (hash is null || !await store.SetFlagAsync(card.FilePath, hash, flag, value))
+            if (hash is null || !await store.SetFlagAsync(path, hash, flag, value))
                 failed++;
         }
         return failed;
     }
 
     /// <summary>Flips <paramref name="flag"/> on one card; returns the new value, or null when it could not be saved.</summary>
-    public async Task<bool?> ToggleAsync(CardBase card, CardFlag flag)
+    public async Task<bool?> ToggleAsync(string filePath, CardFlag flag)
     {
-        var value = !Has(card, flag);
-        return await SetAsync([card], flag, value) == 0 ? value : null;
+        var value = !Has(filePath, flag);
+        return await SetAsync([filePath], flag, value) == 0 ? value : null;
     }
 
     /// <summary>
