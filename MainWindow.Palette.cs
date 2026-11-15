@@ -66,6 +66,7 @@ public sealed partial class MainWindow
 
         foreach (var (item, glyph, english) in new[]
         {
+            (HomeNavItem, "\uE80F", "home start shelves queue favourites"),
             (DiscoveryNavItem, "", "random discovery shuffle explore"),
             (RatingNavItem, "", "rating rate explore"),
             (AuthorsNavItem, "", "authors artists creators"),

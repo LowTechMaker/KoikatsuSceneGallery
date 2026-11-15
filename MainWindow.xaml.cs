@@ -86,7 +86,7 @@ public sealed partial class MainWindow : Window
         ShowRecordModeState(settings.RecordModeEnabled);
         settings.RecordModeEnabledChanged += OnRecordModeEnabledChanged;
 
-        NavigateToSelectedLibraryPage();
+        NavFrame.Navigate(typeof(HomePage));
     }
 
     private void ImportViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -519,6 +519,8 @@ public sealed partial class MainWindow : Window
     {
         if (e.SourcePageType == typeof(SettingsPage))
             NavView.SelectedItem = NavView.SettingsItem;
+        else if (e.SourcePageType == typeof(HomePage))
+            NavView.SelectedItem = HomeNavItem;
         else if (e.SourcePageType == typeof(FeatureUnavailablePage))
             NavView.SelectedItem = e.Parameter switch
             {
@@ -703,6 +705,10 @@ public sealed partial class MainWindow : Window
     {
         switch (item.Tag)
         {
+            case "home":
+                if (NavFrame.CurrentSourcePageType != typeof(HomePage))
+                    NavFrame.Navigate(typeof(HomePage));
+                break;
             case "discovery":
                 if (NavFrame.CurrentSourcePageType != typeof(RandomDiscoveryPage))
                     NavFrame.Navigate(typeof(RandomDiscoveryPage));

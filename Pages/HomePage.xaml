@@ -1,0 +1,24 @@
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <controls:PageHeader x:Uid="Home_Header" />
+        <!--  The shelves are built in code (HomePage.xaml.cs): one CardShelf
+              per HomeViewModel shelf, in the view model's order.  -->
+        <ScrollViewer
+            Grid.Row="1"
+            AutomationProperties.AutomationId="HomeScroll"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel
+                x:Name="Shelves"
+                Margin="0,0,0,24"
+                Spacing="24" />
+        </ScrollViewer>
+    </Grid>
+</Page>

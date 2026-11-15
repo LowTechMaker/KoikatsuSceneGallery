@@ -353,6 +353,9 @@ public partial class App : Application
             Services.GetRequiredService<LibraryRegistry>(), _pluginService, _logger));
         Services.Add(new TagDictionaryService(_pluginService, _logger));
         Services.Add(_userCardRatings);
+        var cardStates = new CardStateService(new CardStateStore(), settingsViewModel, _logger);
+        Services.Add(cardStates);
+        Services.Add(new HomeViewModel(Services.GetRequiredService<LibraryRegistry>(), cardStates));
         Services.Add(new UsageRecordService(
             settingsViewModel,
             () => Services.GetRequiredService<LibraryRegistry>().All

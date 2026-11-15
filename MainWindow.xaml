@@ -167,11 +167,24 @@
             ItemInvoked="NavView_ItemInvoked"
             SelectionChanged="NavView_SelectionChanged">
             <NavigationView.MenuItems>
+                <!--  The start page. First because it is where "what do I
+                      play now" gets answered; the library below is where you
+                      go when you already know what you are looking for.  -->
+                <NavigationViewItem
+                    x:Name="HomeNavItem"
+                    x:Uid="Nav_Home"
+                    AutomationProperties.AutomationId="HomeNavItem"
+                    IsSelected="True"
+                    Tag="home"
+                    ToolTipService.ToolTip="{x:Null}">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE80F;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem
                     x:Name="LibraryNavItem"
                     x:Uid="Nav_Library"
                     AutomationProperties.AutomationId="LibraryNavItem"
-                    IsSelected="True"
                     Tag="library"
                     ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
