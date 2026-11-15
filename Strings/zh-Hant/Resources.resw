@@ -2255,4 +2255,28 @@
   <data name="Settings_CategoryPicker.AutomationProperties.Name" xml:space="preserve">
     <value>設定分類</value>
   </data>
+  <data name="Nav_Home.Content" xml:space="preserve"><value>首頁</value></data>
+  <data name="Home_Header.Title" xml:space="preserve"><value>今天玩什麼</value></data>
+  <data name="Home_Header.Subtitle" xml:space="preserve"><value>想試的、隨手翻到的、最近玩過的和喜歡的場景。</value></data>
+  <data name="Home_Queued" xml:space="preserve"><value>想試</value></data>
+  <data name="Home_QueuedEmpty" xml:space="preserve"><value>還沒有想試的場景。在任何一張卡上按「想試」或 Q 鍵，它就會出現在這裡。</value></data>
+  <data name="Home_Deal" xml:space="preserve"><value>翻幾張看看</value></data>
+  <data name="Home_DealAgain" xml:space="preserve"><value>再發一手</value></data>
+  <data name="Home_Recent" xml:space="preserve"><value>最近玩過</value></data>
+  <data name="Home_Liked" xml:space="preserve"><value>最愛</value></data>
+  <data name="CardState_Queue" xml:space="preserve"><value>想試</value></data>
+  <data name="CardState_Unqueue" xml:space="preserve"><value>移出想試</value></data>
+  <data name="CardState_Like" xml:space="preserve"><value>喜歡</value></data>
+  <data name="CardState_Unlike" xml:space="preserve"><value>取消喜歡</value></data>
+  <data name="CardState_Hide" xml:space="preserve"><value>不要了</value></data>
+  <data name="CardState_Unhide" xml:space="preserve"><value>恢復顯示</value></data>
+  <data name="CardState_SaveFailed" xml:space="preserve"><value>無法儲存卡片狀態。</value></data>
+  <data name="CardState_QueuedToast" xml:space="preserve"><value>已加入想試。</value></data>
+  <data name="CardState_UnqueuedToast" xml:space="preserve"><value>已移出想試。</value></data>
+  <data name="CardState_LikedToast" xml:space="preserve"><value>已加入最愛。</value></data>
+  <data name="CardState_UnlikedToast" xml:space="preserve"><value>已移出最愛。</value></data>
+  <data name="CardState_HiddenToast" xml:space="preserve"><value>已隱藏。可以在收藏庫的篩選中找回。</value></data>
+  <data name="CardState_UnhiddenToast" xml:space="preserve"><value>已恢復顯示。</value></data>
+  <data name="Browser_ShowHiddenToggle.Header" xml:space="preserve"><value>顯示「不要了」的卡片</value></data>
+  <data name="CardState_Used" xml:space="preserve"><value>玩過</value></data>
 </root>

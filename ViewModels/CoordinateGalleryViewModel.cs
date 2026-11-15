@@ -153,7 +153,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         var hasSearch = _searchKeywords.Length > 0;
         var filterRes = HasResolutionFilter;
 
-        if (!hasSearch && !filterRes && !HasOriginFilter && MetadataFilters.ActiveCount == 0)
+        if (!hasSearch && !filterRes && !HasOriginFilter && !HasHiddenFilter && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = null!;
         }

@@ -34,7 +34,9 @@ internal static class CardFileActions
         package.SetStorageItems(files);
         Clipboard.SetContent(package);
         // Copying cards out is exactly what record mode is for.
+        // The card state's "used" is recorded always, record mode or not.
         App.Services.GetService<UsageRecordService>()?.Record(paths, operation);
+        App.Services.GetService<CardStateService>()?.MarkUsed(paths);
         AppToast.Show(UiText.Format("CardMenu_FilesCopied", files.Count), InfoBarSeverity.Success, key: "clipboard");
     }
 
@@ -42,6 +44,7 @@ internal static class CardFileActions
     {
         DetailNavigationHelper.CopyText(filePath);
         App.Services.GetService<UsageRecordService>()?.Record([filePath], operation);
+        App.Services.GetService<CardStateService>()?.MarkUsed([filePath]);
     }
 
     /// <summary>A link copied counts as the card taken somewhere, like a path.</summary>
@@ -49,5 +52,6 @@ internal static class CardFileActions
     {
         DetailNavigationHelper.CopyText(url);
         App.Services.GetService<UsageRecordService>()?.Record([filePath], operation);
+        App.Services.GetService<CardStateService>()?.MarkUsed([filePath]);
     }
 }

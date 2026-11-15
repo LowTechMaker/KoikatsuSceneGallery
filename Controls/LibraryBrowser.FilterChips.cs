@@ -159,6 +159,11 @@ public sealed partial class LibraryBrowser
         }
     }
 
+    private void ShowHiddenToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_adapter is not null) VM.ShowHiddenCards = ShowHiddenToggle.IsOn;
+    }
+
     private void ResolutionToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_syncing || ResolutionFilter() is not { } resolution || resolution.Enabled == ResolutionToggle.IsOn) return;

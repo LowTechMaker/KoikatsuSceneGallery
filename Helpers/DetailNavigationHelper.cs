@@ -1,5 +1,6 @@
 using CommunityToolkit.WinUI.Collections;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -156,6 +157,9 @@ internal static class DetailNavigationHelper
     public static async Task HandleDragStartingAsync(CardBase? card, DragStartingEventArgs e)
     {
         if (card is null) return;
+        // The detail pages' drag-out: the card is on its way to the game, the
+        // same as a drag from the gallery, so it counts as used.
+        App.Services.GetService<CardStateService>()?.MarkUsed([card.FilePath]);
         var deferral = e.GetDeferral();
         try
         {

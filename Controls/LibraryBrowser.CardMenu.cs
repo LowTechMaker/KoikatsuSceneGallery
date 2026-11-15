@@ -4,6 +4,7 @@ using KoikatsuSceneGallery.Pages;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -63,6 +64,12 @@ public sealed partial class LibraryBrowser
             menu.Items.Add(rating);
         }
 
+        var paths = entry.Members.Select(card => card.FilePath).ToArray();
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(StateItem(entry.Card.FilePath, paths, CardFlag.Queued, "\uE710", "CardMenu_Queue"));
+        menu.Items.Add(StateItem(entry.Card.FilePath, paths, CardFlag.Liked, "\uEB51", "CardMenu_Like"));
+        menu.Items.Add(StateItem(entry.Card.FilePath, paths, CardFlag.Hidden, "\uED1A", "CardMenu_Hide"));
+
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item(count > 1 ? "CardMenu_CopyFiles" : "CardMenu_CopyFile", "",
             () => CardFileActions.CopyFilesAsync([.. entry.Members.Select(card => card.FilePath)], "Browser.CopyFile"), count));
@@ -88,6 +95,18 @@ public sealed partial class LibraryBrowser
         Icon = new FontIcon { Glyph = glyph },
         Command = new RelayAction(run),
     };
+
+    private static MenuFlyoutItem StateItem(string firstCardPath, IReadOnlyList<string> paths, CardFlag flag, string glyph, string automationId)
+    {
+        var item = new MenuFlyoutItem
+        {
+            Text = CardStateActions.Label(firstCardPath, flag),
+            Icon = new FontIcon { Glyph = glyph },
+            Command = new RelayAction(() => CardStateActions.ToggleAsync(paths, flag)),
+        };
+        AutomationProperties.SetAutomationId(item, automationId);
+        return item;
+    }
 
     private static AuthorSummary? FindAuthor(AuthorDisplay author) =>
         App.Services.GetRequiredService<AuthorInfoService>().GetSummaries()

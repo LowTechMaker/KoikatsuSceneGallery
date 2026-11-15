@@ -89,4 +89,40 @@ public sealed class SceneCardCachePersistenceTests
         Assert.Equal(TimeSpan.Zero, writer.Persistence.RetryDelay);
         Assert.Equal(2, JsonSerializer.Deserialize<Dictionary<string, CachedCardEntry>>(writer.Json!)!.Count);
     }
+
+    [Fact]
+    public void TheCreationTimeIsSavedAndReadBack()
+    {
+        using var writer = new ControlledCachePersistence();
+        using var cache = new SceneCardCacheService(writer, writer.CachePath, writer.Create);
+        var created = new DateTime(2026, 11, 15, 9, 30, 0).Ticks;
+        cache.Add(new("card.png", 1, 2, 3, 4, null, created));
+        writer.Persistence.Flush();
+        try
+        {
+            File.WriteAllBytes(writer.CachePath, writer.Json!);
+            using var reloaded = new SceneCardCacheService(writer, writer.CachePath, writer.Create);
+            Assert.Equal(created, Assert.Single(reloaded.LoadAll()).Value.DateCreatedTicks);
+        }
+        finally { File.Delete(writer.CachePath); }
+    }
+
+    [Fact]
+    public void ACacheFileWrittenBeforeTheCreationTimeStillLoads()
+    {
+        using var writer = new ControlledCachePersistence();
+        using var cache = new SceneCardCacheService(writer, writer.CachePath, writer.Create);
+        try
+        {
+            // The entry shape every cache file had before DateCreatedTicks.
+            File.WriteAllText(writer.CachePath, """
+                { "old.png": { "FilePath": "old.png", "FileSize": 1, "DateModifiedTicks": 2,
+                               "Width": 3, "Height": 4, "ThumbnailPath": null } }
+                """);
+            var entry = Assert.Single(cache.LoadAll()).Value;
+            Assert.Equal(new CachedCardEntry("old.png", 1, 2, 3, 4, null), entry);
+            Assert.Equal(0, entry.DateCreatedTicks);
+        }
+        finally { File.Delete(writer.CachePath); }
+    }
 }

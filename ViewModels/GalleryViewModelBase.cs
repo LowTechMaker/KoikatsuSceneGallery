@@ -120,8 +120,39 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     protected bool HasOriginFilter => !OriginFilter.IsAll;
 
+    // Also where "not for me" cards drop out: every gallery's filter and every
+    // scoped browser already ask this one question about a card, so hiding
+    // them here hides them everywhere at once.
     protected bool OriginPasses(object? card)
-        => !HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter);
+        => (!HasHiddenFilter || card is not CardBase known || !IsHiddenCard!(known.FilePath))
+           && (!HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter));
+
+    /// <summary>
+    /// Whether the user marked the card at this path "not for me". Set once by
+    /// the app; null (in tests, say) means nothing is ever hidden.
+    /// </summary>
+    public Func<string, bool>? IsHiddenCard { get; set; }
+
+    /// <summary>Session-only, like the other browser filters: off shows hidden cards again.</summary>
+    [ObservableProperty]
+    public partial bool ShowHiddenCards { get; set; }
+
+    protected bool HasHiddenFilter => IsHiddenCard is not null && !ShowHiddenCards;
+
+    partial void OnShowHiddenCardsChanged(bool value)
+    {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// A card's hidden flag changed. Safe from any thread; does nothing while
+    /// hidden cards are being shown anyway.
+    /// </summary>
+    public void RefreshHiddenCards() => _dispatcherQueue.TryEnqueue(() =>
+    {
+        if (HasHiddenFilter) ApplyFilter();
+    });
 
     partial void OnOriginFilterChanged(CardOriginSelection value)
     {

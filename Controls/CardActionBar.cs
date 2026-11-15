@@ -1,4 +1,5 @@
 using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -97,6 +98,10 @@ public sealed partial class CardActionBar : StackPanel
     {
         menu.Items.Clear();
         if (FilePath is not { } path) return;
+        AddState(menu, path, CardFlag.Queued, "\uE710", "CardAction_Queue");
+        AddState(menu, path, CardFlag.Liked, "\uEB51", "CardAction_Like");
+        AddState(menu, path, CardFlag.Hidden, "\uED1A", "CardAction_Hide");
+        menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "", "CardAction_CopyPath", () => CardFileActions.CopyPath(path, "Detail.CopyFilePath"));
         if (Path.GetDirectoryName(path) is { } folder)
             Add(menu, "", "CardAction_CopyFolder", () => DetailNavigationHelper.CopyText(folder));
@@ -110,6 +115,18 @@ public sealed partial class CardActionBar : StackPanel
     {
         var item = new MenuFlyoutItem { Text = UiText.Get(key), Icon = new FontIcon { Glyph = glyph } };
         item.Click += (_, _) => run();
+        menu.Items.Add(item);
+    }
+
+    private static void AddState(MenuFlyout menu, string path, CardFlag flag, string glyph, string automationId)
+    {
+        var item = new MenuFlyoutItem
+        {
+            Text = CardStateActions.Label(path, flag),
+            Icon = new FontIcon { Glyph = glyph },
+        };
+        AutomationProperties.SetAutomationId(item, automationId);
+        item.Click += (_, _) => _ = CardStateActions.ToggleAsync([path], flag);
         menu.Items.Add(item);
     }
 }

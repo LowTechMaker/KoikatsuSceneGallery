@@ -259,6 +259,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                                 FilePath = entry.FilePath,
                                 FileSize = entry.FileSize,
                                 DateModified = new DateTime(entry.DateModifiedTicks),
+                                DateCreated = new DateTime(entry.DateCreatedTicks),
                                 Width = entry.Width,
                                 Height = entry.Height,
                             };
@@ -329,9 +330,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             foreach (var (filePath, card) in _cardIndex)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // A card kept from a cache written before the creation time was
+                // stored has none; the scan just read it, so take it from there.
+                var created = card.DateCreated != default
+                    ? card.DateCreated
+                    : scannedIndex.TryGetValue(filePath, out var scanned) ? scanned.DateCreated : default;
                 newCache[filePath] = new CachedCardEntry(
                     card.FilePath, card.FileSize, card.DateModified.Ticks,
-                    card.Width, card.Height, card.ThumbnailPath);
+                    card.Width, card.Height, card.ThumbnailPath, created.Ticks);
             }
             await Task.Run(() => _cardCacheService.UpdateAll(newCache), cancellationToken);
 
@@ -402,7 +408,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         var filterRes = HasResolutionFilter;
         var hasMetadataFilter = GameFilter != GameFilterOption.All;
 
-        if (!hasRatingFilter && !hasSearch && !filterRes && !hasMetadataFilter && !HasOriginFilter)
+        if (!hasRatingFilter && !hasSearch && !filterRes && !hasMetadataFilter && !HasOriginFilter && !HasHiddenFilter)
         {
             CardsView.Filter = null!;
         }
@@ -421,7 +427,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         _cardCacheService.Add(new CachedCardEntry(
             card.FilePath, card.FileSize, card.DateModified.Ticks,
-            card.Width, card.Height, null));
+            card.Width, card.Height, null, card.DateCreated.Ticks));
         _dispatcherQueue.TryEnqueue(() =>
         {
             if (!_cardIndex.TryAdd(card.FilePath, card)) return;

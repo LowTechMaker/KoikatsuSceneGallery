@@ -17,6 +17,9 @@
     <Page.KeyboardAccelerators>
         <KeyboardAccelerator Key="Left" Invoked="PreviousCard_Invoked" />
         <KeyboardAccelerator Key="Right" Invoked="NextCard_Invoked" />
+        <KeyboardAccelerator Key="Q" Invoked="Queue_Invoked" />
+        <KeyboardAccelerator Key="F" Invoked="Like_Invoked" />
+        <KeyboardAccelerator Key="X" Invoked="Hide_Invoked" />
     </Page.KeyboardAccelerators>
 
     <Grid Padding="24,16,24,16" RowSpacing="16">

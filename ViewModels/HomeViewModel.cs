@@ -38,6 +38,7 @@ internal sealed class HomeViewModel
 
     private readonly ILibrary _scenes;
     private readonly CardStateService _states;
+    private readonly HomeDeal _dealer = new(Random.Shared);
     private string[] _dealt = [];
 
     public HomeViewModel(LibraryRegistry libraries, CardStateService states)
@@ -87,16 +88,23 @@ internal sealed class HomeViewModel
             .Select(entry => live[entry.FullPath]));
 
         if (_dealt.Length == 0) DealAgain();
-        else Replace(Deal, _dealt.Where(live.ContainsKey).Select(path => live[path]));
+        // A card hidden from the hand itself leaves it at once; the hand is not
+        // redealt, so the rest of it stays where the user was looking.
+        else Replace(Deal, _dealt
+            .Where(path => live.ContainsKey(path) && !_states.Has(path, CardFlag.Hidden))
+            .Select(path => live[path]));
     }
 
-    /// <summary>Deals a fresh hand, leaving out hidden cards.</summary>
+    /// <summary>
+    /// Deals a fresh hand, leaving out hidden cards, the way the discovery page
+    /// deals a poker hand (<see cref="HomeDeal"/>).
+    /// </summary>
     public void DealAgain()
     {
         var candidates = _scenes.Cards
             .Where(card => !_states.Has(card.FilePath, CardFlag.Hidden))
             .ToArray();
-        var hand = HomeDeal.Deal(candidates, _dealt);
+        var hand = _dealer.Deal(candidates, _dealt, card => card.FilePath, card => card.FileSize);
         _dealt = [.. hand.Select(card => card.FilePath)];
         Replace(Deal, hand);
     }
@@ -109,28 +117,5 @@ internal sealed class HomeViewModel
         if (shelf.Cards.SequenceEqual(wanted)) return;
         shelf.Cards.Clear();
         foreach (var card in wanted) shelf.Cards.Add(card);
-    }
-}
-
-/// <summary>Picks the hand for the home page's "deal me a few" shelf.</summary>
-internal static class HomeDeal
-{
-    /// <summary>
-    /// A hand of up to <see cref="PokerHand.HandSize"/> cards from
-    /// <paramref name="candidates"/>, avoiding <paramref name="previous"/>
-    /// when there are enough others to choose from.
-    /// </summary>
-    /// <remarks>
-    /// Placeholder: a plain random pick. To be rebuilt on the discovery
-    /// page's own pieces (<c>DiscoveryShuffle</c>, <c>PokerHand</c>,
-    /// <c>DiscoveryAntiClustering</c>) so both deal the same way.
-    /// </remarks>
-    public static IReadOnlyList<CardBase> Deal(IReadOnlyList<CardBase> candidates, IReadOnlyCollection<string> previous)
-    {
-        var seen = new HashSet<string>(previous, StringComparer.OrdinalIgnoreCase);
-        var fresh = candidates.Where(card => !seen.Contains(card.FilePath)).ToArray();
-        var pool = fresh.Length >= PokerHand.HandSize ? fresh : [.. candidates];
-        Random.Shared.Shuffle(pool);
-        return [.. pool.Take(PokerHand.HandSize)];
     }
 }

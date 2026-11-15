@@ -359,7 +359,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         var filterRes = HasResolutionFilter;
         var hasSourceFilter = SourceFilter != CardSourceFilterOption.All;
 
-        if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter
+        if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter && !HasHiddenFilter
             && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = item =>

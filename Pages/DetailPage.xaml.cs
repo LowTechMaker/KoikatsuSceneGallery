@@ -243,6 +243,30 @@ public sealed partial class DetailPage : Page
         args.Handled = true;
     }
 
+    private void Queue_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        // Typing in a text box must stay typing.
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
+        if (ViewModel.Card?.FilePath is { } path) _ = CardStateActions.ToggleAsync([path], CardFlag.Queued);
+        args.Handled = true;
+    }
+
+    private void Like_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        // Typing in a text box must stay typing.
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
+        if (ViewModel.Card?.FilePath is { } path) _ = CardStateActions.ToggleAsync([path], CardFlag.Liked);
+        args.Handled = true;
+    }
+
+    private void Hide_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        // Typing in a text box must stay typing.
+        if (ViewerChrome.IsEditing(XamlRoot)) return;
+        if (ViewModel.Card?.FilePath is { } path) _ = CardStateActions.ToggleAsync([path], CardFlag.Hidden);
+        args.Handled = true;
+    }
+
     private void PixivButton_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "SceneDetail.OpenPixiv", async () =>
         {
@@ -293,8 +317,9 @@ public sealed partial class DetailPage : Page
     /// </summary>
     private void RecordUse(string operation)
     {
-        if (ViewModel.Card is { } card)
-            App.Services.GetService<UsageRecordService>()?.Record([card.FilePath], operation);
+        if (ViewModel.Card is not { } card) return;
+        App.Services.GetService<UsageRecordService>()?.Record([card.FilePath], operation);
+        App.Services.GetService<CardStateService>()?.MarkUsed([card.FilePath]);
     }
 
     private void FilePath_RightTapped(object sender, RightTappedRoutedEventArgs e)

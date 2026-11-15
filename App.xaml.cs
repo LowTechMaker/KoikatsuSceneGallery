@@ -355,6 +355,19 @@ public partial class App : Application
         Services.Add(_userCardRatings);
         var cardStates = new CardStateService(new CardStateStore(), settingsViewModel, _logger);
         Services.Add(cardStates);
+        // The galleries hide "not for me" cards themselves; they only need to
+        // be told which those are and when that changed.
+        foreach (var library in Services.GetRequiredService<LibraryRegistry>().All)
+        {
+            var gallery = library.ViewModel;
+            gallery.IsHiddenCard = path => cardStates.Has(path, CardFlag.Hidden);
+            cardStates.StateChanged += _ => gallery.RefreshHiddenCards();
+        }
+        _ = cardStates.EnsureLoadedAsync().ContinueWith(_ =>
+        {
+            foreach (var library in Services.GetRequiredService<LibraryRegistry>().All)
+                library.ViewModel.RefreshHiddenCards();
+        }, TaskScheduler.Default);
         Services.Add(new HomeViewModel(Services.GetRequiredService<LibraryRegistry>(), cardStates));
         Services.Add(new UsageRecordService(
             settingsViewModel,
