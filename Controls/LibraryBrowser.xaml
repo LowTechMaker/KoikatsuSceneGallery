@@ -73,6 +73,8 @@
        <ToggleSwitch x:Name="ResolutionToggle" x:Uid="Browser_ResolutionToggle" AutomationProperties.AutomationId="GalleryResolutionToggle" Visibility="Collapsed" Toggled="ResolutionToggle_Toggled"/>
        <TextBlock x:Name="ResolutionFilterStatus" Visibility="Collapsed" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+       <!-- Cards with no author yet: the list to work through when adding sources afterwards. -->
+       <ToggleSwitch x:Name="NoSourceToggle" x:Uid="Browser_NoSourceToggle" AutomationProperties.AutomationId="GalleryNoSourceToggle" Toggled="NoSourceToggle_Toggled"/>
        <!-- The only way back for a card marked "not for me": it is hidden everywhere else. -->
        <ToggleSwitch x:Name="ShowHiddenToggle" x:Uid="Browser_ShowHiddenToggle" AutomationProperties.AutomationId="GalleryShowHiddenToggle" Toggled="ShowHiddenToggle_Toggled"/>
        <TextBlock x:Uid="SceneGallery_FilterHint" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

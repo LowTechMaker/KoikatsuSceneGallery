@@ -159,9 +159,28 @@ public sealed partial class LibraryBrowser
         }
     }
 
+    // What the origin filter was before "no source" replaced it, to put back
+    // when the switch goes off. The title bar's platform switch overwrites the
+    // filter on its own; the switch below then simply reads as off.
+    private CardOriginSelection _originBeforeNoSource;
+
+    private void NoSourceToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncing || _adapter is null || NoSourceToggle.IsOn == VM.OriginFilter.IsNoSource) return;
+        if (NoSourceToggle.IsOn)
+        {
+            _originBeforeNoSource = VM.OriginFilter;
+            VM.OriginFilter = CardOriginSelection.NoSource;
+        }
+        else
+        {
+            VM.OriginFilter = _originBeforeNoSource;
+        }
+    }
+
     private void ShowHiddenToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        if (_adapter is not null) VM.ShowHiddenCards = ShowHiddenToggle.IsOn;
+        if (!_syncing && _adapter is not null) VM.ShowHiddenCards = ShowHiddenToggle.IsOn;
     }
 
     private void ResolutionToggle_Toggled(object sender, RoutedEventArgs e)

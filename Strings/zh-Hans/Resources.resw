@@ -2301,4 +2301,5 @@
   <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>卡片已移动，但帖子资料没有保存。</value></data>
   <data name="Reidentify_Failed" xml:space="preserve"><value>无法移动文件：{0}</value></data>
   <data name="Origin_NoSource" xml:space="preserve"><value>来源不明</value></data>
+  <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>只显示来源不明的卡片</value></data>
 </root>

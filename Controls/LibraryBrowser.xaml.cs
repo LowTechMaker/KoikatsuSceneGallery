@@ -190,6 +190,10 @@ public sealed partial class LibraryBrowser : UserControl
         SearchBox.PlaceholderText = UiText.Get(_groupKey is null ? "SceneGallery_Search.PlaceholderText" : "Browser_GroupSearch");
         if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) SearchBox.PlaceholderText = UiText.Get("Metadata_SearchHint");
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
+        _syncing = true;
+        NoSourceToggle.IsOn = VM.OriginFilter.IsNoSource;
+        ShowHiddenToggle.IsOn = VM.ShowHiddenCards;
+        _syncing = false;
         int filterCount = VM switch { GalleryViewModel vm => (vm.RatingFilter == RatingFilterOption.All ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
             + (VM.OriginFilter.IsAll ? 0 : 1);
         var (resolutionEnabled, resolutionCount) = VM switch

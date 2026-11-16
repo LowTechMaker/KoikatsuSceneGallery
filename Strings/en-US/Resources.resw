@@ -2301,4 +2301,5 @@
   <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>The card was moved, but the post data could not be saved.</value></data>
   <data name="Reidentify_Failed" xml:space="preserve"><value>Could not move the file: {0}</value></data>
   <data name="Origin_NoSource" xml:space="preserve"><value>No source</value></data>
+  <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>Only cards with no source</value></data>
 </root>
