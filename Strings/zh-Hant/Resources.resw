@@ -2338,4 +2338,12 @@
   <data name="LayoutMigration_LastRun" xml:space="preserve"><value>上次整理：{0}，搬動了 {1} 個檔案。</value></data>
   <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} 個檔案不在整理範圍內，不會動到</value></data>
   <data name="Import_RatingsNotSaved" xml:space="preserve"><value>有 {0} 張卡的分級沒有存下來，它們現在會顯示為 G。請在卡片上重新設定分級。</value></data>
+  <data name="LayoutMigration_NothingToMoveButLeft" xml:space="preserve"><value>沒有可以搬動的檔案，但還有 {0} 個檔案留在舊的資料夾裡：</value></data>
+  <data name="Home_DuelTitle" xml:space="preserve"><value>二選一</value></data>
+  <data name="Home_DuelHint" xml:space="preserve"><value>點你比較想玩的那張，它會進「想試」。</value></data>
+  <data name="Home_DuelSkip" xml:space="preserve"><value>都不要，換一組</value></data>
+  <data name="Home_DuelEmpty" xml:space="preserve"><value>沒有可以比的場景了。</value></data>
+  <data name="Home_DuelPicked" xml:space="preserve"><value>這一輪已選 {0} 張</value></data>
+  <data name="Home_TileAuthorMore" xml:space="preserve"><value>這位作者還有 {0} 張</value></data>
+  <data name="Home_TilePostMore" xml:space="preserve"><value>同一篇貼文還有 {0} 張</value></data>
 </root>

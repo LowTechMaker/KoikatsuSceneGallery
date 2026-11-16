@@ -244,14 +244,23 @@ internal static class LayoutMigrationDialog
 
     private static string Summary(LayoutMigrationPlan plan)
     {
-        if (plan.Moves.Count == 0 && plan.Merges.Count == 0) return UiText.Get("LayoutMigration_NothingToDo");
-        var lines = new List<string>
+        var lines = new List<string>();
+        switch (plan.SummaryKind)
         {
-            UiText.Format("LayoutMigration_PlanMoves", plan.Moves.Count),
-            UiText.Format("LayoutMigration_PlanAuthors", plan.AuthorsMerged),
-            UiText.Format("LayoutMigration_PlanRatings", plan.Ratings.Count),
-            UiText.Format("LayoutMigration_PlanStays", plan.Stays.Count),
-        };
+            case LayoutMigrationSummaryKind.NothingToDo:
+                return UiText.Get("LayoutMigration_NothingToDo");
+            case LayoutMigrationSummaryKind.NothingToMoveButLeft:
+                // Nothing can move, but the library is not all in the new layout:
+                // say what is left and why (the string ends with a colon).
+                lines.Add(UiText.Format("LayoutMigration_NothingToMoveButLeft", plan.Stays.Count));
+                break;
+            default:
+                lines.Add(UiText.Format("LayoutMigration_PlanMoves", plan.Moves.Count));
+                lines.Add(UiText.Format("LayoutMigration_PlanAuthors", plan.AuthorsMerged));
+                lines.Add(UiText.Format("LayoutMigration_PlanRatings", plan.Ratings.Count));
+                lines.Add(UiText.Format("LayoutMigration_PlanStays", plan.Stays.Count));
+                break;
+        }
         foreach (var group in plan.Stays.GroupBy(s => s.Reason).OrderBy(g => g.Key))
             lines.Add($"    {ReasonText(group.First())}: {group.Count()}");
         var outside = plan.OutOfScope.Sum(o => o.FileCount);

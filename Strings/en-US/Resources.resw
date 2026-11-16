@@ -2338,4 +2338,12 @@
   <data name="LayoutMigration_LastRun" xml:space="preserve"><value>Last tidy-up: {0}, {1} files moved.</value></data>
   <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} files are outside the organized folders and are not touched</value></data>
   <data name="Import_RatingsNotSaved" xml:space="preserve"><value>The rating of {0} imported cards could not be saved, so they now show as G. Set their rating again on the card.</value></data>
+  <data name="LayoutMigration_NothingToMoveButLeft" xml:space="preserve"><value>Nothing can be moved, but {0} files are still in the old folders:</value></data>
+  <data name="Home_DuelTitle" xml:space="preserve"><value>This or that</value></data>
+  <data name="Home_DuelHint" xml:space="preserve"><value>Pick the one you would rather play. It goes to your "want to try" list.</value></data>
+  <data name="Home_DuelSkip" xml:space="preserve"><value>Neither, next pair</value></data>
+  <data name="Home_DuelEmpty" xml:space="preserve"><value>No more scenes to compare.</value></data>
+  <data name="Home_DuelPicked" xml:space="preserve"><value>{0} picked this round</value></data>
+  <data name="Home_TileAuthorMore" xml:space="preserve"><value>{0} more by this author</value></data>
+  <data name="Home_TilePostMore" xml:space="preserve"><value>{0} more from the same post</value></data>
 </root>

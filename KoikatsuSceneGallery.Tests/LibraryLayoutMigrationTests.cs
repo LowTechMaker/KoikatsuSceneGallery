@@ -855,6 +855,54 @@ public sealed partial class LibraryLayoutMigrationTests : IDisposable
         Assert.False(Directory.Exists(P("Organized/Pixiv/Koikatsu")));
     }
 
+    // ================================================================ part 4: what the plan page says
+
+    [Fact]
+    public void ANewLayoutLibraryHasNothingToDo()
+    {
+        File_("Organized/Pixiv/Artist (42)/a.png");
+
+        Assert.Equal(LayoutMigrationSummaryKind.NothingToDo, LibraryLayoutMigration.Plan(Options(), default).SummaryKind);
+    }
+
+    [Fact]
+    public void FilesLeftInOldFoldersWithNothingToMoveAreSaidToBeLeft()
+    {
+        // What a run leaves behind: a collision, a duplicate and a loose file.
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png", "old");
+        File_("Organized/Pixiv/Artist (42)/a.png", "new");
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/b.png", "same");
+        File_("Organized/Pixiv/Artist (42)/b.png", "same");
+        File_("Organized/Pixiv/Koikatsu/R-18/loose.png");
+
+        var plan = LibraryLayoutMigration.Plan(Options(), default);
+
+        Assert.Empty(plan.Moves);
+        Assert.Equal(LayoutMigrationSummaryKind.NothingToMoveButLeft, plan.SummaryKind);
+        Assert.Equal(3, plan.Stays.Count);
+    }
+
+    [Fact]
+    public void APlanWithMovesIsAPlan()
+    {
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        File_("Organized/Pixiv/Koikatsu/R-18/loose.png");
+
+        Assert.Equal(LayoutMigrationSummaryKind.Moves, LibraryLayoutMigration.Plan(Options(), default).SummaryKind);
+    }
+
+    [Fact]
+    public void ADocumentToMergeAloneIsStillWorkToDo()
+    {
+        // A merge without a file move is not "nothing to do": the plan page counts it.
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/.scenegallery/characters.json", """{"cards":{}}""");
+
+        var plan = LibraryLayoutMigration.Plan(Options(), default);
+
+        Assert.Empty(plan.Moves);
+        Assert.Equal(LayoutMigrationSummaryKind.Moves, plan.SummaryKind);
+    }
+
     // ================================================================ part 3: counting and re-pointing
 
     [Fact]

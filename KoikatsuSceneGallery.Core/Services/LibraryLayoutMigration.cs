@@ -62,6 +62,8 @@ internal sealed record LayoutDocumentMerge(string Root, LayoutDocumentKind Kind,
 /// <summary>Files the migration saw but will not touch, by where they are.</summary>
 internal sealed record LayoutOutOfScope(string Location, int FileCount);
 
+internal enum LayoutMigrationSummaryKind { NothingToDo, NothingToMoveButLeft, Moves }
+
 internal sealed record LayoutMigrationPlan(
     IReadOnlyList<string> Roots,
     IReadOnlyList<LayoutMove> Moves,
@@ -73,6 +75,16 @@ internal sealed record LayoutMigrationPlan(
     IReadOnlyList<string> OldFolders,
     IReadOnlyList<string> UnfinishedJournals)
 {
+    /// <summary>
+    /// What the plan page leads with: nothing to do; nothing to move but files
+    /// left in old folders (a collision, a duplicate, a loose file); or a plan.
+    /// A merge counts as work even without a file move.
+    /// </summary>
+    public LayoutMigrationSummaryKind SummaryKind
+        => Moves.Count > 0 || Merges.Count > 0 ? LayoutMigrationSummaryKind.Moves
+            : Stays.Count > 0 ? LayoutMigrationSummaryKind.NothingToMoveButLeft
+            : LayoutMigrationSummaryKind.NothingToDo;
+
     /// <summary>The plan as plain text, one line per file.</summary>
     public string ToText()
     {
