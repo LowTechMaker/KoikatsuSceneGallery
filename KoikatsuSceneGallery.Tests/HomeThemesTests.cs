@@ -68,6 +68,28 @@ public sealed class HomeThemesTests
     }
 
     [Fact]
+    public void TheOrderTheCardsArriveInDoesNotMatter()
+    {
+        // The app hands the cards over in scan order, which changes from launch
+        // to launch. Posts shared between cards make the in-shelf spreading
+        // break ties, which is where an order dependence would show.
+        var cards = Rich();
+        cards.AddRange(Many("T", 12, i => Card($"T{i:D2}", i < 6 ? "T" : "S", post: $"post:t{i % 4}", tags: ["山"])));
+        cards.AddRange(Many("q", 9, i => Card($"q{i}", "Q", post: $"post:q{i % 3}", liked: true)));
+
+        for (var day = 0; day < 15; day++)
+            for (var reroll = 0; reroll < 3; reroll++)
+            {
+                var expected = Describe(Pick(cards, reroll, day: Today.AddDays(day)));
+                var reversed = Enumerable.Reverse(cards).ToList();
+                var shuffled = cards.OrderBy(_ => Random.Shared.Next()).ToList();
+
+                Assert.Equal(expected, Describe(Pick(reversed, reroll, day: Today.AddDays(day))));
+                Assert.Equal(expected, Describe(Pick(shuffled, reroll, day: Today.AddDays(day))));
+            }
+    }
+
+    [Fact]
     public void AnAuthorWithFewerThanSixCardsIsNotATheme()
     {
         var cards = new List<ThemeCard>();
@@ -88,8 +110,8 @@ public sealed class HomeThemesTests
     [Fact]
     public void FewerCandidatesGiveFewerShelves()
     {
-        // Only "never played" qualifies.
-        var shelves = Pick([.. Many("u", 8, i => Card($"u{i}"))]);
+        // Only "never played" qualifies (half the library, no authors, tags or likes).
+        var shelves = Pick([.. Many("u", 8, i => Card($"u{i}")), .. Many("p", 8, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))]);
 
         Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(shelves).Kind);
     }
@@ -101,6 +123,8 @@ public sealed class HomeThemesTests
     {
         var cards = new List<ThemeCard>();
         cards.AddRange(Many("u", 6, i => Card($"u{i}", hidden: i == 0)));
+        // Played cards, so "never played" is not most of the library.
+        cards.AddRange(Many("p", 6, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
 
         Assert.Empty(Pick(cards));
 
@@ -267,6 +291,23 @@ public sealed class HomeThemesTests
         var shelf = Pick(cards, count: 5).Single(s => s.Kind == ThemeKind.NeverPlayed);
 
         Assert.All(shelf.CardPaths, p => Assert.StartsWith("u", p));
+    }
+
+    [Fact]
+    public void NeverPlayedIsOfferedOnlyWhenAtMostHalfTheLibraryIsUnplayed()
+    {
+        // Exactly half unplayed: offered (nothing else qualifies, so it is the shelf).
+        List<ThemeCard> half = [.. Many("u", 7, i => Card($"u{i}")), .. Many("p", 7, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))];
+        Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(Pick(half)).Kind);
+
+        // One played card fewer: more than half unplayed, so it says nothing, on any day.
+        List<ThemeCard> most = [.. Many("u", 7, i => Card($"u{i}")), .. Many("p", 6, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))];
+        for (var day = 0; day < 20; day++)
+            Assert.Empty(Pick(most, day: Today.AddDays(day), count: 5));
+
+        // Hidden cards do not count on either side.
+        List<ThemeCard> hiddenPlayed = [.. half.Take(7), .. half.Skip(7).Select((c, i) => i == 0 ? c with { Hidden = true } : c)];
+        Assert.Empty(Pick(hiddenPlayed, count: 5));
     }
 
     // ---------------------------------------------------------------- inside a shelf
