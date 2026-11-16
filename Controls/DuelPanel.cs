@@ -37,11 +37,7 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed class DuelPanel : StackPanel
 {
-    /// <summary>The two cards together are never wider than this.</summary>
-    private const double MaxWidthBoth = 1100;
-    /// <summary>Below this the two cards stack.</summary>
-    private const double StackBelow = 640;
-    /// <summary>The decoded width: a card is at most half of <see cref="MaxWidthBoth"/>, at 2x scale.</summary>
+    /// <summary>The decoded width: a card is at most half of <see cref="DuelLayout.MaxWidthBoth"/>, at 2x scale.</summary>
     private const int DecodeWidth = 1100;
 
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
@@ -51,7 +47,13 @@ internal sealed class DuelPanel : StackPanel
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
         Visibility = Visibility.Collapsed,
     };
-    private readonly Grid _cards = new() { ColumnSpacing = 16, RowSpacing = 16, MaxWidth = MaxWidthBoth, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly Grid _cards = new()
+    {
+        ColumnSpacing = DuelLayout.Gap,
+        RowSpacing = 16,
+        MaxWidth = DuelLayout.MaxWidthBoth,
+        HorizontalAlignment = HorizontalAlignment.Left,
+    };
     private readonly DuelCardView _left = new("HomeDuel_Left");
     private readonly DuelCardView _right = new("HomeDuel_Right");
     private readonly Button _skip = new() { Content = UiText.Get("Home_DuelSkip") };
@@ -102,8 +104,30 @@ internal sealed class DuelPanel : StackPanel
         // and the arrows do not move focus instead of picking. Enter is left to
         // the button: it picks the focused card.
         PreviewKeyDown += Panel_KeyDown;
-        SizeChanged += (_, e) => Fit(e.NewSize.Width);
-        Loaded += (_, _) => Refresh();
+        SizeChanged += (_, _) => Fit();
+        // Subscribed only while on screen, so the app-wide view model and the
+        // window do not keep a page that is gone.
+        Loaded += (_, _) =>
+        {
+            if (XamlRoot is { } root)
+            {
+                root.Changed -= Window_Changed;
+                root.Changed += Window_Changed;
+            }
+            if (_home is not null)
+            {
+                _home.CardInfoChanged -= Info_Changed;
+                _home.CardInfoChanged += Info_Changed;
+            }
+            Refresh();
+            Fit();
+        };
+        Unloaded += (_, _) =>
+        {
+            if (VisualTreeHelper.GetParent(this) is not null) return;
+            if (XamlRoot is { } root) root.Changed -= Window_Changed;
+            if (_home is not null) _home.CardInfoChanged -= Info_Changed;
+        };
     }
 
     /// <summary>Shows the current pair again, replacing it if it became invalid (hidden, queued, gone).</summary>
@@ -173,14 +197,26 @@ internal sealed class DuelPanel : StackPanel
         e.Handled = true;
     }
 
-    private void Fit(double width)
+    /// <summary>A guess at everything but the pictures, until the panel has been measured once.</summary>
+    private const double ChromeGuess = 190;
+
+    // Sized by DuelLayout: as wide as the page allows, the whole panel at most
+    // about half the window's height (seen live: by width alone it filled the
+    // page). Runs on the panel's resize and on the window's.
+    private void Fit()
     {
-        var stacked = width < StackBelow;
-        if (stacked != _stacked) Layout(stacked);
-        var available = Math.Min(width, MaxWidthBoth);
-        var cardWidth = stacked ? available : (available - _cards.ColumnSpacing) / 2;
-        _left.SetPictureWidth(cardWidth);
-        _right.SetPictureWidth(cardWidth);
+        var width = ActualWidth;
+        var windowHeight = XamlRoot?.Size.Height ?? 0;
+        if (width <= 0 || windowHeight <= 0) return;
+        // The panel's own height without its pictures, measured: the captions
+        // and the heading are whatever height the text style gives them.
+        var pictures = _stacked ? 2 : 1;
+        var chrome = ActualHeight > 0 ? ActualHeight - pictures * _left.PictureHeight : ChromeGuess;
+        if (chrome <= 0) chrome = ChromeGuess;
+        var fit = DuelLayout.Fit(width, windowHeight, chrome);
+        if (fit.Stacked != _stacked) Layout(fit.Stacked);
+        _left.SetSize(fit.CardWidth, fit.PictureHeight);
+        _right.SetSize(fit.CardWidth, fit.PictureHeight);
     }
 
     private void Layout(bool stacked)
@@ -188,7 +224,8 @@ internal sealed class DuelPanel : StackPanel
         _stacked = stacked;
         _cards.ColumnDefinitions.Clear();
         _cards.RowDefinitions.Clear();
-        _cards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Auto, not star: the cards have their own size and shrink together.
+        _cards.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         if (stacked)
         {
             _cards.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -198,11 +235,17 @@ internal sealed class DuelPanel : StackPanel
         }
         else
         {
-            _cards.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _cards.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             Grid.SetColumn(_right, 1);
             Grid.SetRow(_right, 0);
         }
     }
+
+    private void Window_Changed(XamlRoot sender, XamlRootChangedEventArgs args) => Fit();
+
+    // Raised off the UI thread once the sidecars were read: a pair shown
+    // before that still has its file names (seen live).
+    private void Info_Changed() => DispatcherQueue.TryEnqueue(Refresh);
 
     /// <summary>One of the two: a large 16:9 picture and the caption under it.</summary>
     private sealed class DuelCardView : StackPanel
@@ -244,10 +287,13 @@ internal sealed class DuelPanel : StackPanel
             Children.Add(_caption);
         }
 
-        public void SetPictureWidth(double width)
+        public double PictureHeight => _frame.Height;
+
+        public void SetSize(double width, double pictureHeight)
         {
-            if (width <= 0) return;
-            _frame.Height = Math.Round(width * 9 / 16);
+            if (width <= 0 || pictureHeight <= 0) return;
+            Width = Math.Round(width);
+            _frame.Height = Math.Round(pictureHeight);
         }
 
         public void Show(CardBase card, HomeCardInfo info, DecodedPictures pictures)

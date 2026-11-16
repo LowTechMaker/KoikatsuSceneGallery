@@ -2352,4 +2352,5 @@
   <data name="Home_ThemeDusty" xml:space="preserve"><value>Favourites you have not touched in a while</value></data>
   <data name="Home_ThemeSimilar" xml:space="preserve"><value>Looks like "{0}"</value></data>
   <data name="Home_ThemesReroll" xml:space="preserve"><value>Other themes</value></data>
+  <data name="Home_ThemeSeeAll" xml:space="preserve"><value>See all</value></data>
 </root>

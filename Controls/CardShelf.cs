@@ -60,6 +60,7 @@ internal sealed class CardShelf : Grid
     };
     private readonly Dictionary<string, Tile> _tiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
+    private readonly TextBlock _title = new() { Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"] };
     private bool _rebuildQueued;
     private bool _subscribed;
 
@@ -79,11 +80,8 @@ internal sealed class CardShelf : Grid
         AutomationProperties.SetName(this, shelf.Title);
 
         var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        heading.Children.Add(new TextBlock
-        {
-            Text = shelf.Title,
-            Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"],
-        });
+        _title.Text = shelf.Title;
+        heading.Children.Add(_title);
         heading.Children.Add(_count);
         var header = new Grid();
         header.Children.Add(heading);
@@ -123,8 +121,21 @@ internal sealed class CardShelf : Grid
         if (_subscribed) return;
         _subscribed = true;
         _shelf.Cards.CollectionChanged += Cards_Changed;
+        _shelf.TitleChanged += Title_Changed;
         _states.StateChanged += State_Changed;
         if (_home is not null) _home.CardInfoChanged += Info_Changed;
+        Title_Changed();
+    }
+
+    /// <summary>Raised when the shelf's actions should follow a new theme (a "see all" that only some themes have).</summary>
+    public event Action<HomeShelf>? ThemeChanged;
+
+    // A themed shelf gets another title each day or reroll; on the UI thread (Refresh).
+    private void Title_Changed()
+    {
+        _title.Text = _shelf.Title;
+        AutomationProperties.SetName(this, _shelf.Title);
+        ThemeChanged?.Invoke(_shelf);
     }
 
     private void Unsubscribe()
@@ -132,6 +143,7 @@ internal sealed class CardShelf : Grid
         if (!_subscribed) return;
         _subscribed = false;
         _shelf.Cards.CollectionChanged -= Cards_Changed;
+        _shelf.TitleChanged -= Title_Changed;
         _states.StateChanged -= State_Changed;
         if (_home is not null) _home.CardInfoChanged -= Info_Changed;
     }

@@ -20,7 +20,25 @@ internal sealed class HomeShelf(string key, string title, string emptyText)
 {
     /// <summary>Stable name, used for automation ids and to tell shelves apart in code.</summary>
     public string Key { get; } = key;
-    public string Title { get; } = title;
+    public string Title { get; private set; } = title;
+
+    /// <summary>Raised when a themed shelf gets another theme (and title).</summary>
+    public event Action? TitleChanged;
+
+    /// <summary>The theme a themed shelf shows today, or null.</summary>
+    public ThemeKind? Theme { get; private set; }
+
+    /// <summary>What a themed shelf's "see all" opens: the author key; null when there is nothing to open.</summary>
+    public string? SubjectKey { get; private set; }
+
+    public void SetTheme(string title, ThemeKind? theme, string? subjectKey)
+    {
+        var changed = title != Title || theme != Theme || subjectKey != SubjectKey;
+        Title = title;
+        Theme = theme;
+        SubjectKey = subjectKey;
+        if (changed) TitleChanged?.Invoke();
+    }
     /// <summary>Shown instead of the row when it has no cards; empty hides the shelf.</summary>
     public string EmptyText { get; } = emptyText;
     public ObservableCollection<CardBase> Cards { get; } = [];
@@ -68,14 +86,21 @@ internal sealed class HomeViewModel
         _states = states;
         _posts = posts;
         _authors = authors;
-        _scenes.CardsChanged += (_, _) => _indexStale = true;
+        // Themes are chosen again when the library or the sidecars change, never
+        // on a state change: flagging a card must not reshuffle the page.
+        _scenes.CardsChanged += (_, _) =>
+        {
+            _indexStale = true;
+            _themesStale = true;
+        };
         if (posts is not null)
         {
             // Raised off the UI thread once the sidecars were read: titles may
-            // have arrived for cards already on screen.
+            // have arrived for cards already on screen, and tags for the themes.
             posts.PostsReloaded += () =>
             {
                 _indexStale = true;
+                _themesStale = true;
                 CardInfoChanged?.Invoke();
             };
         }
@@ -83,7 +108,109 @@ internal sealed class HomeViewModel
         Deal = new(DealKey, UiText.Get("Home_Deal"), "");
         Recent = new(RecentKey, UiText.Get("Home_Recent"), "");
         Liked = new(LikedKey, UiText.Get("Home_Liked"), "");
-        Shelves = [Queued, Deal, Recent, Liked];
+        Themes = [.. Enumerable.Range(0, ThemeCount).Select(i => new HomeShelf(ThemeKeyPrefix + i, "", ""))];
+        Shelves = [Queued, .. Themes, Deal, Recent, Liked];
+    }
+
+    // ------------------------------------------------------------ themed shelves
+
+    public const string ThemeKeyPrefix = "theme";
+    public const int ThemeCount = 3;
+
+    private volatile bool _themesStale = true;
+    private DateOnly _themesDay;
+    private int _reroll;
+    private string[][] _themePaths = [];
+
+    /// <summary>Today's themed shelves (<see cref="HomeThemes"/>), between "want to try" and the dealt hand.</summary>
+    public IReadOnlyList<HomeShelf> Themes { get; }
+
+    /// <summary>Other themes for today. The count is reset when the date changes.</summary>
+    public void RerollThemes()
+    {
+        _reroll++;
+        _themesStale = true;
+        Refresh();
+    }
+
+    /// <summary>The author an <see cref="ThemeKind.Author"/> shelf is about, for its "see all".</summary>
+    public AuthorSummary? AuthorFor(string subjectKey)
+        => _authors?.GetSummaries().FirstOrDefault(s => AuthorId(s.Display.Key) == subjectKey);
+
+    private static string AuthorId(AuthorKey key) => $"{key.ProviderId}\u001F{key.Id}";
+
+    private void RefreshThemes(Dictionary<string, CardBase> live)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        if (today != _themesDay)
+        {
+            // A new day while the app is open: new themes, and rerolls count from zero.
+            _themesDay = today;
+            _reroll = 0;
+            _themesStale = true;
+        }
+        if (_themesStale)
+        {
+            _themesStale = false;
+            ChooseThemes(live, today);
+        }
+        // Between choices only the cards follow: one that became hidden or was
+        // removed leaves its shelf, nothing is reshuffled.
+        for (var i = 0; i < Themes.Count; i++)
+        {
+            string[] paths = i < _themePaths.Length ? _themePaths[i] : [];
+            Replace(Themes[i], paths
+                .Where(path => live.ContainsKey(path) && !_states.Has(path, CardFlag.Hidden))
+                .Select(path => live[path]));
+        }
+    }
+
+    private void ChooseThemes(Dictionary<string, CardBase> live, DateOnly today)
+    {
+        EnsureIndex();
+        var facts = live.Values.Select(card =>
+        {
+            var state = _states.Get(card.FilePath);
+            var author = (card as IAuthorOwner)?.Author;
+            var postKey = _postKeyByPath!.GetValueOrDefault(card.FilePath);
+            IReadOnlyList<string> tags = postKey is null ? [] : HomeCardText.Tags(_posts?.PostInfo(postKey)?.Tags ?? [], int.MaxValue);
+            return new ThemeCard(
+                card.FilePath,
+                author is null ? null : AuthorId(author.Key),
+                author?.Name,
+                postKey is not null && postKey.StartsWith("post:", StringComparison.Ordinal) ? postKey : null,
+                tags,
+                state?.LastUsedAt is not null,
+                state?.LastUsedAt,
+                state?.Liked == true,
+                state?.Hidden == true,
+                card.DateCreated);
+        }).ToList();
+
+        // SimilarToLast is not offered: the library has no fingerprints to read
+        // cheaply (see the wave 5 report), so no fingerprint function is passed.
+        var chosen = HomeThemes.Pick(facts, today, _reroll, ThemeCount);
+        _themePaths = [.. chosen.Select(shelf => shelf.CardPaths.ToArray())];
+        for (var i = 0; i < Themes.Count; i++)
+        {
+            if (i >= chosen.Count)
+            {
+                Themes[i].SetTheme("", null, null);
+                continue;
+            }
+            var shelf = chosen[i];
+            var title = shelf.Kind switch
+            {
+                ThemeKind.Author => UiText.Format("Home_ThemeAuthor", shelf.Subject ?? ""),
+                ThemeKind.Tag => UiText.Format("Home_ThemeTag", shelf.Subject ?? ""),
+                ThemeKind.NeverPlayed => UiText.Get("Home_ThemeNeverPlayed"),
+                ThemeKind.DustyFavourites => UiText.Get("Home_ThemeDusty"),
+                _ => UiText.Format("Home_ThemeSimilar",
+                    shelf.Subject is { } path && live.TryGetValue(path, out var card) ? Describe(card).Title : ""),
+            };
+            // Only an author has a page to open; a tag cannot be opened by name (see the report).
+            Themes[i].SetTheme(title, shelf.Kind, shelf.Kind == ThemeKind.Author ? shelf.SubjectKey : null);
+        }
     }
 
     public HomeShelf Queued { get; }
@@ -120,6 +247,7 @@ internal sealed class HomeViewModel
             .Where(entry => entry.State.Liked)
             .OrderByDescending(entry => entry.State.UpdatedAt)
             .Select(entry => live[entry.FullPath]));
+        RefreshThemes(live);
 
         if (_dealt.Length == 0) DealAgain();
         // A card hidden from the hand itself leaves it at once; the hand is not

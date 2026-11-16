@@ -37,7 +37,36 @@ public sealed partial class HomePage : Page
                 again.Click += (_, _) => _viewModel.DealAgain();
                 row.AddAction(again);
             }
+            if (shelf.Key.StartsWith(HomeViewModel.ThemeKeyPrefix, StringComparison.Ordinal))
+                AddThemeActions(row, shelf);
             Shelves.Children.Add(row);
+        }
+    }
+
+    // A themed shelf: "see all" when today's theme is an author (their page);
+    // the first one also carries the one button that rerolls the group.
+    private void AddThemeActions(CardShelf row, HomeShelf shelf)
+    {
+        var seeAll = new Button { Content = UiText.Get("Home_ThemeSeeAll") };
+        AutomationProperties.SetAutomationId(seeAll, $"HomeShelf_{shelf.Key}_SeeAll");
+        seeAll.Click += (_, _) =>
+        {
+            if (shelf.SubjectKey is { } key && _viewModel.AuthorFor(key) is { } summary)
+                Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+        };
+        void Follow(HomeShelf themed)
+            => seeAll.Visibility = themed is { Theme: ThemeKind.Author, SubjectKey: not null }
+                ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        row.ThemeChanged += Follow;
+        Follow(shelf);
+        row.AddAction(seeAll);
+
+        if (shelf.Key == HomeViewModel.ThemeKeyPrefix + "0")
+        {
+            var reroll = new Button { Content = UiText.Get("Home_ThemesReroll") };
+            AutomationProperties.SetAutomationId(reroll, "HomeThemesReroll");
+            reroll.Click += (_, _) => _viewModel.RerollThemes();
+            row.AddAction(reroll);
         }
     }
 
@@ -46,6 +75,8 @@ public sealed partial class HomePage : Page
         base.OnNavigatedTo(e);
         _gallery.CardsReloaded += QueueRefresh;
         _gallery.CardsReloaded += Reconcile;
+        // The sidecars are read after the cards: tags (for the themes) come then.
+        _viewModel.CardInfoChanged += QueueRefresh;
         _states.StateChanged += State_Changed;
         // The shelves ask for thumbnails of cards the gallery may not have
         // shown, and leaving the gallery cancelled its thumbnail session.
@@ -62,6 +93,7 @@ public sealed partial class HomePage : Page
     {
         _gallery.CardsReloaded -= QueueRefresh;
         _gallery.CardsReloaded -= Reconcile;
+        _viewModel.CardInfoChanged -= QueueRefresh;
         _states.StateChanged -= State_Changed;
         base.OnNavigatedFrom(e);
     }

@@ -39,18 +39,26 @@ internal sealed class HomeCardCaption : StackPanel
             _extra.Visibility = Visibility.Collapsed;
             Children.Add(_extra);
         }
-        // The element that opens the card carries the name for screen readers.
+        // The element that opens the card carries "title, author" for screen
+        // readers. Raw on this panel alone does not hide its children (seen
+        // live: each line showed up again under the tile), so every line is
+        // taken out of the tree too.
         AutomationProperties.SetAccessibilityView(this, AccessibilityView.Raw);
     }
 
-    private static TextBlock Line(string style, string brush) => new()
+    private static TextBlock Line(string style, string brush)
     {
-        Style = (Style)Application.Current.Resources[style],
-        Foreground = (Brush)Application.Current.Resources[brush],
-        TextWrapping = TextWrapping.NoWrap,
-        TextTrimming = TextTrimming.CharacterEllipsis,
-        MaxLines = 1,
-    };
+        var line = new TextBlock
+        {
+            Style = (Style)Application.Current.Resources[style],
+            Foreground = (Brush)Application.Current.Resources[brush],
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxLines = 1,
+        };
+        AutomationProperties.SetAccessibilityView(line, AccessibilityView.Raw);
+        return line;
+    }
 
     /// <summary>Shows <paramref name="info"/>, and gives <paramref name="target"/> its tooltip and accessible name.</summary>
     public void Show(HomeCardInfo info, FrameworkElement target)
