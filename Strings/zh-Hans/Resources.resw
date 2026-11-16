@@ -2346,4 +2346,10 @@
   <data name="Home_DuelPicked" xml:space="preserve"><value>这一轮已选 {0} 张</value></data>
   <data name="Home_TileAuthorMore" xml:space="preserve"><value>这位作者还有 {0} 张</value></data>
   <data name="Home_TilePostMore" xml:space="preserve"><value>同一篇帖子还有 {0} 张</value></data>
+  <data name="Home_ThemeAuthor" xml:space="preserve"><value>{0} 特辑</value></data>
+  <data name="Home_ThemeTag" xml:space="preserve"><value>今天的标签：{0}</value></data>
+  <data name="Home_ThemeNeverPlayed" xml:space="preserve"><value>收了还没玩过的</value></data>
+  <data name="Home_ThemeDusty" xml:space="preserve"><value>很久没碰的最爱</value></data>
+  <data name="Home_ThemeSimilar" xml:space="preserve"><value>和“{0}”很像的</value></data>
+  <data name="Home_ThemesReroll" xml:space="preserve"><value>换一批主题</value></data>
 </root>
