@@ -40,6 +40,9 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private readonly SettingsViewModel _settingsViewModel;
     private readonly PluginService _pluginService;
     private readonly SceneRatingResolver _ratingResolver;
+
+    /// <summary>Post titles and tags for the home page, read with the ratings.</summary>
+    internal SceneRatingResolver RatingResolver => _ratingResolver;
     private readonly IAppLogger _logger;
 
     public ObservableCollection<SceneCard> Cards { get; }

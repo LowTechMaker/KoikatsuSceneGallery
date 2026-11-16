@@ -2,8 +2,18 @@ using System.Collections.ObjectModel;
 using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
+using SceneGallery.PluginSdk;
 
 namespace KoikatsuSceneGallery.ViewModels;
+
+/// <summary>What a home page tile says about a card.</summary>
+/// <param name="Author">The author's name, or null when unknown.</param>
+/// <param name="AuthorOthers">The author's other scene cards.</param>
+/// <param name="PostOthers">The post's other scene cards.</param>
+/// <param name="PostKey">The card's grouping key; <c>post:…</c> when it belongs to a post.</param>
+internal sealed record HomeCardInfo(
+    string Title, string? Author, IReadOnlyList<string> Tags,
+    int AuthorOthers, int PostOthers, string FileName, string? PostKey);
 
 /// <summary>One row of the home page.</summary>
 internal sealed class HomeShelf(string key, string title, string emptyText)
@@ -38,13 +48,37 @@ internal sealed class HomeViewModel
 
     private readonly ILibrary _scenes;
     private readonly CardStateService _states;
+    private readonly SceneRatingResolver? _posts;
+    private readonly AuthorInfoService? _authors;
     private readonly HomeDeal _dealer = new(Random.Shared);
     private string[] _dealt = [];
 
-    public HomeViewModel(LibraryRegistry libraries, CardStateService states)
+    // Per load, built on first use: card path → post key, post key → scene
+    // cards in it, author → scene cards by them. Dropped when the library or
+    // the sidecars change; never read from a file.
+    private Dictionary<string, string>? _postKeyByPath;
+    private Dictionary<string, int>? _postCounts;
+    private Dictionary<AuthorKey, int>? _authorCounts;
+    private volatile bool _indexStale = true;
+
+    public HomeViewModel(LibraryRegistry libraries, CardStateService states,
+        SceneRatingResolver? posts = null, AuthorInfoService? authors = null)
     {
         _scenes = libraries.Get(LibraryKind.Scenes);
         _states = states;
+        _posts = posts;
+        _authors = authors;
+        _scenes.CardsChanged += (_, _) => _indexStale = true;
+        if (posts is not null)
+        {
+            // Raised off the UI thread once the sidecars were read: titles may
+            // have arrived for cards already on screen.
+            posts.PostsReloaded += () =>
+            {
+                _indexStale = true;
+                CardInfoChanged?.Invoke();
+            };
+        }
         Queued = new(QueuedKey, UiText.Get("Home_Queued"), UiText.Get("Home_QueuedEmpty"));
         Deal = new(DealKey, UiText.Get("Home_Deal"), "");
         Recent = new(RecentKey, UiText.Get("Home_Recent"), "");
@@ -108,6 +142,113 @@ internal sealed class HomeViewModel
         _dealt = [.. hand.Select(card => card.FilePath)];
         Replace(Deal, hand);
     }
+
+    // ------------------------------------------------------------ what a tile says
+
+    /// <summary>Raised, possibly off the UI thread, when titles or counts may have changed.</summary>
+    public event Action? CardInfoChanged;
+
+    /// <summary>
+    /// What a tile says about a card: the post title (else the artwork folder's,
+    /// else the file name), the author, a few tags, and how many other scene
+    /// cards the author and the post have. Call on the UI thread; no file is read.
+    /// </summary>
+    public HomeCardInfo Describe(CardBase card)
+    {
+        EnsureIndex();
+        var postKey = _postKeyByPath!.GetValueOrDefault(card.FilePath);
+        var post = postKey is null ? null : _posts?.PostInfo(postKey);
+        var author = (card as IAuthorOwner)?.Author;
+        var title = HomeCardText.Title(post?.Title, card.FileName,
+            Path.GetFileName(Path.GetDirectoryName(card.FilePath)),
+            _posts?.FolderArtworkId(card), author?.Key.Id);
+        var authorOthers = author is null ? 0 : Math.Max(0, _authorCounts!.GetValueOrDefault(author.Key) - 1);
+        var postOthers = postKey is not null && postKey.StartsWith("post:", StringComparison.Ordinal)
+            ? Math.Max(0, _postCounts!.GetValueOrDefault(postKey) - 1)
+            : 0;
+        return new HomeCardInfo(title, author?.Name, HomeCardText.Tags(post?.Tags ?? [], 5),
+            authorOthers, postOthers, card.FileName, postKey);
+    }
+
+    private void EnsureIndex()
+    {
+        if (!_indexStale && _postKeyByPath is not null) return;
+        _indexStale = false;
+        var keys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var posts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var card in _scenes.Cards)
+        {
+            if (_posts?.PostKeyOf(card) is not { } key) continue;
+            if (!keys.TryAdd(card.FilePath, key)) continue;
+            posts[key] = posts.GetValueOrDefault(key) + 1;
+        }
+        _postKeyByPath = keys;
+        _postCounts = posts;
+        _authorCounts = _authors?.GetSummaries().ToDictionary(s => s.Display.Key, s => s.SceneCount) ?? [];
+    }
+
+    // ------------------------------------------------------------ this or that
+
+    private readonly HomeDuel _duel = new(Random.Shared);
+    private (string Left, string Right)? _current;
+    private (string Left, string Right)? _upcoming;
+
+    /// <summary>Cards picked into "want to try" this session.</summary>
+    public int DuelPicked => _duel.Picked;
+
+    /// <summary>
+    /// The pair to show now, and the one after it (to preload), as current card
+    /// objects; null when fewer than two cards can be shown. Hidden and queued
+    /// cards never appear; a pair that became invalid since is replaced.
+    /// </summary>
+    public ((CardBase Left, CardBase Right)? Current, (CardBase Left, CardBase Right)? Upcoming) DuelPairs()
+    {
+        var live = Live();
+        if (!Valid(_current, live)) _current = NextPair(live);
+        if (!Valid(_upcoming, live)) _upcoming = NextPair(live);
+        return (Resolve(_current, live), Resolve(_upcoming, live));
+    }
+
+    /// <summary>Counts a pick (the caller has queued the card) and moves to the next pair.</summary>
+    public void DuelPick()
+    {
+        _duel.Pick();
+        DuelSkip();
+    }
+
+    /// <summary>Moves to the next pair without choosing; the pair just shown is not shown again this session.</summary>
+    public void DuelSkip()
+    {
+        _current = _upcoming;
+        _upcoming = null;
+    }
+
+    private bool Valid((string Left, string Right)? pair, Dictionary<string, CardBase> live)
+        => pair is { } p && Eligible(p.Left, live) && Eligible(p.Right, live);
+
+    private bool Eligible(string path, Dictionary<string, CardBase> live)
+        => live.ContainsKey(path) && !_states.Has(path, CardFlag.Hidden) && !_states.Has(path, CardFlag.Queued);
+
+    private (string, string)? NextPair(Dictionary<string, CardBase> live)
+    {
+        EnsureIndex();
+        var cards = live.Values.Select(card => new DuelCard(
+            card.FilePath,
+            _postKeyByPath!.GetValueOrDefault(card.FilePath) is { } key && key.StartsWith("post:", StringComparison.Ordinal) ? key : null,
+            (card as IAuthorOwner)?.Author?.Key.ToString(),
+            _states.Get(card.FilePath)?.LastUsedAt is not null)).ToList();
+        // The pair already waiting is not offered again as the one after it.
+        var waiting = _current;
+        var pair = _duel.Next(cards, path =>
+            !Eligible(path, live)
+            || waiting is { } w && (string.Equals(w.Left, path, StringComparison.OrdinalIgnoreCase)
+                                    || string.Equals(w.Right, path, StringComparison.OrdinalIgnoreCase)));
+        return pair is null ? null : (pair.Left.Path, pair.Right.Path);
+    }
+
+    private static (CardBase, CardBase)? Resolve((string Left, string Right)? pair, Dictionary<string, CardBase> live)
+        => pair is { } p && live.TryGetValue(p.Left, out var left) && live.TryGetValue(p.Right, out var right)
+            ? (left, right) : null;
 
     private static void Replace(HomeShelf shelf, IEnumerable<CardBase> cards)
     {

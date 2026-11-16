@@ -3,6 +3,9 @@ using KoikatsuSceneGallery.Models;
 
 namespace KoikatsuSceneGallery.Services;
 
+/// <summary>What a post sidecar says about the post, beyond its rating: for the home page's tiles.</summary>
+internal sealed record ScenePostInfo(string? Title, IReadOnlyList<(string Name, string? Translated)> Tags);
+
 /// <summary>
 /// Works out each scene card's rating from the source chosen in settings:
 /// the platform's (post sidecar, else the rating folder) or the user's own
@@ -15,36 +18,51 @@ namespace KoikatsuSceneGallery.Services;
 /// read one by one. User ratings are looked up by path; a card moved since it
 /// was rated is only recognised by its hash, which the rating and detail pages
 /// compute, and they update the stored path.
+///
+/// The same read keeps each post's title and tags, which the home page shows
+/// instead of file names: one pass over the sidecars per load, off the UI
+/// thread, and a dictionary lookup per tile afterwards.
 /// </remarks>
 internal sealed class SceneRatingResolver(PluginService plugins, UserCardRatingStore userRatings, IAppLogger logger)
 {
     private readonly PostMetadataStore _store = new();
     private IReadOnlyDictionary<string, int> _platform = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, ScenePostInfo> _posts = new Dictionary<string, ScenePostInfo>(StringComparer.OrdinalIgnoreCase);
 
     public bool UseUserRatings { get; set; }
 
     public UserCardRatingStore UserRatings => userRatings;
 
+    /// <summary>Raised, on a background thread, after the sidecars were read again.</summary>
+    public event Action? PostsReloaded;
+
     /// <summary>Reads the sidecars of <paramref name="cards"/> and the user rating files of <paramref name="roots"/>. Off the UI thread.</summary>
     public async Task ReloadAsync(IReadOnlyList<SceneCard> cards, IReadOnlyList<string> roots, CancellationToken token)
     {
-        var map = await Task.Run(() =>
+        var (ratings, posts) = await Task.Run(() =>
         {
             userRatings.EnsureLoaded(roots);
             var directories = PostSidecarLocator.AuthorDirectories(cards, logger);
             var documents = PostSidecarLocator.ReadAll(_store, directories, logger, "SceneRating.ReadSidecars", token);
-            var ratings = new Dictionary<string, (int Rating, DateTimeOffset FetchedAt)>(StringComparer.OrdinalIgnoreCase);
+            var newest = new Dictionary<string, PostMetadataDocument>(StringComparer.OrdinalIgnoreCase);
             foreach (var document in documents)
             {
                 // A post can have a sidecar in several author folders (one per
                 // rating folder); the newest fetch speaks for the platform.
                 var key = GalleryGrouping.GetKey(string.Empty, document.ProviderId, document.ArtworkId);
-                if (!ratings.TryGetValue(key, out var known) || document.FetchedAt > known.FetchedAt)
-                    ratings[key] = (document.Rating, document.FetchedAt);
+                if (!newest.TryGetValue(key, out var known) || document.FetchedAt > known.FetchedAt)
+                    newest[key] = document;
             }
-            return ratings.ToDictionary(p => p.Key, p => p.Value.Rating, StringComparer.OrdinalIgnoreCase);
+            return (
+                newest.ToDictionary(p => p.Key, p => p.Value.Rating, StringComparer.OrdinalIgnoreCase),
+                newest.ToDictionary(p => p.Key,
+                    p => new ScenePostInfo(p.Value.Title,
+                        [.. (p.Value.Tags ?? []).Select(t => (t.Name, t.TranslatedName))]),
+                    StringComparer.OrdinalIgnoreCase));
         }, token);
-        _platform = map;
+        _platform = ratings;
+        _posts = posts;
+        PostsReloaded?.Invoke();
     }
 
     public int Resolve(SceneCard card)
@@ -54,5 +72,30 @@ internal sealed class SceneRatingResolver(PluginService plugins, UserCardRatingS
             : null;
         int? user = UseUserRatings ? userRatings.TryGetByPath(card.FilePath) : null;
         return SceneRating.Resolve(card.FolderRating, platform, user, UseUserRatings);
+    }
+
+    /// <summary>The card's post key (<see cref="CardGroupKey"/>): <c>post:…</c> when it belongs to a post.</summary>
+    public string PostKeyOf(CardBase card) => CardGroupKey.For(card, plugins, logger);
+
+    /// <summary>The title and tags of the card's post, when a sidecar has them.</summary>
+    public ScenePostInfo? PostInfo(string postKey) => _posts.GetValueOrDefault(postKey);
+
+    /// <summary>
+    /// The artwork id the card's folder name parses to through its author's
+    /// provider, or null: the fallback title is in that folder's name.
+    /// </summary>
+    public string? FolderArtworkId(CardBase card)
+    {
+        var providerId = (card as IAuthorOwner)?.Author?.Key.ProviderId;
+        var provider = plugins.ImportProviders.FirstOrDefault(p => p.ProviderId == providerId);
+        try
+        {
+            return provider?.TryParseArtworkFolderName(Path.GetFileName(Path.GetDirectoryName(card.FilePath)) ?? "")?.Id;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("SceneRating.FolderArtworkId", ex, card.FilePath);
+            return null;
+        }
     }
 }

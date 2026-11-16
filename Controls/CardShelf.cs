@@ -59,6 +59,7 @@ internal sealed class CardShelf : Grid
         TextWrapping = TextWrapping.Wrap,
     };
     private readonly Dictionary<string, Tile> _tiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
     private bool _rebuildQueued;
     private bool _subscribed;
 
@@ -123,6 +124,7 @@ internal sealed class CardShelf : Grid
         _subscribed = true;
         _shelf.Cards.CollectionChanged += Cards_Changed;
         _states.StateChanged += State_Changed;
+        if (_home is not null) _home.CardInfoChanged += Info_Changed;
     }
 
     private void Unsubscribe()
@@ -131,7 +133,16 @@ internal sealed class CardShelf : Grid
         _subscribed = false;
         _shelf.Cards.CollectionChanged -= Cards_Changed;
         _states.StateChanged -= State_Changed;
+        if (_home is not null) _home.CardInfoChanged -= Info_Changed;
     }
+
+    // Titles arrive after the sidecars were read, off the UI thread.
+    private void Info_Changed()
+        => DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_home is null) return;
+            foreach (var tile in _tiles.Values) tile.UpdateText(_home.Describe(tile.Card));
+        });
 
     // The view model replaces a shelf by clearing it and adding each card, one
     // event apiece; rebuilding once after the burst keeps the tiles in place
@@ -179,6 +190,7 @@ internal sealed class CardShelf : Grid
             }
             tile.SetAutomationIds($"HomeShelf_{_shelf.Key}_Tile{i}");
             tile.UpdateState();
+            if (_home is not null) tile.UpdateText(_home.Describe(card));
             kept.Add(key);
             tiles[i] = tile;
         }
@@ -235,10 +247,14 @@ internal sealed class CardShelf : Grid
                 Foreground = (Brush)Application.Current.Resources["MediaOverlayForegroundBrush"],
             },
         };
+        private readonly HomeCardCaption _caption = new();
         private bool _pointerOver;
         private bool _thumbnailRequested;
 
         public CardBase Card { get; }
+
+        /// <summary>Caption, tooltip and accessible name from what the home page knows about the card.</summary>
+        public void UpdateText(HomeCardInfo info) => _caption.Show(info, _open);
 
         public Tile(CardBase card, CardStateService states, Action<CardBase> open, Action<CardBase, CardFlag> flag)
         {
@@ -250,6 +266,7 @@ internal sealed class CardShelf : Grid
             RowDefinitions.Add(new RowDefinition { Height = new GridLength(TileHeight) });
             RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
+            // Until the shelf describes it (UpdateText): the file name, as before.
             AutomationProperties.SetName(_open, card.FileName);
             ToolTipService.SetToolTip(_open, card.FileName);
             _open.Content = new Border
@@ -286,19 +303,9 @@ internal sealed class CardShelf : Grid
             var picture = new Grid { Children = { _open, _used, _flags } };
             Children.Add(picture);
 
-            var name = new TextBlock
-            {
-                Text = card.FileName,
-                Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
-                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-                TextWrapping = TextWrapping.NoWrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 1,
-            };
-            // The open button already carries the name for screen readers.
-            AutomationProperties.SetAccessibilityView(name, AccessibilityView.Raw);
-            SetRow(name, 1);
-            Children.Add(name);
+            // What the card is and who made it, not what the file is called.
+            SetRow(_caption, 1);
+            Children.Add(_caption);
 
             PointerEntered += (_, _) => { _pointerOver = true; ShowFlags(true); };
             PointerExited += (_, _) => { _pointerOver = false; ShowFlags(HasFocusWithin()); };

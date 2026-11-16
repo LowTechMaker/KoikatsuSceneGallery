@@ -53,6 +53,8 @@ public sealed partial class HomePage : Page
         if (_gallery.Cards.Count == 0) _ = _gallery.LoadCardsCommand.ExecuteAsync(null);
         await _states.EnsureLoadedAsync();
         _viewModel.Refresh();
+        // Queued, used and hidden are only known now: the pair is checked again.
+        Duel.Refresh();
         Reconcile();
     }
 
@@ -91,6 +93,8 @@ public sealed partial class HomePage : Page
         {
             _refreshQueued = false;
             _viewModel.Refresh();
+            // A card queued or hidden elsewhere (or a reload) leaves the pair.
+            Duel.Refresh();
         });
     }
 
