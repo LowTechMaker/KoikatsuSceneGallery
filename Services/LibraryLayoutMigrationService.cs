@@ -56,6 +56,13 @@ internal sealed class LibraryLayoutMigrationService(
         return await Task.Run(() => LibraryLayoutMigration.FindUnfinished(options.Roots)).ConfigureAwait(false);
     }
 
+    /// <summary>The run each root can move back now (newest only), newest last.</summary>
+    public async Task<IReadOnlyList<LayoutMigrationRun>> FindUndoableAsync()
+    {
+        var options = await importService.BuildLayoutMigrationOptionsAsync().ConfigureAwait(false);
+        return await Task.Run(() => LibraryLayoutMigration.FindUndoable(options.Roots)).ConfigureAwait(false);
+    }
+
     public Task<LayoutMigrationResult> ApplyAsync(
         LayoutMigrationPlan plan, IProgress<LayoutMigrationProgress>? progress, CancellationToken ct)
         => RunAsync(() => LibraryLayoutMigration.ApplyAsync(plan, Steps(), progress, ct));

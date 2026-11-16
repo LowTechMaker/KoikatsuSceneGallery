@@ -2335,4 +2335,6 @@
   <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>Not inside an author folder</value></data>
   <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>Its rating could not be saved first, so it was not moved</value></data>
   <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>The file changed or is no longer there since the plan was made</value></data>
+  <data name="LayoutMigration_LastRun" xml:space="preserve"><value>Last tidy-up: {0}, {1} files moved.</value></data>
+  <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} files are outside the organized folders and are not touched</value></data>
 </root>

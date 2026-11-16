@@ -65,6 +65,7 @@ public sealed partial class LibraryLayoutMigrationTests : IDisposable
         public List<IReadOnlyList<(string From, string To)>> Batches { get; } = [];
         public HashSet<string> RefuseRatingFor { get; } = new(StringComparer.OrdinalIgnoreCase);
         public Action<string>? AfterMove { get; set; }
+        public DateTimeOffset At { get; set; } = new(2026, 11, 17, 9, 0, 0, TimeSpan.Zero);
 
         public LayoutMigrationSteps Steps(LibraryCardMover? mover = null) => new(
             Mover: mover ?? new LibraryCardMover(),
@@ -79,7 +80,7 @@ public sealed partial class LibraryLayoutMigrationTests : IDisposable
                 Batches.Add([.. pairs]);
                 return Task.CompletedTask;
             },
-            Now: () => new DateTimeOffset(2026, 11, 17, 9, 0, 0, TimeSpan.Zero),
+            Now: () => At,
             AfterMove: path => AfterMove?.Invoke(path));
     }
 
@@ -691,5 +692,218 @@ public sealed partial class LibraryLayoutMigrationTests : IDisposable
         var journal = Assert.Single(LibraryLayoutMigration.FindUnfinished([Root]));
         Assert.True(LibraryLayoutMigration.WasBeingUndone(journal));
         Assert.Empty(LibraryLayoutMigration.Plan(Options(), default).UnfinishedJournals);
+    }
+
+    // ================================================================ part 3: undo after closing
+
+    private async Task<LayoutMigrationResult> MigrateAsync(Recorder? recorder = null)
+        => await LibraryLayoutMigration.ApplyAsync(
+            LibraryLayoutMigration.Plan(Options(), default), (recorder ?? new Recorder()).Steps(), null, default);
+
+    [Fact]
+    public async Task AFinishedRunCanStillBeUndoneLaterAndNotAfterwards()
+    {
+        for (var i = 0; i < 3; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        var recorder = new Recorder();
+        var applied = await MigrateAsync(recorder);
+
+        var run = Assert.Single(LibraryLayoutMigration.FindUndoable([Root]));
+        Assert.Equal(applied.Journals[0], run.Journal);
+        Assert.Equal(Root, run.Root);
+        Assert.Equal(recorder.At, run.At);
+        Assert.Equal(3, run.Moved);
+        // Nothing left to move, yet the run is still there to undo.
+        Assert.Empty(LibraryLayoutMigration.Plan(Options(), default).Moves);
+
+        await LibraryLayoutMigration.RollbackAsync(run.Journal, new Recorder().Steps(), null, default);
+
+        Assert.Empty(LibraryLayoutMigration.FindUndoable([Root]));
+    }
+
+    [Fact]
+    public async Task AStoppedRunIsUndoableWithWhatItMoved()
+    {
+        for (var i = 0; i < 4; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        using var cancel = new CancellationTokenSource();
+        var progress = new SynchronousProgress(p => { if (p.Done == 1) cancel.Cancel(); });
+        await LibraryLayoutMigration.ApplyAsync(
+            LibraryLayoutMigration.Plan(Options(), default), new Recorder().Steps(), progress, cancel.Token);
+
+        Assert.Equal(1, Assert.Single(LibraryLayoutMigration.FindUndoable([Root])).Moved);
+    }
+
+    [Fact]
+    public async Task AResumedRunIsOneUndoableRunWithEverythingItMoved()
+    {
+        for (var i = 0; i < 5; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        var recorder = new Recorder();
+        var moves = 0;
+        recorder.AfterMove = _ => { if (++moves == 3) throw new Killed(); };
+        await Assert.ThrowsAsync<Killed>(() => MigrateAsync(recorder));
+        // Killed and not resumed: nothing is offered to undo yet (it is offered to resume).
+        Assert.Empty(LibraryLayoutMigration.FindUndoable([Root]));
+        recorder.AfterMove = null;
+        recorder.At = recorder.At.AddMinutes(5);
+
+        await MigrateAsync(recorder);
+
+        var run = Assert.Single(LibraryLayoutMigration.FindUndoable([Root]));
+        Assert.Equal(5, run.Moved);
+        Assert.Equal(recorder.At.AddMinutes(-5), run.At);
+    }
+
+    [Fact]
+    public async Task OnlyTheNewestRunOfARootIsOffered()
+    {
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        var recorder = new Recorder();
+        await MigrateAsync(recorder);
+        File_("Organized/Pixiv/KoikatsuSunshine/R-18/Other (7)/b.png");
+        File_("Organized/Pixiv/KoikatsuSunshine/R-18/Other (7)/c.png");
+        recorder.At = recorder.At.AddHours(1);
+        var newer = await MigrateAsync(recorder);
+
+        var run = Assert.Single(LibraryLayoutMigration.FindUndoable([Root]));
+        Assert.Equal(newer.Journals[0], run.Journal);
+        Assert.Equal(2, run.Moved);
+
+        // Once the newest is undone, the one before it may be.
+        await LibraryLayoutMigration.RollbackAsync(run.Journal, new Recorder().Steps(), null, default);
+        Assert.Equal(1, Assert.Single(LibraryLayoutMigration.FindUndoable([Root])).Moved);
+    }
+
+    [Fact]
+    public async Task AnOlderRunIsNotOfferedWhileANewerOneIsUnfinished()
+    {
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        var recorder = new Recorder();
+        await MigrateAsync(recorder);
+        File_("Organized/Pixiv/Koikatsu/G/Other (7)/b.png");
+        File_("Organized/Pixiv/Koikatsu/G/Other (7)/c.png");
+        recorder.At = recorder.At.AddHours(1);
+        var moves = 0;
+        recorder.AfterMove = _ => { if (++moves == 1) throw new Killed(); };
+        await Assert.ThrowsAsync<Killed>(() => MigrateAsync(recorder));
+
+        Assert.Empty(LibraryLayoutMigration.FindUndoable([Root]));
+    }
+
+    [Fact]
+    public async Task TwoRunsInTheSameSecondGetTwoJournals()
+    {
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        var recorder = new Recorder();
+        var first = await MigrateAsync(recorder);
+        File_("Organized/Pixiv/Koikatsu/G/Other (7)/b.png");
+
+        var second = await MigrateAsync(recorder);
+
+        Assert.NotEqual(first.Journals[0], second.Journals[0]);
+        Assert.Equal(second.Journals[0], Assert.Single(LibraryLayoutMigration.FindUndoable([Root])).Journal);
+    }
+
+    [Fact]
+    public async Task EveryRootOffersItsNewestRun()
+    {
+        var second = Path.Combine(Root, "characters");
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        var c = Path.Combine(second, "Organized", "Pixiv", "Koikatsu", "G", "Artist (42)", "c.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(c)!);
+        File.WriteAllText(c, "c");
+        var options = Options() with { Roots = [Root, second] };
+
+        await LibraryLayoutMigration.ApplyAsync(LibraryLayoutMigration.Plan(options, default), new Recorder().Steps(), null, default);
+
+        var runs = LibraryLayoutMigration.FindUndoable([Root, second]);
+        Assert.Equal(new[] { Root, second }.Order(), runs.Select(r => r.Root).Order());
+    }
+
+    [Fact]
+    public async Task APartlyUndoneRunIsOfferedWithWhatIsStillMoved()
+    {
+        for (var i = 0; i < 3; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        var applied = await MigrateAsync();
+        using var cancel = new CancellationTokenSource();
+        var progress = new SynchronousProgress(p => { if (p.Done == 1) cancel.Cancel(); });
+        await LibraryLayoutMigration.RollbackAsync(applied.Journals[0], new Recorder().Steps(), progress, cancel.Token);
+
+        Assert.Equal(2, Assert.Single(LibraryLayoutMigration.FindUndoable([Root])).Moved);
+    }
+
+    [Fact]
+    public async Task ANestedRootsRemovedFoldersBelongToItsOwnJournal()
+    {
+        // Roots can sit inside one another; undoing the inner root alone must
+        // bring back the folders the run removed there.
+        var inner = Path.Combine(Root, "characters");
+        File_("Organized/Pixiv/Koikatsu/G/Artist (42)/a.png");
+        var c = Path.Combine(inner, "Organized", "Pixiv", "Koikatsu", "G", "Artist (42)", "c.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(c)!);
+        File.WriteAllText(c, "c");
+        // Only an empty folder shows it: files moving back recreate their own folders.
+        var empty = Path.Combine(inner, "Organized", "Pixiv", "Koikatsu", "G", "Empty (9)");
+        Directory.CreateDirectory(empty);
+        var options = Options() with { Roots = [Root, inner] };
+        await LibraryLayoutMigration.ApplyAsync(LibraryLayoutMigration.Plan(options, default), new Recorder().Steps(), null, default);
+        Assert.False(Directory.Exists(empty));
+        var innerRun = LibraryLayoutMigration.FindUndoable([inner]).Single();
+
+        await LibraryLayoutMigration.RollbackAsync(innerRun.Journal, new Recorder().Steps(), null, default);
+
+        Assert.True(File.Exists(c));
+        Assert.True(Directory.Exists(empty));
+        Assert.False(Directory.Exists(P("Organized/Pixiv/Koikatsu")));
+    }
+
+    // ================================================================ part 3: counting and re-pointing
+
+    [Fact]
+    public void AnAuthorWhoseOldFoldersShareANameIsCountedAsMerged()
+    {
+        File_("Organized/Pixiv/Koikatsu/R-18G/乙 (5)/a.png");
+        File_("Organized/Pixiv/KoikatsuSunshine/G/乙 (5)/b.png");
+        // One old folder only: moved, not merged.
+        File_("Organized/Pixiv/Koikatsu/G/Solo (6)/c.png");
+        File_("Organized/Pixiv/Koikatsu/G/Solo (6)/sub/d.png");
+
+        Assert.Equal(1, LibraryLayoutMigration.Plan(Options(), default).AuthorsMerged);
+    }
+
+    [Fact]
+    public async Task AResumedRunRepointsWhatTheKilledRunMoved()
+    {
+        // Killed after the moves but before the stores were re-pointed: the
+        // resume must re-point those too, not leave them to the hash fallback.
+        for (var i = 0; i < 4; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        var recorder = new Recorder();
+        var moves = 0;
+        recorder.AfterMove = _ => { if (++moves == 3) throw new Killed(); };
+        await Assert.ThrowsAsync<Killed>(() => MigrateAsync(recorder));
+        Assert.Empty(recorder.Batches);
+        recorder.AfterMove = null;
+
+        await MigrateAsync(recorder);
+
+        var batch = Assert.Single(recorder.Batches);
+        Assert.Equal(
+            Enumerable.Range(0, 4).Select(i => P($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png")).Order(),
+            batch.Select(p => p.From).Order());
+    }
+
+    [Fact]
+    public async Task ARollbackRunAgainAfterBeingKilledRepointsWhatItAlreadyMovedBack()
+    {
+        for (var i = 0; i < 3; i++) File_($"Organized/Pixiv/Koikatsu/G/Artist (42)/{i}.png");
+        var applied = await MigrateAsync();
+        var recorder = new Recorder();
+        var moves = 0;
+        recorder.AfterMove = _ => { if (++moves == 2) throw new Killed(); };
+        await Assert.ThrowsAsync<Killed>(() =>
+            LibraryLayoutMigration.RollbackAsync(applied.Journals[0], recorder.Steps(), null, default));
+        recorder.AfterMove = null;
+
+        await LibraryLayoutMigration.RollbackAsync(applied.Journals[0], recorder.Steps(), null, default);
+
+        Assert.Equal(3, Assert.Single(recorder.Batches).Count);
     }
 }

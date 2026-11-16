@@ -103,6 +103,9 @@ internal sealed record LayoutMigrationSteps(
 
 internal sealed record LayoutMigrationProgress(int Done, int Total);
 
+/// <summary>A run that can be moved back: its journal, root, when it started, and how many files it moved (and still has moved).</summary>
+internal sealed record LayoutMigrationRun(string Journal, string Root, DateTimeOffset? At, int Moved);
+
 /// <param name="Stopped">Cancelled between files: what moved stays moved; the run can be resumed or undone.</param>
 internal sealed record LayoutMigrationResult(
     int Moved, IReadOnlyList<LayoutStay> Stayed, bool Stopped, IReadOnlyList<string> Journals);
@@ -191,7 +194,7 @@ internal static class LibraryLayoutMigration
                 var providerDir = Path.Combine(organized, provider);
                 if (!Directory.Exists(providerDir)) continue;
                 var isUnknown = string.Equals(provider, options.UnknownFolderName, PathComparison.Comparison);
-                var entries = new List<(string Source, string[] Tail, int Rating)>();
+                var entries = new List<(string Source, string[] Tail, int Rating, string OldFolder)>();
                 var existingNew = new Dictionary<string, string>(StringComparer.Ordinal);
 
                 foreach (var file in EnumerateFiles(providerDir, ct))
@@ -206,7 +209,8 @@ internal static class LibraryLayoutMigration
                         skip++;
                     }
                     if (skip == 0) continue; // Already the new layout.
-                    entries.Add((file, segments[skip..], rating));
+                    // The old author folder (for a loose file, the file itself; never grouped).
+                    entries.Add((file, segments[skip..], rating, Path.Combine([providerDir, .. segments[..(skip + 1)]])));
                 }
 
                 // Author folders already in the new layout are merge targets,
@@ -227,12 +231,15 @@ internal static class LibraryLayoutMigration
                 {
                     foreach (var group in entries
                                  .Where(e => e.Tail.Length > 1)
-                                 .Select(e => (e.Tail[0], Id: options.ParseAuthorId(provider, e.Tail[0])))
+                                 .Select(e => (e.Tail[0], Id: options.ParseAuthorId(provider, e.Tail[0]), e.OldFolder))
                                  .Where(e => e.Id is not null)
                                  .GroupBy(e => e.Id!, StringComparer.Ordinal))
                     {
                         var names = group.GroupBy(e => e.Item1, PathComparison.Comparer)
                             .Select(g => (Name: g.Key, Files: g.Count())).ToList();
+                        // Merged = more than one old folder, by path: the same name
+                        // under KK\R-18G and under KKS\G is two folders becoming one.
+                        var oldFolderCount = group.Select(e => e.OldFolder).Distinct(PathComparison.Comparer).Count();
                         if (existingNew.TryGetValue(group.Key, out var existing))
                         {
                             targetName[group.Key] = existing;
@@ -244,13 +251,13 @@ internal static class LibraryLayoutMigration
                                 .OrderByDescending(n => n.Files)
                                 .ThenBy(n => n.Name, StringComparer.Ordinal)
                                 .First().Name;
-                            if (names.Count > 1) authorsMerged++;
+                            if (oldFolderCount > 1) authorsMerged++;
                         }
                     }
                 }
 
                 var byDestination = new Dictionary<string, List<(string Source, int Rating)>>(PathComparison.Comparer);
-                foreach (var (source, rest, rating) in entries)
+                foreach (var (source, rest, rating, _) in entries)
                 {
                     string[] destination;
                     if (isUnknown)
@@ -491,6 +498,50 @@ internal static class LibraryLayoutMigration
         return found;
     }
 
+    /// <summary>
+    /// A journal name for a run starting at <paramref name="at"/>, never one
+    /// that exists: two runs in the same second must not share a journal.
+    /// Numbered from 02, so names still sort in the order the runs started.
+    /// </summary>
+    private static string NewJournalPath(string root, DateTimeOffset at)
+    {
+        var stem = Path.Combine(root, Metadata, $"{JournalPrefix}{at:yyyyMMddHHmmss}");
+        var path = stem + ".json";
+        for (var n = 2; File.Exists(path); n++) path = $"{stem}_{n:D2}.json";
+        return path;
+    }
+
+    /// <summary>
+    /// The run that can be moved back now, per root: the newest journal that
+    /// was not undone, when its run finished or was stopped. An older run is
+    /// never offered while a newer one stands (undone runs aside), and a run
+    /// that was killed is offered for resuming, not here. Newest last.
+    /// </summary>
+    public static IReadOnlyList<LayoutMigrationRun> FindUndoable(IEnumerable<string> roots)
+    {
+        var runs = new List<LayoutMigrationRun>();
+        foreach (var root in roots.Where(r => !string.IsNullOrWhiteSpace(r)).Select(Path.GetFullPath).Distinct(PathComparison.Comparer))
+        {
+            var folder = Path.Combine(root, Metadata);
+            if (!Directory.Exists(folder)) continue;
+            foreach (var journal in Directory.GetFiles(folder, JournalPrefix + "*.json").OrderDescending(StringComparer.Ordinal))
+            {
+                var entries = ReadJournal(journal);
+                var ops = entries.Select(e => e.Op).ToList();
+                if (ops.Contains("undone")) continue;
+                if (ops.Contains("done") || ops.Contains("stopped"))
+                {
+                    var returned = new HashSet<string>(entries.Where(e => e.Op == "returned").Select(e => e.To!), PathComparison.Comparer);
+                    runs.Add(new LayoutMigrationRun(journal, root,
+                        entries.FirstOrDefault(e => e.Op == "header")?.At,
+                        entries.Count(e => e.Op == "moved" && !returned.Contains(e.To!))));
+                }
+                break;
+            }
+        }
+        return [.. runs.OrderBy(r => r.At ?? DateTimeOffset.MinValue)];
+    }
+
     /// <summary>Whether this journal's run was being moved back when it stopped.</summary>
     public static bool WasBeingUndone(string journalPath)
         => ReadJournal(journalPath).Any(e => e.Op == "undoing");
@@ -534,6 +585,7 @@ internal static class LibraryLayoutMigration
         var stayed = new List<LayoutStay>(plan.Stays);
         var journals = new Dictionary<string, Journal>(PathComparison.Comparer);
         var moved = new Dictionary<string, List<(string From, string To)>>(PathComparison.Comparer);
+        var repoint = new Dictionary<string, List<(string From, string To)>>(PathComparison.Comparer);
         var stopped = false;
         try
         {
@@ -546,15 +598,23 @@ internal static class LibraryLayoutMigration
                 if (!hasWork) continue;
                 var unfinished = plan.UnfinishedJournals.LastOrDefault(j =>
                     string.Equals(Path.GetDirectoryName(Path.GetDirectoryName(j)), root, PathComparison.Comparison));
-                var path = unfinished ?? Path.Combine(root, Metadata, $"{JournalPrefix}{now():yyyyMMddHHmmss}.json");
+                var path = unfinished ?? NewJournalPath(root, now());
                 var earlier = unfinished is null ? null : ReadJournal(unfinished);
                 var journal = new Journal(path);
                 journals[root] = journal;
                 moved[root] = [];
+                repoint[root] = [];
                 if (earlier is null)
+                {
                     journal.Write(new JournalEntry("header", Root: root, At: now()));
+                }
                 else
+                {
                     SettleDangling(journal, earlier);
+                    // A killed run never re-pointed its moves: this run does, with its own.
+                    // Pairs a stopped run already re-pointed are skipped by the stores.
+                    repoint[root].AddRange(earlier.Where(e => e.Op == "moved").Select(e => (e.From!, e.To!)));
+                }
             }
 
             // 2. Every rating the old folders imply, on disk before anything moves.
@@ -595,6 +655,7 @@ internal static class LibraryLayoutMigration
                     {
                         journal.Write(begin with { Op = "moved" });
                         moved[move.Root].Add((move.Source, move.Destination));
+                        repoint[move.Root].Add((move.Source, move.Destination));
                     }
                     else
                     {
@@ -622,14 +683,18 @@ internal static class LibraryLayoutMigration
                 await MergeAsync(merge, journals[merge.Root], stayed).ConfigureAwait(false);
 
             // 5. Everything keyed by path follows, once per root.
-            foreach (var (_, pairs) in moved.Where(m => m.Value.Count > 0))
+            foreach (var (_, pairs) in repoint.Where(m => m.Value.Count > 0))
                 await steps.PathsMoved(pairs, CancellationToken.None).ConfigureAwait(false);
 
             // 6. Old folders that are now empty, deepest first.
             foreach (var folder in plan.OldFolders)
             {
                 if (!Directory.Exists(folder) || Directory.EnumerateFileSystemEntries(folder).Any()) continue;
-                var root = plan.Roots.First(r => folder.StartsWith(r + Path.DirectorySeparatorChar, PathComparison.Comparison));
+                // The deepest root holding it: roots can be nested.
+                var root = plan.Roots
+                    .Where(r => folder.StartsWith(r + Path.DirectorySeparatorChar, PathComparison.Comparison))
+                    .MaxBy(r => r.Length)!;
+                if (!journals.ContainsKey(root)) continue;
                 try
                 {
                     Directory.Delete(folder);
@@ -849,13 +914,20 @@ internal static class LibraryLayoutMigration
             foreach (var entry in toMove)
             {
                 if (ct.IsCancellationRequested) { stopped = true; break; }
-                if (!Matches(entry.To!, entry.Length, entry.Written))
+                if (!File.Exists(entry.To) && Matches(entry.From!, entry.Length, entry.Written))
+                {
+                    // Moved back by a rollback that was killed before it said so.
+                    journal.Write(entry with { Op = "returned" });
+                    back.Add((entry.To!, entry.From!));
+                }
+                else if (!Matches(entry.To!, entry.Length, entry.Written))
                 {
                     stayed.Add(new(root, entry.To!, entry.From, LayoutStayReason.Changed));
                 }
                 else
                 {
                     var result = await steps.Mover.MoveAsync(entry.To!, entry.From!, CancellationToken.None).ConfigureAwait(false);
+                    steps.AfterMove?.Invoke(entry.To!);
                     if (result.Outcome == LibraryCardMoveOutcome.Moved)
                     {
                         journal.Write(entry with { Op = "returned" });
@@ -875,8 +947,12 @@ internal static class LibraryLayoutMigration
                 progress?.Report(new(++done, toMove.Count));
             }
 
-            if (back.Count > 0)
-                await steps.PathsMoved(back, CancellationToken.None).ConfigureAwait(false);
+            // Everything this journal has moved back, including what a killed
+            // rollback moved but never re-pointed; already re-pointed pairs are skipped by the stores.
+            List<(string From, string To)> repoint =
+                [.. entries.Where(e => e.Op == "returned").Select(e => (e.To!, e.From!)), .. back];
+            if (repoint.Count > 0)
+                await steps.PathsMoved(repoint, CancellationToken.None).ConfigureAwait(false);
 
             // Folders the run created, now empty, deepest first.
             foreach (var folder in entries.Where(e => e.Op == "mkdir").Select(e => e.To!)

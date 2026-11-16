@@ -62,7 +62,9 @@ internal static class LayoutMigrationDialog
         tools.Children.Add(savePlan);
 
         var panel = new StackPanel { Spacing = 12, MinWidth = 480, MaxWidth = 640 };
-        foreach (var element in new UIElement[] { notice, summary, tools, details, progressBar, progressText, result, buttons })
+        var lastRun = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = secondary, Visibility = Visibility.Collapsed };
+        AutomationProperties.SetAutomationId(lastRun, "LayoutMigrationLastRun");
+        foreach (var element in new UIElement[] { notice, summary, lastRun, tools, details, progressBar, progressText, result, buttons })
             panel.Children.Add(element);
 
         var dialog = new ContentDialog
@@ -113,6 +115,7 @@ internal static class LayoutMigrationDialog
         void ShowResult(LayoutMigrationResult outcome, bool undoing)
         {
             run.Visibility = Visibility.Collapsed;
+            lastRun.Visibility = Visibility.Collapsed;
             showDetails.IsChecked = outcome.Stayed.Count > 0;
             details.Visibility = outcome.Stayed.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             savePlan.Visibility = Visibility.Collapsed;
@@ -205,12 +208,21 @@ internal static class LayoutMigrationDialog
                     notice.Message = UiText.Get("LayoutMigration_Resume");
                     notice.IsOpen = true;
                 }
-                if (rollbacks.Count > 0)
+                // The last run of each root stays undoable after the dialog was
+                // closed, whether or not anything is left to move. Only the
+                // newest per root: an older run is never offered over a newer one.
+                var undoable = await service.FindUndoableAsync();
+                if (undoable.Count > 0)
                 {
-                    // A rollback that stopped is finished by rolling back, not by migrating.
-                    journals = rollbacks;
-                    undo.Visibility = Visibility.Visible;
+                    var newest = undoable[^1];
+                    lastRun.Text = UiText.Format("LayoutMigration_LastRun",
+                        (newest.At ?? DateTimeOffset.Now).LocalDateTime.ToString("g"),
+                        undoable.Sum(r => r.Moved));
+                    lastRun.Visibility = Visibility.Visible;
                 }
+                // A rollback that stopped is finished by rolling back, not by migrating.
+                journals = [.. undoable.Select(r => r.Journal).Concat(rollbacks).Distinct(StringComparer.OrdinalIgnoreCase)];
+                undo.Visibility = journals.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
                 plan = await service.PlanAsync(CancellationToken.None);
                 summary.Text = Summary(plan);
@@ -243,7 +255,8 @@ internal static class LayoutMigrationDialog
         foreach (var group in plan.Stays.GroupBy(s => s.Reason).OrderBy(g => g.Key))
             lines.Add($"    {ReasonText(group.First())}: {group.Count()}");
         var outside = plan.OutOfScope.Sum(o => o.FileCount);
-        if (outside > 0) lines.Add($"{UiText.Get("LayoutMigration_ReasonUnknownProvider")}: {outside}");
+        // Files outside the organized folders: the user's own, not an unknown provider's.
+        if (outside > 0) lines.Add(UiText.Format("LayoutMigration_OutOfScope", outside));
         return string.Join(Environment.NewLine, lines);
     }
 
