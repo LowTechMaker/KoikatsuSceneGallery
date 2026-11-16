@@ -2329,4 +2329,10 @@
   <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>無法判斷屬於哪個平台</value></data>
   <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>搬動失敗：{0}</value></data>
   <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>請先等匯入或掃描結束。</value></data>
+  <data name="SC_LayoutMigration.Header" xml:space="preserve"><value>整理資料夾結構</value></data>
+  <data name="SC_LayoutMigration.Description" xml:space="preserve"><value>把收藏庫從「平台＼遊戲＼分級＼作者＼貼文」改成「平台＼作者＼貼文」。會先列出計劃，確認後才搬動檔案。</value></data>
+  <data name="SC_LayoutMigrationButton.Content" xml:space="preserve"><value>整理資料夾結構…</value></data>
+  <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>不在作者資料夾內</value></data>
+  <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>分級無法先存下來，所以沒有搬動</value></data>
+  <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>檔案在列出計劃後有變動或已不在原處</value></data>
 </root>

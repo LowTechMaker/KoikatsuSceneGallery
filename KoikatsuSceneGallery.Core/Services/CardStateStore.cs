@@ -261,6 +261,15 @@ internal sealed class CardStateStore
     /// </summary>
     public async Task<int> SetFiledRatingsAsync(IReadOnlyList<(string FullPath, string Hash, int Rating)> ratings,
         CancellationToken cancellationToken = default)
+        => (await SetFiledRatingsReportingAsync(ratings, cancellationToken).ConfigureAwait(false)).Count;
+
+    /// <summary>
+    /// <see cref="SetFiledRatingsAsync"/>, naming the paths that could not be
+    /// stored: the library migration keeps exactly those cards where they are.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SetFiledRatingsReportingAsync(
+        IReadOnlyList<(string FullPath, string Hash, int Rating)> ratings,
+        CancellationToken cancellationToken = default)
     {
         foreach (var (_, hash, rating) in ratings)
         {
@@ -268,7 +277,7 @@ internal sealed class CardStateStore
             CheckRating(rating);
         }
 
-        var failed = 0;
+        var failed = new List<string>();
         var touched = new HashSet<string>(PathComparison.Comparer);
         var changed = new List<string>(ratings.Count);
         lock (_gate)
@@ -279,7 +288,7 @@ internal sealed class CardStateStore
                 switch (Apply(path, hash, state => state with { FiledRating = rating }, out var root, out var previousRoot))
                 {
                     case ApplyResult.Refused:
-                        failed++;
+                        failed.Add(fullPath);
                         break;
                     case ApplyResult.Changed:
                         touched.Add(root!);
@@ -290,11 +299,43 @@ internal sealed class CardStateStore
             }
         }
 
-        foreach (var root in touched)
-            await WriteRootAsync(root, cancellationToken).ConfigureAwait(false);
-        foreach (var path in changed)
-            StateChanged?.Invoke(path);
+        await WriteAndAnnounceAsync(touched, changed, cancellationToken).ConfigureAwait(false);
         return failed;
+    }
+
+    /// <summary>
+    /// Re-points the states of cards that moved, by their old paths, writing
+    /// each root's file once. A path with no state is skipped. Returns how many
+    /// were re-pointed.
+    /// </summary>
+    public async Task<int> MovePathsAsync(IReadOnlyList<(string From, string To)> moves,
+        CancellationToken cancellationToken = default)
+    {
+        var touched = new HashSet<string>(PathComparison.Comparer);
+        var changed = new List<string>(moves.Count);
+        lock (_gate)
+        {
+            foreach (var (from, to) in moves)
+            {
+                if (!_hashByPath.TryGetValue(Path.GetFullPath(from), out var hash)) continue;
+                var path = Path.GetFullPath(to);
+                if (Apply(path, hash, state => state, out var root, out var previousRoot) != ApplyResult.Changed) continue;
+                touched.Add(root!);
+                if (previousRoot is not null) touched.Add(previousRoot);
+                changed.Add(path);
+            }
+        }
+
+        await WriteAndAnnounceAsync(touched, changed, cancellationToken).ConfigureAwait(false);
+        return changed.Count;
+    }
+
+    private async Task WriteAndAnnounceAsync(HashSet<string> roots, List<string> paths, CancellationToken cancellationToken)
+    {
+        foreach (var root in roots)
+            await WriteRootAsync(root, cancellationToken).ConfigureAwait(false);
+        foreach (var path in paths)
+            StateChanged?.Invoke(path);
     }
 
     /// <summary>How many times a state file was written; for tests.</summary>

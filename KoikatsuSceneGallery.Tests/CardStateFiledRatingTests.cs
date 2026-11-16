@@ -292,4 +292,77 @@ public sealed class CardStateFiledRatingTests
         Assert.DoesNotContain("hash-a", File.ReadAllText(CardStateStore.GetFilePath(first)));
         Assert.True(store.TryGetByPath(Path.Combine(second, "a.png"))?.Liked);
     }
+
+    // --- re-pointing many moved cards at once (library layout migration) ---
+
+    [Fact]
+    public async Task MovedPathsAreRepointedWithOneWritePerRoot()
+    {
+        using var directory = new TestDirectory();
+        var store = Reload(directory.Path);
+        var pairs = new List<(string From, string To)>();
+        for (var i = 0; i < 20; i++)
+        {
+            var from = Path.Combine(directory.Path, "Pixiv", "KK", "R-18", "A (1)", $"{i}.png");
+            await store.SetFiledRatingAsync(from, $"hash-{i}", 1);
+            pairs.Add((from, Path.Combine(directory.Path, "Pixiv", "A (1)", $"{i}.png")));
+        }
+        var before = store.WriteCount;
+        var announced = new List<string>();
+        store.StateChanged += announced.Add;
+
+        Assert.Equal(20, await store.MovePathsAsync(pairs));
+
+        Assert.Equal(1, store.WriteCount - before);
+        Assert.Equal(pairs.Select(p => p.To).Order(), announced.Order());
+        var reloaded = Reload(directory.Path);
+        Assert.All(pairs, p =>
+        {
+            Assert.Equal(1, reloaded.TryGetByPath(p.To)?.FiledRating);
+            Assert.Null(reloaded.TryGetByPath(p.From));
+        });
+    }
+
+    [Fact]
+    public async Task MovingAPathWithNoStateChangesNothing()
+    {
+        using var directory = new TestDirectory();
+        var store = Reload(directory.Path);
+
+        Assert.Equal(0, await store.MovePathsAsync([(Path.Combine(directory.Path, "a.png"), Path.Combine(directory.Path, "b.png"))]));
+        Assert.Equal(0, store.WriteCount);
+    }
+
+    [Fact]
+    public async Task AFlaggedCardKeepsItsFlagsWhenItsPathMoves()
+    {
+        using var directory = new TestDirectory();
+        var from = Path.Combine(directory.Path, "old", "a.png");
+        var to = Path.Combine(directory.Path, "new", "a.png");
+        var store = Reload(directory.Path);
+        await store.SetFlagAsync(from, "hash-a", CardFlag.Liked, true);
+        await store.MarkUsedAsync(from, "hash-a");
+
+        await store.MovePathsAsync([(from, to)]);
+
+        var state = Reload(directory.Path).TryGetByPath(to)!;
+        Assert.True(state.Liked);
+        Assert.Equal(1, state.UseCount);
+    }
+
+    [Fact]
+    public async Task TheReportingBatchNamesThePathsItCouldNotStore()
+    {
+        using var directory = new TestDirectory();
+        var root = Path.Combine(directory.Path, "lib");
+        var store = Store();
+        store.EnsureLoaded([root]);
+        var outside = Path.Combine(directory.Path, "elsewhere", "b.png");
+
+        var failed = await store.SetFiledRatingsReportingAsync(
+            [(Path.Combine(root, "a.png"), "hash-a", 1), (outside, "hash-b", 2)]);
+
+        Assert.Equal([outside], failed);
+        Assert.Equal(1, store.TryGetByPath(Path.Combine(root, "a.png"))?.FiledRating);
+    }
 }

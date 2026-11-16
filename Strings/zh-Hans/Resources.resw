@@ -2329,4 +2329,10 @@
   <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>无法判断属于哪个平台</value></data>
   <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>移动失败：{0}</value></data>
   <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>请先等导入或扫描结束。</value></data>
+  <data name="SC_LayoutMigration.Header" xml:space="preserve"><value>整理文件夹结构</value></data>
+  <data name="SC_LayoutMigration.Description" xml:space="preserve"><value>把收藏库从“平台＼游戏＼分级＼作者＼帖子”改成“平台＼作者＼帖子”。会先列出计划，确认后才移动文件。</value></data>
+  <data name="SC_LayoutMigrationButton.Content" xml:space="preserve"><value>整理文件夹结构…</value></data>
+  <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>不在作者文件夹内</value></data>
+  <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>分级无法先保存，所以没有移动</value></data>
+  <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>文件在列出计划后有变动或已不在原处</value></data>
 </root>

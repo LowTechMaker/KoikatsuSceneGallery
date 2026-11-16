@@ -132,6 +132,42 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
     }
 
     /// <summary>
+    /// For the library migration: files each card's folder-implied rating at
+    /// its current (old) path, unless it already has one at least as high, and
+    /// returns the paths that could not be filed (not a card, or a store that
+    /// would not take it). Those cards must not leave their rating folder.
+    /// </summary>
+    public Task<IReadOnlyList<string>> RecordFolderRatingsAsync(IReadOnlyList<(string Path, int Rating)> ratings)
+    {
+        var roots = Roots();
+        return Task.Run(async () =>
+        {
+            store.EnsureLoaded(roots);
+            var failed = new List<string>();
+            var batch = new List<(string, string, int)>(ratings.Count);
+            foreach (var (path, rating) in ratings)
+            {
+                if (store.TryGetByPath(path)?.FiledRating is { } filed && filed >= rating) continue;
+                if (CardPayloadHash.TryCompute(path) is { } hash) batch.Add((path, hash, rating));
+                else failed.Add(path);
+            }
+            failed.AddRange(await store.SetFiledRatingsReportingAsync(batch).ConfigureAwait(false));
+            return (IReadOnlyList<string>)failed;
+        });
+    }
+
+    /// <summary>Re-points the states of cards the app moved, by their old paths; one write per root.</summary>
+    public Task<int> MovePathsAsync(IReadOnlyList<(string From, string To)> moves)
+    {
+        var roots = Roots();
+        return Task.Run(async () =>
+        {
+            store.EnsureLoaded(roots);
+            return await store.MovePathsAsync(moves).ConfigureAwait(false);
+        });
+    }
+
+    /// <summary>
     /// The app just moved this card (its hash is known): point its state at
     /// the new path now rather than waiting for the next reconcile.
     /// </summary>

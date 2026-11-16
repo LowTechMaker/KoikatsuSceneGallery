@@ -447,6 +447,14 @@
                             <TextBox MinWidth="200" Text="{x:Bind ViewModel.ModInstallFolderName, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
+                        <!-- Moves the whole library to the three-level layout; nothing moves before the dialog's confirm. -->
+                        <controls:SettingsCard x:Uid="SC_LayoutMigration" AutomationProperties.AutomationId="SettingsLayoutMigrationCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE8DE;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <Button x:Uid="SC_LayoutMigrationButton" AutomationProperties.AutomationId="SettingsLayoutMigrationButton" Click="LayoutMigration_Click" />
+                        </controls:SettingsCard>
+
 
                     </StackPanel>
                 </ScrollViewer>

@@ -2329,4 +2329,10 @@
   <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>Could not tell which provider it belongs to</value></data>
   <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>Could not move: {0}</value></data>
   <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>Wait for the import or scan to finish first.</value></data>
+  <data name="SC_LayoutMigration.Header" xml:space="preserve"><value>Tidy the folder layout</value></data>
+  <data name="SC_LayoutMigration.Description" xml:space="preserve"><value>Changes the library from provider\game\rating\author\post to provider\author\post. You see the plan first; nothing moves until you confirm.</value></data>
+  <data name="SC_LayoutMigrationButton.Content" xml:space="preserve"><value>Tidy the folder layout…</value></data>
+  <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>Not inside an author folder</value></data>
+  <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>Its rating could not be saved first, so it was not moved</value></data>
+  <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>The file changed or is no longer there since the plan was made</value></data>
 </root>

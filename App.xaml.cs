@@ -395,6 +395,14 @@ public partial class App : Application
             // where it goes, so it exists only when import does.
             Services.Add(new LibraryCardReidentifier(
                 importService, settingsViewModel, _userCardRatings, cardStates, _logger));
+            // Moving the library to the three-level layout uses the import
+            // settings and plugins for its folder names, like the line above.
+            Services.Add(new LibraryLayoutMigrationService(
+                importService, cardStates, _userCardRatings, _characterAnnotations, _localSourceRegistry,
+                Services.GetRequiredService<LibraryRegistry>(),
+                _sceneCardService, _characterCardService, _coordinateCardService,
+                () => importViewModel is { IsImporting: true } or { IsAnalyzing: true } || localImportViewModel.IsImporting,
+                _logger));
         }
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null)

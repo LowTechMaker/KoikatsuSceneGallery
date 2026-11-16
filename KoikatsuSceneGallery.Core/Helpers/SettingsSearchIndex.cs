@@ -61,6 +61,7 @@ public static class SettingsSearchIndex
         Card("SC_KoikatsuGameFolder", Folders),
         Card("SC_KoikatsuSunshineGameFolder", Folders),
         Card("SC_ModInstallFolderName", Folders),
+        Card("SC_LayoutMigration", Folders),
 
         Heading("Settings_SizeFiltersHeader", Filters),
         Heading("Settings_SceneResolutionHeader", Filters),

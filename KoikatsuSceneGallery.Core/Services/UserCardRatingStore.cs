@@ -187,6 +187,50 @@ internal sealed class UserCardRatingStore
         return true;
     }
 
+    /// <summary>
+    /// Re-points the ratings of cards that moved, by their old paths, writing
+    /// each root's file once (the library migration moves thousands). A path
+    /// with no rating, or whose old or new root is read-only, is skipped.
+    /// Returns how many were re-pointed.
+    /// </summary>
+    public async Task<int> MovePathsAsync(IReadOnlyList<(string From, string To)> moves,
+        CancellationToken cancellationToken = default)
+    {
+        var touched = new HashSet<string>(PathComparison.Comparer);
+        var changed = new List<string>(moves.Count);
+        lock (_gate)
+        {
+            foreach (var (from, to) in moves)
+            {
+                var oldPath = Path.GetFullPath(from);
+                if (!_hashByPath.TryGetValue(oldPath, out var hash) || !_byHash.TryGetValue(hash, out var known)) continue;
+                var newPath = Path.GetFullPath(to);
+                var root = FindRoot(newPath);
+                if (root is null || _readOnlyRoots.Contains(root) || _readOnlyRoots.Contains(known.Root)) continue;
+
+                // One path per hash: the old one is dropped directly, not by
+                // scanning every path, which a batch of thousands cannot afford.
+                _hashByPath.Remove(oldPath);
+                _byHash[hash] = (root, known.Entry with { RelativePath = Path.GetRelativePath(root, newPath) });
+                _hashByPath[newPath] = hash;
+                touched.Add(root);
+                touched.Add(known.Root);
+                changed.Add(newPath);
+            }
+        }
+
+        foreach (var root in touched)
+            await WriteRootAsync(root, cancellationToken).ConfigureAwait(false);
+        foreach (var path in changed)
+            RatingChanged?.Invoke(path);
+        return changed.Count;
+    }
+
+    /// <summary>How many times a rating file was written; for tests.</summary>
+    internal int WriteCount => Volatile.Read(ref _writeCount);
+
+    private int _writeCount;
+
     private bool IsReadOnly(string root)
     {
         lock (_gate) return _readOnlyRoots.Contains(root);
@@ -229,6 +273,7 @@ internal sealed class UserCardRatingStore
             LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
             await AtomicJsonFile.WriteAsync(path, new UserCardRatingDocument(CurrentSchemaVersion, entries),
                 JsonOptions, cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _writeCount);
         }
         finally
         {

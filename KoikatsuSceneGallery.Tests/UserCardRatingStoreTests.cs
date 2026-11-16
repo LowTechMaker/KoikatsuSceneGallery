@@ -145,4 +145,48 @@ public sealed class UserCardRatingStoreTests
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => store.SetAsync(Path.Combine(directory.Path, "a.png"), "hash-a", 3));
     }
+
+    [Fact]
+    public async Task MovedPathsAreRepointedWithOneWritePerRoot()
+    {
+        using var directory = new TestDirectory();
+        var first = Path.Combine(directory.Path, "first");
+        var second = Path.Combine(directory.Path, "second");
+        var store = Store();
+        store.EnsureLoaded([first, second]);
+        var pairs = new List<(string From, string To)>();
+        for (var i = 0; i < 10; i++)
+        {
+            var root = i % 2 == 0 ? first : second;
+            var from = Path.Combine(root, "KK", "R-18", "A (1)", $"{i}.png");
+            await store.SetAsync(from, $"hash-{i}", i % 3);
+            pairs.Add((from, Path.Combine(root, "A (1)", $"{i}.png")));
+        }
+        var changed = new List<string>();
+        store.RatingChanged += changed.Add;
+        var before = store.WriteCount;
+
+        Assert.Equal(10, await store.MovePathsAsync(pairs));
+        Assert.Equal(2, store.WriteCount - before);
+
+        Assert.Equal(pairs.Select(p => p.To).Order(), changed.Order());
+        var reloaded = Store();
+        reloaded.EnsureLoaded([first, second]);
+        for (var i = 0; i < 10; i++)
+        {
+            Assert.Equal(i % 3, reloaded.TryGetByPath(pairs[i].To));
+            Assert.Null(reloaded.TryGetByPath(pairs[i].From));
+        }
+    }
+
+    [Fact]
+    public async Task MovingAnUnratedPathChangesNothing()
+    {
+        using var directory = new TestDirectory();
+        var store = Store();
+        store.EnsureLoaded([directory.Path]);
+
+        Assert.Equal(0, await store.MovePathsAsync([(Path.Combine(directory.Path, "a.png"), Path.Combine(directory.Path, "b.png"))]));
+        Assert.False(File.Exists(UserCardRatingStore.GetFilePath(directory.Path)));
+    }
 }

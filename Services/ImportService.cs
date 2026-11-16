@@ -1157,6 +1157,47 @@ public sealed class ImportService
             authorName);
     }
 
+    /// <summary>
+    /// What the library layout migration needs, from the same sources the
+    /// folder index uses: the roots, the import folder, every plugin's folder
+    /// (plus Unknown), the game and rating folder names, and each plugin's own
+    /// rule for reading an author id from a folder name.
+    /// </summary>
+    internal async Task<LayoutMigrationOptions> BuildLayoutMigrationOptionsAsync()
+    {
+        var config = await _loadConfig().ConfigureAwait(false);
+        var roots = config.FolderPaths.Concat(config.CharacterFolderPaths).Concat(config.CoordinateFolderPaths)
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var scopes = _importProviders
+            .Select(provider => (GetProviderScope(provider.ProviderId).Folder, Author: FindAuthorProvider(provider.ProviderId)))
+            .Where(scope => scope.Folder.Length > 0)
+            .ToList();
+        string[] providerFolders = [.. scopes.Select(scope => scope.Folder)
+            .Append(config.UnknownFolderName.Trim())
+            .Where(folder => folder.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        (string, int)[] ratings = [.. new[]
+            {
+                (config.GFolderName, SceneRating.General),
+                (config.R18FolderName, SceneRating.R18),
+                (config.R18GFolderName, SceneRating.R18G),
+            }
+            .Select(r => (r.Item1.Trim(), r.Item2))
+            .Where(r => r.Item1.Length > 0)];
+        return new LayoutMigrationOptions(
+            roots,
+            config.ImportSubfolder.Trim(),
+            providerFolders,
+            config.UnknownFolderName.Trim(),
+            [.. GetGameVersionFolderNames(config).Where(name => !string.IsNullOrWhiteSpace(name))],
+            ratings,
+            (folder, name) => scopes
+                .Where(scope => string.Equals(scope.Folder, folder, StringComparison.OrdinalIgnoreCase))
+                .Select(scope => scope.Author?.TryParseFolderName(name)?.Key.Id)
+                .FirstOrDefault(id => id is not null));
+    }
+
     private ImportLibraryIndexRequest CreateLibraryIndexRequest(
         SettingsService.ConfigData config, IReadOnlyList<ImportLibrarySource> sources)
     {

@@ -624,6 +624,10 @@ public sealed partial class SettingsPage : Page
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.ClearCache", async () =>
             await ViewModel.ClearCacheCommand.ExecuteAsync(null));
 
+    private void LayoutMigration_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.LayoutMigration", async () =>
+            await Controls.LayoutMigrationDialog.ShowAsync(XamlRoot));
+
     private void RestartApp_Click(object sender, RoutedEventArgs e)
     {
         Microsoft.Windows.AppLifecycle.AppInstance.Restart(string.Empty);
