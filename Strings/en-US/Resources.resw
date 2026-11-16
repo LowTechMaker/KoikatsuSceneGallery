@@ -2337,4 +2337,5 @@
   <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>The file changed or is no longer there since the plan was made</value></data>
   <data name="LayoutMigration_LastRun" xml:space="preserve"><value>Last tidy-up: {0}, {1} files moved.</value></data>
   <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} files are outside the organized folders and are not touched</value></data>
+  <data name="Import_RatingsNotSaved" xml:space="preserve"><value>The rating of {0} imported cards could not be saved, so they now show as G. Set their rating again on the card.</value></data>
 </root>

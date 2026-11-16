@@ -368,8 +368,17 @@ public partial class App : Application
         // files can load after the cards, and a filed rating can be written
         // while the gallery is open, so both refresh it.
         galleryViewModel.FiledRatingOf = cardStates.FiledRatingOf;
-        localImportViewModel.FileCommittedRatings = cardStates.FileImportedRatingsAsync;
-        if (importViewModel is not null) importViewModel.FileCommittedRatings = cardStates.FileImportedRatingsAsync;
+        // A rating that could not be recorded leaves an R-18 card reading as G,
+        // which nothing on screen would otherwise show; the toast stays until dismissed.
+        async Task FileCommittedRatings(IReadOnlyList<string> paths, IEnumerable<Models.ImportItem> items)
+        {
+            var failed = await cardStates.FileImportedRatingsAsync(paths, items);
+            if (failed > 0)
+                AppToast.Show(string.Format(UiText.Get("Import_RatingsNotSaved"), failed),
+                    InfoBarSeverity.Warning, key: "import-ratings", sticky: true);
+        }
+        localImportViewModel.FileCommittedRatings = FileCommittedRatings;
+        if (importViewModel is not null) importViewModel.FileCommittedRatings = FileCommittedRatings;
         cardStates.StateChanged += galleryViewModel.RefreshFiledRatings;
         _ = cardStates.EnsureLoadedAsync().ContinueWith(_ =>
         {

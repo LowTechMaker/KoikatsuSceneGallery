@@ -2337,4 +2337,5 @@
   <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>文件在列出计划后有变动或已不在原处</value></data>
   <data name="LayoutMigration_LastRun" xml:space="preserve"><value>上次整理：{0}，移动了 {1} 个文件。</value></data>
   <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} 个文件不在整理范围内，不会动到</value></data>
+  <data name="Import_RatingsNotSaved" xml:space="preserve"><value>有 {0} 张卡的分级没有保存，它们现在会显示为 G。请在卡片上重新设置分级。</value></data>
 </root>

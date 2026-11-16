@@ -111,23 +111,27 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
     /// Files the rating of every card an import just committed, when it is
     /// above G (<see cref="ImportFiledRatings"/>). New folders have no rating
     /// folder, so this is what keeps an imported R-18 card from reading as G.
-    /// Failures are logged; the import itself has succeeded.
+    /// Failures are logged, and counted for the caller to tell the user: the
+    /// import itself has succeeded, but those cards now read as G.
     /// </summary>
-    public async Task FileImportedRatingsAsync(IReadOnlyList<string> committedPaths, IEnumerable<Models.ImportItem> items)
+    /// <returns>How many ratings could not be recorded.</returns>
+    public async Task<int> FileImportedRatingsAsync(IReadOnlyList<string> committedPaths, IEnumerable<Models.ImportItem> items)
     {
         var filed = ImportFiledRatings.ForCommitted(committedPaths,
             items.Select(item => (item.DestinationPath, (int)item.Rating)).ToList());
-        if (filed.Count == 0) return;
+        if (filed.Count == 0) return 0;
         try
         {
             var failed = await SetFiledRatingsAsync(filed).ConfigureAwait(false);
             if (failed > 0)
                 logger.LogError("CardState.FileImportedRatings",
                     new IOException($"{failed} of {filed.Count} imported ratings could not be recorded."));
+            return failed;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogError("CardState.FileImportedRatings", ex);
+            return filed.Count;
         }
     }
 
