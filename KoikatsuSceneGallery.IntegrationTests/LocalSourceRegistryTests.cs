@@ -82,6 +82,24 @@ public sealed class LocalSourceRegistryTests
     }
 
     [Fact]
+    public async Task Rescan_FindsSourcesInTheThreeLevelLayoutBesideOldOnes()
+    {
+        // New imports go to Organized\Local\<source>, with no game or rating
+        // folder; a library that has both layouts must list both sources.
+        using var root = new TempRoot();
+        var current = root.CreateSourceFolder("阿明 (local-k7f3q9)", game: "", rating: "");
+        var old = root.CreateSourceFolder("小紅 (local-aaabbb)");
+        var (registry, _, logger) = Build(root.Path);
+
+        await registry.RescanAsync();
+
+        Assert.Equal(
+            new[] { current, old }.Order(StringComparer.OrdinalIgnoreCase),
+            registry.Sources.Select(source => source.Directory).Order(StringComparer.OrdinalIgnoreCase));
+        Assert.Empty(logger.Errors);
+    }
+
+    [Fact]
     public async Task Rescan_FindsASourceThatHasNoCardsYet()
     {
         using var root = new TempRoot();

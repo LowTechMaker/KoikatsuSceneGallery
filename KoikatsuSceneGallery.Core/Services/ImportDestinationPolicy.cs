@@ -19,9 +19,11 @@ internal sealed record ImportPathOptions(
 /// <param name="Roots">The library roots for the card's type; the first is where new folders go.</param>
 /// <param name="ProviderId">The post's provider, else the author's; null when neither is known.</param>
 /// <param name="Scope">The card's provider folder, or <c>("", true)</c> when it has no provider.</param>
-/// <param name="RatingFolder">The folder name for the card's rating; ignored when the scope has no rating folders.</param>
+/// <param name="GameVersionFolder">The old layout's game folder for the card, to find folders made before the three-level layout. New folders have none.</param>
+/// <param name="RatingFolder">The old layout's rating folder for the card, likewise; ignored when the scope has no rating folders.</param>
 /// <param name="ProviderScopes">Every provider's scope, to find an author filed under another game version.</param>
 /// <param name="FormatAuthorFolder">Turns (name, id) into the author's folder name, from the user's format.</param>
+/// <param name="DirectoryExists">Whether a folder exists; <see cref="Directory.Exists"/> unless a test says otherwise.</param>
 internal sealed record ImportTargetInput(
     IReadOnlyList<string> Roots,
     string ImportSubfolder,
@@ -36,7 +38,8 @@ internal sealed record ImportTargetInput(
     string? AuthorId,
     string? AuthorName,
     string? AuthorProviderId,
-    Func<string, string, string> FormatAuthorFolder);
+    Func<string, string, string> FormatAuthorFolder,
+    Func<string, bool>? DirectoryExists = null);
 
 /// <param name="Folder">The folder the card goes in, before any artwork subfolder.</param>
 /// <param name="AuthorDirectory">Where the post sidecar is written; null when the card has no post.</param>
@@ -66,6 +69,7 @@ internal static class ImportDestinationPolicy
         var scope = input.Scope;
         var ratingFolder = scope.UsesRatingFolders ? input.RatingFolder : "";
         var gameVersionFolder = input.GameVersionFolder;
+        var directoryExists = input.DirectoryExists ?? Directory.Exists;
         string? targetFolder = null;
         var useUnrecognizedSubfolder = UsesUnrecognizedSink(
             hasArtwork: input.HasArtwork,
@@ -74,21 +78,33 @@ internal static class ImportDestinationPolicy
 
         if (input.AuthorId is { } authorId)
         {
-            targetFolder = ImportAuthorDirectoryLookup.FindExact(
-                roots, scope.Folder, gameVersionFolder, ratingFolder, authorId, folderIndex);
+            // An author folder that exists is reused wherever it is: the new
+            // layout first, then the old layout's own scope, then the same
+            // rating under another game (the game no longer separates authors;
+            // the rating still must, or an R-18 card would sit in a G folder).
+            targetFolder = ImportAuthorDirectoryLookup.FindExact(roots, scope.Folder, "", "", authorId, folderIndex)
+                ?? ImportAuthorDirectoryLookup.FindExact(
+                    roots, scope.Folder, gameVersionFolder, ratingFolder, authorId, folderIndex)
+                ?? input.GameVersionFolderNames
+                    .Where(game => game != gameVersionFolder && (game.Length > 0 || ratingFolder.Length > 0))
+                    .Select(game => ImportAuthorDirectoryLookup.FindExact(
+                        roots, scope.Folder, game, ratingFolder, authorId, folderIndex))
+                    .FirstOrDefault(found => found is not null);
 
             if (targetFolder is null && !input.HasArtwork)
             {
-                var match = ImportAuthorDirectoryLookup.FindFallback(
+                var current = ImportAuthorDirectoryLookup.FindFallback(
+                    roots, input.ProviderScopes, input.GameVersionFolderNames, "", "", authorId, folderIndex);
+                var old = ImportAuthorDirectoryLookup.FindFallback(
                     roots, input.ProviderScopes,
                     input.GameVersionFolderNames, gameVersionFolder, ratingFolder, authorId, folderIndex);
-                targetFolder = match.Directory;
-                var matchedProvider = match.ProviderFolder;
+                targetFolder = current.Directory ?? old.Directory;
+                var matchedProvider = current.ProviderFolder ?? old.ProviderFolder;
 
                 if (targetFolder is null && matchedProvider is not null && input.AuthorName is not null)
                 {
                     var safeName = input.FormatAuthorFolder(input.AuthorName, authorId);
-                    targetFolder = BuildTargetBase(roots[0], subfolder, matchedProvider, gameVersionFolder, ratingFolder, safeName);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, matchedProvider, "", "", safeName);
                 }
             }
 
@@ -97,13 +113,16 @@ internal static class ImportDestinationPolicy
                 if (input.ProviderId is not null)
                 {
                     var safeName = input.FormatAuthorFolder(input.AuthorName, authorId);
-                    targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
+                    targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, "", "", safeName);
                 }
                 else
                 {
-                    targetFolder = BuildTargetBase(
-                        roots[0], subfolder, input.UnknownFolderName, gameVersionFolder, "",
-                        PathSanitizer.SanitizeFolderName(authorId));
+                    // Not in the folder index (no provider scope covers Unknown),
+                    // so an old-layout folder is looked for on disk.
+                    var folderName = PathSanitizer.SanitizeFolderName(authorId);
+                    var current = BuildTargetBase(roots[0], subfolder, input.UnknownFolderName, "", "", folderName);
+                    var old = BuildTargetBase(roots[0], subfolder, input.UnknownFolderName, gameVersionFolder, "", folderName);
+                    targetFolder = !directoryExists(current) && directoryExists(old) ? old : current;
                     useUnrecognizedSubfolder = false;
                 }
             }
@@ -111,9 +130,9 @@ internal static class ImportDestinationPolicy
 
         if (targetFolder is null)
         {
-            targetFolder = BuildTargetBase(roots[0], subfolder, input.UnknownFolderName, gameVersionFolder, "", null);
-            // No author folder: the card would sit loose in Unknown\<game>,
-            // where every such card shares one gallery key.
+            targetFolder = BuildTargetBase(roots[0], subfolder, input.UnknownFolderName, "", "", null);
+            // No author folder: the card would sit loose in Unknown, where
+            // every such card shares one gallery key.
             useUnrecognizedSubfolder = true;
         }
 

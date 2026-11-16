@@ -135,9 +135,46 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     private void AssignRating(SceneCard card)
     {
-        card.FolderRating = SceneRating.FromFolders(card.FilePath, _r18FolderNames, _r18GFolderNames);
+        // The rating folder says it when there is one; a card in the
+        // three-level layout has none, and its filed rating says it instead.
+        card.FolderRating = SceneRating.FolderOrFiled(
+            SceneRating.FromFolders(card.FilePath, _r18FolderNames, _r18GFolderNames),
+            FiledRatingOf?.Invoke(card.FilePath));
         card.Rating = _ratingResolver.Resolve(card);
     }
+
+    /// <summary>
+    /// The rating a card was filed under (<c>CardState.FiledRating</c>), by
+    /// path. Set once the card state service exists; until then, and for a
+    /// card with none, the rating folders alone decide.
+    /// </summary>
+    public Func<string, int?>? FiledRatingOf { get; set; }
+
+    /// <summary>
+    /// Re-reads filed ratings: of one card after its state changed, or of all
+    /// of them (<paramref name="path"/> null) once the state files are loaded,
+    /// which can happen after the cards were. Safe from any thread.
+    /// </summary>
+    public void RefreshFiledRatings(string? path = null) => _dispatcherQueue.TryEnqueue(() =>
+    {
+        var changed = false;
+        if (path is null)
+        {
+            foreach (var card in Cards) changed |= Reassign(card);
+        }
+        else if (_cardIndex.TryGetValue(path, out var card))
+        {
+            changed = Reassign(card);
+        }
+        if (changed && RatingFilter != RatingFilterOption.All) ApplyFilter();
+
+        bool Reassign(SceneCard card)
+        {
+            var before = (card.FolderRating, card.Rating);
+            AssignRating(card);
+            return before != (card.FolderRating, card.Rating);
+        }
+    });
 
     /// <summary>
     /// Reads the platform and user ratings after a load and relabels every card.

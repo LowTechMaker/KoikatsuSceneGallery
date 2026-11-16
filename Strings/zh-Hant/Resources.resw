@@ -2302,4 +2302,31 @@
   <data name="Reidentify_Failed" xml:space="preserve"><value>無法移動檔案：{0}</value></data>
   <data name="Origin_NoSource" xml:space="preserve"><value>來源不明</value></data>
   <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>只顯示來源不明的卡片</value></data>
+  <data name="LayoutMigration_Entry" xml:space="preserve"><value>整理資料夾結構…</value></data>
+  <data name="LayoutMigration_EntryDescription" xml:space="preserve"><value>把收藏庫從「平台＼遊戲＼分級＼作者＼貼文」改成「平台＼作者＼貼文」。會先列出計劃，確認後才搬動檔案。</value></data>
+  <data name="LayoutMigration_Title" xml:space="preserve"><value>整理資料夾結構</value></data>
+  <data name="LayoutMigration_Scanning" xml:space="preserve"><value>正在檢查資料夾…</value></data>
+  <data name="LayoutMigration_NothingToDo" xml:space="preserve"><value>收藏庫已經是新的結構，沒有需要搬動的檔案。</value></data>
+  <data name="LayoutMigration_PlanMoves" xml:space="preserve"><value>會搬動 {0} 個檔案</value></data>
+  <data name="LayoutMigration_PlanAuthors" xml:space="preserve"><value>{0} 位作者的資料夾會合併成一個</value></data>
+  <data name="LayoutMigration_PlanStays" xml:space="preserve"><value>{0} 個檔案會留在原地</value></data>
+  <data name="LayoutMigration_PlanRatings" xml:space="preserve"><value>{0} 張卡的分級會先存成資料</value></data>
+  <data name="LayoutMigration_ShowDetails" xml:space="preserve"><value>逐筆檢視</value></data>
+  <data name="LayoutMigration_SavePlan" xml:space="preserve"><value>把計劃存成文字檔…</value></data>
+  <data name="LayoutMigration_Run" xml:space="preserve"><value>開始搬動</value></data>
+  <data name="LayoutMigration_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="LayoutMigration_Close" xml:space="preserve"><value>關閉</value></data>
+  <data name="LayoutMigration_Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="LayoutMigration_Progress" xml:space="preserve"><value>已搬動 {0} / {1}</value></data>
+  <data name="LayoutMigration_Stopped" xml:space="preserve"><value>已停止。已搬動的 {0} 個檔案留在新位置，可以稍後繼續或全部搬回。</value></data>
+  <data name="LayoutMigration_Done" xml:space="preserve"><value>完成：搬動 {0} 個檔案，{1} 個留在原地。</value></data>
+  <data name="LayoutMigration_Undo" xml:space="preserve"><value>全部搬回去</value></data>
+  <data name="LayoutMigration_UndoDone" xml:space="preserve"><value>已搬回 {0} 個檔案。</value></data>
+  <data name="LayoutMigration_UndoPartial" xml:space="preserve"><value>已搬回 {0} 個檔案，{1} 個無法搬回。</value></data>
+  <data name="LayoutMigration_Resume" xml:space="preserve"><value>上次的整理沒有完成，要繼續嗎？</value></data>
+  <data name="LayoutMigration_ReasonCollision" xml:space="preserve"><value>目的地已有同名但內容不同的檔案</value></data>
+  <data name="LayoutMigration_ReasonDuplicate" xml:space="preserve"><value>目的地已有相同的檔案</value></data>
+  <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>無法判斷屬於哪個平台</value></data>
+  <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>搬動失敗：{0}</value></data>
+  <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>請先等匯入或掃描結束。</value></data>
 </root>

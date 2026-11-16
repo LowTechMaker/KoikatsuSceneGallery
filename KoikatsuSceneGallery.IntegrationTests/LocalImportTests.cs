@@ -208,17 +208,17 @@ public sealed class LocalImportTests
                 f.Library,
                 f.Config.ImportSubfolder,
                 f.Config.LocalFolderName,
-                f.Config.KoikatsuFolderName,
-                f.Config.GFolderName,
                 $"{LocalSourceName} ({LocalSourceId})",
                 "123456_p0.png"),
             destination);
     }
 
-    // Rating folders stay on for local sources, because the gallery derives
-    // R-18 from the path.
+    // The three-level layout has no rating folder. The rating the user picks
+    // stays on the item, and the commit files it as card state
+    // (CardStateService.FileImportedRatingsAsync), which is what the gallery
+    // reads when the folder says nothing.
     [Fact]
-    public async Task LocalBatch_HonoursTheRatingTheUserPicks()
+    public async Task LocalBatch_KeepsTheRatingTheUserPicksAsDataNotAsAFolder()
     {
         using var f = new Fixture();
         await f.AnalyzeLocal(f.Card("card"));
@@ -226,9 +226,14 @@ public sealed class LocalImportTests
         Assert.Single(f.Items).Rating = ContentRating.R18;
         await f.Service.ReResolveWithDetailedDiagnosticsAsync(f.Items, Fixture.Publish, default);
 
-        Assert.Contains(
-            Path.Combine(f.Config.LocalFolderName, f.Config.KoikatsuFolderName, f.Config.R18FolderName),
-            Assert.Single(f.Items).DestinationPath);
+        var item = Assert.Single(f.Items);
+        Assert.Equal(ContentRating.R18, item.Rating);
+        Assert.Equal(
+            Path.Combine(f.Library, f.Config.ImportSubfolder, f.Config.LocalFolderName,
+                $"{LocalSourceName} ({LocalSourceId})", "card.png"),
+            item.DestinationPath);
+        Assert.DoesNotContain(Path.DirectorySeparatorChar + f.Config.R18FolderName + Path.DirectorySeparatorChar,
+            item.DestinationPath);
     }
 
     // The folder name carries the identity, so a second import of the same

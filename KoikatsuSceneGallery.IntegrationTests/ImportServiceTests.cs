@@ -180,7 +180,7 @@ public sealed class ImportServiceTests
         Assert.Equal(ImportItemStatus.ReadyToImport, item.Status);
         Assert.Equal("42", item.AuthorId);
         Assert.NotNull(item.FetchedArtworkInfo);
-        Assert.Equal(Path.Combine(f.Library, "Organized", "test", "Koikatsu", "R-18", "Author (42)", "card.png"), item.DestinationPath);
+        Assert.Equal(Path.Combine(f.Library, "Organized", "test", "Author (42)", "card.png"), item.DestinationPath);
         Assert.True(File.Exists(source)); // Analysis never moves input.
     }
 
@@ -217,7 +217,7 @@ public sealed class ImportServiceTests
         Assert.Equal("42", item.AuthorId);
         Assert.Equal("Test Creator", item.AuthorName);
         Assert.Equal("patreon", item.AuthorProviderId);
-        Assert.Equal(Path.Combine(f.Library, "Organized", "patreon", "Koikatsu", "G",
+        Assert.Equal(Path.Combine(f.Library, "Organized", "patreon",
             "Test Creator (42)", "scene-123456789.png"), item.DestinationPath);
         Assert.Null(item.FetchedArtworkInfo);
     }
@@ -247,7 +247,7 @@ public sealed class ImportServiceTests
         {
             Assert.Equal(ImportItemStatus.ReadyToImport, item.Status);
             Assert.Equal(Path.GetFileNameWithoutExtension(item.FileName), item.FetchedArtworkInfo!.ArtworkId.Id);
-            Assert.Equal(Path.Combine(f.Library, "Organized", "test", "Koikatsu", "R-18",
+            Assert.Equal(Path.Combine(f.Library, "Organized", "test",
                 "Author (42)", item.FileName), item.DestinationPath);
         });
     }
@@ -352,7 +352,7 @@ public sealed class ImportServiceTests
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
         else
             Assert.Same(await second, await first.WaitAsync(TimeSpan.FromSeconds(15)));
-        Assert.Equal(Path.Combine(f.Library, "Organized", "test", "Koikatsu", "R-18",
+        Assert.Equal(Path.Combine(f.Library, "Organized", "test",
             "Author (42)", "Title (one)", "one.png"), item.DestinationPath);
     }
 
@@ -508,6 +508,19 @@ public sealed class ImportServiceTests
         var task = f.Analyze(f.Card("one"));
         await f.Ui.DrainUntil(task);
         Assert.Equal(Path.Combine(artworkDirectory, "one.png"), Assert.Single(f.Items).DestinationPath);
+    }
+
+    [Fact]
+    public async Task WithTheAuthorInBothLayoutsTheThreeLevelFolderWins()
+    {
+        await using var f = new Fixture();
+        Directory.CreateDirectory(Path.Combine(f.Library, "Organized", "test", "Koikatsu", "R-18", "Old (42)"));
+        var current = Path.Combine(f.Library, "Organized", "test", "Current (42)");
+        Directory.CreateDirectory(current);
+
+        await f.Ui.DrainUntil(f.Analyze(f.Card("one")));
+
+        Assert.Equal(Path.Combine(current, "one.png"), Assert.Single(f.Items).DestinationPath);
     }
 
     [Theory]

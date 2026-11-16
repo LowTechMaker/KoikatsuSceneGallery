@@ -2302,4 +2302,31 @@
   <data name="Reidentify_Failed" xml:space="preserve"><value>Could not move the file: {0}</value></data>
   <data name="Origin_NoSource" xml:space="preserve"><value>No source</value></data>
   <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>Only cards with no source</value></data>
+  <data name="LayoutMigration_Entry" xml:space="preserve"><value>Tidy the folder layout…</value></data>
+  <data name="LayoutMigration_EntryDescription" xml:space="preserve"><value>Changes the library from provider\game\rating\author\post to provider\author\post. You see the plan first; nothing moves until you confirm.</value></data>
+  <data name="LayoutMigration_Title" xml:space="preserve"><value>Tidy the folder layout</value></data>
+  <data name="LayoutMigration_Scanning" xml:space="preserve"><value>Looking at the folders…</value></data>
+  <data name="LayoutMigration_NothingToDo" xml:space="preserve"><value>The library already uses the new layout. Nothing to move.</value></data>
+  <data name="LayoutMigration_PlanMoves" xml:space="preserve"><value>{0} files will move</value></data>
+  <data name="LayoutMigration_PlanAuthors" xml:space="preserve"><value>{0} authors' folders will be merged into one each</value></data>
+  <data name="LayoutMigration_PlanStays" xml:space="preserve"><value>{0} files will stay where they are</value></data>
+  <data name="LayoutMigration_PlanRatings" xml:space="preserve"><value>The rating of {0} cards will be saved as data first</value></data>
+  <data name="LayoutMigration_ShowDetails" xml:space="preserve"><value>Show every file</value></data>
+  <data name="LayoutMigration_SavePlan" xml:space="preserve"><value>Save the plan as a text file…</value></data>
+  <data name="LayoutMigration_Run" xml:space="preserve"><value>Move the files</value></data>
+  <data name="LayoutMigration_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="LayoutMigration_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="LayoutMigration_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="LayoutMigration_Progress" xml:space="preserve"><value>Moved {0} of {1}</value></data>
+  <data name="LayoutMigration_Stopped" xml:space="preserve"><value>Stopped. The {0} files already moved stay in their new place; you can continue later or move them all back.</value></data>
+  <data name="LayoutMigration_Done" xml:space="preserve"><value>Done: {0} files moved, {1} left where they were.</value></data>
+  <data name="LayoutMigration_Undo" xml:space="preserve"><value>Move everything back</value></data>
+  <data name="LayoutMigration_UndoDone" xml:space="preserve"><value>{0} files moved back.</value></data>
+  <data name="LayoutMigration_UndoPartial" xml:space="preserve"><value>{0} files moved back; {1} could not be.</value></data>
+  <data name="LayoutMigration_Resume" xml:space="preserve"><value>The last tidy-up did not finish. Continue?</value></data>
+  <data name="LayoutMigration_ReasonCollision" xml:space="preserve"><value>A different file with the same name is already there</value></data>
+  <data name="LayoutMigration_ReasonDuplicate" xml:space="preserve"><value>The same file is already there</value></data>
+  <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>Could not tell which provider it belongs to</value></data>
+  <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>Could not move: {0}</value></data>
+  <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>Wait for the import or scan to finish first.</value></data>
 </root>

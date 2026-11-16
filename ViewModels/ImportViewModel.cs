@@ -18,6 +18,13 @@ namespace KoikatsuSceneGallery.ViewModels;
 
 public partial class ImportViewModel : ObservableObject
 {
+    /// <summary>
+    /// Files the rating of the cards an import committed (the card state
+    /// service's <c>FileImportedRatingsAsync</c>). Set by the app; null leaves
+    /// ratings to the folders, as in tests that build this alone.
+    /// </summary>
+    internal Func<IReadOnlyList<string>, IEnumerable<ImportItem>, Task>? FileCommittedRatings { get; set; }
+
     private static readonly ResourceLoader ResLoader = new();
 
     private readonly ImportService _importService;
@@ -1968,6 +1975,9 @@ public partial class ImportViewModel : ObservableObject
             if (result.Receipt.IsFullySuccessful)
             {
                 _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
+                // Before the items leave the workspace: their ratings are what gets filed.
+                if (FileCommittedRatings is { } fileRatings)
+                    await fileRatings(result.CommittedPaths, planItems);
                 RemoveItemsFromWorkspace(planItems);
                 TransactionStatusText = string.Format(GetLocalizedString(successResource), plans.Count);
                 return (plans.Count, false);

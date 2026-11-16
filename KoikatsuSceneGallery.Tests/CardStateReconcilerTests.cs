@@ -277,4 +277,19 @@ public sealed class CardStateReconcilerTests
 
         Assert.Empty(hashes.Calls);
     }
+
+    [Fact]
+    public async Task AnEntryWithOnlyAFiledRatingIsReattachedAfterAMove()
+    {
+        using var directory = new TestDirectory();
+        var oldPath = Path.Combine(directory.Path, "R-18", "a.png");
+        var newPath = Path.Combine(directory.Path, "author", "a.png");
+        var store = await StoreWith(directory.Path);
+        Assert.True(await store.SetFiledRatingAsync(oldPath, "hash-a", 1));
+        var hashes = new FakeHashes(new() { [newPath] = "hash-a" });
+
+        Assert.Equal(1, await Reconciler(store, hashes).ReconcileAsync([newPath]));
+
+        Assert.Equal(1, store.TryGetByPath(newPath)?.FiledRating);
+    }
 }

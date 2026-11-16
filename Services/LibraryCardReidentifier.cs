@@ -74,11 +74,15 @@ internal sealed class LibraryCardReidentifier(
             => new(request, source, "", null, false, problem);
     }
 
-    public Task<LibraryCardMoveResult> ApplyAsync(ReidentifyPlan plan, CancellationToken ct)
+    public async Task<LibraryCardMoveResult> ApplyAsync(ReidentifyPlan plan, CancellationToken ct)
     {
         if (plan.Problem is not null || string.IsNullOrEmpty(plan.DestinationPath))
-            return Task.FromResult(new LibraryCardMoveResult(
-                LibraryCardMoveOutcome.Failed, plan.SourcePath, $"The plan cannot be applied: {plan.Problem}."));
+            return new LibraryCardMoveResult(
+                LibraryCardMoveOutcome.Failed, plan.SourcePath, $"The plan cannot be applied: {plan.Problem}.");
+
+        // "Has this card a filed rating already?" must read the files, not an
+        // empty store: answering no would overwrite the rating it has.
+        await cardStates.EnsureLoadedAsync().ConfigureAwait(false);
 
         var steps = new LibraryCardRelocationSteps(
             ComputeHash: (path, token) => CardPayloadHash.TryCompute(path, token),
@@ -101,9 +105,22 @@ internal sealed class LibraryCardReidentifier(
             },
             // The old path is gone and the new one is not in the import page's
             // index: both would mislead the next "already in the library" check.
-            LibraryChanged: (_, _) => importService.InvalidateLibraryFileCache());
+            LibraryChanged: (_, _) => importService.InvalidateLibraryFileCache(),
+            FolderRatingOf: FolderRatingOf,
+            FiledRatingOf: cardStates.FiledRatingOf,
+            SetFiledRating: (path, hash, rating, _) => cardStates.SetFiledRatingAsync(path, hash, rating));
 
-        return LibraryCardRelocation.ApplyAsync(plan.SourcePath, plan.DestinationPath, plan.WritesSidecar, steps, ct);
+        return await LibraryCardRelocation.ApplyAsync(plan.SourcePath, plan.DestinationPath, plan.WritesSidecar, steps, ct,
+            chosenRating: plan.Request.Rating is { } chosen ? (int)chosen : null).ConfigureAwait(false);
+    }
+
+    /// <summary>The rating the card's current rating folders imply, by the user's folder names.</summary>
+    private int FolderRatingOf(string path)
+    {
+        static HashSet<string> Names(string name) => string.IsNullOrWhiteSpace(name)
+            ? new(StringComparer.OrdinalIgnoreCase)
+            : new([name.Trim()], StringComparer.OrdinalIgnoreCase);
+        return SceneRating.FromFolders(path, Names(settings.R18FolderName), Names(settings.R18GFolderName));
     }
 
     /// <summary>The card as the import rules see it: type and game from the file, the rest from the source.</summary>

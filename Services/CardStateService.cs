@@ -67,6 +67,70 @@ internal sealed class CardStateService(CardStateStore store, SettingsViewModel s
         return await SetAsync([filePath], flag, value) == 0 ? value : null;
     }
 
+    /// <summary>The rating the card at this path was filed under, or null when none is recorded or nothing is loaded yet.</summary>
+    public int? FiledRatingOf(string filePath) => Get(filePath)?.FiledRating;
+
+    /// <summary>
+    /// Records the rating the card was filed under, loading the state files
+    /// first. False when it could not be stored. <paramref name="hash"/> is
+    /// computed when not given.
+    /// </summary>
+    public async Task<bool> SetFiledRatingAsync(string filePath, string? hash, int? rating)
+    {
+        var roots = Roots();
+        return await Task.Run(async () =>
+        {
+            store.EnsureLoaded(roots);
+            return (hash ?? CardPayloadHash.TryCompute(filePath)) is { } known
+                   && await store.SetFiledRatingAsync(filePath, known, rating).ConfigureAwait(false);
+        }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Records the filed rating of many cards, hashing them off the UI thread
+    /// and writing each state file once. Returns how many could not be stored
+    /// (not a card, outside every library root, or a read-only root).
+    /// </summary>
+    public Task<int> SetFiledRatingsAsync(IReadOnlyList<(string FilePath, int Rating)> ratings)
+    {
+        var roots = Roots();
+        return Task.Run(async () =>
+        {
+            store.EnsureLoaded(roots);
+            var hashed = ratings
+                .Select(r => (r.FilePath, Hash: CardPayloadHash.TryCompute(r.FilePath), r.Rating))
+                .ToList();
+            var notCards = hashed.Count(r => r.Hash is null);
+            var failed = await store.SetFiledRatingsAsync(
+                [.. hashed.Where(r => r.Hash is not null).Select(r => (r.FilePath, r.Hash!, r.Rating))]).ConfigureAwait(false);
+            return notCards + failed;
+        });
+    }
+
+    /// <summary>
+    /// Files the rating of every card an import just committed, when it is
+    /// above G (<see cref="ImportFiledRatings"/>). New folders have no rating
+    /// folder, so this is what keeps an imported R-18 card from reading as G.
+    /// Failures are logged; the import itself has succeeded.
+    /// </summary>
+    public async Task FileImportedRatingsAsync(IReadOnlyList<string> committedPaths, IEnumerable<Models.ImportItem> items)
+    {
+        var filed = ImportFiledRatings.ForCommitted(committedPaths,
+            items.Select(item => (item.DestinationPath, (int)item.Rating)).ToList());
+        if (filed.Count == 0) return;
+        try
+        {
+            var failed = await SetFiledRatingsAsync(filed).ConfigureAwait(false);
+            if (failed > 0)
+                logger.LogError("CardState.FileImportedRatings",
+                    new IOException($"{failed} of {filed.Count} imported ratings could not be recorded."));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogError("CardState.FileImportedRatings", ex);
+        }
+    }
+
     /// <summary>
     /// The app just moved this card (its hash is known): point its state at
     /// the new path now rather than waiting for the next reconcile.

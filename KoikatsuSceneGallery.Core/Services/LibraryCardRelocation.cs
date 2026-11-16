@@ -18,12 +18,18 @@ internal enum ReidentifyProblem
 /// <param name="WriteSidecar">Writes the post sidecar for the card at its new path; throws on failure.</param>
 /// <param name="FollowCard">Re-points the user's rating and state at (new path, hash).</param>
 /// <param name="LibraryChanged">(old path, new path): caches keyed by path are stale.</param>
+/// <param name="FolderRatingOf">The rating a path's rating folders imply (<c>SceneRating.FromFolders</c>).</param>
+/// <param name="FiledRatingOf">The rating already filed for the card at a path, or null.</param>
+/// <param name="SetFiledRating">Records (path, hash, rating) as the card's filed rating; false when it could not.</param>
 internal sealed record LibraryCardRelocationSteps(
     Func<string, CancellationToken, string?> ComputeHash,
     LibraryCardMover Mover,
     Func<string, CancellationToken, Task> WriteSidecar,
     Func<string, string, CancellationToken, Task> FollowCard,
-    Action<string, string> LibraryChanged);
+    Action<string, string> LibraryChanged,
+    Func<string, int> FolderRatingOf,
+    Func<string, int?> FiledRatingOf,
+    Func<string, string, int, CancellationToken, Task<bool>> SetFiledRating);
 
 /// <summary>
 /// Moves a library card to where its newly given source says it belongs, and
@@ -38,6 +44,11 @@ internal sealed record LibraryCardRelocationSteps(
 /// caches — runs to the end even if the caller cancels, and a failure in any
 /// of it never undoes the move: the card is in the right place, and a missing
 /// sidecar is reported, not rolled back.
+///
+/// Ratings: a rating folder the card leaves may be all that says it is
+/// R-18, so that rating is filed as card state, at the old path, before the
+/// move; when it cannot be, the card does not move. A rating the user chose
+/// is filed after the move and wins.
 /// </remarks>
 internal static class LibraryCardRelocation
 {
@@ -64,15 +75,35 @@ internal static class LibraryCardRelocation
                 PathComparison.Comparison));
     }
 
+    /// <param name="chosenRating">The rating the user chose for the card, recorded after the move; null keeps what is there.</param>
     public static async Task<LibraryCardMoveResult> ApplyAsync(
         string sourcePath, string destinationPath, bool writesSidecar,
-        LibraryCardRelocationSteps steps, CancellationToken ct)
+        LibraryCardRelocationSteps steps, CancellationToken ct, int? chosenRating = null)
     {
         ct.ThrowIfCancellationRequested();
         var source = Path.GetFullPath(sourcePath);
         var hash = steps.ComputeHash(source, ct);
         if (hash is null)
             return new(LibraryCardMoveOutcome.Failed, source, "The file is not a card that can be identified.");
+
+        // The rating folder the card is about to leave may be the only thing
+        // that says it is R-18. That goes on disk first, at the path the card
+        // still has; if it cannot, the card stays where its rating is visible.
+        var implied = steps.FolderRatingOf(source);
+        if (implied != SceneRating.General && steps.FiledRatingOf(source) is null)
+        {
+            bool recorded;
+            try
+            {
+                recorded = await steps.SetFiledRating(source, hash, implied, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                recorded = false;
+            }
+            if (!recorded)
+                return new(LibraryCardMoveOutcome.Failed, source, "The card's rating could not be recorded before moving it.");
+        }
 
         var moved = await steps.Mover.MoveAsync(source, destinationPath, ct).ConfigureAwait(false);
         if (moved.Outcome != LibraryCardMoveOutcome.Moved)
@@ -101,6 +132,18 @@ internal static class LibraryCardRelocation
         {
             // The stores re-attach a moved card by its hash on their own later
             // (CardStateReconciler); losing that here is not worth undoing the move.
+        }
+
+        if (chosenRating is { } rating)
+        {
+            try
+            {
+                await steps.SetFiledRating(newPath, hash, rating, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // The card is in place; its rating can be set again from its menu.
+            }
         }
 
         steps.LibraryChanged(source, newPath);

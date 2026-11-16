@@ -26,6 +26,13 @@ namespace KoikatsuSceneGallery.ViewModels;
 public sealed partial class LocalImportViewModel : ObservableObject
 {
     /// <summary>
+    /// Files the rating of the cards an import committed (the card state
+    /// service's <c>FileImportedRatingsAsync</c>). Set by the app; null leaves
+    /// ratings to the folders, as in tests that build this alone.
+    /// </summary>
+    internal Func<IReadOnlyList<string>, IEnumerable<ImportItem>, Task>? FileCommittedRatings { get; set; }
+
+    /// <summary>
     /// How many staged files get a thumbnail. Caps the memory the strip holds
     /// and the number of visuals the flight animation touches, whatever the
     /// batch size; the count below the strip still reports every file.
@@ -375,6 +382,10 @@ public sealed partial class LocalImportViewModel : ObservableObject
             }
 
             _importService.RegisterCommittedLibraryFiles(result.CommittedPaths);
+            // A local card has no post to say its rating: once the folder no
+            // longer does either, the filed rating is the only record of it.
+            if (FileCommittedRatings is { } fileRatings)
+                await fileRatings(result.CommittedPaths, _items.ToList()).ConfigureAwait(true);
             foreach (var (directory, id, displayName) in targets)
             {
                 await _localSourceRegistry

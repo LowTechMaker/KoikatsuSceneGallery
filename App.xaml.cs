@@ -363,10 +363,19 @@ public partial class App : Application
             gallery.IsHiddenCard = path => cardStates.Has(path, CardFlag.Hidden);
             cardStates.StateChanged += _ => gallery.RefreshHiddenCards();
         }
+        // A scene's rating falls back to the rating it was filed under when no
+        // rating folder says it (the three-level layout has none). The state
+        // files can load after the cards, and a filed rating can be written
+        // while the gallery is open, so both refresh it.
+        galleryViewModel.FiledRatingOf = cardStates.FiledRatingOf;
+        localImportViewModel.FileCommittedRatings = cardStates.FileImportedRatingsAsync;
+        if (importViewModel is not null) importViewModel.FileCommittedRatings = cardStates.FileImportedRatingsAsync;
+        cardStates.StateChanged += galleryViewModel.RefreshFiledRatings;
         _ = cardStates.EnsureLoadedAsync().ContinueWith(_ =>
         {
             foreach (var library in Services.GetRequiredService<LibraryRegistry>().All)
                 library.ViewModel.RefreshHiddenCards();
+            galleryViewModel.RefreshFiledRatings();
         }, TaskScheduler.Default);
         Services.Add(new HomeViewModel(Services.GetRequiredService<LibraryRegistry>(), cardStates));
         Services.Add(new UsageRecordService(

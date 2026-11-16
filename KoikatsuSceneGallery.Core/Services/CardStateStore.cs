@@ -22,6 +22,13 @@ internal enum CardFlag
 /// <param name="Hash">The card's <see cref="CardPayloadHash"/>, its identity.</param>
 /// <param name="RelativePath">Where the card was last seen, relative to its library root.</param>
 /// <param name="LastUsedAt">When the card was last dragged or copied out of the app.</param>
+/// <param name="UpdatedAt">When a flag or a use last changed; orders the state shelves.</param>
+/// <param name="FiledRating">
+/// The rating the card was filed under (0 = G, 1 = R-18, 2 = R-18G, the
+/// <c>SceneRating</c> scale), or null when never recorded. Rating folders used
+/// to say this; the simpler library layout has none, so it is kept here
+/// before a card leaves the folder that implied it. Not written when null.
+/// </param>
 internal sealed record CardState(
     string Hash,
     string RelativePath,
@@ -30,12 +37,16 @@ internal sealed record CardState(
     bool Hidden,
     DateTimeOffset? LastUsedAt,
     int UseCount,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? FiledRating = null)
 {
-    /// <summary>Nothing worth keeping on disk: no flag and never used.</summary>
+    /// <summary>
+    /// Nothing worth keeping on disk: no flag, never used, and no rating above
+    /// G. A filed G (or none) says nothing G does not already mean by default.
+    /// </summary>
     /// <remarks>Derived, so not written: a stored copy could only disagree with the fields.</remarks>
     [JsonIgnore]
-    public bool IsEmpty => !Queued && !Liked && !Hidden && LastUsedAt is null;
+    public bool IsEmpty => !Queued && !Liked && !Hidden && LastUsedAt is null && FiledRating is not (1 or 2);
 
     public bool Has(CardFlag flag) => flag switch
     {
@@ -136,7 +147,7 @@ internal sealed class CardStateStore
                     if (_byHash.TryGetValue(entry.Hash, out var known))
                     {
                         if (entry.UpdatedAt <= known.Entry.UpdatedAt) continue;
-                        RemovePathsOf(entry.Hash);
+                        RemovePathOf(entry.Hash);
                     }
                     _byHash[entry.Hash] = (root, entry);
                     _hashByPath[FullPathOf(root, entry)] = entry.Hash;
@@ -230,6 +241,74 @@ internal sealed class CardStateStore
     }
 
     /// <summary>
+    /// Records the rating the card was filed under, or clears it with null.
+    /// Leaves the flags, the use and <see cref="CardState.UpdatedAt"/> alone,
+    /// and the flag rules leave it alone. False when the card is outside every
+    /// loaded root or its root is read-only.
+    /// </summary>
+    public Task<bool> SetFiledRatingAsync(string fullPath, string hash, int? rating,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+        CheckRating(rating);
+        return StoreAsync(fullPath, hash, state => state with { FiledRating = rating }, cancellationToken);
+    }
+
+    /// <summary>
+    /// <see cref="SetFiledRatingAsync"/> for many cards at once, writing each
+    /// root's file once rather than once per card. Returns how many could not
+    /// be stored (outside every root, or a read-only root).
+    /// </summary>
+    public async Task<int> SetFiledRatingsAsync(IReadOnlyList<(string FullPath, string Hash, int Rating)> ratings,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var (_, hash, rating) in ratings)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+            CheckRating(rating);
+        }
+
+        var failed = 0;
+        var touched = new HashSet<string>(PathComparison.Comparer);
+        var changed = new List<string>(ratings.Count);
+        lock (_gate)
+        {
+            foreach (var (fullPath, hash, rating) in ratings)
+            {
+                var path = Path.GetFullPath(fullPath);
+                switch (Apply(path, hash, state => state with { FiledRating = rating }, out var root, out var previousRoot))
+                {
+                    case ApplyResult.Refused:
+                        failed++;
+                        break;
+                    case ApplyResult.Changed:
+                        touched.Add(root!);
+                        if (previousRoot is not null) touched.Add(previousRoot);
+                        changed.Add(path);
+                        break;
+                }
+            }
+        }
+
+        foreach (var root in touched)
+            await WriteRootAsync(root, cancellationToken).ConfigureAwait(false);
+        foreach (var path in changed)
+            StateChanged?.Invoke(path);
+        return failed;
+    }
+
+    /// <summary>How many times a state file was written; for tests.</summary>
+    internal int WriteCount => Volatile.Read(ref _writeCount);
+
+    private int _writeCount;
+
+    private static void CheckRating(int? rating)
+    {
+        if (rating is < 0 or > 2)
+            throw new ArgumentOutOfRangeException(nameof(rating), rating, "A rating is 0 (G), 1 (R-18) or 2 (R-18G).");
+    }
+
+    /// <summary>
     /// Applies <paramref name="change"/> to the card's state (a blank one when
     /// it has none), stores it under <paramref name="fullPath"/>, writes the
     /// files it touched and raises <see cref="StateChanged"/>.
@@ -238,61 +317,84 @@ internal sealed class CardStateStore
         CancellationToken cancellationToken)
     {
         var path = Path.GetFullPath(fullPath);
-        string root;
-        string? previousRoot = null;
+        string? root;
+        string? previousRoot;
         lock (_gate)
         {
-            if (FindRoot(path) is not { } found || _readOnlyRoots.Contains(found)) return false;
-            root = found;
-            var relative = Path.GetRelativePath(root, path);
-            CardState current;
-            if (_byHash.TryGetValue(hash, out var known))
+            switch (Apply(path, hash, change, out root, out previousRoot))
             {
-                if (!PathComparison.Comparer.Equals(known.Root, root))
-                {
-                    // Moving the entry rewrites the old root's file too; when
-                    // that one is read-only the entry would end up in both.
-                    if (_readOnlyRoots.Contains(known.Root)) return false;
-                    previousRoot = known.Root;
-                }
-                current = known.Entry;
-            }
-            else
-            {
-                current = new CardState(hash, relative, false, false, false, null, 0, _now());
-            }
-
-            var next = change(current) with { Hash = hash, RelativePath = relative };
-            if (next.IsEmpty && !_byHash.ContainsKey(hash))
-                return true; // Clearing a flag nobody set: nothing to write or announce.
-
-            RemovePathsOf(hash);
-            if (next.IsEmpty)
-            {
-                _byHash.Remove(hash);
-            }
-            else
-            {
-                _byHash[hash] = (root, next);
-                _hashByPath[path] = hash;
+                case ApplyResult.Refused: return false;
+                case ApplyResult.Unchanged: return true;
             }
         }
 
-        await WriteRootAsync(root, cancellationToken).ConfigureAwait(false);
+        await WriteRootAsync(root!, cancellationToken).ConfigureAwait(false);
         if (previousRoot is not null)
             await WriteRootAsync(previousRoot, cancellationToken).ConfigureAwait(false);
         StateChanged?.Invoke(path);
         return true;
     }
 
+    private enum ApplyResult { Refused, Unchanged, Changed }
+
+    /// <summary>
+    /// The in-memory half of a change: which root's file (and which previous
+    /// root's, for an entry that moved roots) must be written. Call under the gate.
+    /// </summary>
+    private ApplyResult Apply(string path, string hash, Func<CardState, CardState> change,
+        out string? root, out string? previousRoot)
+    {
+        previousRoot = null;
+        root = FindRoot(path);
+        if (root is null || _readOnlyRoots.Contains(root)) return ApplyResult.Refused;
+        var relative = Path.GetRelativePath(root, path);
+        CardState current;
+        if (_byHash.TryGetValue(hash, out var known))
+        {
+            if (!PathComparison.Comparer.Equals(known.Root, root))
+            {
+                // Moving the entry rewrites the old root's file too; when
+                // that one is read-only the entry would end up in both.
+                if (_readOnlyRoots.Contains(known.Root)) return ApplyResult.Refused;
+                previousRoot = known.Root;
+            }
+            current = known.Entry;
+        }
+        else
+        {
+            current = new CardState(hash, relative, false, false, false, null, 0, _now());
+        }
+
+        var next = change(current) with { Hash = hash, RelativePath = relative };
+        if (next.IsEmpty && !_byHash.ContainsKey(hash))
+            return ApplyResult.Unchanged; // Clearing what nobody set: nothing to write or announce.
+
+        RemovePathOf(hash);
+        if (next.IsEmpty)
+        {
+            _byHash.Remove(hash);
+        }
+        else
+        {
+            _byHash[hash] = (root, next);
+            _hashByPath[path] = hash;
+        }
+        return ApplyResult.Changed;
+    }
+
     private static string FullPathOf(string root, CardState entry)
         => Path.GetFullPath(Path.Combine(root, entry.RelativePath));
 
-    /// <summary>Call under the gate.</summary>
-    private void RemovePathsOf(string hash)
+    /// <summary>
+    /// Forgets the path the entry for <paramref name="hash"/> is stored under.
+    /// An entry has exactly one path, its root plus its relative path, so this
+    /// is a lookup rather than a scan; a batch of thousands depends on that.
+    /// Call under the gate.
+    /// </summary>
+    private void RemovePathOf(string hash)
     {
-        foreach (var path in _hashByPath.Where(p => p.Value == hash).Select(p => p.Key).ToList())
-            _hashByPath.Remove(path);
+        if (_byHash.TryGetValue(hash, out var known))
+            _hashByPath.Remove(FullPathOf(known.Root, known.Entry));
     }
 
     /// <summary>The deepest loaded root holding <paramref name="fullPath"/>. Call under the gate.</summary>
@@ -326,6 +428,7 @@ internal sealed class CardStateStore
             LibraryMetadataDirectory.MarkHiddenOnWindows(metadataDirectory);
             await AtomicJsonFile.WriteAsync(path, new CardStateDocument(CurrentSchemaVersion, entries),
                 JsonOptions, cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _writeCount);
         }
         finally
         {
@@ -372,10 +475,14 @@ internal sealed class CardStateStore
 
         // An entry with nothing in it would only be dropped at the next write;
         // dropping it now keeps Snapshot() to cards that have a state.
-        return [.. document.States.Where(e => e is not null
-            && !string.IsNullOrWhiteSpace(e.Hash)
-            && !string.IsNullOrWhiteSpace(e.RelativePath)
-            && e.UseCount >= 0
-            && !e.IsEmpty)];
+        // A rating outside the scale is not trusted to mean anything: it reads
+        // as never recorded rather than as some rating it might have meant.
+        return [.. document.States
+            .Where(e => e is not null)
+            .Select(e => e.FiledRating is null or (>= 0 and <= 2) ? e : e with { FiledRating = null })
+            .Where(e => !string.IsNullOrWhiteSpace(e.Hash)
+                && !string.IsNullOrWhiteSpace(e.RelativePath)
+                && e.UseCount >= 0
+                && !e.IsEmpty)];
     }
 }

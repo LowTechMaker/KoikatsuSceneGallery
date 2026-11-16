@@ -36,8 +36,15 @@ public sealed class ImportService
         return (PathSanitizer.SanitizeRelativePath(name), true);
     }
 
+    /// <summary>
+    /// The rating folders an author folder can sit under, for finding existing
+    /// folders. "" is the three-level layout, where authors sit directly under
+    /// the provider (or game) folder. Distinct, so a rating folder name left
+    /// blank in the settings does not scan the same folder twice.
+    /// </summary>
     private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
-        [config.GFolderName, config.R18FolderName, config.R18GFolderName];
+        [.. new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName, "" }
+            .Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
 
     private static string[] GetGameVersionFolderNames(SettingsService.ConfigData config) =>
         [config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, ""];
