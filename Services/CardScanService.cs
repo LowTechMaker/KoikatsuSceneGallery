@@ -37,17 +37,19 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
-    /// <param name="reuse">
-    /// Returns a card for a listed file the caller already knows (from its card
-    /// cache, matched on size and write time), or null to have the file opened
-    /// and read as before. Called on the scan's worker threads.
+    /// <param name="skip">
+    /// True for a listed file the caller already has as a card, unchanged (its
+    /// card cache matches size and write time): the file is neither opened nor
+    /// sent to <paramref name="onBatch"/>, which would only find it equal to the
+    /// card already there. The caller records that it was seen. Called on the
+    /// scan's worker threads.
     /// </param>
     public Task ScanFoldersAsync(
         IEnumerable<string> folderPaths,
         Action<List<TCard>> onBatch,
         CancellationToken cancellationToken = default,
         int batchSize = 200,
-        Func<FileInfo, TCard?>? reuse = null)
+        Func<FileInfo, bool>? skip = null)
     {
         return Task.Run(() =>
         {
@@ -71,7 +73,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                     onBatch(ready);
             }
 
-            ScanFolders(folderPaths, options, Accumulate, reuse);
+            ScanFolders(folderPaths, options, Accumulate, skip);
 
             if (batch.Count > 0)
             {
@@ -89,7 +91,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     public int LastScanUnreadableCount => Volatile.Read(ref _lastScanUnreadableCount);
     private int _lastScanUnreadableCount;
 
-    /// <summary>Files listed, opened and taken from the caller's cache by the last scan (for the startup timing log).</summary>
+    /// <summary>Files listed, opened, and skipped as unchanged (taken from the caller's cache) by the last scan (for the startup timing log).</summary>
     public (int Listed, int Opened, int Reused) LastScanCounts { get; private set; }
 
     /// <summary>
@@ -128,7 +130,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
     // Synchronous worker core: callers retain their own result collection/publication.
     private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept,
-        Func<FileInfo, TCard?>? reuse = null)
+        Func<FileInfo, bool>? skip = null)
     {
         var cancellationToken = options.CancellationToken;
         int unreadable = 0, listed = 0, opened = 0, reused = 0;
@@ -140,15 +142,15 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Interlocked.Increment(ref listed);
-                // A file the cache already describes is not opened: its size and
-                // write time came with the listing, its dimensions from the cache.
-                var card = reuse?.Invoke(file);
-                if (card is not null) Interlocked.Increment(ref reused);
-                else
+                // A file the caller already has, unchanged, is neither opened nor
+                // published: its size and write time came with the listing.
+                if (skip?.Invoke(file) == true)
                 {
-                    Interlocked.Increment(ref opened);
-                    card = TryCreateCard(file);
+                    Interlocked.Increment(ref reused);
+                    return;
                 }
+                Interlocked.Increment(ref opened);
+                var card = TryCreateCard(file);
                 if (card != null)
                     accept(card);
                 else

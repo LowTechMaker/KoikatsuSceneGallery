@@ -450,7 +450,9 @@ public sealed partial class MainWindow : Window
         };
         foreach (var text in texts)
         {
-            var badge = new RatingBadge { Text = text, IsHitTestVisible = false };
+            // Hit-testable like the origin switch's text: a press on the badge bubbles
+            // to the SegmentedItem, which selects (no reliance on the item's background).
+            var badge = new RatingBadge { Text = text };
             // The label beside it (or the button's name) says it; read once, not twice.
             AutomationProperties.SetAccessibilityView(badge, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
             badges.Children.Add(badge);

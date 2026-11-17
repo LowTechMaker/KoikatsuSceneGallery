@@ -81,19 +81,17 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private const string TimingLibrary = "scenes";
 
     /// <summary>
-    /// A card from its cache entry. <paramref name="file"/> is the listed file
-    /// when the scan reuses the entry (its creation time fills an entry written
-    /// before creation times were stored). A thumbnail found missing is left
-    /// off, so it is made again when the card is shown.
+    /// A card from its cache entry. A thumbnail found missing is left off, so it
+    /// is made again when the card is shown.
     /// </summary>
-    private static SceneCard FromCache(CachedCardEntry entry, FileInfo? file, HashSet<string> staleThumbnails)
+    private static SceneCard FromCache(CachedCardEntry entry, HashSet<string> staleThumbnails)
     {
         var card = new SceneCard
         {
             FilePath = entry.FilePath,
             FileSize = entry.FileSize,
             DateModified = new DateTime(entry.DateModifiedTicks),
-            DateCreated = entry.DateCreatedTicks != 0 || file is null ? new DateTime(entry.DateCreatedTicks) : file.CreationTime,
+            DateCreated = new DateTime(entry.DateCreatedTicks),
             Width = entry.Width,
             Height = entry.Height,
         };
@@ -395,7 +393,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                         foreach (var (filePath, entry) in chunk)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            var card = FromCache(entry, null, staleThumbnails);
+                            var card = FromCache(entry, staleThumbnails);
                             if (card.ThumbnailPath is not null)
                                 _thumbnailPathCache[filePath] = card.ThumbnailPath;
                             AssignRating(card);
@@ -422,14 +420,16 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             // A cold cache used to wait for every PNG to be scanned before adding the
             // first card.  Stream modest batches to the UI instead, leaving the grid
             // virtualized while the rest of the folders are still being enumerated.
-            // A file the cache describes (same size and write time) is not opened.
-            var scannedIndex = new ConcurrentDictionary<string, SceneCard>(StringComparer.OrdinalIgnoreCase);
+            // A file the cache describes (same size and write time) is neither
+            // opened nor sent here: its card is already on screen. The tracker
+            // remembers that the scan saw it, so only cards really gone are removed.
+            var seen = new CardScanTracker(relevantCached);
             var addedOrChanged = 0;
             await _sceneCardService.ScanFoldersAsync(paths, batch =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 foreach (var card in batch)
-                    scannedIndex.TryAdd(card.FilePath, card);
+                    seen.MarkRead(card.FilePath, card.DateCreated);
 
                 PublishScannedBatch(() =>
                 {
@@ -458,20 +458,15 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     }
                     FirstCards();
                 }, cancellationToken);
-            }, cancellationToken, reuse: file =>
-                relevantCached.TryGetValue(file.FullName, out var entry)
-                && CardCacheReuse.Describes(entry, file.Length, file.LastWriteTime)
-                    ? FromCache(entry, file, staleThumbnails)
-                    : null);
+            }, cancellationToken, skip: file =>
+                seen.SkipUnchanged(file.FullName, file.Length, file.LastWriteTime, file.CreationTime));
             var scan = _sceneCardService.LastScanCounts;
             timing?.Add(new(TimingLibrary, "scan", Lap(), [("listed", scan.Listed), ("opened", scan.Opened), ("reused", scan.Reused),
                 ("unreadable", _sceneCardService.LastScanUnreadableCount), ("addedOrChanged", addedOrChanged)]));
 
-            // Everything received in the batches is current.  Remove cache entries
+            // Everything the scan skipped or read is current.  Remove cache entries
             // that were not found without delaying the first visible batch.
-            var toRemove = _cardIndex.Keys
-                .Where(filePath => !scannedIndex.ContainsKey(filePath))
-                .ToList();
+            var toRemove = seen.Missing(_cardIndex.Keys).ToList();
             if (toRemove.Count > 0)
             {
                 _scanChanged = true;
@@ -491,10 +486,10 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 // A card kept from a cache written before the creation time was
-                // stored has none; the scan just read it, so take it from there.
+                // stored has none; the listing just gave it, so take it from there.
                 var created = card.DateCreated != default
                     ? card.DateCreated
-                    : scannedIndex.TryGetValue(filePath, out var scanned) ? scanned.DateCreated : default;
+                    : seen.CreatedOf(filePath) ?? default;
                 newCache[filePath] = new CachedCardEntry(
                     card.FilePath, card.FileSize, card.DateModified.Ticks,
                     card.Width, card.Height, card.ThumbnailPath, created.Ticks);

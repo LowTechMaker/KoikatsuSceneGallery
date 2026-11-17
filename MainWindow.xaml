@@ -55,23 +55,19 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <!--  Items built in code: icons (the rating badges). A plain
-                          horizontal panel instead of Segmented's equal-width one,
-                          so "All" is not as wide as "R-18 and R-18G".  -->
+                    <!--  Items built in code: icons (the rating badges). Set up
+                          exactly like OriginSelectorBar below, Segmented's own
+                          items panel included: replacing it with a plain panel
+                          left the items without UI Automation selection (seen
+                          live in wave 7). The price is equal-width items, each
+                          as wide as "R-18 and R-18G".  -->
                     <controls:Segmented
                         x:Name="RatingFilterBar"
                         Grid.Column="1"
-                        MaxWidth="360"
                         AutomationProperties.AutomationId="TitleBarRatingFilter"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        SelectionChanged="RatingFilterBar_SelectionChanged">
-                        <controls:Segmented.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </controls:Segmented.ItemsPanel>
-                    </controls:Segmented>
+                        SelectionChanged="RatingFilterBar_SelectionChanged" />
                     <DropDownButton
                         x:Name="RatingFilterPicker"
                         Grid.Column="1"
