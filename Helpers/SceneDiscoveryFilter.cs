@@ -17,7 +17,7 @@ internal sealed record SceneDiscoveryFilter(
         // Discovery draws from the same library as the grids, so it has to obey
         // the global online/local switch or the two views disagree.
         if (!CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), origin)) return false;
-        if (!RatingPasses(rating, card.Rating)) return false;
+        if (!RatingFilterRule.Passes(rating, card.Rating)) return false;
         if (!GallerySearch.Matches(card.FilePath, card.Author?.Name, keywords)) return false;
         if (filterResolution && resolutions.Count > 0 && !resolutions.Contains(card.Resolution)) return false;
         if (game == GameFilterOption.All) return true;
@@ -29,13 +29,4 @@ internal sealed record SceneDiscoveryFilter(
         };
         return card.MetadataLoaded && card.Game == target;
     }
-
-    public static bool RatingPasses(RatingFilterOption filter, int rating) => filter switch
-    {
-        RatingFilterOption.GeneralOnly => rating == SceneRating.General,
-        RatingFilterOption.R18AndR18G => rating >= SceneRating.R18,
-        RatingFilterOption.R18Only => rating == SceneRating.R18,
-        RatingFilterOption.R18GOnly => rating == SceneRating.R18G,
-        _ => true,
-    };
 }

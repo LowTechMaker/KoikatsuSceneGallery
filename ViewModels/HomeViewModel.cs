@@ -80,12 +80,13 @@ internal sealed class HomeViewModel
     private volatile bool _indexStale = true;
 
     public HomeViewModel(LibraryRegistry libraries, CardStateService states,
-        SceneRatingResolver? posts = null, AuthorInfoService? authors = null)
+        SceneRatingResolver? posts = null, AuthorInfoService? authors = null, GalleryViewModel? gallery = null)
     {
         _scenes = libraries.Get(LibraryKind.Scenes);
         _states = states;
         _posts = posts;
         _authors = authors;
+        _gallery = gallery;
         // Themes are chosen again when the library or the sidecars change, never
         // on a state change: flagging a card must not reshuffle the page.
         _scenes.CardsChanged += (_, _) =>
@@ -219,10 +220,35 @@ internal sealed class HomeViewModel
     public HomeShelf Liked { get; }
     public IReadOnlyList<HomeShelf> Shelves { get; }
 
-    /// <summary>The scene library's cards by path, as they are right now.</summary>
+    /// <summary>
+    /// The scene library's cards by path, as they are right now, less the ones
+    /// the app-wide rating filter leaves out. Every shelf, the pair and the
+    /// themes are built from this, so the filter means the same here as in the
+    /// gallery: "do not show me these".
+    /// </summary>
     private Dictionary<string, CardBase> Live() => _scenes.Cards
+        .Where(RatingPasses)
         .DistinctBy(card => card.FilePath, StringComparer.OrdinalIgnoreCase)
         .ToDictionary(card => card.FilePath, StringComparer.OrdinalIgnoreCase);
+
+    // ------------------------------------------------------------ rating filter
+
+    private readonly GalleryViewModel? _gallery;
+    private RatingFilterOption _themesFilter = RatingFilterOption.All;
+
+    /// <summary>The gallery's rule (<see cref="GalleryViewModel.RatingPasses"/>), with the card's resolved rating.</summary>
+    private bool RatingPasses(CardBase card)
+        => _gallery is null || card is not SceneCard scene || _gallery.RatingPasses(scene);
+
+    private RatingFilterOption RatingFilter => _gallery?.RatingFilter ?? RatingFilterOption.All;
+
+    /// <summary>
+    /// True while a rating filter is on and the ratings of the current load are
+    /// not in yet. Until then a card's rating is its folder's (or filed one), and
+    /// the sidecars read next may still change it; the page keeps what it shows
+    /// instead of showing a card the gallery would hide a moment later.
+    /// </summary>
+    public bool WaitingForRatings => _gallery is { RatingsSettled: false } && RatingFilter != RatingFilterOption.All;
 
     /// <summary>
     /// Rebuilds the three state shelves from the store and re-resolves the
@@ -230,6 +256,13 @@ internal sealed class HomeViewModel
     /// </summary>
     public void Refresh()
     {
+        if (WaitingForRatings) return;
+        // Another filter is another library for the themes: they are chosen again.
+        if (RatingFilter != _themesFilter)
+        {
+            _themesFilter = RatingFilter;
+            _themesStale = true;
+        }
         var live = Live();
         var states = _states.Snapshot()
             .Where(entry => live.ContainsKey(entry.FullPath))
@@ -264,7 +297,7 @@ internal sealed class HomeViewModel
     public void DealAgain()
     {
         var candidates = _scenes.Cards
-            .Where(card => !_states.Has(card.FilePath, CardFlag.Hidden))
+            .Where(card => RatingPasses(card) && !_states.Has(card.FilePath, CardFlag.Hidden))
             .ToArray();
         var hand = _dealer.Deal(candidates, _dealt, card => card.FilePath, card => card.FileSize);
         _dealt = [.. hand.Select(card => card.FilePath)];

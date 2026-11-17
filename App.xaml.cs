@@ -388,8 +388,9 @@ public partial class App : Application
         }, TaskScheduler.Default);
         // Titles and tags come from the sidecars the scene ratings already read;
         // author counts from the author index. Neither reads a file per tile.
+        // The gallery also brings the app-wide rating filter and the rule it applies.
         Services.Add(new HomeViewModel(Services.GetRequiredService<LibraryRegistry>(), cardStates,
-            galleryViewModel.RatingResolver, authorInfoService));
+            galleryViewModel.RatingResolver, authorInfoService, galleryViewModel));
         Services.Add(new UsageRecordService(
             settingsViewModel,
             () => Services.GetRequiredService<LibraryRegistry>().All

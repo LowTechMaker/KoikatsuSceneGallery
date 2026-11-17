@@ -36,9 +36,8 @@ public sealed partial class LibraryBrowser
         var libraryWide = _scope is null && _groupKey is null;
         if (libraryWide && VM is GalleryViewModel scene)
         {
-            if (scene.RatingFilter != RatingFilterOption.All)
-                list.Add(new($"{UiText.Get("SceneGallery_Rating.Header")}：{RatingFilterLabels()[(int)scene.RatingFilter]}",
-                    () => scene.RatingFilter = RatingFilterOption.All));
+            // The rating filter is app-wide now and lives in the title bar, so it
+            // is no chip here: removing it from one page would change every page.
             if (scene.GameFilter != GameFilterOption.All)
                 list.Add(new($"{UiText.Get("SceneGallery_Environment.Header")}：{GameLabels()[(int)scene.GameFilter]}",
                     () => scene.GameFilter = GameFilterOption.All));

@@ -69,6 +69,21 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool UseUserRatings => RatingSourceIndex == 1;
 
+    /// <summary>
+    /// The rating filter for the whole app, chosen in the title bar. Like the
+    /// browse origin it is persisted and pushed into every place that shows
+    /// scene cards; read <see cref="EffectiveRatingFilter"/>, not this.
+    /// </summary>
+    [ObservableProperty]
+    public partial RatingFilterOption RatingFilter { get; set; } = RatingFilterOption.All;
+
+    /// <summary>Rating filtering at all (the settings switch). Off: nothing is filtered and the title bar control is hidden.</summary>
+    [ObservableProperty]
+    public partial bool RatingFilterEnabled { get; set; } = true;
+
+    /// <summary>The filter to apply: <see cref="RatingFilter"/>, or All while filtering is switched off.</summary>
+    public RatingFilterOption EffectiveRatingFilter => RatingFilterRule.Effective(RatingFilterEnabled, RatingFilter);
+
     [ObservableProperty]
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
@@ -303,6 +318,8 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? CoordinateFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
     public event Action<CardOriginSelection>? BrowseOriginChanged;
+    /// <summary>Raised on the UI thread when <see cref="EffectiveRatingFilter"/> or the switch changed.</summary>
+    public event Action? RatingFilterChanged;
 
     public SettingsViewModel(
         SettingsService settingsService,
@@ -361,6 +378,17 @@ public partial class SettingsViewModel : ObservableObject
 
         SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
+    }
+
+    partial void OnRatingFilterChanged(RatingFilterOption value) => OnRatingFilterSettingChanged();
+    partial void OnRatingFilterEnabledChanged(bool value) => OnRatingFilterSettingChanged();
+
+    private void OnRatingFilterSettingChanged()
+    {
+        if (_isLoading) return;
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        OnPropertyChanged(nameof(EffectiveRatingFilter));
+        RatingFilterChanged?.Invoke();
     }
 
     partial void OnRatingSourceIndexChanged(int value)
@@ -624,6 +652,8 @@ public partial class SettingsViewModel : ObservableObject
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             ShowFileNames = config.ShowFileNames;
             RatingSourceIndex = config.UseUserRatings ? 1 : 0;
+            RatingFilter = RatingFilterRule.Parse(config.RatingFilter);
+            RatingFilterEnabled = config.RatingFilterEnabled;
             ScrollToTopOnSort = config.ScrollToTopOnSort;
             DiscoverySpreadEnabled = config.DiscoverySpreadEnabled;
             PokerHandEnabled = config.PokerHandEnabled;
@@ -927,6 +957,8 @@ public partial class SettingsViewModel : ObservableObject
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
                 ShowFileNames = ShowFileNames,
                 UseUserRatings = UseUserRatings,
+                RatingFilter = RatingFilterRule.ToConfigValue(RatingFilter),
+                RatingFilterEnabled = RatingFilterEnabled,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 DiscoverySpreadEnabled = DiscoverySpreadEnabled,
                 PokerHandEnabled = PokerHandEnabled,

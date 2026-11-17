@@ -77,6 +77,9 @@ public sealed partial class HomePage : Page
         _gallery.CardsReloaded += Reconcile;
         // The sidecars are read after the cards: tags (for the themes) come then.
         _viewModel.CardInfoChanged += QueueRefresh;
+        // The rating filter (title bar, settings switch) and the ratings themselves.
+        _gallery.RatingsChanged += QueueRefresh;
+        _gallery.PropertyChanged += Gallery_PropertyChanged;
         _states.StateChanged += State_Changed;
         // The shelves ask for thumbnails of cards the gallery may not have
         // shown, and leaving the gallery cancelled its thumbnail session.
@@ -94,6 +97,8 @@ public sealed partial class HomePage : Page
         _gallery.CardsReloaded -= QueueRefresh;
         _gallery.CardsReloaded -= Reconcile;
         _viewModel.CardInfoChanged -= QueueRefresh;
+        _gallery.RatingsChanged -= QueueRefresh;
+        _gallery.PropertyChanged -= Gallery_PropertyChanged;
         _states.StateChanged -= State_Changed;
         base.OnNavigatedFrom(e);
     }
@@ -116,6 +121,11 @@ public sealed partial class HomePage : Page
     // Raised off the UI thread, once per card: a batch of ten changes should
     // rebuild the shelves once.
     private void State_Changed(string path) => QueueRefresh();
+
+    private void Gallery_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GalleryViewModel.RatingFilter)) QueueRefresh();
+    }
 
     private void QueueRefresh()
     {

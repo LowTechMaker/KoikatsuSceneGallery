@@ -43,6 +43,7 @@ public static class SettingsSearchIndex
     [
         Card("SC_ShowFileNames", General),
         Card("SC_RatingSource", General),
+        Card("SC_RatingFilterEnabled", General),
         Card("SC_ScrollToTop", General),
         Card("SC_DiscoverySpread", General),
         Card("SC_PokerHand", General),

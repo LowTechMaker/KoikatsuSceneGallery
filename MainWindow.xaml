@@ -40,10 +40,27 @@
                       still matters — Segmented derives from ListViewBase and
                       claims the full width at measure, which once left the
                       window with no room for its own title.  -->
+                <!--  The rating filter sits in its own column beside the origin
+                      switch: it does not depend on a platform plugin, so it
+                      stays when the origin switch is hidden.  -->
                 <Grid
-                    MaxWidth="520"
+                    MaxWidth="680"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <DropDownButton
+                        x:Name="RatingFilterPicker"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="TitleBarRatingFilter"
+                        VerticalAlignment="Center">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout x:Name="RatingFilterMenu" Placement="BottomEdgeAlignedRight" />
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
                     <controls:Segmented
                         x:Name="OriginSelectorBar"
                         x:Uid="Origin_SelectorBar"

@@ -125,6 +125,20 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
+                        <!--  The app-wide rating filter on or off. The choice itself is
+                              made in the title bar; off hides that control and shows
+                              every rating, and keeps the choice for when it is on again.  -->
+                        <controls:SettingsCard
+                            x:Uid="SC_RatingFilterEnabled"
+                            AutomationProperties.AutomationId="SettingsRatingFilterCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE71C;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsRatingFilterToggle"
+                                IsOn="{x:Bind ViewModel.RatingFilterEnabled, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
                         <controls:SettingsCard
                             x:Uid="SC_ScrollToTop"
                             AutomationProperties.AutomationId="SettingsScrollToTopCard">

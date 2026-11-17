@@ -177,6 +177,12 @@ public class SettingsService
         /// </summary>
         public string BrowseOrigin { get; set; } = "";
 
+        /// <summary>The app-wide rating filter choice (<see cref="Helpers.RatingFilterRule.Parse"/>); empty is All.</summary>
+        public string RatingFilter { get; set; } = "";
+
+        /// <summary>Rating filtering at all. Off shows every card as with All, and keeps the choice for later.</summary>
+        public bool RatingFilterEnabled { get; set; } = true;
+
         // ── Folder naming (OCD) ─────────────────────────────────────
         public string AuthorFolderFormat { get; set; } = "{name} ({id})";
         public string ArtworkFolderFormat { get; set; } = "{title} ({id})";

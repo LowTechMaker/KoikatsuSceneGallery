@@ -52,8 +52,6 @@ public sealed partial class RandomDiscoveryPage : Page
         _refreshTimer.Tick += (_, _) => RefreshCandidates();
         foreach (var name in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") })
             GameFilter.Items.Add(name);
-        foreach (var name in Controls.LibraryBrowser.RatingFilterLabels())
-            RatingFilter.Items.Add(name);
         Loaded += (_, _) =>
         {
             _layout.OnLoaded(RequestVisible);
@@ -78,7 +76,6 @@ public sealed partial class RandomDiscoveryPage : Page
         {
             _syncing = true;
             SearchBox.Text = _gallery.SearchText;
-            RatingFilter.SelectedIndex = (int)_gallery.RatingFilter;
             GameFilter.SelectedIndex = (int)_gallery.GameFilter;
             ResolutionFilter.IsOn = _settings.ResolutionFilterEnabled;
             _syncing = false;
@@ -92,7 +89,8 @@ public sealed partial class RandomDiscoveryPage : Page
         if (reload || _reloadRequested || _gallery.Cards.Count == 0) Load();
         // The page is cached, so a switch flipped while it was away is only
         // visible in the captured filter.
-        else if (SearchBox.Text != _appliedQuery || _filter.Origin != _settings.EffectiveBrowseOrigin) ApplyConditions();
+        else if (SearchBox.Text != _appliedQuery || _filter.Origin != _settings.EffectiveBrowseOrigin
+                 || _filter.Rating != _gallery.RatingFilter) ApplyConditions();
         else RefreshCandidates();
     }
 
@@ -125,7 +123,8 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         _appliedQuery = SearchBox.Text;
         _filter = new(SearchBox.Text.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray(),
-            (RatingFilterOption)Math.Max(0, RatingFilter.SelectedIndex), (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
+            // The rating filter is the app-wide one (title bar), as the gallery has it.
+            _gallery.RatingFilter, (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
             ResolutionFilter.IsOn, new(_settings.AllowedResolutions), _settings.EffectiveBrowseOrigin);
     }
 
@@ -357,6 +356,8 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         if (e.PropertyName is nameof(GalleryViewModel.IsLoading) or nameof(GalleryViewModel.IsParsingMetadata)
             or nameof(GalleryViewModel.ShowMetadataFilters)) QueueRefresh();
+        // The app-wide rating filter changed (title bar or settings switch).
+        if (e.PropertyName is nameof(GalleryViewModel.RatingFilter)) ApplyConditions();
     }
     private void Folders_Changed() { _folders = _settings.FolderPaths.ToArray(); Load(); }
     private void Search_Changed(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs e)
@@ -373,7 +374,6 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         _syncing = true;
         SearchBox.Text = "";
-        RatingFilter.SelectedIndex = 0;
         GameFilter.SelectedIndex = 0;
         ResolutionFilter.IsOn = false;
         _syncing = false;

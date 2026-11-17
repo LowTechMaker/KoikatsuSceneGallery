@@ -82,6 +82,9 @@ public sealed partial class MainWindow : Window
         App.Services.GetRequiredService<AuthorsViewModel>().ProviderTabs.CollectionChanged +=
             (_, _) => DispatcherQueue.TryEnqueue(ApplyNavVisibility);
         settings.BrowseOriginChanged += OnBrowseOriginChanged;
+        BuildRatingFilterMenu();
+        ApplyRatingFilter();
+        settings.RatingFilterChanged += () => DispatcherQueue.TryEnqueue(ApplyRatingFilter);
         RecordModeNavToggle.IsOn = settings.RecordModeEnabled;
         ShowRecordModeState(settings.RecordModeEnabled);
         settings.RecordModeEnabledChanged += OnRecordModeEnabledChanged;
@@ -371,6 +374,40 @@ public sealed partial class MainWindow : Window
             ApplyNavVisibility();
             LeaveHiddenPage();
         });
+    }
+
+    // ------------------------------------------------------------ rating filter
+
+    /// <summary>The title bar's rating menu: the same choices, in the same order, as the filters always had.</summary>
+    private void BuildRatingFilterMenu()
+    {
+        var labels = Controls.LibraryBrowser.RatingFilterLabels();
+        for (var i = 0; i < labels.Length; i++)
+        {
+            var option = (RatingFilterOption)i;
+            var item = new RadioMenuFlyoutItem { Text = labels[i], Tag = option, GroupName = "TitleBarRatingFilter" };
+            AutomationProperties.SetAutomationId(item, $"TitleBarRatingFilter_{option}");
+            item.Click += (_, _) => App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
+            RatingFilterMenu.Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Shows the stored choice in the title bar (hidden while filtering is
+    /// switched off in the settings) and pushes the filter that applies into
+    /// the scene gallery, which every scene view reads.
+    /// </summary>
+    private void ApplyRatingFilter()
+    {
+        var settings = App.Services.GetRequiredService<SettingsViewModel>();
+        RatingFilterPicker.Visibility = settings.RatingFilterEnabled ? Visibility.Visible : Visibility.Collapsed;
+        var labels = Controls.LibraryBrowser.RatingFilterLabels();
+        var label = labels[Math.Clamp((int)settings.RatingFilter, 0, labels.Length - 1)];
+        RatingFilterPicker.Content = label;
+        AutomationProperties.SetName(RatingFilterPicker, $"{UiText.Get("TitleBar_RatingFilter")}: {label}");
+        foreach (var item in RatingFilterMenu.Items.OfType<RadioMenuFlyoutItem>())
+            item.IsChecked = item.Tag is RatingFilterOption option && option == settings.RatingFilter;
+        App.Services.GetRequiredService<GalleryViewModel>().RatingFilter = settings.EffectiveRatingFilter;
     }
 
     /// <summary>

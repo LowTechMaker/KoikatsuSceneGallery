@@ -107,6 +107,7 @@ public sealed partial class LibraryBrowser : UserControl
     {
         _frame = frame; _active = true;
         SetScopedMetadataSubscriptions(true);
+        SetScopedRatingSubscriptions(true);
         if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.Activate();
         _syncing = true; SelectSortItem(_scope is null ? VM.SelectedSort : _localSort); _syncing = false;
         UpdateSize(_settings.ThumbnailSize);
@@ -126,6 +127,7 @@ public sealed partial class LibraryBrowser : UserControl
         // The control is reused across navigations, so half-finished state must not survive.
         _collapse.Finish();
         SetScopedMetadataSubscriptions(false);
+        SetScopedRatingSubscriptions(false);
         if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.CancelPendingWork();
         foreach (var item in _items) { _adapter?.Thumbnail(item.Card, true); item.Dispose(); }
         _entriesDetached = true;
@@ -137,6 +139,21 @@ public sealed partial class LibraryBrowser : UserControl
         { await _adapter!.LoadAsync(); QueueRefresh(); });
     }
     private void QueueRefresh() { if (_active && !_refresh.IsRunning) _refresh.Start(); }
+
+    // A scoped scene browse (author, tag, post page) asks the gallery whether a
+    // card passes the rating filter, but does not listen to the gallery the way
+    // the library browser does; it follows the filter and the ratings only while
+    // shown, so a page left behind is not kept alive by the gallery.
+    private bool _ratingSubscribed;
+    private void SetScopedRatingSubscriptions(bool on)
+    {
+        if (_scope is null || VM is not GalleryViewModel scene || on == _ratingSubscribed) return;
+        _ratingSubscribed = on;
+        if (on) { scene.PropertyChanged += Scene_RatingFilterChanged; scene.RatingsChanged += QueueRefresh; }
+        else { scene.PropertyChanged -= Scene_RatingFilterChanged; scene.RatingsChanged -= QueueRefresh; }
+    }
+    private void Scene_RatingFilterChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    { if (e.PropertyName == nameof(GalleryViewModel.RatingFilter)) QueueRefresh(); }
     private string Key(CardBase card)
     {
         var author = (card as IAuthorOwner)?.Author;
@@ -194,7 +211,7 @@ public sealed partial class LibraryBrowser : UserControl
         NoSourceToggle.IsOn = VM.OriginFilter.IsNoSource;
         ShowHiddenToggle.IsOn = VM.ShowHiddenCards;
         _syncing = false;
-        int filterCount = VM switch { GalleryViewModel vm => (vm.RatingFilter == RatingFilterOption.All ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
+        int filterCount = VM switch { GalleryViewModel vm => vm.GameFilter == GameFilterOption.All ? 0 : 1, CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
             + (VM.OriginFilter.IsAll ? 0 : 1);
         var (resolutionEnabled, resolutionCount) = VM switch
         {
@@ -255,12 +272,7 @@ public sealed partial class LibraryBrowser : UserControl
     {
         if (VM is GalleryViewModel scene)
         {
-            var rating = new ComboBox { Header = UiText.Get("SceneGallery_Rating.Header"), HorizontalAlignment = HorizontalAlignment.Stretch, Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed };
-            foreach (var s in RatingFilterLabels()) rating.Items.Add(s);
-            rating.SelectedIndex = (int)scene.RatingFilter;
-            rating.SelectionChanged += (_, _) => { if (rating.SelectedIndex >= 0) scene.RatingFilter = (RatingFilterOption)rating.SelectedIndex; };
-            scene.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(scene.RatingFilter)) rating.SelectedIndex = (int)scene.RatingFilter; if (e.PropertyName == nameof(scene.ShowR18FilterButton)) rating.Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed; };
-            SpecificFilters.Children.Add(rating);
+            // No rating box: the rating filter is app-wide, in the title bar.
             var game = new ComboBox { Header = UiText.Get("SceneGallery_Environment.Header"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (var s in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") }) game.Items.Add(s);
             game.SelectedIndex = (int)scene.GameFilter; game.Visibility = scene.ShowMetadataFilters ? Visibility.Visible : Visibility.Collapsed;

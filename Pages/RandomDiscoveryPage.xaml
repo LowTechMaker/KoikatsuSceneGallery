@@ -27,8 +27,6 @@
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Width="260" Spacing="16">
-                                <ComboBox x:Name="RatingFilter" x:Uid="SceneGallery_Rating"
-                                          HorizontalAlignment="Stretch" SelectionChanged="Game_Changed" />
                                 <ComboBox x:Name="GameFilter" x:Uid="SceneGallery_Environment"
                                           HorizontalAlignment="Stretch" SelectionChanged="Game_Changed" />
                                 <ToggleSwitch x:Name="ResolutionFilter" x:Uid="Discovery_Resolution" Toggled="Filter_Changed" />

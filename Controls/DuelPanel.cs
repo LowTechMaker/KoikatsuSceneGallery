@@ -133,7 +133,8 @@ internal sealed class DuelPanel : StackPanel
     /// <summary>Shows the current pair again, replacing it if it became invalid (hidden, queued, gone).</summary>
     public void Refresh()
     {
-        if (_home is null) return;
+        // The pair on screen stays until the ratings are in (see WaitingForRatings).
+        if (_home is null || _home.WaitingForRatings) return;
         var (current, upcoming) = _home.DuelPairs();
         _count.Text = _home.DuelPicked > 0 ? UiText.Format("Home_DuelPicked", _home.DuelPicked) : "";
         _count.Visibility = _home.DuelPicked > 0 ? Visibility.Visible : Visibility.Collapsed;

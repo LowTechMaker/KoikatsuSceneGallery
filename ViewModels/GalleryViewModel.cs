@@ -18,18 +18,6 @@ public enum GameFilterOption
     Unknown
 }
 
-/// <summary>Order matches the filter combo boxes, which bind by index.</summary>
-public enum RatingFilterOption
-{
-    All,
-    GeneralOnly,
-    /// <summary>R-18 including R-18G.</summary>
-    R18AndR18G,
-    /// <summary>R-18 excluding R-18G.</summary>
-    R18Only,
-    R18GOnly
-}
-
 public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 {
     private readonly SceneCardService _sceneCardService;
@@ -47,13 +35,31 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
     public ObservableCollection<SceneCard> Cards { get; }
 
+    /// <summary>
+    /// The app-wide rating filter as it applies now
+    /// (<see cref="SettingsViewModel.EffectiveRatingFilter"/>), pushed in by the
+    /// main window the way the browse origin is; never set from a page.
+    /// </summary>
     [ObservableProperty]
     public partial RatingFilterOption RatingFilter { get; set; } = RatingFilterOption.All;
 
-    // The user's own ratings exist without any rating-folder provider.
-    public bool ShowR18FilterButton => _ratingResolver.UseUserRatings || _pluginService.ImportProviders
-        .OfType<IImportDestinationProvider>()
-        .Any(p => p.UsesRatingFolders);
+    /// <summary>
+    /// False from the start of a load until the platform and user ratings of
+    /// that load have been applied. Until then a card's rating is its folder or
+    /// filed rating, which the sidecars may still change.
+    /// </summary>
+    public bool RatingsSettled { get; private set; }
+
+    /// <summary>Raised on the UI thread when card ratings may have changed (settled after a load, a user or filed rating).</summary>
+    public event Action? RatingsChanged;
+
+    /// <summary>Whether a scene card passes the rating filter: the one rule, with the card's resolved rating.</summary>
+    public bool RatingPasses(SceneCard card) => RatingFilterRule.Passes(RatingFilter, card.Rating);
+
+    // Scoped browses (author, tag and post pages) only asked the search before;
+    // the rating filter is app-wide, so they ask it too.
+    public override bool MatchesBrowseCard(CardBase card, IReadOnlyList<string> keywords)
+        => base.MatchesBrowseCard(card, keywords) && (card is not SceneCard scene || RatingPasses(scene));
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParsingMetadata))]
@@ -122,7 +128,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private void OnUseUserRatingsChanged(bool enabled) => _dispatcherQueue.TryEnqueue(() =>
     {
         _ratingResolver.UseUserRatings = enabled;
-        OnPropertyChanged(nameof(ShowR18FilterButton));
         ApplyRatings();
     });
 
@@ -134,6 +139,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         if (card.Rating == rating) return;
         card.Rating = rating;
         if (RatingFilter != RatingFilterOption.All) ApplyFilter();
+        RatingsChanged?.Invoke();
     });
 
     private void AssignRating(SceneCard card)
@@ -170,6 +176,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             changed = Reassign(card);
         }
         if (changed && RatingFilter != RatingFilterOption.All) ApplyFilter();
+        if (changed) RatingsChanged?.Invoke();
 
         bool Reassign(SceneCard card)
         {
@@ -186,9 +193,23 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     /// </summary>
     private async Task ReloadRatingsAsync(IReadOnlyList<string> roots, CancellationToken token)
     {
-        await _ratingResolver.ReloadAsync(Cards.ToArray(), roots, token);
-        if (token.IsCancellationRequested) return;
-        ApplyRatings();
+        try
+        {
+            await _ratingResolver.ReloadAsync(Cards.ToArray(), roots, token);
+            if (token.IsCancellationRequested) return;
+            ApplyRatings();
+        }
+        finally
+        {
+            // Settled even when the read failed (it is logged): the folder and
+            // filed ratings are then all there is, and waiting on would keep the
+            // home page empty. A cancelled read is followed by another load.
+            if (!token.IsCancellationRequested)
+            {
+                RatingsSettled = true;
+                RatingsChanged?.Invoke();
+            }
+        }
     }
 
     private void ApplyRatings()
@@ -248,6 +269,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>
         {
+            RatingsSettled = false;
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
             _resolutionFilterEnabled = config.ResolutionFilterEnabled;
@@ -257,7 +279,6 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             _r18GFolderNames = new HashSet<string>([config.R18GFolderName], StringComparer.OrdinalIgnoreCase);
             _r18GFolderNames.RemoveWhere(string.IsNullOrWhiteSpace);
             _ratingResolver.UseUserRatings = config.UseUserRatings;
-            OnPropertyChanged(nameof(ShowR18FilterButton));
             ShowFileNames = config.ShowFileNames;
             _pluginAnalysisEnabled = config.PluginAnalysisEnabled;
             ShowMetadataFilters = config.PluginAnalysisEnabled;
