@@ -45,7 +45,14 @@ internal sealed class CardShelf : Grid
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
     };
     private readonly StackPanel _actions = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-    private readonly StackPanel _panel = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    // The bottom margin is room for the horizontal scroll bar, which WinUI draws
+    // over the content: without it the bar runs through the caption's last line.
+    private readonly StackPanel _panel = new()
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 8,
+        Margin = new Thickness(0, 0, 0, 16),
+    };
     private readonly ScrollViewer _scroll = new()
     {
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -91,6 +98,9 @@ internal sealed class CardShelf : Grid
 
         AutomationProperties.SetAutomationId(_scroll, $"HomeShelf_{shelf.Key}_Row");
         _scroll.Content = _panel;
+        // handledEventsToo: a tile's button may mark the wheel handled before it gets here.
+        _scroll.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnWheel), handledEventsToo: true);
+        _panel.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnWheel), handledEventsToo: true);
         SetRow(_scroll, 1);
         Children.Add(_scroll);
         _empty.Text = shelf.EmptyText;
@@ -176,6 +186,46 @@ internal sealed class CardShelf : Grid
         {
             if (_tiles.TryGetValue(path, out var tile)) tile.UpdateState();
         });
+
+    private double _wheelTarget;
+    private long _wheelTick;
+
+    /// <summary>
+    /// The mouse wheel scrolls the page, not the row. A row that only scrolls
+    /// sideways would otherwise take the wheel for itself, so moving down the
+    /// home page stopped at every shelf the pointer crossed. Shift+wheel and a
+    /// tilt wheel still move the row; touch and touchpad panning never come
+    /// through here.
+    /// </summary>
+    private void OnWheel(object sender, PointerRoutedEventArgs e)
+    {
+        var wheel = e.GetCurrentPoint(this).Properties;
+        if (wheel.IsHorizontalMouseWheel
+            || e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift)
+            || e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control))
+            return;
+
+        // Reached through the panel first and the row's own viewer second:
+        // the first to see it handles it, which also keeps the row's viewer
+        // (a class handler that skips handled events) from scrolling sideways.
+        if (e.Handled && ReferenceEquals(sender, _scroll)) return;
+
+        ScrollViewer? page = null;
+        for (var parent = VisualTreeHelper.GetParent(_scroll); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+        {
+            if (parent is ScrollViewer viewer) { page = viewer; break; }
+        }
+        if (page is null) return;
+
+        // Several notches in a row: continue from where the last one was
+        // headed, not from where the animation has got to so far.
+        var now = Environment.TickCount64;
+        if (now - _wheelTick > 300) _wheelTarget = page.VerticalOffset;
+        _wheelTick = now;
+        _wheelTarget = Math.Clamp(_wheelTarget - wheel.MouseWheelDelta, 0, page.ScrollableHeight);
+        page.ChangeView(null, _wheelTarget, null);
+        e.Handled = true;
+    }
 
     private void Rebuild()
     {
