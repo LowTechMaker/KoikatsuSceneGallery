@@ -46,8 +46,8 @@ internal sealed record ThemeShelf(ThemeKind Kind, string? Subject, string? Subje
 /// and is the author shelf again when all its cards are one author's;</item>
 /// <item>inside a shelf: never-used cards first, then a seeded shuffle, at most
 /// <see cref="MaxCards"/>, and no two neighbours of one post when avoidable;</item>
-/// <item>"never played" only when the never-used cards are at most half of the
-/// visible library;</item>
+/// <item>"never played" only once at least <see cref="NeverPlayedAfter"/> visible
+/// cards have been used;</item>
 /// <item>two shelves sharing more than half their cards are not both chosen;</item>
 /// <item>the order the cards arrive in does not matter.</item>
 /// </list>
@@ -58,6 +58,8 @@ internal static class HomeThemes
     public const int MaxCards = 30;
     /// <summary>Cards not used for this many days count as dusty.</summary>
     public const int DustyDays = 30;
+    /// <summary>"Never played" is offered once this many visible cards have been used (the user's choice).</summary>
+    public const int NeverPlayedAfter = 50;
     /// <summary>The largest pHash distance (of 64 bits) that still looks alike.</summary>
     public const int SimilarDistance = 10;
 
@@ -102,11 +104,12 @@ internal static class HomeThemes
         foreach (var (tag, tagCards) in Draw(tags, t => Math.Sqrt(t.Cards.Count), TagDraws, random))
             candidates.Add((ThemeKind.Tag, tag, tag, tagCards));
 
-        // When most of the library was never played, "never played" is just
-        // another random hand, and a large one that blocks the other themes
+        // Before the user has played a fair number of cards, "never played" is
+        // just another random hand, and a large one that blocks the other themes
         // through the overlap rule. It is offered once it means something.
         var never = visible.Where(c => !c.Used).ToList();
-        if (never.Count >= MinCards && never.Count * 2 <= visible.Count) candidates.Add((ThemeKind.NeverPlayed, null, null, never));
+        var played = visible.Count - never.Count;
+        if (never.Count >= MinCards && played >= NeverPlayedAfter) candidates.Add((ThemeKind.NeverPlayed, null, null, never));
 
         var dustyBefore = new DateTimeOffset(today.ToDateTime(TimeOnly.MinValue)).AddDays(-DustyDays);
         var dusty = visible.Where(c => c.Liked && (c.LastUsed is null || c.LastUsed < dustyBefore)).ToList();

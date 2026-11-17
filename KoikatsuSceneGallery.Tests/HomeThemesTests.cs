@@ -27,7 +27,7 @@ public sealed class HomeThemesTests
             cards.AddRange(Many(author, 8, i => Card($"{author}{i}", author, tags: i < 3 ? ["海"] : ["教室"])));
         cards.AddRange(Many("u", 8, i => Card($"u{i}")));
         cards.AddRange(Many("d", 7, i => Card($"d{i}", liked: true, lastUsed: Now.AddDays(-60))));
-        cards.AddRange(Many("p", 30, i => Card($"p{i}", lastUsed: Now.AddDays(-i))));
+        cards.AddRange(Many("p", 50, i => Card($"p{i}", lastUsed: Now.AddDays(-i))));
         return cards;
     }
 
@@ -110,8 +110,8 @@ public sealed class HomeThemesTests
     [Fact]
     public void FewerCandidatesGiveFewerShelves()
     {
-        // Only "never played" qualifies (half the library, no authors, tags or likes).
-        var shelves = Pick([.. Many("u", 8, i => Card($"u{i}")), .. Many("p", 8, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))]);
+        // Only "never played" qualifies (fifty played cards, no authors, tags or likes).
+        var shelves = Pick([.. Many("u", 8, i => Card($"u{i}")), .. Many("p", 50, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))]);
 
         Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(shelves).Kind);
     }
@@ -123,8 +123,8 @@ public sealed class HomeThemesTests
     {
         var cards = new List<ThemeCard>();
         cards.AddRange(Many("u", 6, i => Card($"u{i}", hidden: i == 0)));
-        // Played cards, so "never played" is not most of the library.
-        cards.AddRange(Many("p", 6, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
+        // Fifty played cards, so "never played" can be offered.
+        cards.AddRange(Many("p", 50, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
 
         Assert.Empty(Pick(cards));
 
@@ -158,6 +158,8 @@ public sealed class HomeThemesTests
             cards.AddRange(Many(author, 8, i => Card($"{author}{i}", author, lastUsed: Now.AddDays(-1),
                 tags: i < 3 ? ["海"] : i < 6 ? ["山"] : [])));
         cards.AddRange(Many("u", 8, i => Card($"u{i}")));
+        // Ten more played cards: fifty in all, so "never played" is offered.
+        cards.AddRange(Many("p", 10, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
 
         for (var day = 0; day < 60; day++)
         {
@@ -286,7 +288,7 @@ public sealed class HomeThemesTests
     {
         var cards = new List<ThemeCard>();
         cards.AddRange(Many("u", 7, i => Card($"u{i}")));
-        cards.AddRange(Many("p", 7, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
+        cards.AddRange(Many("p", 50, i => Card($"p{i}", lastUsed: Now.AddDays(-1))));
 
         var shelf = Pick(cards, count: 5).Single(s => s.Kind == ThemeKind.NeverPlayed);
 
@@ -294,20 +296,27 @@ public sealed class HomeThemesTests
     }
 
     [Fact]
-    public void NeverPlayedIsOfferedOnlyWhenAtMostHalfTheLibraryIsUnplayed()
+    public void NeverPlayedIsOfferedOnlyOnceFiftyCardsHaveBeenPlayed()
     {
-        // Exactly half unplayed: offered (nothing else qualifies, so it is the shelf).
-        List<ThemeCard> half = [.. Many("u", 7, i => Card($"u{i}")), .. Many("p", 7, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))];
-        Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(Pick(half)).Kind);
+        // A large unplayed library, so the share of unplayed cards plays no part.
+        var unplayed = Many("u", 500, i => Card($"u{i:D3}")).ToList();
+        List<ThemeCard> Library(int played) => [.. unplayed, .. Many("p", played, i => Card($"p{i:D2}", lastUsed: Now.AddDays(-1)))];
 
-        // One played card fewer: more than half unplayed, so it says nothing, on any day.
-        List<ThemeCard> most = [.. Many("u", 7, i => Card($"u{i}")), .. Many("p", 6, i => Card($"p{i}", lastUsed: Now.AddDays(-1)))];
+        // Fifty played: offered (nothing else qualifies, so it is the shelf).
+        Assert.Equal(50, HomeThemes.NeverPlayedAfter);
+        Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(Pick(Library(50))).Kind);
+
+        // Forty-nine: it says nothing, on any day.
         for (var day = 0; day < 20; day++)
-            Assert.Empty(Pick(most, day: Today.AddDays(day), count: 5));
+            Assert.Empty(Pick(Library(49), day: Today.AddDays(day), count: 5));
 
-        // Hidden cards do not count on either side.
-        List<ThemeCard> hiddenPlayed = [.. half.Take(7), .. half.Skip(7).Select((c, i) => i == 0 ? c with { Hidden = true } : c)];
-        Assert.Empty(Pick(hiddenPlayed, count: 5));
+        // A hidden played card does not count toward the fifty.
+        var oneHidden = Library(50).Select(c => c.Path == "p00" ? c with { Hidden = true } : c).ToList();
+        Assert.Empty(Pick(oneHidden, count: 5));
+        // Nor do hidden unplayed cards count as unplayed: six visible ones are still needed.
+        var fewVisible = Library(50).Select(c => c.Path.StartsWith('u') && string.CompareOrdinal(c.Path, "u005") > 0 ? c with { Hidden = true } : c).ToList();
+        Assert.Equal(ThemeKind.NeverPlayed, Assert.Single(Pick(fewVisible)).Kind);
+        Assert.Empty(Pick(fewVisible.Select(c => c.Path == "u005" ? c with { Hidden = true } : c).ToList(), count: 5));
     }
 
     // ---------------------------------------------------------------- inside a shelf
