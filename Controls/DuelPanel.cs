@@ -284,6 +284,8 @@ internal sealed class DuelPanel : StackPanel
             _open.Content = _frame;
             // Click, Enter and Space are all the button's own Click.
             _open.Click += (_, _) => { if (Card is { } card) Picked?.Invoke(card); };
+            // Straight into the game from here too; that does not pick it.
+            ButtonDragOut.Enable(_open, () => Card?.FilePath, "Home.DuelDrag");
             Children.Add(_open);
             Children.Add(_caption);
         }

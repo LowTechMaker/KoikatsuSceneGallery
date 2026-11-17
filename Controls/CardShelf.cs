@@ -280,7 +280,6 @@ internal sealed class CardShelf : Grid
             VerticalContentAlignment = VerticalAlignment.Stretch,
             Background = new SolidColorBrush(Colors.Transparent),
             CornerRadius = new CornerRadius(6),
-            CanDrag = true,
         };
         private readonly Image _image = new() { Stretch = Stretch.UniformToFill };
         private readonly StackPanel _flags = new()
@@ -339,8 +338,9 @@ internal sealed class CardShelf : Grid
             };
             _open.Click += (_, _) => open(Card);
             // Dragged out like a gallery tile, through the same funnel, so it
-            // is recorded as used and in record mode alike.
-            _open.DragStarting += (_, e) => DragFilePayload.Attach(e, "Home.Drag", Card.FilePath);
+            // is recorded as used and in record mode alike. CanDrag alone does
+            // nothing on a button; see ButtonDragOut.
+            ButtonDragOut.Enable(_open, () => Card.FilePath, "Home.Drag");
 
             _queue = new FlagButton(CardFlag.Queued, Glyph(0xE718), Glyph(0xE841), "CardState_Queue", "CardState_Unqueue"); // Pin / PinFill
             _like = new FlagButton(CardFlag.Liked, Glyph(0xEB51), Glyph(0xEB52), "CardState_Like", "CardState_Unlike"); // Heart / HeartFill
