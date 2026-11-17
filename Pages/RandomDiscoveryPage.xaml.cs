@@ -23,7 +23,7 @@ public sealed partial class RandomDiscoveryPage : Page
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _searchTimer;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _refreshTimer;
     private Dictionary<string, SceneCard> _candidates = new(StringComparer.OrdinalIgnoreCase);
-    private SceneDiscoveryFilter _filter = new([], RatingFilterOption.All, GameFilterOption.All, false, []);
+    private SceneDiscoveryFilter _filter = new([], RatingSet.All, GameFilterOption.All, false, []);
     private string[] _folders = [];
     private bool _initialized, _active, _syncing, _loading, _restorePosition, _reloadRequested;
     private string _appliedQuery = "";

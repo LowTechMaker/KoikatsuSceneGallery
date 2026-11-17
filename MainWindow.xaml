@@ -42,47 +42,157 @@
                       window with no room for its own title.  -->
                 <!--  The rating filter sits in its own column beside the origin
                       switch: it does not depend on a platform plugin, so it
-                      stays when the origin switch is hidden. Like the origin
-                      switch it is a row of choices, clicked directly, with a
-                      single button and a flyout as the narrow-window fallback
-                      at the same breakpoint.  -->
+                      stays when the origin switch is hidden. Three toggle
+                      badges, one per rating, about 130 px together: small
+                      enough that no narrow-window fallback is needed.  -->
                 <Grid
-                    MaxWidth="880"
+                    MaxWidth="680"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    ColumnSpacing="8">
+                    ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <!--  Items built in code: icons (the rating badges). Set up
-                          exactly like OriginSelectorBar below, Segmented's own
-                          items panel included: replacing it with a plain panel
-                          left the items without UI Automation selection (seen
-                          live in wave 7). The price is equal-width items, each
-                          as wide as "R-18 and R-18G".  -->
-                    <controls:Segmented
-                        x:Name="RatingFilterBar"
+                    <!--  Plain ToggleButtons (their own automation peer gives the
+                          Toggle pattern; the template below only draws, nothing
+                          in it is hit-test blind or wraps the button). Each holds
+                          two looks of the app's rating badge: coloured when on,
+                          a grey outline with grey letters when off. The letters
+                          are in both, so the meaning never rests on colour.
+                          XYFocusKeyboardNavigation lets the arrow keys move
+                          between the three; Tab reaches each, Space toggles.  -->
+                    <StackPanel
+                        x:Name="RatingFilterGroup"
                         Grid.Column="1"
                         AutomationProperties.AutomationId="TitleBarRatingFilter"
-                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="2"
                         VerticalAlignment="Center"
-                        SelectionChanged="RatingFilterBar_SelectionChanged" />
-                    <DropDownButton
-                        x:Name="RatingFilterPicker"
-                        Grid.Column="1"
-                        AutomationProperties.AutomationId="TitleBarRatingFilterPicker"
-                        VerticalAlignment="Center"
-                        Visibility="Collapsed">
-                        <!--  A flyout of radio buttons, not a MenuFlyout: a menu item's
-                              icon must be an IconElement, and the choices show the
-                              rating badges themselves. Built in code.  -->
-                        <DropDownButton.Flyout>
-                            <Flyout x:Name="RatingFilterFlyout" Placement="BottomEdgeAlignedRight">
-                                <StackPanel x:Name="RatingFilterChoices" Spacing="2" />
-                            </Flyout>
-                        </DropDownButton.Flyout>
-                    </DropDownButton>
+                        XYFocusKeyboardNavigation="Enabled">
+                        <StackPanel.Resources>
+                            <Style x:Key="RatingToggleStyle" TargetType="ToggleButton">
+                                <Setter Property="Padding" Value="3" />
+                                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Grid
+                                                x:Name="Root"
+                                                Padding="{TemplateBinding Padding}"
+                                                Background="Transparent"
+                                                BorderBrush="Transparent"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                                <VisualStateManager.VisualStateGroups>
+                                                    <VisualStateGroup x:Name="CommonStates">
+                                                        <VisualState x:Name="Normal" />
+                                                        <VisualState x:Name="PointerOver">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                <Setter Target="Root.BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="Pressed">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                <Setter Target="Root.BorderBrush" Value="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="Checked" />
+                                                        <VisualState x:Name="CheckedPointerOver">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                <Setter Target="Root.BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="CheckedPressed">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                <Setter Target="Root.BorderBrush" Value="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="Disabled">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Opacity" Value="0.5" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="CheckedDisabled">
+                                                            <VisualState.Setters>
+                                                                <Setter Target="Root.Opacity" Value="0.5" />
+                                                            </VisualState.Setters>
+                                                        </VisualState>
+                                                        <VisualState x:Name="Indeterminate" />
+                                                        <VisualState x:Name="IndeterminatePointerOver" />
+                                                        <VisualState x:Name="IndeterminatePressed" />
+                                                        <VisualState x:Name="IndeterminateDisabled" />
+                                                    </VisualStateGroup>
+                                                </VisualStateManager.VisualStateGroups>
+                                                <ContentPresenter
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Content="{TemplateBinding Content}" />
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </StackPanel.Resources>
+                        <ToggleButton
+                            x:Name="RatingToggleG"
+                            AutomationProperties.AutomationId="TitleBarRatingFilter_G"
+                            Style="{StaticResource RatingToggleStyle}"
+                            Tag="General"
+                            Checked="RatingToggle_Changed"
+                            Unchecked="RatingToggle_Changed">
+                            <Grid>
+                                <Border x:Name="RatingToggleGOn" Padding="6,1" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource RatingAllAgesBadgeBrush}" BorderBrush="{ThemeResource RatingAllAgesBadgeBrush}">
+                                    <TextBlock Text="G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                </Border>
+                                <Border x:Name="RatingToggleGOff" Padding="6,1" CornerRadius="4" BorderThickness="1" Visibility="Collapsed"
+                                        Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <TextBlock Text="G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
+                            </Grid>
+                        </ToggleButton>
+                        <ToggleButton
+                            x:Name="RatingToggleR18"
+                            AutomationProperties.AutomationId="TitleBarRatingFilter_R18"
+                            Style="{StaticResource RatingToggleStyle}"
+                            Tag="R18"
+                            Checked="RatingToggle_Changed"
+                            Unchecked="RatingToggle_Changed">
+                            <Grid>
+                                <Border x:Name="RatingToggleR18On" Padding="6,1" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource RatingR18BadgeBrush}" BorderBrush="{ThemeResource RatingR18BadgeBrush}">
+                                    <TextBlock Text="R-18" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                </Border>
+                                <Border x:Name="RatingToggleR18Off" Padding="6,1" CornerRadius="4" BorderThickness="1" Visibility="Collapsed"
+                                        Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <TextBlock Text="R-18" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
+                            </Grid>
+                        </ToggleButton>
+                        <ToggleButton
+                            x:Name="RatingToggleR18G"
+                            AutomationProperties.AutomationId="TitleBarRatingFilter_R18G"
+                            Style="{StaticResource RatingToggleStyle}"
+                            Tag="R18G"
+                            Checked="RatingToggle_Changed"
+                            Unchecked="RatingToggle_Changed">
+                            <Grid>
+                                <Border x:Name="RatingToggleR18GOn" Padding="6,1" CornerRadius="4" BorderThickness="1"
+                                        Background="{ThemeResource RatingR18GBadgeBrush}" BorderBrush="{ThemeResource RatingR18GBadgeBrush}">
+                                    <TextBlock Text="R-18G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                </Border>
+                                <Border x:Name="RatingToggleR18GOff" Padding="6,1" CornerRadius="4" BorderThickness="1" Visibility="Collapsed"
+                                        Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <TextBlock Text="R-18G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
+                            </Grid>
+                        </ToggleButton>
+                    </StackPanel>
                     <controls:Segmented
                         x:Name="OriginSelectorBar"
                         x:Uid="Origin_SelectorBar"

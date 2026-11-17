@@ -268,9 +268,6 @@ public sealed partial class LibraryBrowser : UserControl
         _returnOffset = state.ReturnOffset; _localSort = state.Sort; _localAscending = state.Ascending;
         _detailContext = state.Context; _syncing = true; SelectSortItem(_localSort); _syncing = false;
     }
-    internal static string[] RatingFilterLabels() =>
-        [UiText.Get("Gallery_FilterAll.Content"), UiText.Get("Gallery_RatingGeneralOnly"), UiText.Get("Gallery_RatingR18AndR18G"),
-         UiText.Get("Gallery_RatingR18Only"), UiText.Get("Gallery_RatingR18GOnly")];
     private void BuildFilters()
     {
         if (VM is GalleryViewModel scene)

@@ -238,7 +238,7 @@ internal sealed class HomeViewModel
     // ------------------------------------------------------------ rating filter
 
     private readonly GalleryViewModel? _gallery;
-    private RatingFilterOption _themesFilter = RatingFilterOption.All;
+    private RatingSet _themesFilter = RatingSet.All;
 
     /// <summary>
     /// The gallery's rule (<see cref="GalleryViewModel.RatingPasses"/>), with the
@@ -249,9 +249,9 @@ internal sealed class HomeViewModel
     private bool RatingPasses(CardBase card)
         => _gallery is null || card is not SceneCard scene
            || (_gallery.RatingPasses(scene)
-               && (RatingFilter == RatingFilterOption.All || _gallery.IsRatingSettled(scene)));
+               && (RatingFilter == RatingSet.All || _gallery.IsRatingSettled(scene)));
 
-    private RatingFilterOption RatingFilter => _gallery?.RatingFilter ?? RatingFilterOption.All;
+    private RatingSet RatingFilter => _gallery?.RatingFilter ?? RatingSet.All;
 
     /// <summary>
     /// True while a rating filter is on and the ratings of the current load are
@@ -259,7 +259,7 @@ internal sealed class HomeViewModel
     /// the sidecars read next may still change it; the page keeps what it shows
     /// instead of showing a card the gallery would hide a moment later.
     /// </summary>
-    public bool WaitingForRatings => _gallery is { RatingsSettled: false } && RatingFilter != RatingFilterOption.All;
+    public bool WaitingForRatings => _gallery is { RatingsSettled: false } && RatingFilter != RatingSet.All;
 
     /// <summary>
     /// Rebuilds the three state shelves from the store and re-resolves the

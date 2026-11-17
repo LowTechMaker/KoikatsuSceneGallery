@@ -1178,12 +1178,6 @@
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
     <value>Rating</value>
   </data>
-  <data name="Gallery_RatingR18Only" xml:space="preserve">
-    <value>R-18 only (without R-18G)</value>
-  </data>
-  <data name="Gallery_RatingGeneralOnly" xml:space="preserve">
-    <value>G (all ages) only</value>
-  </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>Game environment</value>
   </data>
@@ -1884,12 +1878,6 @@
   </data>
   <data name="Detail_UserRatingUnavailable" xml:space="preserve">
     <value>This file holds no readable card data, so it cannot be rated.</value>
-  </data>
-  <data name="Gallery_RatingR18AndR18G" xml:space="preserve">
-    <value>R-18 (including R-18G)</value>
-  </data>
-  <data name="Gallery_RatingR18GOnly" xml:space="preserve">
-    <value>R-18G only</value>
   </data>
   <data name="SC_RatingSource.Header" xml:space="preserve">
     <value>Rating source</value>

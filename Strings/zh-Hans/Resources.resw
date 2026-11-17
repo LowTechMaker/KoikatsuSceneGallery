@@ -1178,12 +1178,6 @@
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
     <value>分级</value>
   </data>
-  <data name="Gallery_RatingR18Only" xml:space="preserve">
-    <value>只显示 R-18（不含 R-18G）</value>
-  </data>
-  <data name="Gallery_RatingGeneralOnly" xml:space="preserve">
-    <value>只显示 G（全年龄）</value>
-  </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>游戏环境</value>
   </data>
@@ -1884,12 +1878,6 @@
   </data>
   <data name="Detail_UserRatingUnavailable" xml:space="preserve">
     <value>这个文件读不到卡片数据，无法评价。</value>
-  </data>
-  <data name="Gallery_RatingR18AndR18G" xml:space="preserve">
-    <value>R-18（含 R-18G）</value>
-  </data>
-  <data name="Gallery_RatingR18GOnly" xml:space="preserve">
-    <value>只显示 R-18G</value>
   </data>
   <data name="SC_RatingSource.Header" xml:space="preserve">
     <value>分级来源</value>

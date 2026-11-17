@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using ToggleButton = Microsoft.UI.Xaml.Controls.Primitives.ToggleButton;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Automation;
@@ -379,89 +380,71 @@ public sealed partial class MainWindow : Window
 
     // ------------------------------------------------------------ rating filter
 
-    private bool _suppressRatingSelectionChanged;
+    // Set while ApplyRatingFilter marks the stored set, so the Checked/Unchecked
+    // events it causes are not read as the user's.
+    private bool _syncingRatingToggles;
+
+    private (ToggleButton Button, RatingSet Rating, string Label, FrameworkElement On, FrameworkElement Off)[] RatingToggles =>
+    [
+        (RatingToggleG, RatingSet.General, "G", RatingToggleGOn, RatingToggleGOff),
+        (RatingToggleR18, RatingSet.R18, "R-18", RatingToggleR18On, RatingToggleR18Off),
+        (RatingToggleR18G, RatingSet.R18G, "R-18G", RatingToggleR18GOn, RatingToggleR18GOff),
+    ];
 
     /// <summary>
-    /// The title bar's rating choices: the same choices, in the same order, as
-    /// the filters always had. A row of icons clicked directly (the way the
-    /// origin switch beside it works, arrow keys included, since both are a
-    /// <c>Segmented</c>), and the same choices with their labels in the narrow
-    /// window's fallback flyout.
+    /// The three rating toggles in the title bar: one badge per rating, on
+    /// (coloured) or off (grey outline). Any non-empty combination is a choice.
     /// </summary>
     private void BuildRatingFilterMenu()
     {
-        var labels = Controls.LibraryBrowser.RatingFilterLabels();
-        AutomationProperties.SetName(RatingFilterBar, UiText.Get("TitleBar_RatingFilter"));
-        _suppressRatingSelectionChanged = true;
-        for (var i = 0; i < labels.Length; i++)
-        {
-            var option = (RatingFilterOption)i;
-            var segment = new SegmentedItem { Content = RatingFilterIcon(option), Tag = option };
-            AutomationProperties.SetAutomationId(segment, $"TitleBarRatingFilter_{option}");
-            AutomationProperties.SetName(segment, labels[i]);
-            ToolTipService.SetToolTip(segment, labels[i]);
-            RatingFilterBar.Items.Add(segment);
-        }
-        _suppressRatingSelectionChanged = false;
-
-        for (var i = 0; i < labels.Length; i++)
-        {
-            var option = (RatingFilterOption)i;
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            row.Children.Add(new Border { MinWidth = 96, Child = RatingFilterIcon(option) });
-            row.Children.Add(new TextBlock { Text = labels[i], VerticalAlignment = VerticalAlignment.Center });
-            var item = new RadioButton
-            {
-                Content = row,
-                Tag = option,
-                GroupName = "TitleBarRatingFilter",
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-            };
-            // The row's items own TitleBarRatingFilter_<Option>; these are the fallback's.
-            AutomationProperties.SetAutomationId(item, $"TitleBarRatingFilterPicker_{option}");
-            AutomationProperties.SetName(item, labels[i]);
-            // Click, not Checked: Checked also fires when ApplyRatingFilter marks the stored choice.
-            item.Click += (_, _) =>
-            {
-                App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
-                RatingFilterFlyout.Hide();
-            };
-            RatingFilterChoices.Children.Add(item);
-        }
+        AutomationProperties.SetName(RatingFilterGroup, UiText.Get("TitleBar_RatingFilter"));
+        foreach (var (button, _, _, _, _) in RatingToggles)
+            // Its own tooltip object, so a refused click can open it.
+            ToolTipService.SetToolTip(button, new ToolTip());
     }
 
     /// <summary>
-    /// The icon for a choice: the app's own rating badges (letters inside, so
-    /// the meaning never rests on colour; their brushes follow the theme and
-    /// high contrast), both badges for "R-18 and R-18G", and a neutral filter
-    /// glyph for "All", which is no rating of its own.
+    /// A toggle changed by click, keyboard (Space/Enter) or UI Automation's
+    /// Toggle pattern; all three raise Checked/Unchecked. The last rating that
+    /// is on cannot be turned off: the button is put back on at once and its
+    /// tooltip ("\u81F3\u5C11\u8981\u986F\u793A\u4E00\u7A2E\u5206\u7D1A") is shown, which reads better than a button
+    /// that looks disabled while it is the only one on and would no longer
+    /// explain itself on hover.
     /// </summary>
-    private static FrameworkElement RatingFilterIcon(RatingFilterOption option)
+    private void RatingToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (option == RatingFilterOption.All)
-            return new FontIcon { Glyph = "\uE71C", FontSize = 16, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
-        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-        string[] texts = option switch
+        if (_syncingRatingToggles || sender is not ToggleButton { Tag: string tag } button) return;
+        if (!Enum.TryParse<RatingSet>(tag, out var rating)) return;
+        var settings = App.Services.GetRequiredService<SettingsViewModel>();
+        if (button.IsChecked != true && RatingFilterRule.IsLast(settings.RatingFilter, rating))
         {
-            RatingFilterOption.GeneralOnly => ["G"],
-            RatingFilterOption.R18AndR18G => ["R-18", "R-18G"],
-            RatingFilterOption.R18Only => ["R-18"],
-            _ => ["R-18G"],
-        };
-        foreach (var text in texts)
-        {
-            // Hit-testable like the origin switch's text: a press on the badge bubbles
-            // to the SegmentedItem, which selects (no reliance on the item's background).
-            var badge = new RatingBadge { Text = text };
-            // The label beside it (or the button's name) says it; read once, not twice.
-            AutomationProperties.SetAccessibilityView(badge, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
-            badges.Children.Add(badge);
+            _syncingRatingToggles = true;
+            button.IsChecked = true;
+            _syncingRatingToggles = false;
+            if (ToolTipService.GetToolTip(button) is ToolTip tip)
+            {
+                tip.Content = UiText.Get("TitleBar_RatingLast");
+                tip.IsOpen = true;
+            }
+            return;
         }
-        return badges;
+        settings.RatingFilter = RatingFilterRule.Toggle(settings.RatingFilter, rating);
+        // Shown at once; ApplyRatingFilter follows through the settings event.
+        PaintRatingToggle(button);
+    }
+
+    private void PaintRatingToggle(ToggleButton button)
+    {
+        foreach (var (b, _, _, on, off) in RatingToggles)
+        {
+            if (!ReferenceEquals(b, button)) continue;
+            on.Visibility = b.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            off.Visibility = b.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+        }
     }
 
     /// <summary>
-    /// Shows the stored choice in the title bar (hidden while filtering is
+    /// Shows the stored set on the three toggles (hidden while filtering is
     /// switched off in the settings) and pushes the filter that applies into
     /// the scene gallery, which every scene view reads.
     /// </summary>
@@ -469,41 +452,37 @@ public sealed partial class MainWindow : Window
     {
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
         UpdateRatingFilterLayout();
-        _suppressRatingSelectionChanged = true;
-        RatingFilterBar.SelectedItem = RatingFilterBar.Items.OfType<SegmentedItem>()
-            .FirstOrDefault(item => item.Tag is RatingFilterOption option && option == settings.RatingFilter);
-        _suppressRatingSelectionChanged = false;
-        var labels = Controls.LibraryBrowser.RatingFilterLabels();
-        var label = labels[Math.Clamp((int)settings.RatingFilter, 0, labels.Length - 1)];
-        // An icon, not the label: the name and the tooltip carry the words.
-        RatingFilterPicker.Content = RatingFilterIcon(settings.RatingFilter);
-        var name = $"{UiText.Get("TitleBar_RatingFilter")}: {label}";
-        AutomationProperties.SetName(RatingFilterPicker, name);
-        ToolTipService.SetToolTip(RatingFilterPicker, name);
-        foreach (var item in RatingFilterChoices.Children.OfType<RadioButton>())
-            item.IsChecked = item.Tag is RatingFilterOption option && option == settings.RatingFilter;
+        var set = RatingFilterRule.Effective(enabled: true, settings.RatingFilter);
+        _syncingRatingToggles = true;
+        foreach (var (button, rating, label, _, _) in RatingToggles)
+        {
+            var on = (set & rating) != 0;
+            button.IsChecked = on;
+            PaintRatingToggle(button);
+            var name = UiText.Format(on ? "TitleBar_RatingOn" : "TitleBar_RatingOff", label);
+            AutomationProperties.SetName(button, name);
+            var last = RatingFilterRule.IsLast(set, rating);
+            // The only one on says why it will not turn off, to the eye and to a screen reader.
+            AutomationProperties.SetHelpText(button, last ? UiText.Get("TitleBar_RatingLast") : "");
+            if (ToolTipService.GetToolTip(button) is ToolTip tip)
+            {
+                tip.IsOpen = false;
+                tip.Content = last ? $"{name}\n{UiText.Get("TitleBar_RatingLast")}" : name;
+            }
+        }
+        _syncingRatingToggles = false;
         App.Services.GetRequiredService<GalleryViewModel>().RatingFilter = settings.EffectiveRatingFilter;
     }
 
-    private void RatingFilterBar_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressRatingSelectionChanged) return;
-        if (RatingFilterBar.SelectedItem is SegmentedItem { Tag: RatingFilterOption option })
-            App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
-    }
-
     /// <summary>
-    /// The row, or in a window too narrow for it the single button with a
-    /// flyout, at the origin switch's breakpoint; neither while rating
-    /// filtering is switched off in the settings.
+    /// The toggles, unless rating filtering is switched off in the settings. At
+    /// about 130 px they need no narrow-window fallback.
     /// </summary>
     private void UpdateRatingFilterLayout()
     {
-        if (RatingFilterBar is null || RatingFilterPicker is null) return;
+        if (RatingFilterGroup is null) return;
         var enabled = App.Services.GetRequiredService<SettingsViewModel>().RatingFilterEnabled;
-        var compact = RootLayout.ActualWidth > 0 && RootLayout.ActualWidth < CompactOriginSelectorWidth;
-        RatingFilterBar.Visibility = enabled && !compact ? Visibility.Visible : Visibility.Collapsed;
-        RatingFilterPicker.Visibility = enabled && compact ? Visibility.Visible : Visibility.Collapsed;
+        RatingFilterGroup.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>

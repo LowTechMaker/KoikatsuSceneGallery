@@ -4,13 +4,13 @@ using KoikatsuSceneGallery.ViewModels;
 namespace KoikatsuSceneGallery.Helpers;
 
 internal sealed record SceneDiscoveryFilter(
-    string[] Keywords, RatingFilterOption Rating, GameFilterOption Game, bool FilterResolution, HashSet<string> Resolutions,
+    string[] Keywords, RatingSet Rating, GameFilterOption Game, bool FilterResolution, HashSet<string> Resolutions,
     CardOriginSelection Origin = default)
 {
     public bool Matches(SceneCard card)
         => Matches(card, Keywords, Rating, Game, FilterResolution, Resolutions, Origin);
 
-    public static bool Matches(SceneCard card, IReadOnlyList<string> keywords, RatingFilterOption rating,
+    public static bool Matches(SceneCard card, IReadOnlyList<string> keywords, RatingSet rating,
         GameFilterOption game, bool filterResolution, HashSet<string> resolutions,
         CardOriginSelection origin = default)
     {

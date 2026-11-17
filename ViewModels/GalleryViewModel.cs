@@ -41,7 +41,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     /// main window the way the browse origin is; never set from a page.
     /// </summary>
     [ObservableProperty]
-    public partial RatingFilterOption RatingFilter { get; set; } = RatingFilterOption.All;
+    public partial RatingSet RatingFilter { get; set; } = RatingSet.All;
 
     /// <summary>
     /// False from the start of a load until the platform and user ratings of
@@ -185,7 +185,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         var rating = _ratingResolver.Resolve(card);
         if (card.Rating == rating) return;
         card.Rating = rating;
-        if (RatingFilter != RatingFilterOption.All) ApplyFilter();
+        if (RatingFilter != RatingSet.All) ApplyFilter();
         RatingsChanged?.Invoke();
     });
 
@@ -222,7 +222,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         {
             changed = Reassign(card);
         }
-        if (changed && RatingFilter != RatingFilterOption.All) ApplyFilter();
+        if (changed && RatingFilter != RatingSet.All) ApplyFilter();
         if (changed) RatingsChanged?.Invoke();
 
         bool Reassign(SceneCard card)
@@ -273,7 +273,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         foreach (var card in Cards)
             card.Rating = _ratingResolver.Resolve(card);
-        if (RatingFilter != RatingFilterOption.All)
+        if (RatingFilter != RatingSet.All)
         {
             if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
             ApplyFilter();
@@ -303,7 +303,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         });
     }
 
-    partial void OnRatingFilterChanged(RatingFilterOption value)
+    partial void OnRatingFilterChanged(RatingSet value)
     {
         if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
         ApplyFilter();
@@ -582,7 +582,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     {
         if (TryApplyShuffleFilter()) return;
 
-        var hasRatingFilter = RatingFilter != RatingFilterOption.All;
+        var hasRatingFilter = RatingFilter != RatingSet.All;
         var hasSearch = _searchKeywords.Length > 0;
         var filterRes = HasResolutionFilter;
         var hasMetadataFilter = GameFilter != GameFilterOption.All;

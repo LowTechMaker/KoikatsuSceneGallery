@@ -75,14 +75,14 @@ public partial class SettingsViewModel : ObservableObject
     /// scene cards; read <see cref="EffectiveRatingFilter"/>, not this.
     /// </summary>
     [ObservableProperty]
-    public partial RatingFilterOption RatingFilter { get; set; } = RatingFilterOption.All;
+    public partial RatingSet RatingFilter { get; set; } = RatingSet.All;
 
     /// <summary>Rating filtering at all (the settings switch). Off: nothing is filtered and the title bar control is hidden.</summary>
     [ObservableProperty]
     public partial bool RatingFilterEnabled { get; set; } = true;
 
     /// <summary>The filter to apply: <see cref="RatingFilter"/>, or All while filtering is switched off.</summary>
-    public RatingFilterOption EffectiveRatingFilter => RatingFilterRule.Effective(RatingFilterEnabled, RatingFilter);
+    public RatingSet EffectiveRatingFilter => RatingFilterRule.Effective(RatingFilterEnabled, RatingFilter);
 
     [ObservableProperty]
     public partial bool ScrollToTopOnSort { get; set; } = true;
@@ -380,7 +380,7 @@ public partial class SettingsViewModel : ObservableObject
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
-    partial void OnRatingFilterChanged(RatingFilterOption value) => OnRatingFilterSettingChanged();
+    partial void OnRatingFilterChanged(RatingSet value) => OnRatingFilterSettingChanged();
     partial void OnRatingFilterEnabledChanged(bool value) => OnRatingFilterSettingChanged();
 
     private void OnRatingFilterSettingChanged()
