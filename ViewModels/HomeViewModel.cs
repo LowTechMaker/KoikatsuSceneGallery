@@ -71,13 +71,14 @@ internal sealed class HomeViewModel
     private readonly HomeDeal _dealer = new(Random.Shared);
     private string[] _dealt = [];
 
-    // Per load, built on first use: card path → post key, post key → scene
-    // cards in it, author → scene cards by them. Dropped when the library or
-    // the sidecars change; never read from a file.
+    // Per load, built on first use: card path → post key. Dropped when the
+    // library or the sidecars change; never read from a file.
     private Dictionary<string, string>? _postKeyByPath;
-    private Dictionary<string, int>? _postCounts;
-    private Dictionary<AuthorKey, int>? _authorCounts;
     private volatile bool _indexStale = true;
+
+    // "N more by this author / from the same post": rebuilt on every refresh,
+    // because the rating filter and "not for me" change what counts.
+    private HomeCardCounts _counts = HomeCardCounts.Empty;
 
     public HomeViewModel(LibraryRegistry libraries, CardStateService states,
         SceneRatingResolver? posts = null, AuthorInfoService? authors = null, GalleryViewModel? gallery = null)
@@ -150,7 +151,10 @@ internal sealed class HomeViewModel
             _reroll = 0;
             _themesStale = true;
         }
-        if (_themesStale)
+        // Not on a half-loaded list: the themes are a choice for the day and
+        // would change under the user. The whole cache on screen is a whole
+        // library (the last run's); once the scan changes it, wait for the end.
+        if (_themesStale && (_gallery?.CardsComplete ?? true))
         {
             _themesStale = false;
             ChooseThemes(live, today);
@@ -236,9 +240,16 @@ internal sealed class HomeViewModel
     private readonly GalleryViewModel? _gallery;
     private RatingFilterOption _themesFilter = RatingFilterOption.All;
 
-    /// <summary>The gallery's rule (<see cref="GalleryViewModel.RatingPasses"/>), with the card's resolved rating.</summary>
+    /// <summary>
+    /// The gallery's rule (<see cref="GalleryViewModel.RatingPasses"/>), with the
+    /// card's resolved rating. While a filter is on, a card whose rating is not
+    /// final yet (the scan brought it in after the ratings were read) is left out
+    /// until it is: no card the filter excludes is ever shown here.
+    /// </summary>
     private bool RatingPasses(CardBase card)
-        => _gallery is null || card is not SceneCard scene || _gallery.RatingPasses(scene);
+        => _gallery is null || card is not SceneCard scene
+           || (_gallery.RatingPasses(scene)
+               && (RatingFilter == RatingFilterOption.All || _gallery.IsRatingSettled(scene)));
 
     private RatingFilterOption RatingFilter => _gallery?.RatingFilter ?? RatingFilterOption.All;
 
@@ -263,6 +274,7 @@ internal sealed class HomeViewModel
             _themesFilter = RatingFilter;
             _themesStale = true;
         }
+        RecountOthers();
         var live = Live();
         var states = _states.Snapshot()
             .Where(entry => live.ContainsKey(entry.FullPath))
@@ -323,10 +335,8 @@ internal sealed class HomeViewModel
         var title = HomeCardText.Title(post?.Title, card.FileName,
             Path.GetFileName(Path.GetDirectoryName(card.FilePath)),
             _posts?.FolderArtworkId(card), author?.Key.Id);
-        var authorOthers = author is null ? 0 : Math.Max(0, _authorCounts!.GetValueOrDefault(author.Key) - 1);
-        var postOthers = postKey is not null && postKey.StartsWith("post:", StringComparison.Ordinal)
-            ? Math.Max(0, _postCounts!.GetValueOrDefault(postKey) - 1)
-            : 0;
+        var authorOthers = _counts.AuthorOthers(card.FilePath, author is null ? null : AuthorId(author.Key));
+        var postOthers = _counts.PostOthers(card.FilePath, postKey);
         return new HomeCardInfo(title, author?.Name, HomeCardText.Tags(post?.Tags ?? [], 5),
             authorOthers, postOthers, card.FileName, postKey);
     }
@@ -336,16 +346,32 @@ internal sealed class HomeViewModel
         if (!_indexStale && _postKeyByPath is not null) return;
         _indexStale = false;
         var keys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var posts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var card in _scenes.Cards)
         {
             if (_posts?.PostKeyOf(card) is not { } key) continue;
-            if (!keys.TryAdd(card.FilePath, key)) continue;
-            posts[key] = posts.GetValueOrDefault(key) + 1;
+            keys.TryAdd(card.FilePath, key);
         }
         _postKeyByPath = keys;
-        _postCounts = posts;
-        _authorCounts = _authors?.GetSummaries().ToDictionary(s => s.Display.Key, s => s.SceneCount) ?? [];
+    }
+
+    /// <summary>
+    /// Counts the cards the user would find on an author's or a post's page:
+    /// those the rating filter lets through and, unless hidden cards are being
+    /// shown, not "not for me". When the numbers changed the tiles are told to
+    /// redraw (once: the redraw's own refresh finds the same numbers).
+    /// </summary>
+    private void RecountOthers()
+    {
+        EnsureIndex();
+        var showHidden = _gallery?.ShowHiddenCards == true;
+        var counts = HomeCardCounts.Build(_scenes.Cards.Select(card => new CountedCard(
+            card.FilePath,
+            (card as IAuthorOwner)?.Author is { } author ? AuthorId(author.Key) : null,
+            _postKeyByPath!.GetValueOrDefault(card.FilePath),
+            RatingPasses(card) && (showHidden || !_states.Has(card.FilePath, CardFlag.Hidden)))));
+        if (counts.SameAs(_counts)) return;
+        _counts = counts;
+        CardInfoChanged?.Invoke();
     }
 
     // ------------------------------------------------------------ this or that

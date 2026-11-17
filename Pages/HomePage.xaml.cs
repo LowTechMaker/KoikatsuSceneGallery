@@ -80,6 +80,9 @@ public sealed partial class HomePage : Page
         // The rating filter (title bar, settings switch) and the ratings themselves.
         _gallery.RatingsChanged += QueueRefresh;
         _gallery.PropertyChanged += Gallery_PropertyChanged;
+        // With a warm cache the whole library is on screen before the scan: the
+        // page is usable from then on, and corrects itself when the scan is done.
+        _gallery.CachedCardsShown += QueueRefresh;
         _states.StateChanged += State_Changed;
         // The shelves ask for thumbnails of cards the gallery may not have
         // shown, and leaving the gallery cancelled its thumbnail session.
@@ -99,6 +102,7 @@ public sealed partial class HomePage : Page
         _viewModel.CardInfoChanged -= QueueRefresh;
         _gallery.RatingsChanged -= QueueRefresh;
         _gallery.PropertyChanged -= Gallery_PropertyChanged;
+        _gallery.CachedCardsShown -= QueueRefresh;
         _states.StateChanged -= State_Changed;
         base.OnNavigatedFrom(e);
     }
@@ -124,7 +128,8 @@ public sealed partial class HomePage : Page
 
     private void Gallery_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(GalleryViewModel.RatingFilter)) QueueRefresh();
+        // The filter, and whether hidden cards count (the tiles' "N more").
+        if (e.PropertyName is nameof(GalleryViewModel.RatingFilter) or nameof(GalleryViewModel.ShowHiddenCards)) QueueRefresh();
     }
 
     private void QueueRefresh()

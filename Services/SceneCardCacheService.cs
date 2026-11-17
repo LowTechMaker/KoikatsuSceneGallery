@@ -5,20 +5,6 @@ using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
-/// <param name="DateCreatedTicks">
-/// The file's creation time, which is what "date added" sorts by. Last and
-/// optional so cache files written before it existed still load: the missing
-/// field reads as 0 (no date) and the next scan fills it from the file system.
-/// </param>
-public record CachedCardEntry(
-    string FilePath,
-    long FileSize,
-    long DateModifiedTicks,
-    int Width,
-    int Height,
-    string? ThumbnailPath,
-    long DateCreatedTicks = 0);
-
 public sealed class SceneCardCacheService : IDisposable
 {
     private const string CacheFileName = "scene_cards.json";

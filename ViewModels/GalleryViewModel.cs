@@ -53,6 +53,55 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     /// <summary>Raised on the UI thread when card ratings may have changed (settled after a load, a user or filed rating).</summary>
     public event Action? RatingsChanged;
 
+    // Cards the scan of this load added or replaced: their platform rating is only
+    // known once the ratings are read again after the scan. UI thread only.
+    private readonly HashSet<string> _ratingPending = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whether the card's rating is final for this load: the ratings were read,
+    /// and the card is not one the scan brought in after that read.
+    /// </summary>
+    public bool IsRatingSettled(SceneCard card) => RatingsSettled && !_ratingPending.Contains(card.FilePath);
+
+    // This load put the whole card cache on screen; the scan has changed the list since.
+    private bool _cacheShown;
+    private bool _scanChanged;
+
+    /// <summary>
+    /// Whether <see cref="Cards"/> is a whole library: the load has finished, or
+    /// it showed the whole cache (the library as of the last run) and the scan
+    /// has changed nothing yet. What must not act on a half-loaded list (the
+    /// home page's themes) waits for this.
+    /// </summary>
+    public bool CardsComplete => !IsLoading || (_cacheShown && !_scanChanged);
+
+    /// <summary>Raised on the UI thread once a load has put the whole card cache on screen, before the scan.</summary>
+    public event Action? CachedCardsShown;
+
+    private const string TimingLibrary = "scenes";
+
+    /// <summary>
+    /// A card from its cache entry. <paramref name="file"/> is the listed file
+    /// when the scan reuses the entry (its creation time fills an entry written
+    /// before creation times were stored). A thumbnail found missing is left
+    /// off, so it is made again when the card is shown.
+    /// </summary>
+    private static SceneCard FromCache(CachedCardEntry entry, FileInfo? file, HashSet<string> staleThumbnails)
+    {
+        var card = new SceneCard
+        {
+            FilePath = entry.FilePath,
+            FileSize = entry.FileSize,
+            DateModified = new DateTime(entry.DateModifiedTicks),
+            DateCreated = entry.DateCreatedTicks != 0 || file is null ? new DateTime(entry.DateCreatedTicks) : file.CreationTime,
+            Width = entry.Width,
+            Height = entry.Height,
+        };
+        if (entry.ThumbnailPath is not null && !staleThumbnails.Contains(entry.FilePath))
+            card.ThumbnailPath = entry.ThumbnailPath;
+        return card;
+    }
+
     /// <summary>Whether a scene card passes the rating filter: the one rule, with the card's resolved rating.</summary>
     public bool RatingPasses(SceneCard card) => RatingFilterRule.Passes(RatingFilter, card.Rating);
 
@@ -187,25 +236,35 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
     });
 
     /// <summary>
-    /// Reads the platform and user ratings after a load and relabels every card.
-    /// Runs after the load has finished, so the grid is usable meanwhile with
-    /// the folder ratings.
+    /// Reads the platform and user ratings and relabels every card. With a warm
+    /// cache this runs twice per load: once for the cached cards as soon as they
+    /// are on screen, alongside the scan (so the home page can settle from the
+    /// cache), and once after the scan when it found new or changed cards. The
+    /// resolver drops an earlier read that finishes after a later one started.
     /// </summary>
-    private async Task ReloadRatingsAsync(IReadOnlyList<string> roots, CancellationToken token)
+    /// <param name="final">The read after the scan: the cards it added stop being pending.</param>
+    /// <returns>The posts read, or null when the read was superseded, cancelled or failed.</returns>
+    private async Task<int?> ReloadRatingsAsync(IReadOnlyList<string> roots, CancellationToken token, bool final)
     {
+        var superseded = false;
         try
         {
-            await _ratingResolver.ReloadAsync(Cards.ToArray(), roots, token);
-            if (token.IsCancellationRequested) return;
+            var read = await _ratingResolver.ReloadAsync(Cards.ToArray(), roots, token);
+            superseded = read is null;
+            if (token.IsCancellationRequested || superseded) return null;
+            if (final) _ratingPending.Clear();
             ApplyRatings();
+            return read;
         }
         finally
         {
             // Settled even when the read failed (it is logged): the folder and
             // filed ratings are then all there is, and waiting on would keep the
-            // home page empty. A cancelled read is followed by another load.
-            if (!token.IsCancellationRequested)
+            // home page empty. A cancelled read is followed by another load; a
+            // superseded one by the read that superseded it.
+            if (!token.IsCancellationRequested && !superseded)
             {
+                if (final) _ratingPending.Clear();
                 RatingsSettled = true;
                 RatingsChanged?.Invoke();
             }
@@ -270,6 +329,26 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
         => RunLoadAsync(async cancellationToken =>
         {
             RatingsSettled = false;
+            _ratingPending.Clear();
+            _cacheShown = false;
+            _scanChanged = false;
+            // Only the first load of the run is the start; reloads are not timed.
+            var timing = StartupTimingRecorder.IsFirstLoad(TimingLibrary) ? new List<StartupPhase>() : null;
+            var firstCardsLogged = false;
+            void FirstCards()
+            {
+                if (firstCardsLogged || timing is null || Cards.Count == 0) return;
+                firstCardsLogged = true;
+                timing.Add(new(TimingLibrary, "first.cards", StartupTimingRecorder.SinceProcessStart, [("cards", Cards.Count)]));
+            }
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            long Lap()
+            {
+                var ms = clock.ElapsedMilliseconds;
+                clock.Restart();
+                return ms;
+            }
+
             var config = await _settingsService.LoadConfigAsync();
             cancellationToken.ThrowIfCancellationRequested();
             _resolutionFilterEnabled = config.ResolutionFilterEnabled;
@@ -287,25 +366,26 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             Cards.Clear();
             _cardIndex.Clear();
 
+            Lap();
             var cached = await Task.Run(() => _cardCacheService.LoadAll(), cancellationToken);
             var configuredRoots = paths.Select(p => p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 .ToArray();
             var relevantCached = cached.Where(kv =>
                 configuredRoots.Any(root => kv.Value.FilePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
                 .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+            timing?.Add(new(TimingLibrary, "cache.read", Lap(), [("cached", cached.Count), ("relevant", relevantCached.Count)]));
+
+            var staleThumbnails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            Task<int?>? cachedRatings = null;
             if (relevantCached.Count > 0)
             {
-                var staleThumbnails = await Task.Run(() =>
-                {
-                    var stale = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var (path, entry) in relevantCached)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        if (entry.ThumbnailPath is not null && !File.Exists(entry.ThumbnailPath))
-                            stale.Add(path);
-                    }
-                    return stale;
-                }, cancellationToken);
+                // One listing per thumbnail folder instead of one File.Exists per
+                // card; a thumbnail that is gone is still left off the card, so it
+                // is made again when the card is shown.
+                var presence = await Task.Run(() => ThumbnailPresence.Find(
+                    relevantCached.Select(kv => (kv.Key, kv.Value.ThumbnailPath))), cancellationToken);
+                staleThumbnails.UnionWith(presence.Missing);
+                timing?.Add(new(TimingLibrary, "thumbs.check", Lap(), [("folders", presence.FoldersListed), ("missing", presence.Missing.Count)]));
 
                 foreach (var chunk in relevantCached.Chunk(200))
                 {
@@ -315,35 +395,36 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                         foreach (var (filePath, entry) in chunk)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            var card = new SceneCard
-                            {
-                                FilePath = entry.FilePath,
-                                FileSize = entry.FileSize,
-                                DateModified = new DateTime(entry.DateModifiedTicks),
-                                DateCreated = new DateTime(entry.DateCreatedTicks),
-                                Width = entry.Width,
-                                Height = entry.Height,
-                            };
-                            if (entry.ThumbnailPath is not null && !staleThumbnails.Contains(filePath))
-                            {
-                                card.ThumbnailPath = entry.ThumbnailPath;
-                                _thumbnailPathCache[filePath] = entry.ThumbnailPath;
-                            }
+                            var card = FromCache(entry, null, staleThumbnails);
+                            if (card.ThumbnailPath is not null)
+                                _thumbnailPathCache[filePath] = card.ThumbnailPath;
                             AssignRating(card);
                             if (_cardIndex.TryAdd(card.FilePath, card))
                                 Cards.Add(card);
                         }
                     }
                     await Task.Yield();
+                    FirstCards();
                 }
                 ApplyFilter();
                 RaiseViewRefreshed();
+                timing?.Add(new(TimingLibrary, "cache.shown", Lap(), [("cards", Cards.Count)]));
+
+                // The whole cache is on screen: a complete library as of the last
+                // run. The home page may use it now, and its ratings are read now,
+                // alongside the scan, instead of after it.
+                _cacheShown = true;
+                CachedCardsShown?.Invoke();
+                cachedRatings = ReloadRatingsAsync([.. paths], cancellationToken, final: false);
+                cachedRatings.Observe(_logger, "Gallery.ReloadCachedRatings");
             }
 
             // A cold cache used to wait for every PNG to be scanned before adding the
             // first card.  Stream modest batches to the UI instead, leaving the grid
             // virtualized while the rest of the folders are still being enumerated.
+            // A file the cache describes (same size and write time) is not opened.
             var scannedIndex = new ConcurrentDictionary<string, SceneCard>(StringComparer.OrdinalIgnoreCase);
+            var addedOrChanged = 0;
             await _sceneCardService.ScanFoldersAsync(paths, batch =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -356,7 +437,8 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     {
                         if (_cardIndex.TryGetValue(fresh.FilePath, out var existing))
                         {
-                            if (existing.DateModified.Ticks == fresh.DateModified.Ticks)
+                            // The size too: a file rewritten with its write time kept is a changed file.
+                            if (existing.DateModified.Ticks == fresh.DateModified.Ticks && existing.FileSize == fresh.FileSize)
                                 continue;
 
                             _cardIndex.Remove(fresh.FilePath);
@@ -365,10 +447,25 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
 
                         AssignRating(fresh);
                         if (_cardIndex.TryAdd(fresh.FilePath, fresh))
+                        {
                             Cards.Add(fresh);
+                            // Its platform rating is only known after the ratings are
+                            // read again; until then the home page leaves it out.
+                            _ratingPending.Add(fresh.FilePath);
+                            _scanChanged = true;
+                            addedOrChanged++;
+                        }
                     }
+                    FirstCards();
                 }, cancellationToken);
-            }, cancellationToken);
+            }, cancellationToken, reuse: file =>
+                relevantCached.TryGetValue(file.FullName, out var entry)
+                && CardCacheReuse.Describes(entry, file.Length, file.LastWriteTime)
+                    ? FromCache(entry, file, staleThumbnails)
+                    : null);
+            var scan = _sceneCardService.LastScanCounts;
+            timing?.Add(new(TimingLibrary, "scan", Lap(), [("listed", scan.Listed), ("opened", scan.Opened), ("reused", scan.Reused),
+                ("unreadable", _sceneCardService.LastScanUnreadableCount), ("addedOrChanged", addedOrChanged)]));
 
             // Everything received in the batches is current.  Remove cache entries
             // that were not found without delaying the first visible batch.
@@ -377,12 +474,14 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 .ToList();
             if (toRemove.Count > 0)
             {
+                _scanChanged = true;
                 using (CardsView.DeferRefresh())
                 {
                     foreach (var path in toRemove)
                     {
                         if (_cardIndex.Remove(path, out var old))
                             Cards.Remove(old);
+                        _ratingPending.Remove(path);
                     }
                 }
             }
@@ -400,13 +499,37 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     card.FilePath, card.FileSize, card.DateModified.Ticks,
                     card.Width, card.Height, card.ThumbnailPath, created.Ticks);
             }
-            await Task.Run(() => _cardCacheService.UpdateAll(newCache), cancellationToken);
+            // Rewritten only when something changed: an unchanged library used to
+            // rewrite the whole file on every start.
+            var cacheChanged = !CardCacheReuse.SameEntries(cached, newCache);
+            if (cacheChanged)
+                await Task.Run(() => _cardCacheService.UpdateAll(newCache), cancellationToken);
+            timing?.Add(new(TimingLibrary, "cache.write", Lap(), [("written", cacheChanged ? 1 : 0), ("removed", toRemove.Count)]));
 
             ApplyFilter();
-            ReloadRatingsAsync([.. paths], cancellationToken).Observe(_logger, "Gallery.ReloadRatings");
+            // The ratings of the cached cards are already being read; read them
+            // again only for a cold cache or when the scan brought new cards (their
+            // sidecars may live in folders the first read did not visit).
+            var finalRatings = cachedRatings is null || addedOrChanged > 0
+                ? ReloadRatingsAsync([.. paths], cancellationToken, final: true)
+                : cachedRatings;
+            finalRatings.Observe(_logger, "Gallery.ReloadRatings");
             _sceneCardService.StartWatching(paths);
             if (_pluginAnalysisEnabled)
                 StartMetadataScan();
+
+            if (timing is not null)
+            {
+                timing.Add(new(TimingLibrary, "load.finished", StartupTimingRecorder.SinceProcessStart, [("cards", Cards.Count)]));
+                var ratingsClock = System.Diagnostics.Stopwatch.StartNew();
+                _ = finalRatings.ContinueWith(task =>
+                {
+                    timing.Add(new(TimingLibrary, "ratings.settled", StartupTimingRecorder.SinceProcessStart,
+                        [("posts", task.IsCompletedSuccessfully ? task.Result ?? -1 : -1),
+                         ("waitedAfterLoad.ms", ratingsClock.ElapsedMilliseconds)]));
+                    StartupTimingRecorder.Write(TimingLibrary, timing);
+                }, TaskScheduler.Default);
+            }
         }, _logger, "Gallery.LoadCanceled", _metadata.CancelScan);
 
     /// <summary>

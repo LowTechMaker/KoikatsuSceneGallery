@@ -42,9 +42,12 @@
                       window with no room for its own title.  -->
                 <!--  The rating filter sits in its own column beside the origin
                       switch: it does not depend on a platform plugin, so it
-                      stays when the origin switch is hidden.  -->
+                      stays when the origin switch is hidden. Like the origin
+                      switch it is a row of choices, clicked directly, with a
+                      single button and a flyout as the narrow-window fallback
+                      at the same breakpoint.  -->
                 <Grid
-                    MaxWidth="680"
+                    MaxWidth="880"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     ColumnSpacing="8">
@@ -52,13 +55,36 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <!--  Items built in code: icons (the rating badges). A plain
+                          horizontal panel instead of Segmented's equal-width one,
+                          so "All" is not as wide as "R-18 and R-18G".  -->
+                    <controls:Segmented
+                        x:Name="RatingFilterBar"
+                        Grid.Column="1"
+                        MaxWidth="360"
+                        AutomationProperties.AutomationId="TitleBarRatingFilter"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        SelectionChanged="RatingFilterBar_SelectionChanged">
+                        <controls:Segmented.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </controls:Segmented.ItemsPanel>
+                    </controls:Segmented>
                     <DropDownButton
                         x:Name="RatingFilterPicker"
                         Grid.Column="1"
-                        AutomationProperties.AutomationId="TitleBarRatingFilter"
-                        VerticalAlignment="Center">
+                        AutomationProperties.AutomationId="TitleBarRatingFilterPicker"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                        <!--  A flyout of radio buttons, not a MenuFlyout: a menu item's
+                              icon must be an IconElement, and the choices show the
+                              rating badges themselves. Built in code.  -->
                         <DropDownButton.Flyout>
-                            <MenuFlyout x:Name="RatingFilterMenu" Placement="BottomEdgeAlignedRight" />
+                            <Flyout x:Name="RatingFilterFlyout" Placement="BottomEdgeAlignedRight">
+                                <StackPanel x:Name="RatingFilterChoices" Spacing="2" />
+                            </Flyout>
                         </DropDownButton.Flyout>
                     </DropDownButton>
                     <controls:Segmented

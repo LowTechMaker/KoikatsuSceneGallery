@@ -36,9 +36,18 @@ internal sealed class SceneRatingResolver(PluginService plugins, UserCardRatingS
     /// <summary>Raised, on a background thread, after the sidecars were read again.</summary>
     public event Action? PostsReloaded;
 
-    /// <summary>Reads the sidecars of <paramref name="cards"/> and the user rating files of <paramref name="roots"/>. Off the UI thread.</summary>
-    public async Task ReloadAsync(IReadOnlyList<SceneCard> cards, IReadOnlyList<string> roots, CancellationToken token)
+    private int _generation;
+
+    /// <summary>
+    /// Reads the sidecars of <paramref name="cards"/> and the user rating files of
+    /// <paramref name="roots"/>. Off the UI thread. Returns the number of sidecars
+    /// read, or null when a later reload started meanwhile: the start reads the
+    /// ratings of the cached cards first and again after the scan if it found new
+    /// cards, and the earlier, smaller read must never overwrite the later one.
+    /// </summary>
+    public async Task<int?> ReloadAsync(IReadOnlyList<SceneCard> cards, IReadOnlyList<string> roots, CancellationToken token)
     {
+        var generation = Interlocked.Increment(ref _generation);
         var (ratings, posts) = await Task.Run(() =>
         {
             userRatings.EnsureLoaded(roots);
@@ -60,9 +69,11 @@ internal sealed class SceneRatingResolver(PluginService plugins, UserCardRatingS
                         [.. (p.Value.Tags ?? []).Select(t => (t.Name, t.TranslatedName))]),
                     StringComparer.OrdinalIgnoreCase));
         }, token);
+        if (generation != Volatile.Read(ref _generation)) return null;
         _platform = ratings;
         _posts = posts;
         PostsReloaded?.Invoke();
+        return posts.Count;
     }
 
     public int Resolve(SceneCard card)

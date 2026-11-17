@@ -93,8 +93,21 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             Cards.Clear();
             _cardIndex.Clear();
 
+            // Timed on the run's first load only (startup_timing.log). This library
+            // has no card cache: every file is opened on every start.
+            var timed = StartupTimingRecorder.IsFirstLoad("coordinates");
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             await _cardService.ScanFoldersAsync(paths,
                 batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
+            if (timed)
+            {
+                var scan = _cardService.LastScanCounts;
+                StartupTimingRecorder.Write("coordinates", [
+                    new("coordinates", "scan", clock.ElapsedMilliseconds, [("listed", scan.Listed), ("opened", scan.Opened),
+                        ("unreadable", _cardService.LastScanUnreadableCount)]),
+                    new("coordinates", "load.finished", StartupTimingRecorder.SinceProcessStart, [("cards", Cards.Count)]),
+                ]);
+            }
 
             ApplyFilter();
             _cardService.StartWatching(paths);

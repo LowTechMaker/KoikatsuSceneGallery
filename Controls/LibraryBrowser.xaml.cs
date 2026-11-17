@@ -202,8 +202,11 @@ public sealed partial class LibraryBrowser : UserControl
 
         UpdateHeaderLayout(RootLayout.ActualWidth);
         BackButton.Visibility = _groupKey is null ? Visibility.Collapsed : Visibility.Visible;
-        ResultCount.Text = UiText.Format(visible.Length == (_groupKey is null ? (_scope?.Count ?? _adapter.Cards.Count) : groupTotal)
-            ? "SceneGallery_TotalCount" : "SceneGallery_FilteredCount", visible.Length, _groupKey is null ? _adapter.Cards.Count : groupTotal);
+        // Out of what this view holds: a scoped browse (author, tag, post page)
+        // counts against its own cards, not the whole library ("4 / 10", not "4 / 22").
+        var total = _groupKey is null ? (_scope?.Count ?? _adapter.Cards.Count) : groupTotal;
+        ResultCount.Text = UiText.Format(visible.Length == total
+            ? "SceneGallery_TotalCount" : "SceneGallery_FilteredCount", visible.Length, total);
         SearchBox.PlaceholderText = UiText.Get(_groupKey is null ? "SceneGallery_Search.PlaceholderText" : "Browser_GroupSearch");
         if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) SearchBox.PlaceholderText = UiText.Get("Metadata_SearchHint");
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);

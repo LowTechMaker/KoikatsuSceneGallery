@@ -37,11 +37,17 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
+    /// <param name="reuse">
+    /// Returns a card for a listed file the caller already knows (from its card
+    /// cache, matched on size and write time), or null to have the file opened
+    /// and read as before. Called on the scan's worker threads.
+    /// </param>
     public Task ScanFoldersAsync(
         IEnumerable<string> folderPaths,
         Action<List<TCard>> onBatch,
         CancellationToken cancellationToken = default,
-        int batchSize = 200)
+        int batchSize = 200,
+        Func<FileInfo, TCard?>? reuse = null)
     {
         return Task.Run(() =>
         {
@@ -65,7 +71,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                     onBatch(ready);
             }
 
-            ScanFolders(folderPaths, options, Accumulate);
+            ScanFolders(folderPaths, options, Accumulate, reuse);
 
             if (batch.Count > 0)
             {
@@ -82,6 +88,9 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
     /// </summary>
     public int LastScanUnreadableCount => Volatile.Read(ref _lastScanUnreadableCount);
     private int _lastScanUnreadableCount;
+
+    /// <summary>Files listed, opened and taken from the caller's cache by the last scan (for the startup timing log).</summary>
+    public (int Listed, int Opened, int Reused) LastScanCounts { get; private set; }
 
     /// <summary>
     /// Counts the card files under <paramref name="folderPaths"/> without
@@ -118,10 +127,11 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
 
     // Synchronous worker core: callers retain their own result collection/publication.
-    private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept)
+    private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept,
+        Func<FileInfo, TCard?>? reuse = null)
     {
         var cancellationToken = options.CancellationToken;
-        var unreadable = 0;
+        int unreadable = 0, listed = 0, opened = 0, reused = 0;
         foreach (var folder in folderPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -129,7 +139,16 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var card = TryCreateCard(file);
+                Interlocked.Increment(ref listed);
+                // A file the cache already describes is not opened: its size and
+                // write time came with the listing, its dimensions from the cache.
+                var card = reuse?.Invoke(file);
+                if (card is not null) Interlocked.Increment(ref reused);
+                else
+                {
+                    Interlocked.Increment(ref opened);
+                    card = TryCreateCard(file);
+                }
                 if (card != null)
                     accept(card);
                 else
@@ -138,6 +157,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }
 
         Volatile.Write(ref _lastScanUnreadableCount, unreadable);
+        LastScanCounts = (listed, opened, reused);
     }
 
     private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)

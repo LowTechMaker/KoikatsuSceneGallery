@@ -325,6 +325,7 @@ public sealed partial class MainWindow : Window
             ? Visibility.Visible : Visibility.Collapsed;
         OriginSelectorPicker.Visibility = _originSelectorAvailable && compact
             ? Visibility.Visible : Visibility.Collapsed;
+        UpdateRatingFilterLayout();
     }
 
     /// <summary>
@@ -378,18 +379,83 @@ public sealed partial class MainWindow : Window
 
     // ------------------------------------------------------------ rating filter
 
-    /// <summary>The title bar's rating menu: the same choices, in the same order, as the filters always had.</summary>
+    private bool _suppressRatingSelectionChanged;
+
+    /// <summary>
+    /// The title bar's rating choices: the same choices, in the same order, as
+    /// the filters always had. A row of icons clicked directly (the way the
+    /// origin switch beside it works, arrow keys included, since both are a
+    /// <c>Segmented</c>), and the same choices with their labels in the narrow
+    /// window's fallback flyout.
+    /// </summary>
     private void BuildRatingFilterMenu()
     {
         var labels = Controls.LibraryBrowser.RatingFilterLabels();
+        AutomationProperties.SetName(RatingFilterBar, UiText.Get("TitleBar_RatingFilter"));
+        _suppressRatingSelectionChanged = true;
         for (var i = 0; i < labels.Length; i++)
         {
             var option = (RatingFilterOption)i;
-            var item = new RadioMenuFlyoutItem { Text = labels[i], Tag = option, GroupName = "TitleBarRatingFilter" };
-            AutomationProperties.SetAutomationId(item, $"TitleBarRatingFilter_{option}");
-            item.Click += (_, _) => App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
-            RatingFilterMenu.Items.Add(item);
+            var segment = new SegmentedItem { Content = RatingFilterIcon(option), Tag = option };
+            AutomationProperties.SetAutomationId(segment, $"TitleBarRatingFilter_{option}");
+            AutomationProperties.SetName(segment, labels[i]);
+            ToolTipService.SetToolTip(segment, labels[i]);
+            RatingFilterBar.Items.Add(segment);
         }
+        _suppressRatingSelectionChanged = false;
+
+        for (var i = 0; i < labels.Length; i++)
+        {
+            var option = (RatingFilterOption)i;
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            row.Children.Add(new Border { MinWidth = 96, Child = RatingFilterIcon(option) });
+            row.Children.Add(new TextBlock { Text = labels[i], VerticalAlignment = VerticalAlignment.Center });
+            var item = new RadioButton
+            {
+                Content = row,
+                Tag = option,
+                GroupName = "TitleBarRatingFilter",
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+            };
+            // The row's items own TitleBarRatingFilter_<Option>; these are the fallback's.
+            AutomationProperties.SetAutomationId(item, $"TitleBarRatingFilterPicker_{option}");
+            AutomationProperties.SetName(item, labels[i]);
+            // Click, not Checked: Checked also fires when ApplyRatingFilter marks the stored choice.
+            item.Click += (_, _) =>
+            {
+                App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
+                RatingFilterFlyout.Hide();
+            };
+            RatingFilterChoices.Children.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// The icon for a choice: the app's own rating badges (letters inside, so
+    /// the meaning never rests on colour; their brushes follow the theme and
+    /// high contrast), both badges for "R-18 and R-18G", and a neutral filter
+    /// glyph for "All", which is no rating of its own.
+    /// </summary>
+    private static FrameworkElement RatingFilterIcon(RatingFilterOption option)
+    {
+        if (option == RatingFilterOption.All)
+            return new FontIcon { Glyph = "\uE71C", FontSize = 16, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left };
+        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+        string[] texts = option switch
+        {
+            RatingFilterOption.GeneralOnly => ["G"],
+            RatingFilterOption.R18AndR18G => ["R-18", "R-18G"],
+            RatingFilterOption.R18Only => ["R-18"],
+            _ => ["R-18G"],
+        };
+        foreach (var text in texts)
+        {
+            var badge = new RatingBadge { Text = text, IsHitTestVisible = false };
+            // The label beside it (or the button's name) says it; read once, not twice.
+            AutomationProperties.SetAccessibilityView(badge, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
+            badges.Children.Add(badge);
+        }
+        return badges;
     }
 
     /// <summary>
@@ -400,14 +466,42 @@ public sealed partial class MainWindow : Window
     private void ApplyRatingFilter()
     {
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
-        RatingFilterPicker.Visibility = settings.RatingFilterEnabled ? Visibility.Visible : Visibility.Collapsed;
+        UpdateRatingFilterLayout();
+        _suppressRatingSelectionChanged = true;
+        RatingFilterBar.SelectedItem = RatingFilterBar.Items.OfType<SegmentedItem>()
+            .FirstOrDefault(item => item.Tag is RatingFilterOption option && option == settings.RatingFilter);
+        _suppressRatingSelectionChanged = false;
         var labels = Controls.LibraryBrowser.RatingFilterLabels();
         var label = labels[Math.Clamp((int)settings.RatingFilter, 0, labels.Length - 1)];
-        RatingFilterPicker.Content = label;
-        AutomationProperties.SetName(RatingFilterPicker, $"{UiText.Get("TitleBar_RatingFilter")}: {label}");
-        foreach (var item in RatingFilterMenu.Items.OfType<RadioMenuFlyoutItem>())
+        // An icon, not the label: the name and the tooltip carry the words.
+        RatingFilterPicker.Content = RatingFilterIcon(settings.RatingFilter);
+        var name = $"{UiText.Get("TitleBar_RatingFilter")}: {label}";
+        AutomationProperties.SetName(RatingFilterPicker, name);
+        ToolTipService.SetToolTip(RatingFilterPicker, name);
+        foreach (var item in RatingFilterChoices.Children.OfType<RadioButton>())
             item.IsChecked = item.Tag is RatingFilterOption option && option == settings.RatingFilter;
         App.Services.GetRequiredService<GalleryViewModel>().RatingFilter = settings.EffectiveRatingFilter;
+    }
+
+    private void RatingFilterBar_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressRatingSelectionChanged) return;
+        if (RatingFilterBar.SelectedItem is SegmentedItem { Tag: RatingFilterOption option })
+            App.Services.GetRequiredService<SettingsViewModel>().RatingFilter = option;
+    }
+
+    /// <summary>
+    /// The row, or in a window too narrow for it the single button with a
+    /// flyout, at the origin switch's breakpoint; neither while rating
+    /// filtering is switched off in the settings.
+    /// </summary>
+    private void UpdateRatingFilterLayout()
+    {
+        if (RatingFilterBar is null || RatingFilterPicker is null) return;
+        var enabled = App.Services.GetRequiredService<SettingsViewModel>().RatingFilterEnabled;
+        var compact = RootLayout.ActualWidth > 0 && RootLayout.ActualWidth < CompactOriginSelectorWidth;
+        RatingFilterBar.Visibility = enabled && !compact ? Visibility.Visible : Visibility.Collapsed;
+        RatingFilterPicker.Visibility = enabled && compact ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
