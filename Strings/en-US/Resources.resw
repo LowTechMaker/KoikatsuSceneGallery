@@ -2356,4 +2356,7 @@
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>When on, a rating filter appears in the title bar, and the home page, the library and discovery show or hide cards by it. When off, every rating is shown.</value></data>
+  <data name="TitleBar_RatingOn" xml:space="preserve"><value>Showing {0} cards. Click to hide them.</value></data>
+  <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} cards are hidden. Click to show them.</value></data>
+  <data name="TitleBar_RatingLast" xml:space="preserve"><value>At least one rating has to be shown</value></data>
 </root>

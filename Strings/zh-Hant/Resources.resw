@@ -2356,4 +2356,7 @@
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>分級篩選</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>啟用分級篩選</value></data>
   <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>開啟後，標題列會出現分級篩選，首頁、收藏庫與探索都會依它顯示或隱藏卡片。關閉則一律顯示所有分級。</value></data>
+  <data name="TitleBar_RatingOn" xml:space="preserve"><value>顯示 {0} 的卡片，點一下隱藏</value></data>
+  <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} 的卡片已隱藏，點一下顯示</value></data>
+  <data name="TitleBar_RatingLast" xml:space="preserve"><value>至少要顯示一種分級</value></data>
 </root>
