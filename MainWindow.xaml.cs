@@ -50,16 +50,17 @@ public sealed partial class MainWindow : Window
 
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
 
-        // Online versus local only means something while an online platform is
-        // installed. With none, every card is "not local" and the switch is a
-        // control that cannot change anything. The stored choice is left as it
-        // is — only its application is suppressed — so it returns intact when a
-        // plugin comes back.
+        // Play-first: the title bar no longer offers an origin switch. The user
+        // browses everything and found a platform switch beside the rating
+        // filter redundant (2026-11-18); the Authors and Tags pages keep their
+        // own platform tabs, which appear under "all". This reuses the path
+        // that already existed for "no platform plugin": browsing is pinned to
+        // all, the switch is hidden, and the stored choice is left untouched
+        // so it is not lost if the switch comes back.
         var installed = App.Services.GetRequiredService<TagCloudService>().InstalledProviderIds();
         var platforms = PlatformAvailability.Online(installed);
-        var hasPlatform = platforms.Count > 0;
-        settings.PlatformFilteringAvailable = hasPlatform;
-        _originSelectorAvailable = hasPlatform;
+        settings.PlatformFilteringAvailable = false;
+        _originSelectorAvailable = false;
         BuildOriginSelector(platforms);
         UpdateOriginSelectorLayout();
 
