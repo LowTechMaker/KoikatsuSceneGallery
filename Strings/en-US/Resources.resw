@@ -2341,6 +2341,8 @@
   <data name="Home_ThemeSimilar" xml:space="preserve"><value>Looks like "{0}"</value></data>
   <data name="Home_ThemesReroll" xml:space="preserve"><value>Other themes</value></data>
   <data name="Home_ThemeSeeAll" xml:space="preserve"><value>See all</value></data>
+  <data name="Home_ShelfShowAll" xml:space="preserve"><value>Show all ({0})</value></data>
+  <data name="Home_ShelfCollapse" xml:space="preserve"><value>Show less</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>When on, a rating filter appears in the title bar, and the home page, the library and discovery show or hide cards by it. When off, every rating is shown.</value></data>

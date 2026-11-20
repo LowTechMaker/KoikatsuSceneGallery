@@ -2341,6 +2341,8 @@
   <data name="Home_ThemeSimilar" xml:space="preserve"><value>和“{0}”很像的</value></data>
   <data name="Home_ThemesReroll" xml:space="preserve"><value>换一批主题</value></data>
   <data name="Home_ThemeSeeAll" xml:space="preserve"><value>全部看</value></data>
+  <data name="Home_ShelfShowAll" xml:space="preserve"><value>显示全部（{0}）</value></data>
+  <data name="Home_ShelfCollapse" xml:space="preserve"><value>收起</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>分级筛选</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>启用分级筛选</value></data>
   <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>开启后，标题栏会出现分级筛选，首页、收藏库与探索都会依它显示或隐藏卡片。关闭则一律显示所有分级。</value></data>

@@ -27,7 +27,7 @@ public sealed partial class HomePage : Page
 
         foreach (var shelf in _viewModel.Shelves)
         {
-            var row = new CardShelf(shelf);
+            var row = new CardShelf(shelf, () => Frame);
             row.CardInvoked += OpenCard;
             row.FlagInvoked += ToggleFlag;
             if (shelf.Key == HomeViewModel.DealKey)

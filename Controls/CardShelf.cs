@@ -15,12 +15,19 @@ using Microsoft.UI.Xaml.Media.Imaging;
 namespace KoikatsuSceneGallery.Controls;
 
 /// <summary>
-/// One row of the home page: a heading with a count, then cards side by side.
-/// Each tile opens its card on click, can be dragged out to the game, and on
-/// hover or keyboard focus shows the queue, like and hide buttons.
+/// One section of the home page: a heading with a count, then cards that wrap
+/// onto the next line like the gallery's. Only the first two lines are shown
+/// until "show all". Each tile opens its card on click, can be dragged out to
+/// the game, and on hover or keyboard focus shows the queue, like and hide buttons.
 /// </summary>
 /// <remarks>
-/// The row is a plain panel, not a virtualizing list: a shelf holds at most
+/// It used to be one row that scrolled sideways, the way a TV app does it: a
+/// mouse has no sideways wheel, so the row needed a wheel handler of its own
+/// and most of each shelf was out of sight. Tiles past the second line are not
+/// in the tree at all (<see cref="ShelfLines"/>), so Tab cannot land on them and
+/// they ask for no thumbnails.
+///
+/// The section is a plain panel, not a virtualizing list: a shelf holds at most
 /// <see cref="HomeViewModel.ShelfLimit"/> cards, and a recycling list would
 /// hand one tile several cards over its life, which the thumbnail lifecycle
 /// below is not built for. What is expensive (the thumbnail) is still only
@@ -33,11 +40,15 @@ namespace KoikatsuSceneGallery.Controls;
 internal sealed class CardShelf : Grid
 {
     private const double TileHeight = 135;
+    private const double TileSpacing = 8;
+    /// <summary>Lines shown until the user asks for all of them.</summary>
+    private const int CollapsedLines = 2;
 
     /// <summary>A Segoe Fluent Icons glyph by its code point.</summary>
     private static string Glyph(int codePoint) => char.ConvertFromUtf32(codePoint);
 
     private readonly HomeShelf _shelf;
+    private readonly Func<Frame?> _frame;
     private readonly CardStateService _states = App.Services.GetRequiredService<CardStateService>();
     private readonly TextBlock _count = new()
     {
@@ -45,21 +56,8 @@ internal sealed class CardShelf : Grid
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
     };
     private readonly StackPanel _actions = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
-    // The bottom margin is room for the horizontal scroll bar, which WinUI draws
-    // over the content: without it the bar runs through the caption's last line.
-    private readonly StackPanel _panel = new()
-    {
-        Orientation = Orientation.Horizontal,
-        Spacing = 8,
-        Margin = new Thickness(0, 0, 0, 16),
-    };
-    private readonly ScrollViewer _scroll = new()
-    {
-        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-        HorizontalScrollMode = ScrollMode.Enabled,
-        VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-        VerticalScrollMode = ScrollMode.Disabled,
-    };
+    private readonly WrapPanel _panel = new() { Spacing = TileSpacing };
+    private readonly Button _more = new() { Visibility = Visibility.Collapsed };
     private readonly TextBlock _empty = new()
     {
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
@@ -67,7 +65,10 @@ internal sealed class CardShelf : Grid
     };
     private readonly Dictionary<string, Tile> _tiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
-    private readonly TextBlock _title = new() { Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"] };
+    private readonly TextBlock _title = new() { Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] };
+    private Tile[] _all = [];
+    private bool _expanded;
+    private double _laidOutWidth = -1;
     private bool _rebuildQueued;
     private bool _subscribed;
 
@@ -77,9 +78,11 @@ internal sealed class CardShelf : Grid
     /// <summary>The user asked to set or clear a flag on a card from the shelf.</summary>
     public event Action<CardBase, CardFlag>? FlagInvoked;
 
-    public CardShelf(HomeShelf shelf)
+    /// <param name="frame">The page's frame, for the menu's "go to author".</param>
+    public CardShelf(HomeShelf shelf, Func<Frame?> frame)
     {
         _shelf = shelf;
+        _frame = frame;
         RowSpacing = 8;
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -96,13 +99,23 @@ internal sealed class CardShelf : Grid
         header.Children.Add(_actions);
         Children.Add(header);
 
-        AutomationProperties.SetAutomationId(_scroll, $"HomeShelf_{shelf.Key}_Row");
-        _scroll.Content = _panel;
-        // handledEventsToo: a tile's button may mark the wheel handled before it gets here.
-        _scroll.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnWheel), handledEventsToo: true);
-        _panel.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnWheel), handledEventsToo: true);
-        SetRow(_scroll, 1);
-        Children.Add(_scroll);
+        AutomationProperties.SetAutomationId(_more, $"HomeShelf_{shelf.Key}_ShowAll");
+        _more.Click += (_, _) =>
+        {
+            _expanded = !_expanded;
+            ShowTiles();
+        };
+        _actions.Children.Add(_more);
+
+        AutomationProperties.SetAutomationId(_panel, $"HomeShelf_{shelf.Key}_Row");
+        SetRow(_panel, 1);
+        Children.Add(_panel);
+        // How many tiles fit on two lines depends on the width.
+        SizeChanged += (_, e) =>
+        {
+            if (Math.Abs(e.NewSize.Width - _laidOutWidth) < 0.5) return;
+            ShowTiles();
+        };
         _empty.Text = shelf.EmptyText;
         SetRow(_empty, 1);
         Children.Add(_empty);
@@ -187,46 +200,6 @@ internal sealed class CardShelf : Grid
             if (_tiles.TryGetValue(path, out var tile)) tile.UpdateState();
         });
 
-    private double _wheelTarget;
-    private long _wheelTick;
-
-    /// <summary>
-    /// The mouse wheel scrolls the page, not the row. A row that only scrolls
-    /// sideways would otherwise take the wheel for itself, so moving down the
-    /// home page stopped at every shelf the pointer crossed. Shift+wheel and a
-    /// tilt wheel still move the row; touch and touchpad panning never come
-    /// through here.
-    /// </summary>
-    private void OnWheel(object sender, PointerRoutedEventArgs e)
-    {
-        var wheel = e.GetCurrentPoint(this).Properties;
-        if (wheel.IsHorizontalMouseWheel
-            || e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Shift)
-            || e.KeyModifiers.HasFlag(Windows.System.VirtualKeyModifiers.Control))
-            return;
-
-        // Reached through the panel first and the row's own viewer second:
-        // the first to see it handles it, which also keeps the row's viewer
-        // (a class handler that skips handled events) from scrolling sideways.
-        if (e.Handled && ReferenceEquals(sender, _scroll)) return;
-
-        ScrollViewer? page = null;
-        for (var parent = VisualTreeHelper.GetParent(_scroll); parent is not null; parent = VisualTreeHelper.GetParent(parent))
-        {
-            if (parent is ScrollViewer viewer) { page = viewer; break; }
-        }
-        if (page is null) return;
-
-        // Several notches in a row: continue from where the last one was
-        // headed, not from where the animation has got to so far.
-        var now = Environment.TickCount64;
-        if (now - _wheelTick > 300) _wheelTarget = page.VerticalOffset;
-        _wheelTick = now;
-        _wheelTarget = Math.Clamp(_wheelTarget - wheel.MouseWheelDelta, 0, page.ScrollableHeight);
-        page.ChangeView(null, _wheelTarget, null);
-        e.Handled = true;
-    }
-
     private void Rebuild()
     {
         var cards = _shelf.Cards.ToArray();
@@ -235,7 +208,7 @@ internal sealed class CardShelf : Grid
         // heading so the hint has something to belong to.
         Visibility = cards.Length == 0 && string.IsNullOrEmpty(_shelf.EmptyText)
             ? Visibility.Collapsed : Visibility.Visible;
-        _scroll.Visibility = cards.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        _panel.Visibility = cards.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         _empty.Visibility = cards.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         var kept = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -248,7 +221,8 @@ internal sealed class CardShelf : Grid
             {
                 _tiles[key] = tile = new Tile(card, _states,
                     opened => CardInvoked?.Invoke(_shelf, opened),
-                    (flagged, flag) => FlagInvoked?.Invoke(flagged, flag));
+                    (flagged, flag) => FlagInvoked?.Invoke(flagged, flag),
+                    _frame);
             }
             tile.SetAutomationIds($"HomeShelf_{_shelf.Key}_Tile{i}");
             tile.UpdateState();
@@ -259,10 +233,30 @@ internal sealed class CardShelf : Grid
         foreach (var stale in _tiles.Keys.Where(path => !kept.Contains(path)).ToArray())
             _tiles.Remove(stale);
 
-        // Re-adding a tile unloads and reloads it, which drops its thumbnail.
-        if (_panel.Children.SequenceEqual(tiles)) return;
-        _panel.Children.Clear();
-        foreach (var tile in tiles) _panel.Children.Add(tile);
+        _all = tiles;
+        ShowTiles();
+    }
+
+    /// <summary>Puts on screen the tiles that fit on two lines, or all of them once expanded.</summary>
+    private void ShowTiles()
+    {
+        _laidOutWidth = ActualWidth;
+        var fits = ShelfLines.Fit([.. _all.Select(tile => tile.Width)], ActualWidth, TileSpacing, CollapsedLines);
+        // A wider window or a smaller shelf can leave nothing to collapse.
+        if (fits == _all.Length) _expanded = false;
+        var count = _expanded ? _all.Length : fits;
+        _more.Content = _expanded
+            ? UiText.Get("Home_ShelfCollapse")
+            : UiText.Format("Home_ShelfShowAll", _all.Length - fits);
+        _more.Visibility = fits < _all.Length ? Visibility.Visible : Visibility.Collapsed;
+
+        // Only the tail changes: re-adding a tile unloads and reloads it, which
+        // drops its thumbnail, so the tiles that stay are never touched.
+        var children = _panel.Children;
+        var same = 0;
+        while (same < count && same < children.Count && ReferenceEquals(children[same], _all[same])) same++;
+        while (children.Count > same) children.RemoveAt(children.Count - 1);
+        for (var i = same; i < count; i++) children.Add(_all[i]);
     }
 
     /// <summary>One card: its picture, its name, and the three flag buttons over the picture.</summary>
@@ -317,7 +311,7 @@ internal sealed class CardShelf : Grid
         /// <summary>Caption, tooltip and accessible name from what the home page knows about the card.</summary>
         public void UpdateText(HomeCardInfo info) => _caption.Show(info, _open);
 
-        public Tile(CardBase card, CardStateService states, Action<CardBase> open, Action<CardBase, CardFlag> flag)
+        public Tile(CardBase card, CardStateService states, Action<CardBase> open, Action<CardBase, CardFlag> flag, Func<Frame?> frame)
         {
             Card = card;
             _states = states;
@@ -341,10 +335,31 @@ internal sealed class CardShelf : Grid
             // is recorded as used and in record mode alike. CanDrag alone does
             // nothing on a button; see ButtonDragOut.
             ButtonDragOut.Enable(_open, () => Card.FilePath, "Home.Drag");
+            // The gallery's own right-click menu, built as it opens.
+            var menu = new MenuFlyout();
+            menu.Opening += (_, _) => CardMenu.Fill(menu, [Card], () => open(Card), frame());
+            _open.ContextFlyout = menu;
+            // Q, L and H on a focused tile, as the flag buttons' tooltips say.
+            // A key handler, not KeyboardAccelerators: those would be live
+            // app-wide, once per tile on the page.
+            KeyDown += (_, e) =>
+            {
+                if (e.KeyStatus.WasKeyDown || IsModifierDown()) return;
+                CardFlag? which = e.Key switch
+                {
+                    Windows.System.VirtualKey.Q => CardFlag.Queued,
+                    Windows.System.VirtualKey.L => CardFlag.Liked,
+                    Windows.System.VirtualKey.H => CardFlag.Hidden,
+                    _ => null,
+                };
+                if (which is not { } chosen) return;
+                flag(Card, chosen);
+                e.Handled = true;
+            };
 
-            _queue = new FlagButton(CardFlag.Queued, Glyph(0xE718), Glyph(0xE841), "CardState_Queue", "CardState_Unqueue"); // Pin / PinFill
-            _like = new FlagButton(CardFlag.Liked, Glyph(0xEB51), Glyph(0xEB52), "CardState_Like", "CardState_Unlike"); // Heart / HeartFill
-            _hide = new FlagButton(CardFlag.Hidden, Glyph(0xE894), Glyph(0xEB90), "CardState_Hide", "CardState_Unhide"); // Clear / StatusErrorFull
+            _queue = new FlagButton(CardFlag.Queued, Glyph(0xE718), Glyph(0xE841), "CardState_Queue", "CardState_Unqueue", "Q"); // Pin / PinFill
+            _like = new FlagButton(CardFlag.Liked, Glyph(0xEB51), Glyph(0xEB52), "CardState_Like", "CardState_Unlike", "L"); // Heart / HeartFill
+            _hide = new FlagButton(CardFlag.Hidden, Glyph(0xE894), Glyph(0xEB90), "CardState_Hide", "CardState_Unhide", "H"); // Clear / StatusErrorFull
             foreach (var button in new[] { _queue, _like, _hide })
             {
                 var which = button.Flag;
@@ -421,6 +436,16 @@ internal sealed class CardShelf : Grid
             AutomationProperties.SetItemStatus(_open, used ? UiText.Get("CardState_Used") : "");
         }
 
+        private static bool IsModifierDown()
+        {
+            foreach (var key in new[] { Windows.System.VirtualKey.Control, Windows.System.VirtualKey.Menu, Windows.System.VirtualKey.Shift, Windows.System.VirtualKey.LeftWindows })
+            {
+                if (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
+                    return true;
+            }
+            return false;
+        }
+
         private void ShowFlags(bool show) => _flags.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 
         private bool HasFocusWithin()
@@ -491,9 +516,14 @@ internal sealed class CardShelf : Grid
 
         public CardFlag Flag { get; }
 
-        public FlagButton(CardFlag flag, string offGlyph, string onGlyph, string setKey, string clearKey)
+        private readonly string _shortcut;
+
+        /// <param name="shortcut">The key that does the same on a focused tile (CardShelf.Tile).</param>
+        public FlagButton(CardFlag flag, string offGlyph, string onGlyph, string setKey, string clearKey, string shortcut)
         {
             Flag = flag;
+            _shortcut = shortcut;
+            AutomationProperties.SetAcceleratorKey(this, shortcut);
             _offGlyph = offGlyph;
             _onGlyph = onGlyph;
             _setKey = setKey;
@@ -515,7 +545,7 @@ internal sealed class CardShelf : Grid
             _shown = on;
             _icon.Glyph = on ? _onGlyph : _offGlyph;
             var text = UiText.Get(on ? _clearKey : _setKey);
-            ToolTipService.SetToolTip(this, text);
+            ToolTipService.SetToolTip(this, $"{text} ({_shortcut})");
             AutomationProperties.SetName(this, text);
         }
     }
