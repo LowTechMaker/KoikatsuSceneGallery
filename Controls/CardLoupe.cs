@@ -51,9 +51,10 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed class CardLoupe : Grid
 {
-    private const int DecodeWidth = 2560;
-    private const float MaxZoom = 8;
-    private const double WheelStep = 1.2;
+    // Sizes from UiMetrics, the app's one place for them.
+    private const int DecodeWidth = UiMetrics.LoupeDecodeWidth;
+    private const float MaxZoom = UiMetrics.LoupeMaxZoom;
+    private const double WheelStep = UiMetrics.LoupeZoomStep;
     // The app's motion tempo (CardMotion), like every other flight.
     private static readonly TimeSpan OpenDuration = CardMotion.FlyDuration;
     private static readonly TimeSpan CloseDuration = CardMotion.ReturnDuration;
@@ -183,7 +184,7 @@ internal sealed class CardLoupe : Grid
         BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
         BorderThickness = new Thickness(1);
         CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"];
-        Padding = new Thickness(16, 12, 16, 12);
+        Padding = UiMetrics.LoupePadding;
 
         BuildHeader();
         BuildStage();
@@ -434,7 +435,7 @@ internal sealed class CardLoupe : Grid
     // ------------------------------------------------------------ zoom and pan
 
     /// <summary>The most a picture is enlarged to fit: beyond twice its own pixels it is only blur.</summary>
-    private const double MaxFitScale = 2;
+    private const double MaxFitScale = UiMetrics.LoupeMaxFitScale;
 
     /// <summary>
     /// The picture's size when it fits the stage, at most twice its own pixels:
@@ -707,13 +708,13 @@ internal sealed class CardLoupe : Grid
     {
         var button = new Button
         {
-            Width = 44,
-            Height = 44,
+            Width = UiMetrics.LoupeEdgeButtonSize,
+            Height = UiMetrics.LoupeEdgeButtonSize,
             Padding = new Thickness(0),
             Margin = new Thickness(12),
             HorizontalAlignment = side,
             VerticalAlignment = VerticalAlignment.Center,
-            CornerRadius = new CornerRadius(22),
+            CornerRadius = new CornerRadius(UiMetrics.LoupeEdgeButtonSize / 2),
             BorderThickness = new Thickness(0),
             Background = (Brush)Application.Current.Resources["MediaOverlayBadgeBackgroundBrush"],
             Content = new FontIcon

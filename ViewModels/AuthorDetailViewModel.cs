@@ -264,7 +264,7 @@ public partial class AuthorDetailViewModel : ObservableObject
     }
 
     /// <summary>Lines each overview section shows (wave 17); "view all" opens the tab.</summary>
-    private const int PreviewLines = 2;
+    private const int PreviewLines = Controls.UiMetrics.CollapsedLines;
 
     /// <summary>
     /// Fills a section with what fits on <see cref="PreviewLines"/> lines of the

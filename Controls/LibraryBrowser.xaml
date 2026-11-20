@@ -98,7 +98,7 @@
        Extended: Ctrl and Shift select several, Ctrl+A all. -->
   <!-- Padding on the right: the overlay scroll bar runs in that gutter, between the
        pictures and the details pane, instead of over the last column (user report). -->
-  <GridView x:Name="GalleryGrid" Grid.Row="2" Padding="0,0,16,0" SelectionMode="Extended" IsItemClickEnabled="False"
+  <GridView x:Name="GalleryGrid" Grid.Row="2" Padding="{x:Bind local:UiMetrics.GridPadding}" SelectionMode="Extended" IsItemClickEnabled="False"
    SelectionChanged="Grid_SelectionChanged" DoubleTapped="Grid_DoubleTapped" PreviewKeyDown="Grid_PreviewKeyDown"
    ContainerContentChanging="Container_Changing" CanDragItems="True" DragItemsStarting="Drag_Starting" AutomationProperties.AutomationId="GalleryGrid">
    <GridView.ItemContainerTransitions><TransitionCollection/></GridView.ItemContainerTransitions>
@@ -141,14 +141,14 @@
       <!-- A group: its next two cards fanned out behind the cover, the details pane's stack
            of selected cards (CardInspector.ShowStack): each turned and shifted a little more,
            a little fainter. The same in both modes (user request). -->
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="0.76"
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="{x:Bind local:UiMetrics.StackFarOpacity}"
               CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-       <Border.RenderTransform><CompositeTransform Rotation="6" TranslateX="10" TranslateY="-6"/></Border.RenderTransform>
+       <Border.RenderTransform><CompositeTransform Rotation="{x:Bind local:UiMetrics.StackFarTurn}" TranslateX="{x:Bind local:UiMetrics.StackFarShiftX}" TranslateY="{x:Bind local:UiMetrics.StackFarShiftY}"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(ThirdCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind IsGroup}" RenderTransformOrigin="0.5,0.5" Opacity="0.88"
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind IsGroup}" RenderTransformOrigin="0.5,0.5" Opacity="{x:Bind local:UiMetrics.StackNearOpacity}"
               CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-       <Border.RenderTransform><CompositeTransform Rotation="3" TranslateX="5" TranslateY="-3"/></Border.RenderTransform>
+       <Border.RenderTransform><CompositeTransform Rotation="{x:Bind local:UiMetrics.StackNearTurn}" TranslateX="{x:Bind local:UiMetrics.StackNearShiftX}" TranslateY="{x:Bind local:UiMetrics.StackNearShiftY}"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(SecondCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
       <!-- The cover. Its picture is a brush so its corners follow PictureCorners. -->

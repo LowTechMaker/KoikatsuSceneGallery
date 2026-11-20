@@ -32,7 +32,7 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// single card, whose picture fills its cell.
     /// </summary>
     public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup
-        ? new Microsoft.UI.Xaml.Thickness(4, 10, 16, 6)
+        ? Controls.UiMetrics.GroupCoverInset
         : new Microsoft.UI.Xaml.Thickness(0);
 
     /// <summary>The number on a group's count badge.</summary>
@@ -46,16 +46,18 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public double MetadataHeight => ShowTitle ? CaptionHeight : 0;
 
     /// <summary>The caption under the picture in card mode: title, then author and badges (LibraryBrowser, the layout reserve).</summary>
-    public const double CaptionHeight = 58;
+    public const double CaptionHeight = Controls.UiMetrics.CardCaptionHeight;
 
     /// <summary>The plainer two-line caption random discovery puts under its pictures.</summary>
-    public const double SimpleCaptionHeight = 44;
+    public const double SimpleCaptionHeight = Controls.UiMetrics.SimpleCaptionHeight;
 
     // Two looks, by the "show file names" setting (GalleryLayoutEngine.SetChrome):
     // photo mode, pictures edge to edge with their badges on them; card mode, a
     // framed card with everything (title, author, rating, count, versions) under
     // the picture so nothing covers it (user request).
-    public const double PhotoMargin = 1, CardModeMargin = 4, CardModeInset = 6;
+    public const double PhotoMargin = Controls.UiMetrics.PhotoTileMargin,
+        CardModeMargin = Controls.UiMetrics.CardTileMargin,
+        CardModeInset = Controls.UiMetrics.CardTileInset;
     /// <summary>Room under every card in card mode, where a group's stacked sheets show.</summary>
     public const double StackRoom = 0;
     public Microsoft.UI.Xaml.Thickness TileMargin => new(ShowTitle ? CardModeMargin : PhotoMargin);
@@ -65,7 +67,7 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// <summary>The card itself leaves <see cref="StackRoom"/> under it for the sheets of a group.</summary>
     public Microsoft.UI.Xaml.Thickness CardFrameMargin => new(0);
     /// <summary>The picture's corners: rounded inside a card, square edge to edge.</summary>
-    public Microsoft.UI.Xaml.CornerRadius PictureCorners => new(ShowTitle ? 4 : 0);
+    public Microsoft.UI.Xaml.CornerRadius PictureCorners => new(ShowTitle ? Controls.UiMetrics.CardPictureCorner : 0);
     public bool BadgesOnPicture => !ShowTitle;
     public bool GroupBadgeOnPicture => IsGroup && !ShowTitle;
     public bool VersionBadgeOnPicture => HasVersionBadge && !ShowTitle;

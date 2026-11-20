@@ -19,7 +19,7 @@ public sealed partial class HomePage : Page
     private readonly CardStateService _states = App.Services.GetRequiredService<CardStateService>();
     private readonly GalleryViewModel _gallery = App.Services.GetRequiredService<GalleryViewModel>();
     private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
-    private readonly CardInspector _inspector = new() { Width = 320, Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 16) };
+    private readonly CardInspector _inspector = new() { Width = UiMetrics.InspectorWidth, Margin = UiMetrics.InspectorMargin(UiMetrics.PaneGap) };
     private readonly CardLoupe _loupe = new() { Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 16) };
     private readonly List<CardShelf> _rows = [];
     private HomeShelf? _selectedShelf;
@@ -28,7 +28,7 @@ public sealed partial class HomePage : Page
     private bool _refreshQueued;
 
     /// <summary>Below this page width the pane would squeeze the shelves; it hides.</summary>
-    private const double InspectorMinPageWidth = 820;
+    private const double InspectorMinPageWidth = UiMetrics.InspectorMinHostWidth;
 
     public HomePage()
     {

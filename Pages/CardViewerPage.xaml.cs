@@ -27,7 +27,7 @@ namespace KoikatsuSceneGallery.Pages;
 public sealed partial class CardViewerPage : Page
 {
     private readonly CardLoupe _loupe = new();
-    private readonly CardInspector _inspector = new() { Width = 320, Margin = new Thickness(16, 0, 0, 0) };
+    private readonly CardInspector _inspector = new() { Width = UiMetrics.InspectorWidth, Margin = new Thickness(UiMetrics.PaneGap, 0, 0, 0) };
     private BrowseContext? _context;
     private bool _leaving;
 

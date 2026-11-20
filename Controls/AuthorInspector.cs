@@ -17,9 +17,9 @@ namespace KoikatsuSceneGallery.Controls;
 /// </summary>
 internal sealed class AuthorInspector : UserControl
 {
-    private const int PreviewCount = 6;
+    private const int PreviewCount = UiMetrics.AuthorPanePreviews;
 
-    private readonly StackPanel _body = new() { Spacing = 16, Padding = new Thickness(16) };
+    private readonly StackPanel _body = new() { Spacing = 16, Padding = new Thickness(UiMetrics.PanePadding) };
     private readonly TextBlock _empty = Caption(UiText.Get("AuthorInspector_Empty"));
     private readonly StackPanel _one = new() { Spacing = 16 };
     private readonly PersonPicture _avatar = new() { Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Left };

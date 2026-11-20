@@ -309,7 +309,7 @@ public sealed partial class AuthorsPage : Page
     private Controls.AuthorInspector AuthorPane()
     {
         if (_authorInspector is { } made) return made;
-        made = new Controls.AuthorInspector { Width = 300, Margin = new Thickness(8, 4, 0, 16) };
+        made = new Controls.AuthorInspector { Width = Controls.UiMetrics.AuthorPaneWidth, Margin = Controls.UiMetrics.InspectorMargin(Controls.UiMetrics.PaneGap / 2) };
         Grid.SetColumn(made, 2);
         AuthorsContent.Children.Add(made);
         made.OpenRequested += OpenAuthorDetail;

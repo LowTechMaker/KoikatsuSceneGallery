@@ -33,13 +33,13 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed class CardInspector : UserControl
 {
-    private const double PreviewHeight = 180;
+    private const double PreviewHeight = UiMetrics.InspectorPreviewHeight;
 
     private readonly CardStateService _states = App.Services.GetRequiredService<CardStateService>();
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
     private readonly IAppLogger _logger = App.Services.GetRequiredService<IAppLogger>();
 
-    private readonly StackPanel _body = new() { Spacing = 16, Padding = new Thickness(16) };
+    private readonly StackPanel _body = new() { Spacing = 16, Padding = new Thickness(UiMetrics.PanePadding) };
     private readonly TextBlock _empty = Secondary(UiText.Get("Inspector_Empty"));
 
     // One card.
@@ -415,7 +415,7 @@ internal sealed class CardInspector : UserControl
     /// </summary>
     private void ShowStack(IReadOnlyList<CardBase> cards)
     {
-        const int Shown = 4;
+        const int Shown = UiMetrics.StackShown;
         const double CardHeight = PreviewHeight - 44;
         _stack.Children.Clear();
         var layers = cards.Take(Shown).ToArray();
@@ -445,11 +445,11 @@ internal sealed class CardInspector : UserControl
                 RenderTransform = new CompositeTransform
                 {
                     // Small enough that the back cards stay inside the pane (live check, wave 16).
-                    Rotation = i * 3,
-                    TranslateX = i * 5,
-                    TranslateY = -i * 3,
+                    Rotation = i * UiMetrics.StackTurnStep,
+                    TranslateX = i * UiMetrics.StackShiftXStep,
+                    TranslateY = i * UiMetrics.StackShiftYStep,
                 },
-                Opacity = 1 - i * 0.12,
+                Opacity = 1 - i * UiMetrics.StackFadeStep,
             };
             _stack.Children.Add(layer);
         }

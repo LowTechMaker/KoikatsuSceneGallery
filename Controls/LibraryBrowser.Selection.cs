@@ -21,8 +21,8 @@ namespace KoikatsuSceneGallery.Controls;
 public sealed partial class LibraryBrowser
 {
     /// <summary>Below this width the pane would squeeze the grid to one or two columns; it hides.</summary>
-    private const double InspectorMinBrowserWidth = 820;
-    private const double InspectorWidth = 320;
+    private const double InspectorMinBrowserWidth = UiMetrics.InspectorMinHostWidth;
+    private const double InspectorWidth = UiMetrics.InspectorWidth;
 
     private CardInspector _inspector = null!;
     private CardLoupe _loupe = null!;
@@ -36,7 +36,7 @@ public sealed partial class LibraryBrowser
             Width = InspectorWidth,
             // Top flush with the grid (it sat 4 px lower). The gap on the left
             // is narrow because the grid's own right padding holds its scroll bar.
-            Margin = new Thickness(4, 0, 0, 16),
+            Margin = UiMetrics.InspectorMargin(UiMetrics.PaneGapBesideGrid),
             Frame = () => _frame,
         };
         Grid.SetRow(_inspector, 2);
@@ -248,7 +248,7 @@ public sealed partial class LibraryBrowser
         EmptyPanel.Opacity = open ? 0 : 1;
         // Beside the loupe panel the pane needs its own gap; beside the grid the
         // grid's scroll-bar gutter is the gap.
-        _inspector.Margin = new Thickness(open ? 16 : 4, 0, 0, 16);
+        _inspector.Margin = UiMetrics.InspectorMargin(open ? UiMetrics.PaneGap : UiMetrics.PaneGapBesideGrid);
         Grid.SetRow(_inspector, open ? 0 : 2);
         Grid.SetRowSpan(_inspector, open ? 3 : 1);
         if (_scope is null) MainWindow.Instance?.SetLibraryHeadingHidden(open);

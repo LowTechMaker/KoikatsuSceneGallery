@@ -39,10 +39,10 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed class CardShelf : Grid
 {
-    private const double TileHeight = 135;
-    private const double TileSpacing = 8;
+    private const double TileHeight = UiMetrics.ShelfTileHeight;
+    private const double TileSpacing = UiMetrics.ShelfTileSpacing;
     /// <summary>Lines shown until the user asks for all of them.</summary>
-    private const int CollapsedLines = 2;
+    private const int CollapsedLines = UiMetrics.CollapsedLines;
 
     /// <summary>A Segoe Fluent Icons glyph by its code point.</summary>
     private static string Glyph(int codePoint) => char.ConvertFromUtf32(codePoint);
