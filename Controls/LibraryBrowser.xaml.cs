@@ -72,6 +72,7 @@ public sealed partial class LibraryBrowser : UserControl
         _search = DispatcherQueue.CreateTimer(); _search.Interval = TimeSpan.FromMilliseconds(200); _search.IsRepeating = false;
         _search.Tick += (_, _) => ApplySearch();
         _collapse = new(CollapseOverlay);
+        InitInspector();
         Loaded += (_, _) => _layout?.OnLoaded(RequestVisible);
     }
     /// <summary>The card grid, for hosts that animate its containers on entry.</summary>
@@ -182,6 +183,9 @@ public sealed partial class LibraryBrowser : UserControl
             g.Key != _items[i].Key || !_items[i].Members.SequenceEqual(g.Members) || _items[i].ShowTitle != VM.ShowFileNames).Any();
         if (changed)
         {
+            // The tiles are rebuilt, which drops the selection; the cards that
+            // are still shown are selected again (LibraryBrowser.Selection.cs).
+            var selected = RememberSelection();
             _entriesDetached = false;
             using (_view.DeferRefresh())
             {
@@ -189,6 +193,7 @@ public sealed partial class LibraryBrowser : UserControl
                 _items.Clear();
                 foreach (var group in groups) _items.Add(new(group.Key, group.Members, VM.ShowFileNames));
             }
+            RestoreSelection(selected);
         }
         Heading.Text = _groupKey is null ? _adapter.Title : _groupTitle;
         // Three cases, and only the middle one is the host's business:
@@ -315,17 +320,15 @@ public sealed partial class LibraryBrowser : UserControl
         if (_scope is null && _groupKey is null) { if (VM is GalleryViewModel s) s.GameFilter = GameFilterOption.All; if (VM is CharacterGalleryViewModel c) c.SourceFilter = CardSourceFilterOption.All; }
         ApplySearch(); SearchBox.Focus(FocusState.Keyboard);
     }
-    private void Item_Click(object sender, ItemClickEventArgs e)
-    {
-        if (e.ClickedItem is GalleryEntry entry) OpenEntry(entry);
-    }
-
     /// <summary>Opens a tile: a group drills down, a single card opens its details.</summary>
     private void OpenEntry(GalleryEntry entry)
     {
         _collapse.Finish();
         if (entry.IsGroup)
         {
+            // Inside the group nothing is selected yet: carried over, the
+            // group's selection would select every card in it.
+            GalleryGrid.SelectedItems.Clear();
             ApplySearch(); _returnPath = entry.Card.FilePath; _returnIndex = _items.IndexOf(entry);
             _returnOffset = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid)?.VerticalOffset ?? 0;
             _groupKey = entry.Key; _groupTitle = entry.Title; _groupSearch = ""; SetSearchText(""); Refresh(); ScrollFirst();
@@ -383,6 +386,8 @@ public sealed partial class LibraryBrowser : UserControl
         var item = _items.FirstOrDefault(i => i.Members.Any(c => c.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase)))
             ?? (_items.Count > 0 ? _items[Math.Clamp(fallback, 0, _items.Count - 1)] : null);
         if (item is null) return;
+        // Back from a card or a group: that tile is selected, so the pane shows it.
+        SelectOnly(item);
         GalleryGrid.ScrollIntoView(item);
         DispatcherQueue.TryEnqueue(() =>
         {
@@ -391,7 +396,16 @@ public sealed partial class LibraryBrowser : UserControl
             (GalleryGrid.ContainerFromItem(item) as Control)?.Focus(FocusState.Keyboard);
         });
     }
-    private void Random_Click(object sender, RoutedEventArgs e) { var cards = _items.SelectMany(i => i.Members).ToArray(); if (cards.Length > 0) OpenDetail(cards[Random.Shared.Next(cards.Length)]); }
+    // A random tile is selected and scrolled to, not opened: the pane shows it,
+    // and a double click opens it as any other.
+    private void Random_Click(object sender, RoutedEventArgs e)
+    {
+        if (_items.Count == 0) return;
+        var entry = _items[Random.Shared.Next(_items.Count)];
+        SelectOnly(entry);
+        GalleryGrid.ScrollIntoView(entry);
+        DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));
+    }
     /// <summary>
     /// The label stays put; the badge carries how many filters are on.
     /// </summary>

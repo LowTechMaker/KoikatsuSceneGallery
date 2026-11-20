@@ -118,7 +118,7 @@ internal static class CardMenu
         return item;
     }
 
-    private static AuthorSummary? FindAuthor(AuthorDisplay author) =>
+    internal static AuthorSummary? FindAuthor(AuthorDisplay author) =>
         App.Services.GetRequiredService<AuthorInfoService>().GetSummaries()
             .FirstOrDefault(summary => summary.Display.Key == author.Key);
 

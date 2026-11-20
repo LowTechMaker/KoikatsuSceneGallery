@@ -2343,6 +2343,11 @@
   <data name="Home_ThemeSeeAll" xml:space="preserve"><value>See all</value></data>
   <data name="Home_ShelfShowAll" xml:space="preserve"><value>Show all ({0})</value></data>
   <data name="Home_ShelfCollapse" xml:space="preserve"><value>Show less</value></data>
+  <data name="Inspector_Name" xml:space="preserve"><value>Details</value></data>
+  <data name="Inspector_Empty" xml:space="preserve"><value>Select a card to see its details. Ctrl or Shift selects several.</value></data>
+  <data name="Inspector_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Inspector_SelectedMany" xml:space="preserve"><value>{0} cards selected</value></data>
+  <data name="Inspector_Toggle" xml:space="preserve"><value>Details pane (Ctrl+I)</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>When on, a rating filter appears in the title bar, and the home page, the library and discovery show or hide cards by it. When off, every rating is shown.</value></data>

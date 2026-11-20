@@ -6,10 +6,13 @@
   <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
   <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="First_Invoked" />
   <KeyboardAccelerator Key="End" Modifiers="Control" Invoked="Last_Invoked" />
+  <KeyboardAccelerator Key="I" Modifiers="Control" Invoked="Inspector_Invoked" />
  </UserControl.KeyboardAccelerators>
  <Grid x:Name="RootLayout" Padding="{StaticResource PageContentPadding}" RowSpacing="12" SizeChanged="Browser_SizeChanged">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-  <Grid x:Name="Header" ColumnSpacing="12" RowSpacing="8">
+  <!-- The second column is the details pane (CardInspector, added in code), beside the grid only. -->
+  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+  <Grid x:Name="Header" Grid.ColumnSpan="2" ColumnSpacing="12" RowSpacing="8">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <StackPanel Spacing="4">
@@ -54,9 +57,10 @@
      <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeMedium"/>
      <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeLarge"/>
     </toolkit:Segmented>
+    <ToggleButton x:Name="InspectorToggle" AutomationProperties.AutomationId="GalleryInspectorToggle" Click="InspectorToggle_Click" Padding="8,6"><FontIcon Glyph="&#xE8A0;" FontSize="14"/></ToggleButton>
    </StackPanel>
   </Grid>
-  <StackPanel Grid.Row="1" Spacing="8">
+  <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
    <Grid x:Name="SearchRow" ColumnSpacing="8" RowSpacing="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -90,7 +94,10 @@
     <ProgressRing x:Name="BusyRing" Width="14" Height="14"/><TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}"/>
    </StackPanel>
   </StackPanel>
-  <GridView x:Name="GalleryGrid" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="True" ItemClick="Item_Click"
+  <!-- A click selects (the details pane shows it); a double click or Enter opens.
+       Extended: Ctrl and Shift select several, Ctrl+A all. -->
+  <GridView x:Name="GalleryGrid" Grid.Row="2" SelectionMode="Extended" IsItemClickEnabled="False"
+   SelectionChanged="Grid_SelectionChanged" DoubleTapped="Grid_DoubleTapped" PreviewKeyDown="Grid_PreviewKeyDown"
    ContainerContentChanging="Container_Changing" CanDragItems="True" DragItemsStarting="Drag_Starting" AutomationProperties.AutomationId="GalleryGrid">
    <GridView.ItemContainerTransitions><TransitionCollection/></GridView.ItemContainerTransitions>
    <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4"/></ItemsPanelTemplate></GridView.ItemsPanel>

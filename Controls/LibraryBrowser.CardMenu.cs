@@ -9,6 +9,6 @@ public sealed partial class LibraryBrowser
     private void CardMenu_Opening(object sender, object e)
     {
         if (sender is not MenuFlyout menu || menu.Target?.DataContext is not GalleryEntry entry) return;
-        CardMenu.Fill(menu, entry.Members, () => OpenEntry(entry), _frame);
+        CardMenu.Fill(menu, MenuTargets(entry), () => OpenEntry(entry), _frame);
     }
 }

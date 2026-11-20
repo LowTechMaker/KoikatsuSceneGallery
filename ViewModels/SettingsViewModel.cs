@@ -104,6 +104,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupCollapseAnimationEnabled { get; set; } = true;
 
+    /// <summary>Whether the details pane beside a grid of cards is shown (Ctrl+I).</summary>
+    [ObservableProperty]
+    public partial bool InspectorVisible { get; set; } = true;
+
     [ObservableProperty]
     public partial double CacheLength { get; set; } = 4;
 
@@ -455,6 +459,15 @@ public partial class SettingsViewModel : ObservableObject
 
     // No event: each browser reads this at the moment a group closes, so a
     // change takes effect on the next collapse without disturbing anything.
+    // Every browser listens through PropertyChanged, so the pane follows in all of them.
+    partial void OnInspectorVisibleChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
     partial void OnGroupCollapseAnimationEnabledChanged(bool value)
     {
         if (_isLoading)
@@ -659,6 +672,7 @@ public partial class SettingsViewModel : ObservableObject
             PokerHandEnabled = config.PokerHandEnabled;
             RecordModeEnabled = config.RecordModeEnabled;
             GroupCollapseAnimationEnabled = config.GroupCollapseAnimationEnabled;
+            InspectorVisible = config.InspectorVisible;
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
@@ -964,6 +978,7 @@ public partial class SettingsViewModel : ObservableObject
                 PokerHandEnabled = PokerHandEnabled,
                 RecordModeEnabled = RecordModeEnabled,
                 GroupCollapseAnimationEnabled = GroupCollapseAnimationEnabled,
+                InspectorVisible = InspectorVisible,
                 CacheLength = CacheLength,
                 ThumbnailSize = ThumbnailSize,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,

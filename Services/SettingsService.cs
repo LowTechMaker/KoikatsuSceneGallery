@@ -97,6 +97,9 @@ public class SettingsService
         /// </summary>
         public bool GroupCollapseAnimationEnabled { get; set; } = true;
 
+        /// <summary>The details pane beside a grid of cards (wave 12). On by default.</summary>
+        public bool InspectorVisible { get; set; } = true;
+
         /// <summary>
         /// Off-screen render buffer for the gallery, as a multiple of the
         /// viewport (ItemsWrapGrid.CacheLength). Higher = more thumbnails kept
