@@ -8,14 +8,16 @@ namespace KoikatsuSceneGallery.Helpers;
 /// <remarks>
 /// Seen live at 1440x753: sized by width alone, the panel filled the page and
 /// every shelf fell below the fold. Capped at half the height it still read as
-/// the hero banner of a TV app, so both caps were tightened. The height cap
+/// the hero banner of a TV app, so the height cap became a third. The width
+/// cap is loose on purpose: at 560 px (seen live at 1920x1080) the pair sat in
+/// the left third of a wide page, so on a large window the height cap decides. The height cap
 /// shrinks both cards together and keeps them 16:9; a minimum keeps them worth
 /// looking at in a low window.
 /// </remarks>
 internal static class DuelLayout
 {
     /// <summary>The two cards together are never wider than this.</summary>
-    public const double MaxWidthBoth = 560;
+    public const double MaxWidthBoth = 880;
     /// <summary>Below this panel width the two cards stack.</summary>
     public const double StackBelow = 480;
     /// <summary>The part of the window's height the whole panel may take.</summary>

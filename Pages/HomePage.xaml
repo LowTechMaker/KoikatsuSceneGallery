@@ -15,9 +15,12 @@
             Grid.Row="1"
             AutomationProperties.AutomationId="HomeScroll"
             VerticalScrollBarVisibility="Auto">
+            <!--  The right margin is room for the vertical scroll bar, which WinUI
+                  draws over the content: without it the bar covers the shelf
+                  headers' buttons (seen live at 1920x1080).  -->
             <StackPanel
                 x:Name="Shelves"
-                Margin="0,0,0,24"
+                Margin="0,0,16,24"
                 Spacing="16">
                 <!--  "This or that" first; the shelves are added after it in code.  -->
                 <controls:DuelPanel x:Name="Duel" />
