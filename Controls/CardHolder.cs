@@ -206,8 +206,12 @@ internal sealed class CardHolder : UserControl
             Root.Children.Add(_joker);
 
             Root.PointerEntered += (_, _) => Lift(true);
-            Root.PointerExited += (_, _) => { if (Root.FocusState == FocusState.Unfocused) Lift(false); };
-            Root.GotFocus += (_, _) => Lift(true);
+            // Focus lifts a card only when it came from the keyboard: the page
+            // puts focus on the first card after dealing (programmatic), and a
+            // click focuses too, and either left that card standing up over the
+            // rack with nothing pointing at it (user report).
+            Root.PointerExited += (_, _) => { if (Root.FocusState != FocusState.Keyboard) Lift(false); };
+            Root.GotFocus += (_, _) => { if (Root.FocusState == FocusState.Keyboard) Lift(true); };
             Root.LostFocus += (_, _) => Lift(false);
             Root.Tapped += (_, e) => { e.Handled = true; Invoke(); };
             Root.KeyDown += (_, e) =>
