@@ -174,9 +174,10 @@ internal static class CardMotion
 
     /// <summary>Stops any of these movements on <paramref name="element"/> and puts it back as laid out.</summary>
     /// <summary>
-    /// A card dealt into the holder (random discovery's hand): it rises from
-    /// <paramref name="drop"/> pixels below and fades in, after
-    /// <paramref name="delay"/> so a hand arrives card by card.
+    /// A card dealt into the holder (random discovery's hand): it drops in from
+    /// <paramref name="drop"/> pixels above and fades in, after
+    /// <paramref name="delay"/> so a hand arrives card by card. From above,
+    /// as cards are put into a rack (user request; it used to rise from below).
     /// </summary>
     public static void Deal(UIElement element, float drop, TimeSpan delay)
     {
@@ -193,7 +194,7 @@ internal static class CardMotion
         fade.DelayTime = delay;
         fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
         var move = compositor.CreateVector3KeyFrameAnimation();
-        move.InsertKeyFrame(0, new Vector3(0, drop, 0));
+        move.InsertKeyFrame(0, new Vector3(0, -drop, 0));
         move.InsertKeyFrame(1, Vector3.Zero, ease);
         move.Duration = FlyDuration;
         move.DelayTime = delay;
