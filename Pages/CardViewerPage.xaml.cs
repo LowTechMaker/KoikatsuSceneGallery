@@ -19,8 +19,12 @@ namespace KoikatsuSceneGallery.Pages;
 /// were near copies of one another that had drifted apart. Every way of
 /// opening a card (<see cref="BrowseContext.Open"/>, the author page's own
 /// parameters) lands here.
+///
+/// It has a XAML file only so the Frame can create it: a page that is C# alone
+/// is missing from the XAML type information, and Frame.Navigate to it ended the
+/// process with an access violation (user report, random discovery).
 /// </remarks>
-public sealed class CardViewerPage : Page
+public sealed partial class CardViewerPage : Page
 {
     private readonly CardLoupe _loupe = new();
     private readonly CardInspector _inspector = new() { Width = 320, Margin = new Thickness(16, 0, 0, 0) };
@@ -29,13 +33,11 @@ public sealed class CardViewerPage : Page
 
     public CardViewerPage()
     {
-        var root = new Grid { Padding = (Thickness)Application.Current.Resources["DetailContentPadding"] };
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        InitializeComponent();
+        var root = Root;
         root.Children.Add(_loupe);
         Grid.SetColumn(_inspector, 1);
         root.Children.Add(_inspector);
-        Content = root;
 
         _inspector.ShowPreview = false; // the loupe shows the picture
         _inspector.Frame = () => Frame;

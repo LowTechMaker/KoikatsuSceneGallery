@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--  The loupe and the details pane are added in code (CardViewerPage.xaml.cs).
+      This file exists so the Frame can create the page: see the remarks there.  -->
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.CardViewerPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="Root" Padding="{StaticResource DetailContentPadding}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+    </Grid>
+</Page>
