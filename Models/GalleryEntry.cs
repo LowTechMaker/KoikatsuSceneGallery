@@ -31,8 +31,8 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// the details pane's stack of selected cards (user request); none for a
     /// single card, whose picture fills its cell.
     /// </summary>
-    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup && !ShowTitle
-        ? new Microsoft.UI.Xaml.Thickness(6, 10, 14, 8)
+    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup
+        ? new Microsoft.UI.Xaml.Thickness(4, 10, 16, 6)
         : new Microsoft.UI.Xaml.Thickness(0);
 
     /// <summary>The number on a group's count badge.</summary>
@@ -57,13 +57,13 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     // the picture so nothing covers it (user request).
     public const double PhotoMargin = 1, CardModeMargin = 4, CardModeInset = 6;
     /// <summary>Room under every card in card mode, where a group's stacked sheets show.</summary>
-    public const double StackRoom = 8;
+    public const double StackRoom = 0;
     public Microsoft.UI.Xaml.Thickness TileMargin => new(ShowTitle ? CardModeMargin : PhotoMargin);
     public Microsoft.UI.Xaml.Thickness PictureInset => ShowTitle
         ? new Microsoft.UI.Xaml.Thickness(CardModeInset, CardModeInset, CardModeInset, 0)
         : new Microsoft.UI.Xaml.Thickness(0);
     /// <summary>The card itself leaves <see cref="StackRoom"/> under it for the sheets of a group.</summary>
-    public Microsoft.UI.Xaml.Thickness CardFrameMargin => new(0, 0, 0, StackRoom);
+    public Microsoft.UI.Xaml.Thickness CardFrameMargin => new(0);
     /// <summary>The picture's corners: rounded inside a card, square edge to edge.</summary>
     public Microsoft.UI.Xaml.CornerRadius PictureCorners => new(ShowTitle ? 4 : 0);
     public bool BadgesOnPicture => !ShowTitle;

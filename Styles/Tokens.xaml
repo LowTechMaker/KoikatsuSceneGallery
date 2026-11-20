@@ -26,6 +26,11 @@
                   than a label stuck on the card (phase 108).  -->
             <SolidColorBrush x:Key="MediaOverlayBadgeSubtleBackgroundBrush" Color="#CC202020" />
             <SolidColorBrush x:Key="MediaOverlayForegroundBrush" Color="White" />
+            <!--  A library card with its caption (file names on). Opaque and a
+                  clear step lighter than the page: the translucent card fill
+                  barely parted one card from the next (user report).  -->
+            <SolidColorBrush x:Key="MediaCardBackgroundBrush" Color="#FF363636" />
+            <SolidColorBrush x:Key="MediaCardStrokeBrush" Color="#24FFFFFF" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="#FF4060" />
@@ -38,6 +43,8 @@
             <SolidColorBrush x:Key="MediaOverlayBadgeBackgroundBrush" Color="#E6202020" />
             <SolidColorBrush x:Key="MediaOverlayBadgeSubtleBackgroundBrush" Color="#CC202020" />
             <SolidColorBrush x:Key="MediaOverlayForegroundBrush" Color="White" />
+            <SolidColorBrush x:Key="MediaCardBackgroundBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="MediaCardStrokeBrush" Color="#1F000000" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="RatingR18GBadgeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -50,6 +57,8 @@
             <SolidColorBrush x:Key="MediaOverlayBadgeBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="MediaOverlayBadgeSubtleBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="MediaOverlayForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="MediaCardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="MediaCardStrokeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

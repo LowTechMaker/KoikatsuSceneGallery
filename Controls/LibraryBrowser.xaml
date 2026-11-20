@@ -133,27 +133,22 @@
      <Grid.ContextFlyout><MenuFlyout Opening="CardMenu_Opening"/></Grid.ContextFlyout>
      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
-     <!-- Card mode: a group's sheets, each a little narrower, showing under the card. -->
-     <Border Grid.RowSpan="2" Margin="16,16,16,0" Visibility="{x:Bind SheetThird}" CornerRadius="{StaticResource MediaTileCornerRadius}"
-             Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
-     <Border Grid.RowSpan="2" Margin="8,8,8,4" Visibility="{x:Bind SheetBehind}" CornerRadius="{StaticResource MediaTileCornerRadius}"
-             Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
-     <!-- Card mode: the card. Opaque underneath, so the sheets do not show through it. -->
-     <Border Grid.RowSpan="2" Margin="{x:Bind CardFrameMargin}" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
-             Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
-     <Border Grid.RowSpan="2" Margin="{x:Bind CardFrameMargin}" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
-             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+     <!-- Card mode: the card, opaque and a step lighter than the page (MediaCardBackgroundBrush). -->
+     <Border Grid.RowSpan="2" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource MediaCardBackgroundBrush}" BorderBrush="{ThemeResource MediaCardStrokeBrush}" BorderThickness="1"/>
 
      <Grid Margin="{x:Bind PictureInset}">
-      <!-- Photo mode: a group's next two cards fanned out behind the cover. -->
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind FanThird}" RenderTransformOrigin="0.5,0.5" Opacity="0.7"
-              BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-       <Border.RenderTransform><CompositeTransform Rotation="7" TranslateX="6" TranslateY="-4"/></Border.RenderTransform>
+      <!-- A group: its next two cards fanned out behind the cover, the details pane's stack
+           of selected cards (CardInspector.ShowStack): each turned and shifted a little more,
+           a little fainter. The same in both modes (user request). -->
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="0.76"
+              CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+       <Border.RenderTransform><CompositeTransform Rotation="6" TranslateX="10" TranslateY="-6"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(ThirdCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind FanBehind}" RenderTransformOrigin="0.5,0.5" Opacity="0.85"
-              BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
-       <Border.RenderTransform><CompositeTransform Rotation="3.5" TranslateX="3" TranslateY="-2"/></Border.RenderTransform>
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind IsGroup}" RenderTransformOrigin="0.5,0.5" Opacity="0.88"
+              CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+       <Border.RenderTransform><CompositeTransform Rotation="3" TranslateX="5" TranslateY="-3"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(SecondCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
       <!-- The cover. Its picture is a brush so its corners follow PictureCorners. -->
@@ -176,7 +171,7 @@
         </StackPanel>
        </Border>
        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6" MinWidth="26" Height="26" Padding="8,0" CornerRadius="13"
-               Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind GroupBadgeOnPicture}"
+               Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind IsGroup}"
                AutomationProperties.Name="{x:Bind CountText}">
         <TextBlock Text="{x:Bind MemberCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
@@ -210,13 +205,6 @@
        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
         <Border Height="20" Padding="7,0" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind VersionInCaption, Mode=OneWay}">
          <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-        </Border>
-        <Border Height="20" Padding="7,0" CornerRadius="10" Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind GroupInCaption}"
-                AutomationProperties.Name="{x:Bind CountText}">
-         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <FontIcon Glyph="&#xE8B9;" FontSize="11" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
-          <TextBlock Text="{x:Bind MemberCountText}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
-         </StackPanel>
         </Border>
         <local:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" VerticalAlignment="Center"/>
        </StackPanel>
