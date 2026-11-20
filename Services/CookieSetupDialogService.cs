@@ -131,7 +131,7 @@ internal static class CookieSetupDialogService
                 webView.Visibility = Visibility.Collapsed;
                 dialog.Content = new TextBlock
                 {
-                    Text = $"Failed to initialize WebView2: {ex.Message}",
+                    Text = UiText.Format("Cookie_WebViewFailed", ex.Message),
                     TextWrapping = TextWrapping.Wrap,
                 };
             }

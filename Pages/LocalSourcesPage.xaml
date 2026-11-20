@@ -42,7 +42,7 @@
                     <MenuFlyout>
                         <MenuFlyoutItem x:Uid="LocalSources_EditSource" Click="EditSource_Click" Tag="{x:Bind}">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="&#xE70F;" />
+                                <FontIcon Glyph="{StaticResource GlyphEdit}" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                     </MenuFlyout>
@@ -81,7 +81,7 @@
                         HorizontalAlignment="Center"
                         FontSize="28"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Glyph="&#xE710;" />
+                        Glyph="{StaticResource GlyphAdd}" />
                     <TextBlock
                         x:Uid="LocalSources_AddSource"
                         HorizontalAlignment="Center"
@@ -213,7 +213,7 @@
                         <FontIcon
                             FontSize="44"
                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
-                            Glyph="&#xE8B7;" />
+                            Glyph="{StaticResource GlyphFolder}" />
                     </Border>
 
                     <TextBlock

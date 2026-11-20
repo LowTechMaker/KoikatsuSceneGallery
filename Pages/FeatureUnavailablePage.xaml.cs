@@ -26,9 +26,9 @@ public sealed partial class FeatureUnavailablePage : Page
         Feature = e.Parameter as string ?? "";
         var (glyph, key) = Feature switch
         {
-            "authors" => ("", "Authors"),
-            "tags" => ("", "Tags"),
-            _ => ("", "Import"),
+            "authors" => (Glyphs.Authors, "Authors"),
+            "tags" => (Glyphs.Tags, "Tags"),
+            _ => (Glyphs.Import, "Import"),
         };
         FeatureIcon.Glyph = glyph;
         TitleText.Text = UiText.Get($"FeatureUnavailable_{key}Title");

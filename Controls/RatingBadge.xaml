@@ -1,7 +1,8 @@
 <UserControl
     x:Class="KoikatsuSceneGallery.Controls.RatingBadge"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:helpers="using:KoikatsuSceneGallery.Helpers">
     <Grid>
         <Border x:Name="RestrictedBadge" Padding="6,2" CornerRadius="{StaticResource ControlCornerRadius}"
                 Visibility="Collapsed" Background="{ThemeResource RatingR18BadgeBrush}">
@@ -10,7 +11,7 @@
         </Border>
         <Border x:Name="GeneralBadge" Padding="6,2" CornerRadius="{StaticResource ControlCornerRadius}"
                 Visibility="Collapsed" Background="{ThemeResource RatingAllAgesBadgeBrush}">
-            <TextBlock Style="{StaticResource BadgeTextStyle}" Text="G"
+            <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.General}"
                        Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
         </Border>
     </Grid>

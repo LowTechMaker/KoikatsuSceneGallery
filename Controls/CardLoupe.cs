@@ -75,15 +75,15 @@ internal sealed class CardLoupe : Grid
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
         VerticalAlignment = VerticalAlignment.Center,
     };
-    private readonly Button _zoomOut = IconButton("", "Loupe_ZoomOut", "LoupeZoomOut");
-    private readonly Button _zoomIn = IconButton("", "Loupe_ZoomIn", "LoupeZoomIn");
+    private readonly Button _zoomOut = IconButton(Glyphs.ZoomOut, "Loupe_ZoomOut", "LoupeZoomOut");
+    private readonly Button _zoomIn = IconButton(Glyphs.ZoomIn, "Loupe_ZoomIn", "LoupeZoomIn");
     private readonly Button _zoomLevel = new()
     {
         MinWidth = 64,
         Padding = new Thickness(8, 5, 8, 5),
         Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
     };
-    private readonly Button _info = IconButton("", "Inspector_Toggle", "LoupeToggleInfo");
+    private readonly Button _info = IconButton(Glyphs.DetailsPane, "Inspector_Toggle", "LoupeToggleInfo");
 
     // ---- stage
     private readonly Border _stage = new();
@@ -108,8 +108,8 @@ internal sealed class CardLoupe : Grid
         HorizontalAlignment = HorizontalAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
     };
-    private readonly Button _prev = EdgeButton("", "Loupe_Previous", "LoupePrevious", HorizontalAlignment.Left);
-    private readonly Button _next = EdgeButton("", "Loupe_Next", "LoupeNext", HorizontalAlignment.Right);
+    private readonly Button _prev = EdgeButton(Glyphs.Previous, "Loupe_Previous", "LoupePrevious", HorizontalAlignment.Left);
+    private readonly Button _next = EdgeButton(Glyphs.Next, "Loupe_Next", "LoupeNext", HorizontalAlignment.Right);
     private readonly Border _hint = new()
     {
         HorizontalAlignment = HorizontalAlignment.Center,
@@ -209,7 +209,7 @@ internal sealed class CardLoupe : Grid
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
-            Children = { new FontIcon { Glyph = "\uE72B", FontSize = UiMetrics.IconSize }, _backLabel },
+            Children = { new FontIcon { Glyph = Glyphs.Back, FontSize = UiMetrics.IconSize }, _backLabel },
         };
         var backTip = UiText.Get("Loupe_Close");
         ToolTipService.SetToolTip(_back, backTip);

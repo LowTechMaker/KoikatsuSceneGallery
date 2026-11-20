@@ -487,7 +487,7 @@ public sealed partial class LibraryBrowser : UserControl
         // Shuffle has no direction, so an arrow there would claim an order the
         // cards do not have.
         DirectionIcon.Visibility = ordered ? Visibility.Visible : Visibility.Collapsed;
-        DirectionIcon.Glyph = ascending ? "" : "";
+        DirectionIcon.Glyph = ascending ? Glyphs.SortAscending : Glyphs.SortDescending;
         SortAscendingItem.IsEnabled = ordered;
         SortDescendingItem.IsEnabled = ordered;
         SortAscendingItem.IsChecked = ordered && ascending;

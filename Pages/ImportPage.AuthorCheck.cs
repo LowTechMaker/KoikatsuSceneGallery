@@ -14,10 +14,9 @@ namespace KoikatsuSceneGallery.Pages;
 // Checking an author's posts, one by one, against the cards that have been dropped in.
 public sealed partial class ImportPage
 {
-    private static readonly Brush CautionBrush = new SolidColorBrush(Color_(0xFF, 0xE0, 0xB0, 0x00));
-    private static readonly Brush OrangeBrush = new SolidColorBrush(Color_(0xFF, 0xE8, 0x89, 0x2B));
+    private static readonly Brush CautionBrush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+    private static readonly Brush OrangeBrush = (Brush)Application.Current.Resources["AttentionTextBrush"];
 
-    private static Windows.UI.Color Color_(byte a, byte r, byte g, byte b) => Windows.UI.Color.FromArgb(a, r, g, b);
 
     private bool _authorCheckOpen;
     private string? _lastOfferedAuthorUrl;

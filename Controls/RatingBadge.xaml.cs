@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Controls;
 
@@ -27,7 +28,7 @@ public sealed partial class RatingBadge : UserControl
     private void UpdateBadge()
     {
         RestrictedLabel.Text = Text;
-        RestrictedBadge.Visibility = Text is "R-18" or "R-18G" ? Visibility.Visible : Visibility.Collapsed;
-        GeneralBadge.Visibility = Text == "G" ? Visibility.Visible : Visibility.Collapsed;
+        RestrictedBadge.Visibility = RatingLabels.IsRestricted(Text) ? Visibility.Visible : Visibility.Collapsed;
+        GeneralBadge.Visibility = Text == RatingLabels.General ? Visibility.Visible : Visibility.Collapsed;
     }
 }

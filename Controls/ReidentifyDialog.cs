@@ -33,9 +33,9 @@ internal static class ReidentifyDialog
 
     private static string RatingText(ContentRating rating) => rating switch
     {
-        ContentRating.R18 => "R-18",
-        ContentRating.R18G => "R-18G",
-        _ => "G",
+        ContentRating.R18 => RatingLabels.R18,
+        ContentRating.R18G => RatingLabels.R18G,
+        _ => RatingLabels.General,
     };
 
     /// <summary>Shows the dialog for one card; returns true when the card was moved.</summary>

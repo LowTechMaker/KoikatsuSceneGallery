@@ -117,7 +117,7 @@ public sealed partial class MainWindow : Window
         if (viewModel.IsImporting)
         {
             ImportNavItem.InfoBadge = CreateImportStatusBadge();
-            ToolTipService.SetToolTip(ImportNavItem, "Importing");
+            ToolTipService.SetToolTip(ImportNavItem, UiText.Get("Nav_ImportBusy"));
             return;
         }
 
@@ -127,7 +127,7 @@ public sealed partial class MainWindow : Window
             ImportNavItem.InfoBadge = pendingCount > 0
                 ? CreateImportStatusBadge(pendingCount)
                 : CreateImportStatusBadge();
-            ToolTipService.SetToolTip(ImportNavItem, $"Analyzing {pendingCount} pending");
+            ToolTipService.SetToolTip(ImportNavItem, UiText.Format("Nav_ImportAnalyzing", pendingCount));
             return;
         }
 
@@ -406,9 +406,9 @@ public sealed partial class MainWindow : Window
 
     private (ToggleButton Button, RatingSet Rating, string Label, FrameworkElement On, FrameworkElement Off)[] RatingToggles =>
     [
-        (RatingToggleG, RatingSet.General, "G", RatingToggleGOn, RatingToggleGOff),
-        (RatingToggleR18, RatingSet.R18, "R-18", RatingToggleR18On, RatingToggleR18Off),
-        (RatingToggleR18G, RatingSet.R18G, "R-18G", RatingToggleR18GOn, RatingToggleR18GOff),
+        (RatingToggleG, RatingSet.General, RatingLabels.General, RatingToggleGOn, RatingToggleGOff),
+        (RatingToggleR18, RatingSet.R18, RatingLabels.R18, RatingToggleR18On, RatingToggleR18Off),
+        (RatingToggleR18G, RatingSet.R18G, RatingLabels.R18G, RatingToggleR18GOn, RatingToggleR18GOff),
     ];
 
     /// <summary>

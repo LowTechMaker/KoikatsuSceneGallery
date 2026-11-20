@@ -839,7 +839,7 @@ public sealed class ImportService
                         foreach (var item in artworkItems)
                         {
                             item.Status = ImportItemStatus.Skipped;
-                            item.ErrorMessage = $"Conflicting artwork file: {result.CollisionFileName}";
+                            item.ErrorMessage = UiText.Format("Import_Error_ArtworkConflict", result.CollisionFileName);
                         }
                     });
                 }

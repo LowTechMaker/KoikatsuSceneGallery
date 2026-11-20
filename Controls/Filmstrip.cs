@@ -123,7 +123,7 @@ internal sealed class Filmstrip : Grid
     {
         // A fixed dark veil rather than opacity: the strip should read darker
         // on both themes, and a faded tile on a dark page reads lighter.
-        private static readonly SolidColorBrush Veil = new(ColorHelper.FromArgb(0x99, 0, 0, 0));
+        private static readonly Brush Veil = (Brush)Application.Current.Resources["FilmstripVeilBrush"];
         private readonly Border _frame;
         private readonly Border _veil;
 

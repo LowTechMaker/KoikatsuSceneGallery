@@ -42,7 +42,7 @@
                         AutomationProperties.AutomationId="PostOpenInBrowserButton"
                         Click="OpenInBrowser_Click">
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                            <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE774;" />
+                            <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphWeb}" />
                             <TextBlock x:Uid="PostDetail_OpenInBrowserLabel" />
                         </StackPanel>
                     </Button>

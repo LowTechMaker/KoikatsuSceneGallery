@@ -53,9 +53,9 @@ public sealed partial class MainWindow
         var library = UiText.Get("Nav_Library.Content");
         foreach (var (item, glyph, english) in new[]
         {
-            (ScenesSelectorItem, "", "library scenes studio"),
-            (CharactersSelectorItem, "", "library characters chara"),
-            (CoordinatesSelectorItem, "", "library coordinates outfits clothes"),
+            (ScenesSelectorItem, Glyphs.Scene, "library scenes studio"),
+            (CharactersSelectorItem, Glyphs.Character, "library characters chara"),
+            (CoordinatesSelectorItem, Glyphs.Coordinate, "library coordinates outfits clothes"),
         })
         {
             if (item.Visibility != Visibility.Visible || LibraryNavItem.Visibility != Visibility.Visible) continue;
@@ -66,14 +66,14 @@ public sealed partial class MainWindow
 
         foreach (var (item, glyph, english) in new[]
         {
-            (HomeNavItem, "\uE80F", "home start shelves queue favourites"),
-            (DiscoveryNavItem, "", "random discovery shuffle explore"),
-            (RatingNavItem, "", "rating rate explore"),
-            (AuthorsNavItem, "", "authors artists creators"),
-            (TagsNavItem, "", "tags cloud"),
-            (LocalSourcesNavItem, "", "local sources collection"),
-            (ImportNavItem, "", "import add files"),
-            (UsageNavItem, "", "usage history log record"),
+            (HomeNavItem, Glyphs.Home, "home start shelves queue favourites"),
+            (DiscoveryNavItem, Glyphs.Discovery, "random discovery shuffle explore"),
+            (RatingNavItem, Glyphs.Rating, "rating rate explore"),
+            (AuthorsNavItem, Glyphs.Authors, "authors artists creators"),
+            (TagsNavItem, Glyphs.Tags, "tags cloud"),
+            (LocalSourcesNavItem, Glyphs.LocalSources, "local sources collection"),
+            (ImportNavItem, Glyphs.Import, "import add files"),
+            (UsageNavItem, Glyphs.Usage, "usage history log record"),
         })
         {
             // Wave 16 took discovery, rating, tags, local sources and usage out
@@ -87,13 +87,13 @@ public sealed partial class MainWindow
         }
 
         var settings = UiText.Get("Palette_Settings");
-        list.Add(Candidate(PaletteCategory.Command, "", settings, "", page,
+        list.Add(Candidate(PaletteCategory.Command, Glyphs.Settings, settings, "", page,
             () => OpenSettings(new SettingsTarget(SettingsSearchIndex.General)), "settings options preferences"));
         for (var tab = 0; tab < SettingsSearchIndex.TabKeys.Count; tab++)
         {
             var target = new SettingsTarget(tab);
             var tabName = UiText.Get(SettingsSearchIndex.TabKeys[tab]);
-            list.Add(Candidate(PaletteCategory.Command, "", $"{settings} › {tabName}", "", page,
+            list.Add(Candidate(PaletteCategory.Command, Glyphs.Settings, $"{settings} › {tabName}", "", page,
                 () => OpenSettings(target), "settings"));
         }
     }
@@ -103,7 +103,7 @@ public sealed partial class MainWindow
         var command = UiText.Get("Palette_CategoryCommand");
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
         var recording = settings.RecordModeEnabled;
-        list.Add(Candidate(PaletteCategory.Command, "",
+        list.Add(Candidate(PaletteCategory.Command, Glyphs.Record,
             UiText.Get(recording ? "Palette_RecordOff" : "Palette_RecordOn"), "", command,
             () =>
             {
@@ -119,7 +119,7 @@ public sealed partial class MainWindow
         foreach (var option in OriginSelectorMenu.Items.OfType<RadioMenuFlyoutItem>())
         {
             if (option.Tag is not string tag || tag == current) continue;
-            list.Add(Candidate(PaletteCategory.Command, "",
+            list.Add(Candidate(PaletteCategory.Command, Glyphs.Web,
                 UiText.Format("Palette_SwitchPlatform", option.Text), "", command,
                 () => settings.BrowseOrigin = CardOriginSelection.Parse(tag),
                 "platform switch origin", option.Text));
@@ -138,7 +138,7 @@ public sealed partial class MainWindow
             // A missing description comes back as its own key; that is not a keyword.
             if (description == entry.DescriptionKey) description = "";
             var target = new SettingsTarget(entry.Tab, label);
-            list.Add(Candidate(PaletteCategory.Setting, "", label, $"{settings} › {tabName}", category,
+            list.Add(Candidate(PaletteCategory.Setting, Glyphs.Settings, label, $"{settings} › {tabName}", category,
                 () => OpenSettings(target), description));
         }
     }
@@ -151,7 +151,7 @@ public sealed partial class MainWindow
             foreach (var summary in tab.Authors)
             {
                 var target = summary;
-                list.Add(Candidate(PaletteCategory.Author, "", summary.Display.Name, tab.DisplayName, category,
+                list.Add(Candidate(PaletteCategory.Author, Glyphs.Author, summary.Display.Name, tab.DisplayName, category,
                     () => NavFrame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(target)),
                     summary.Display.Key.Id, tab.ProviderId));
             }
@@ -165,9 +165,9 @@ public sealed partial class MainWindow
         {
             var glyph = library.Kind switch
             {
-                LibraryKind.Characters => "",
-                LibraryKind.Coordinates => "",
-                _ => "",
+                LibraryKind.Characters => Glyphs.Character,
+                LibraryKind.Coordinates => Glyphs.Coordinate,
+                _ => Glyphs.Scene,
             };
             foreach (var card in library.Cards)
             {

@@ -859,7 +859,7 @@ public partial class ImportViewModel : ObservableObject
     private static string DescribeModSteps(IReadOnlyList<ModInstallStep> steps)
         => string.Join("  ·  ", steps.Select(step => step.Game is null
             ? ModActionText(step)
-            : $"{GameName(step.Game)}：{ModActionText(step)}"));
+            : UiText.Format("Format_LabelValue", GameName(step.Game), ModActionText(step))));
 
     private static string DescribeModCopies(IReadOnlyList<ModInstallStep> steps)
         => string.Join("\n", steps.SelectMany(step => step.OlderCopies.Select(copy => string.Format(

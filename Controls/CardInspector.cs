@@ -529,9 +529,9 @@ internal sealed class CardInspector : UserControl
     {
         var glyph = flag switch
         {
-            CardFlag.Queued => "", // Pin
-            CardFlag.Liked => "",  // Heart
-            _ => "",               // Clear
+            CardFlag.Queued => Glyphs.Queue, // Pin
+            CardFlag.Liked => Glyphs.Like,  // Heart
+            _ => Glyphs.Hide,               // Clear
         };
         var toggle = new ToggleButton
         {

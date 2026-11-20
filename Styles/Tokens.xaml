@@ -18,6 +18,10 @@
             <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
             <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
             <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
+            <!--  "Already in the library": orange, not the caution yellow - nothing is lost.  -->
+            <SolidColorBrush x:Key="AttentionTextBrush" Color="#E8892B" />
+            <!--  Over the filmstrip's pictures that are not the current one.  -->
+            <SolidColorBrush x:Key="FilmstripVeilBrush" Color="#99000000" />
             <!--  Badges drawn over a thumbnail. They sit on arbitrary pixels, so
                   they stay dark in both themes: a light badge on a light
                   picture disappears.  -->
@@ -40,6 +44,10 @@
             <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="White" />
             <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="#CCFFFFFF" />
             <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
+            <!--  "Already in the library": orange, not the caution yellow - nothing is lost.  -->
+            <SolidColorBrush x:Key="AttentionTextBrush" Color="#E8892B" />
+            <!--  Over the filmstrip's pictures that are not the current one.  -->
+            <SolidColorBrush x:Key="FilmstripVeilBrush" Color="#99000000" />
             <SolidColorBrush x:Key="MediaOverlayBadgeBackgroundBrush" Color="#E6202020" />
             <SolidColorBrush x:Key="MediaOverlayBadgeSubtleBackgroundBrush" Color="#CC202020" />
             <SolidColorBrush x:Key="MediaOverlayForegroundBrush" Color="White" />
@@ -54,6 +62,8 @@
             <SolidColorBrush x:Key="LiveTileOverlayForegroundBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="LiveTileOverlaySecondaryBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <Color x:Key="LiveTileScrimEndColor">#CC000000</Color>
+            <SolidColorBrush x:Key="AttentionTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="FilmstripVeilBrush" Color="#99000000" />
             <SolidColorBrush x:Key="MediaOverlayBadgeBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="MediaOverlayBadgeSubtleBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="MediaOverlayForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
@@ -98,6 +108,60 @@
     <Style x:Key="TileTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <!--  Icons, one name per meaning: generated from Helpers/Glyphs.cs (wave 3 of
+          centralising values); keep the two in step. FontIcon Glyph="{StaticResource GlyphQueue}".  -->
+    <x:String x:Key="GlyphHome">&#xE80F;</x:String>
+    <x:String x:Key="GlyphLibrary">&#xE8B9;</x:String>
+    <x:String x:Key="GlyphScene">&#xE8B9;</x:String>
+    <x:String x:Key="GlyphCharacter">&#xE76E;</x:String>
+    <x:String x:Key="GlyphCoordinate">&#xE78A;</x:String>
+    <x:String x:Key="GlyphAuthor">&#xE77B;</x:String>
+    <x:String x:Key="GlyphAuthors">&#xE716;</x:String>
+    <x:String x:Key="GlyphLocalSources">&#xE8F4;</x:String>
+    <x:String x:Key="GlyphDiscovery">&#xE8B1;</x:String>
+    <x:String x:Key="GlyphShuffle">&#xE8B1;</x:String>
+    <x:String x:Key="GlyphRating">&#xE734;</x:String>
+    <x:String x:Key="GlyphTags">&#xE8EC;</x:String>
+    <x:String x:Key="GlyphUsage">&#xE81C;</x:String>
+    <x:String x:Key="GlyphRecord">&#xE7C8;</x:String>
+    <x:String x:Key="GlyphImport">&#xE896;</x:String>
+    <x:String x:Key="GlyphSettings">&#xE713;</x:String>
+    <x:String x:Key="GlyphPosts">&#xE8F1;</x:String>
+    <x:String x:Key="GlyphQueue">&#xE718;</x:String>
+    <x:String x:Key="GlyphLike">&#xEB51;</x:String>
+    <x:String x:Key="GlyphHide">&#xED1A;</x:String>
+    <x:String x:Key="GlyphSelected">&#xE73E;</x:String>
+    <x:String x:Key="GlyphOpen">&#xE8A7;</x:String>
+    <x:String x:Key="GlyphOpenFolder">&#xED43;</x:String>
+    <x:String x:Key="GlyphCopyFile">&#xE8C8;</x:String>
+    <x:String x:Key="GlyphCopyLink">&#xE71B;</x:String>
+    <x:String x:Key="GlyphAdd">&#xE710;</x:String>
+    <x:String x:Key="GlyphRemove">&#xE711;</x:String>
+    <x:String x:Key="GlyphDelete">&#xE74D;</x:String>
+    <x:String x:Key="GlyphEdit">&#xE70F;</x:String>
+    <x:String x:Key="GlyphRefresh">&#xE72C;</x:String>
+    <x:String x:Key="GlyphWeb">&#xE774;</x:String>
+    <x:String x:Key="GlyphSearch">&#xE721;</x:String>
+    <x:String x:Key="GlyphFilter">&#xE71C;</x:String>
+    <x:String x:Key="GlyphSort">&#xE8CB;</x:String>
+    <x:String x:Key="GlyphSortDescending">&#xE74B;</x:String>
+    <x:String x:Key="GlyphSortAscending">&#xE74A;</x:String>
+    <x:String x:Key="GlyphMore">&#xE712;</x:String>
+    <x:String x:Key="GlyphClose">&#xE711;</x:String>
+    <x:String x:Key="GlyphBack">&#xE72B;</x:String>
+    <x:String x:Key="GlyphPrevious">&#xE76B;</x:String>
+    <x:String x:Key="GlyphNext">&#xE76C;</x:String>
+    <x:String x:Key="GlyphChevronDown">&#xE70D;</x:String>
+    <x:String x:Key="GlyphZoomIn">&#xE8A3;</x:String>
+    <x:String x:Key="GlyphZoomOut">&#xE71F;</x:String>
+    <x:String x:Key="GlyphDetailsPane">&#xE8A0;</x:String>
+    <x:String x:Key="GlyphThumbnail">&#xE91B;</x:String>
+    <x:String x:Key="GlyphFolder">&#xE8B7;</x:String>
+    <x:String x:Key="GlyphArrowRight">&#xE72A;</x:String>
+    <x:String x:Key="GlyphDone">&#xE930;</x:String>
+    <x:String x:Key="GlyphWarning">&#xE7BA;</x:String>
+    <x:String x:Key="GlyphError">&#xEA39;</x:String>
+    <x:String x:Key="GlyphInLibrary">&#xE8F1;</x:String>
 
     <!--  Headings, sized for a desktop window (wave 11). The built-in Title
           style (28 px) made every page open like a phone screen's big title;

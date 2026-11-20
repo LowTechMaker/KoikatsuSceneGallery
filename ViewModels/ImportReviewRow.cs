@@ -46,7 +46,7 @@ public sealed partial class ImportReviewRow(string key, ImportReviewRowKind kind
     }
 
     /// <summary>Chevron glyph: pointing down when open, right when collapsed.</summary>
-    public string ChevronGlyph => IsCollapsed ? "" : "";
+    public string ChevronGlyph => IsCollapsed ? Glyphs.Next : Glyphs.ChevronDown;
 
     partial void OnItemsChanged(IReadOnlyList<ImportItemReviewState> value)
     {

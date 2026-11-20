@@ -39,22 +39,22 @@ public sealed partial class LibraryBrowser
             // The rating filter is app-wide now and lives in the title bar, so it
             // is no chip here: removing it from one page would change every page.
             if (scene.GameFilter != GameFilterOption.All)
-                list.Add(new($"{UiText.Get("SceneGallery_Environment.Header")}：{GameLabels()[(int)scene.GameFilter]}",
+                list.Add(new(UiText.Format("Format_LabelValue", UiText.Get("SceneGallery_Environment.Header"), GameLabels()[(int)scene.GameFilter]),
                     () => scene.GameFilter = GameFilterOption.All));
         }
 
         if (libraryWide && VM is CharacterGalleryViewModel character && character.SourceFilter != CardSourceFilterOption.All)
-            list.Add(new($"{UiText.Get("Browser_Source")}：{SourceLabels()[(int)character.SourceFilter]}",
+            list.Add(new(UiText.Format("Format_LabelValue", UiText.Get("Browser_Source"), SourceLabels()[(int)character.SourceFilter]),
                 () => character.SourceFilter = CardSourceFilterOption.All));
 
         if (_groupKey is null && GetMetadataFilters() is { } metadata)
         {
             if (metadata.Sex is not null && _metadataSex?.SelectedItem is { } sex)
-                list.Add(new($"{UiText.Get("Metadata_Sex")}：{sex}", () => metadata.Sex = null));
+                list.Add(new(UiText.Format("Format_LabelValue", UiText.Get("Metadata_Sex"), sex), () => metadata.Sex = null));
             if (metadata.Personality is not null && _metadataPersonality?.SelectedItem is { } personality)
-                list.Add(new($"{UiText.Get("Metadata_Personality")}：{personality}", () => metadata.Personality = null));
+                list.Add(new(UiText.Format("Format_LabelValue", UiText.Get("Metadata_Personality"), personality), () => metadata.Personality = null));
             if (metadata.PluginGuid is { } guid)
-                list.Add(new($"{UiText.Get("Metadata_PluginGuid")}：{guid}", () => metadata.PluginGuid = null));
+                list.Add(new(UiText.Format("Format_LabelValue", UiText.Get("Metadata_PluginGuid"), guid), () => metadata.PluginGuid = null));
         }
 
         if (libraryWide && ResolutionFilter() is { Enabled: true, Count: > 0 } resolution)
@@ -115,7 +115,7 @@ public sealed partial class LibraryBrowser
                             Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
                             VerticalAlignment = VerticalAlignment.Center,
                         },
-                        new FontIcon { Glyph = "", FontSize = 10, VerticalAlignment = VerticalAlignment.Center },
+                        new FontIcon { Glyph = Glyphs.Remove, FontSize = 10, VerticalAlignment = VerticalAlignment.Center },
                     },
                 },
             };

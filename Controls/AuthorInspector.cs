@@ -39,8 +39,8 @@ internal sealed class AuthorInspector : UserControl
         Content = UiText.Get("Inspector_Open"),
         Style = (Style)Application.Current.Resources["AccentButtonStyle"],
     };
-    private readonly Button _profile = IconButton("\uE774", "AuthorInspector_Profile");
-    private readonly Button _refresh = IconButton("\uE72C", "AuthorInspector_Refresh");
+    private readonly Button _profile = IconButton(Glyphs.Web, "AuthorInspector_Profile");
+    private readonly Button _refresh = IconButton(Glyphs.Refresh, "AuthorInspector_Refresh");
     /// <summary>Recent cards, in equal columns that fill the pane (a wrap of fixed squares left a gap on the right).</summary>
     private readonly Grid _previews = new() { ColumnSpacing = UiMetrics.AuthorPanePreviewGap, RowSpacing = UiMetrics.AuthorPanePreviewGap };
 

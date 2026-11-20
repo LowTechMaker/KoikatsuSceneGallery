@@ -89,7 +89,7 @@
             <Grid x:Name="SettingsTabs" Grid.Column="1" Grid.Row="1">
 
             <!-- General Tab -->
-            <appControls:SettingsTab x:Uid="Settings_TabGeneral" Glyph="&#xE713;">
+            <appControls:SettingsTab x:Uid="Settings_TabGeneral" Glyph="{StaticResource GlyphSettings}">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="{StaticResource Space8}">
 
@@ -103,7 +103,7 @@
                             x:Uid="SC_ShowFileNames"
                             AutomationProperties.AutomationId="SettingsShowFileNamesCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE91B;" />
+                                <FontIcon Glyph="{StaticResource GlyphThumbnail}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsShowFileNamesToggle"
@@ -115,7 +115,7 @@
                             x:Uid="SC_RatingSource"
                             AutomationProperties.AutomationId="SettingsRatingSourceCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE734;" />
+                                <FontIcon Glyph="{StaticResource GlyphRating}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ComboBox
                                 MinWidth="160"
@@ -133,7 +133,7 @@
                             x:Uid="SC_RatingFilterEnabled"
                             AutomationProperties.AutomationId="SettingsRatingFilterCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE71C;" />
+                                <FontIcon Glyph="{StaticResource GlyphFilter}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsRatingFilterToggle"
@@ -144,7 +144,7 @@
                             x:Uid="SC_ScrollToTop"
                             AutomationProperties.AutomationId="SettingsScrollToTopCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE74A;" />
+                                <FontIcon Glyph="{StaticResource GlyphSortAscending}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsScrollToTopToggle"
@@ -177,7 +177,7 @@
                             x:Uid="SC_GroupCollapseAnimation"
                             AutomationProperties.AutomationId="SettingsGroupCollapseAnimationCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE8B9;" />
+                                <FontIcon Glyph="{StaticResource GlyphScene}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsGroupCollapseAnimationToggle"
@@ -230,7 +230,7 @@
                             x:Uid="SC_Language"
                             AutomationProperties.AutomationId="SettingsLanguageCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE774;" />
+                                <FontIcon Glyph="{StaticResource GlyphWeb}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ComboBox
                                 x:Name="LanguageComboBox"
@@ -260,7 +260,7 @@
             </appControls:SettingsTab>
 
             <!-- Folders Tab -->
-            <appControls:SettingsTab x:Uid="Settings_TabFolders" Glyph="&#xE8B7;">
+            <appControls:SettingsTab x:Uid="Settings_TabFolders" Glyph="{StaticResource GlyphFolder}">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="{StaticResource Space8}">
 
@@ -302,10 +302,10 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{StaticResource GlyphFolder}" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphDelete}" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -352,10 +352,10 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{StaticResource GlyphFolder}" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCharacterFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphDelete}" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -402,10 +402,10 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
+                                                <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{StaticResource GlyphFolder}" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCoordinateFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphDelete}" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -457,7 +457,7 @@
 
                         <controls:SettingsCard x:Uid="SC_ModInstallFolderName">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE8B7;" />
+                                <FontIcon Glyph="{StaticResource GlyphFolder}" />
                             </controls:SettingsCard.HeaderIcon>
                             <TextBox MinWidth="200" Text="{x:Bind ViewModel.ModInstallFolderName, Mode=TwoWay}" />
                         </controls:SettingsCard>
@@ -476,7 +476,7 @@
             </appControls:SettingsTab>
 
             <!-- Filters Tab -->
-            <appControls:SettingsTab x:Uid="Settings_TabFilters" Glyph="&#xE71C;">
+            <appControls:SettingsTab x:Uid="Settings_TabFilters" Glyph="{StaticResource GlyphFilter}">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="{StaticResource Space8}">
                         <TextBlock x:Uid="Settings_SizeFiltersHeader" Style="{StaticResource SectionTitleTextBlockStyle}" />
@@ -489,7 +489,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="&#xE91B;" FontSize="20" VerticalAlignment="Center" />
+                                    <FontIcon Glyph="{StaticResource GlyphThumbnail}" FontSize="20" VerticalAlignment="Center" />
                                     <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_SceneResolutionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetResolutionFilterSummary(ViewModel.ResolutionFilterEnabled, ViewModel.AllowedResolutions.Count), Mode=OneWay}"
@@ -513,7 +513,7 @@
                                                     ToolTipService.ToolTip="{x:Bind local:SettingsPage.GetRemoveResolutionLabel((x:String))}">
                                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                                     <TextBlock Text="{x:Bind}" />
-                                                    <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                                    <FontIcon Glyph="{StaticResource GlyphRemove}" FontSize="10" />
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
@@ -543,7 +543,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="&#xE77B;" FontSize="20" VerticalAlignment="Center" />
+                                    <FontIcon Glyph="{StaticResource GlyphCharacter}" FontSize="20" VerticalAlignment="Center" />
                                     <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_CharaResolutionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetResolutionFilterSummary(ViewModel.CharacterResolutionFilterEnabled, ViewModel.CharacterAllowedResolutions.Count), Mode=OneWay}"
@@ -567,7 +567,7 @@
                                                     ToolTipService.ToolTip="{x:Bind local:SettingsPage.GetRemoveResolutionLabel((x:String))}">
                                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                                     <TextBlock Text="{x:Bind}" />
-                                                    <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                                    <FontIcon Glyph="{StaticResource GlyphRemove}" FontSize="10" />
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
@@ -621,7 +621,7 @@
                                                     ToolTipService.ToolTip="{x:Bind local:SettingsPage.GetRemoveResolutionLabel((x:String))}">
                                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                                     <TextBlock Text="{x:Bind}" />
-                                                    <FontIcon Glyph="&#xE711;" FontSize="10" />
+                                                    <FontIcon Glyph="{StaticResource GlyphRemove}" FontSize="10" />
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
@@ -677,7 +677,7 @@
                                             Command="{x:Bind ViewModel.RescanMetadataCommand}"
                                             IsEnabled="{x:Bind CanScanMetadata(ViewModel.PluginAnalysisEnabled, GalleryViewModel.IsNotParsingMetadata), Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                                                <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
+                                                <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
                                                 <TextBlock x:Uid="Settings_RescanAll" />
                                             </StackPanel>
                                         </Button>
@@ -713,7 +713,7 @@
                             x:Uid="SC_CacheFolder"
                             AutomationProperties.AutomationId="SettingsCacheFolderCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE8B7;" />
+                                <FontIcon Glyph="{StaticResource GlyphFolder}" />
                             </controls:SettingsCard.HeaderIcon>
                             <TextBlock
                                 MaxWidth="400"
@@ -758,7 +758,7 @@
                                 </Button>
                                 <Button Click="ClearCache_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
+                                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphDelete}" />
                                         <TextBlock x:Uid="Settings_ClearCache" />
                                     </StackPanel>
                                 </Button>
@@ -918,7 +918,7 @@
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    Glyph="&#xE76C;" />
+                                                    Glyph="{StaticResource GlyphNext}" />
                                             </Grid>
                                         </Button>
                                     </DataTemplate>
@@ -978,7 +978,7 @@
                             x:Uid="SC_ThumbnailSize"
                             AutomationProperties.AutomationId="SettingsThumbnailSizeCard">
                             <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE91B;" />
+                                <FontIcon Glyph="{StaticResource GlyphThumbnail}" />
                             </controls:SettingsCard.HeaderIcon>
                             <ComboBox
                                 MinWidth="160"

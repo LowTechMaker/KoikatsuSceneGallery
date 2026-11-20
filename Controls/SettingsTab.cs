@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Controls;
 
@@ -17,7 +18,7 @@ public sealed class SettingsTab : ContentControl
         DependencyProperty.Register(nameof(Header), typeof(string), typeof(SettingsTab), new PropertyMetadata(""));
 
     public static readonly DependencyProperty GlyphProperty =
-        DependencyProperty.Register(nameof(Glyph), typeof(string), typeof(SettingsTab), new PropertyMetadata(""));
+        DependencyProperty.Register(nameof(Glyph), typeof(string), typeof(SettingsTab), new PropertyMetadata(Glyphs.Settings));
 
     public SettingsTab()
     {

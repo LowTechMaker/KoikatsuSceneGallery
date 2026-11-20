@@ -504,8 +504,7 @@ public sealed partial class AuthorDetailPage : Page
         { };
         var error = new TextBlock
         {
-            Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.IndianRed),
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed,
         };

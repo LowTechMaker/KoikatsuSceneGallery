@@ -17,7 +17,7 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal sealed partial class UserRatingPicker : Grid
 {
-    private static readonly string[] Labels = ["G", "R-18", "R-18G"];
+    private static readonly string[] Labels = [.. RatingLabels.All];
     private readonly ToggleButton[] _buttons;
     private int? _rating;
 

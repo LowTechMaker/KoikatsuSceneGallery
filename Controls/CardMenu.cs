@@ -34,7 +34,7 @@ internal static class CardMenu
         var count = members.Count;
         var first = members[0];
 
-        menu.Items.Add(Item(count > 1 ? "CardMenu_OpenGroup" : "CardMenu_Open", "", () =>
+        menu.Items.Add(Item(count > 1 ? "CardMenu_OpenGroup" : "CardMenu_Open", Glyphs.Open, () =>
         {
             open();
             return Task.CompletedTask;
@@ -46,7 +46,7 @@ internal static class CardMenu
             var rating = new MenuFlyoutSubItem
             {
                 Text = count > 1 ? UiText.Format("CardMenu_RateMany", scenes.Length) : UiText.Get("CardMenu_Rate"),
-                Icon = new FontIcon { Glyph = "" },
+                Icon = new FontIcon { Glyph = Glyphs.Rating },
             };
             for (var i = 0; i < CardRatingActions.Labels.Length; i++)
             {
@@ -69,29 +69,29 @@ internal static class CardMenu
 
         var paths = members.Select(card => card.FilePath).ToArray();
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Queued, "\uE710", "CardMenu_Queue"));
-        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Liked, "\uEB51", "CardMenu_Like"));
-        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Hidden, "\uED1A", "CardMenu_Hide"));
+        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Queued, Glyphs.Queue, "CardMenu_Queue"));
+        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Liked, Glyphs.Like, "CardMenu_Like"));
+        menu.Items.Add(StateItem(first.FilePath, paths, CardFlag.Hidden, Glyphs.Hide, "CardMenu_Hide"));
 
         if (count == 1 && CardOrigin.NeedsSource(first))
         {
-            var addSource = Item("CardMenu_AddSource", "\uE71B", () => Controls.ReidentifyDialog.ShowAsync(menu.XamlRoot, first.FilePath));
+            var addSource = Item("CardMenu_AddSource", Glyphs.CopyLink, () => Controls.ReidentifyDialog.ShowAsync(menu.XamlRoot, first.FilePath));
             AutomationProperties.SetAutomationId(addSource, "CardMenu_AddSource");
             menu.Items.Add(addSource);
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item(count > 1 ? "CardMenu_CopyFiles" : "CardMenu_CopyFile", "",
+        menu.Items.Add(Item(count > 1 ? "CardMenu_CopyFiles" : "CardMenu_CopyFile", Glyphs.CopyFile,
             () => CardFileActions.CopyFilesAsync([.. members.Select(card => card.FilePath)], "Browser.CopyFile"), count));
         if (count == 1)
-            menu.Items.Add(Item("CardMenu_CopyPath", "",
+            menu.Items.Add(Item("CardMenu_CopyPath", Glyphs.CopyLink,
                 () => { CardFileActions.CopyPath(first.FilePath, "Browser.CopyFilePath"); return Task.CompletedTask; }));
-        menu.Items.Add(Item("Gallery_OpenFileLocation.Text", "", () => CardFileActions.OpenFolderAsync(first.FilePath)));
+        menu.Items.Add(Item("Gallery_OpenFileLocation.Text", Glyphs.OpenFolder, () => CardFileActions.OpenFolderAsync(first.FilePath)));
 
         if (frame is not null && (first as IAuthorOwner)?.Author is { } author && FindAuthor(author) is { } summary)
         {
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(Item("CardMenu_GoToAuthor", "", () =>
+            menu.Items.Add(Item("CardMenu_GoToAuthor", Glyphs.Author, () =>
             {
                 frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
                 return Task.CompletedTask;

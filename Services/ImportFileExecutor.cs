@@ -59,7 +59,7 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                             dispatcher.TryEnqueue(() =>
                             {
                                 item.Status = ImportItemStatus.Skipped;
-                                item.ErrorMessage = "File already exists";
+                                item.ErrorMessage = UiText.Get("Import_Error_FileExists");
                             });
                             break;
                         default:

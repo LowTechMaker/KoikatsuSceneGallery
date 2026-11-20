@@ -32,14 +32,14 @@ public sealed partial class CardActionBar : StackPanel
     {
         Orientation = Orientation.Horizontal;
         Spacing = 4;
-        Children.Add(Action("", "CardAction_OpenFolder", "CardActionOpenFolder",
+        Children.Add(Action(Glyphs.OpenFolder, "CardAction_OpenFolder", "CardActionOpenFolder",
             () => FilePath is { } path ? CardFileActions.OpenFolderAsync(path) : Task.CompletedTask));
-        Children.Add(Action("", "CardAction_CopyFile", "CardActionCopyFile",
+        Children.Add(Action(Glyphs.CopyFile, "CardAction_CopyFile", "CardActionCopyFile",
             () => FilePath is { } path ? CardFileActions.CopyFilesAsync([path], "Detail.CopyFile") : Task.CompletedTask));
 
         var more = new Button
         {
-            Content = new FontIcon { Glyph = "", FontSize = UiMetrics.IconSize },
+            Content = new FontIcon { Glyph = Glyphs.More, FontSize = UiMetrics.IconSize },
             Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
             Padding = new Thickness(8, 6, 8, 6),
         };
@@ -98,25 +98,25 @@ public sealed partial class CardActionBar : StackPanel
     {
         menu.Items.Clear();
         if (FilePath is not { } path) return;
-        AddState(menu, path, CardFlag.Queued, "\uE710", "CardAction_Queue");
-        AddState(menu, path, CardFlag.Liked, "\uEB51", "CardAction_Like");
-        AddState(menu, path, CardFlag.Hidden, "\uED1A", "CardAction_Hide");
+        AddState(menu, path, CardFlag.Queued, Glyphs.Queue, "CardAction_Queue");
+        AddState(menu, path, CardFlag.Liked, Glyphs.Like, "CardAction_Like");
+        AddState(menu, path, CardFlag.Hidden, Glyphs.Hide, "CardAction_Hide");
         var addSource = new MenuFlyoutItem
         {
             Text = UiText.Get("CardMenu_AddSource"),
-            Icon = new FontIcon { Glyph = "\uE71B" },
+            Icon = new FontIcon { Glyph = Glyphs.CopyLink },
         };
         AutomationProperties.SetAutomationId(addSource, "CardAction_AddSource");
         addSource.Click += (_, _) => _ = ReidentifyDialog.ShowAsync(XamlRoot, path);
         menu.Items.Add(addSource);
         menu.Items.Add(new MenuFlyoutSeparator());
-        Add(menu, "", "CardAction_CopyPath", () => CardFileActions.CopyPath(path, "Detail.CopyFilePath"));
+        Add(menu, Glyphs.CopyLink, "CardAction_CopyPath", () => CardFileActions.CopyPath(path, "Detail.CopyFilePath"));
         if (Path.GetDirectoryName(path) is { } folder)
-            Add(menu, "", "CardAction_CopyFolder", () => DetailNavigationHelper.CopyText(folder));
+            Add(menu, Glyphs.Folder, "CardAction_CopyFolder", () => DetailNavigationHelper.CopyText(folder));
         if (PixivUrl is { } pixiv)
-            Add(menu, "", "CardAction_CopyPixiv", () => CardFileActions.CopyLink(pixiv, path, "Detail.CopyPixivUrl"));
+            Add(menu, Glyphs.CopyLink, "CardAction_CopyPixiv", () => CardFileActions.CopyLink(pixiv, path, "Detail.CopyPixivUrl"));
         if (BepisDbUrl is { } bepis)
-            Add(menu, "", "CardAction_CopyBepisDb", () => CardFileActions.CopyLink(bepis, path, "Detail.CopyBepisDbUrl"));
+            Add(menu, Glyphs.CopyLink, "CardAction_CopyBepisDb", () => CardFileActions.CopyLink(bepis, path, "Detail.CopyBepisDbUrl"));
     }
 
     private static void Add(MenuFlyout menu, string glyph, string key, Action run)

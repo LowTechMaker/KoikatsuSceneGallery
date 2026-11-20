@@ -569,7 +569,7 @@ public sealed partial class ImportPage : Page
 
             var pictures = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
             pictures.Children.Add(Thumb(conflict.Item.SourceFilePath));
-            pictures.Children.Add(new FontIcon { Glyph = "", FontSize = 12, Foreground = secondary });
+            pictures.Children.Add(new FontIcon { Glyph = Glyphs.ArrowRight, FontSize = 12, Foreground = secondary });
             pictures.Children.Add(Thumb(conflict.ExistingPath));
 
             var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
@@ -997,9 +997,9 @@ public sealed partial class ImportPage : Page
             MinWidth = 180,
             SelectedIndex = 0,
         };
-        ratingBox.Items.Add(new ComboBoxItem { Content = "G", Tag = ContentRating.AllAges });
-        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18", Tag = ContentRating.R18 });
-        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18G", Tag = ContentRating.R18G });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.General, Tag = ContentRating.AllAges });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.R18, Tag = ContentRating.R18 });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.R18G, Tag = ContentRating.R18G });
 
         var panel = new StackPanel { Spacing = 10 };
         if (selectionContext is not null)

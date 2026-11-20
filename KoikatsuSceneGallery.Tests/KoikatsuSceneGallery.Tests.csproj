@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KoikatsuSceneGallery.Core\KoikatsuSceneGallery.Core.csproj" />
     <ProjectReference Include="..\PluginSdk\SceneGallery.PluginSdk.csproj" />
+    <Compile Include="..\Helpers\Glyphs.cs" Link="Helpers\Glyphs.cs" />
     <Compile Include="..\Models\ImportItem.cs" Link="Models\ImportItem.cs" />
     <Compile Include="..\ViewModels\ImportAuthorAssignment.cs" Link="ViewModels\ImportAuthorAssignment.cs" />
     <Compile Include="..\ViewModels\ImportSearchResultAssignment.cs" Link="ViewModels\ImportSearchResultAssignment.cs" />

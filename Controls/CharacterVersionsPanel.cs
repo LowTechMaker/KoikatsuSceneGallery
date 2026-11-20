@@ -236,9 +236,9 @@ internal sealed class CharacterVersionsPanel : StackPanel
         };
 
         var menu = new MenuFlyout();
-        var reveal = new MenuFlyoutItem { Text = UiText.Get("Detail_RevealVersion.Text"), Icon = new FontIcon { Glyph = "" } };
+        var reveal = new MenuFlyoutItem { Text = UiText.Get("Detail_RevealVersion.Text"), Icon = new FontIcon { Glyph = Glyphs.OpenFolder } };
         reveal.Click += (_, _) => UiEventGuard.Run(_logger, "Inspector.RevealVersion", () => CardFileActions.OpenFolderAsync(version.FilePath));
-        var delete = new MenuFlyoutItem { Text = UiText.Get("Detail_DeleteVersion.Text"), Icon = new FontIcon { Glyph = "" } };
+        var delete = new MenuFlyoutItem { Text = UiText.Get("Detail_DeleteVersion.Text"), Icon = new FontIcon { Glyph = Glyphs.Delete } };
         delete.Click += (_, _) => UiEventGuard.Run(_logger, "Inspector.DeleteVersion", () => DeleteAsync(version, count));
         menu.Items.Add(reveal);
         menu.Items.Add(delete);

@@ -74,7 +74,7 @@
                                             Tag="{x:Bind}"
                                             Visibility="{x:Bind Display.HasProfileUrl, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE774;" />
+                                                <FontIcon Glyph="{StaticResource GlyphWeb}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                         <MenuFlyoutItem
@@ -82,7 +82,7 @@
                                             Click="RefreshOne_Click"
                                             Tag="{x:Bind}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE72C;" />
+                                                <FontIcon Glyph="{StaticResource GlyphRefresh}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                         <MenuFlyoutItem
@@ -91,7 +91,7 @@
                                             Tag="{x:Bind}"
                                             Visibility="{x:Bind Display.IsLocalSource, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE70F;" />
+                                                <FontIcon Glyph="{StaticResource GlyphEdit}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                     </MenuFlyout>
@@ -101,7 +101,7 @@
                     </GridView.ItemTemplate>
                 </GridView>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Space12}" Visibility="{x:Bind IsEmpty, Mode=OneWay}">
-                    <FontIcon Glyph="&#xE721;" FontSize="32" />
+                    <FontIcon Glyph="{StaticResource GlyphSearch}" FontSize="32" />
                     <TextBlock x:Uid="Authors_NoResults" />
                     <Button x:Uid="SceneGallery_ResetSearch" Click="ClearSearch_Click" HorizontalAlignment="Center" />
                 </StackPanel>
@@ -172,7 +172,7 @@
                     x:Uid="Authors_Sort"
                     AutomationProperties.AutomationId="AuthorSortButton">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8CB;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphSort}" />
                         <TextBlock x:Name="SortLabel" />
                     </StackPanel>
                     <DropDownButton.Flyout>
@@ -204,7 +204,7 @@
                     AutomationProperties.AutomationId="AuthorsLocalSourcesButton"
                     Click="LocalSources_Click">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8F4;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphLocalSources}" />
                         <TextBlock x:Uid="Authors_LocalSourcesLabel" />
                     </StackPanel>
                 </Button>
@@ -214,7 +214,7 @@
                     IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
                     Command="{x:Bind ViewModel.RefreshAllCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
                         <TextBlock x:Uid="Authors_RefreshAllLabel" />
                     </StackPanel>
                 </Button>

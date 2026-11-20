@@ -2383,4 +2383,10 @@
   <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} cards are hidden. Click to show them.</value></data>
   <data name="TitleBar_RatingLast" xml:space="preserve"><value>At least one rating has to be shown</value></data>
   <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>Explore</value></data>
+  <data name="Nav_ImportBusy" xml:space="preserve"><value>Importing</value></data>
+  <data name="Nav_ImportAnalyzing" xml:space="preserve"><value>Analyzing, {0} pending</value></data>
+  <data name="Cookie_WebViewFailed" xml:space="preserve"><value>Could not start WebView2: {0}</value></data>
+  <data name="Import_Error_FileExists" xml:space="preserve"><value>A file with this name already exists</value></data>
+  <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>Another artwork already uses this file name: {0}</value></data>
+  <data name="Format_LabelValue" xml:space="preserve"><value>{0}: {1}</value></data>
 </root>

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Services;
 using SceneGallery.PluginSdk;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Models;
 
@@ -108,9 +109,9 @@ public partial class ImportItem : ObservableObject
 
     public string RatingText => Rating switch
     {
-        ContentRating.R18  => "R-18",
-        ContentRating.R18G => "R-18G",
-        ContentRating.AllAges => "G",
+        ContentRating.R18  => RatingLabels.R18,
+        ContentRating.R18G => RatingLabels.R18G,
+        ContentRating.AllAges => RatingLabels.General,
         _ => "",
     };
 
@@ -166,10 +167,10 @@ public partial class ImportItem : ObservableObject
 
     public string StatusGlyph => Status switch
     {
-        ImportItemStatus.Completed        => "",  // Accept checkmark
-        ImportItemStatus.Failed           => "",  // Error badge
-        ImportItemStatus.Skipped          => "",  // Cancel
-        ImportItemStatus.AlreadyInLibrary => "",  // Library
+        ImportItemStatus.Completed        => Glyphs.Done,  // Accept checkmark
+        ImportItemStatus.Failed           => Glyphs.Error,  // Error badge
+        ImportItemStatus.Skipped          => Glyphs.Remove,  // Cancel
+        ImportItemStatus.AlreadyInLibrary => Glyphs.InLibrary,  // Library
         _ => "",
     };
 

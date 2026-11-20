@@ -56,7 +56,7 @@ internal sealed class StepIndicator : StackPanel
             var active = i == current;
             dot.Background = active ? Brush("AccentFillColorDefaultBrush") : null;
             dot.BorderBrush = active || done ? Brush("AccentFillColorDefaultBrush") : Brush("ControlStrongStrokeColorDefaultBrush");
-            mark.Text = done ? "" : (i + 1).ToString();
+            mark.Text = done ? Glyphs.Selected : (i + 1).ToString();
             mark.FontFamily = done ? (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"] : FontFamily.XamlAutoFontFamily;
             mark.Foreground = active ? Brush("TextOnAccentFillColorPrimaryBrush") : done ? Brush("AccentTextFillColorPrimaryBrush") : Brush("TextFillColorSecondaryBrush");
             label.Foreground = active ? Brush("TextFillColorPrimaryBrush") : Brush("TextFillColorSecondaryBrush");

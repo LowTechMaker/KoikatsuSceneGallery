@@ -2,6 +2,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml.Controls;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Helpers;
 
@@ -14,7 +15,7 @@ namespace KoikatsuSceneGallery.Helpers;
 internal static class CardRatingActions
 {
     /// <summary>The labels for ratings 0, 1 and 2.</summary>
-    public static readonly string[] Labels = ["G", "R-18", "R-18G"];
+    public static readonly string[] Labels = [.. RatingLabels.All];
 
     private static UserCardRatingStore Store => App.Services.GetRequiredService<UserCardRatingStore>();
 

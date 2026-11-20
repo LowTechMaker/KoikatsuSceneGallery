@@ -6,7 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:converters="using:KoikatsuSceneGallery.Converters"
-    xmlns:controls="using:KoikatsuSceneGallery.Controls"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls" xmlns:helpers="using:KoikatsuSceneGallery.Helpers"
     xmlns:pages="using:KoikatsuSceneGallery.Pages"
     xmlns:vm="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d"
@@ -27,7 +27,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE77B;" VerticalAlignment="Center"
+                <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphAuthor}" VerticalAlignment="Center"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyTextBlockStyle}"
@@ -79,7 +79,7 @@
                           IsEnabled="{x:Bind HasSelectableItems, Mode=OneWay}"
                           Tag="{x:Bind}" Click="ReviewHeaderBox_Click"
                           AutomationProperties.Name="{x:Bind Title, Mode=OneWay}" />
-                <FontIcon Grid.Column="1" Glyph="&#xE8B7;" FontSize="13" VerticalAlignment="Center"
+                <FontIcon Grid.Column="1" Glyph="{StaticResource GlyphFolder}" FontSize="13" VerticalAlignment="Center"
                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 <TextBlock Grid.Column="2" Text="{x:Bind Title, Mode=OneWay}" VerticalAlignment="Center"
                            Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold"
@@ -140,7 +140,7 @@
                         Padding="8" Background="Transparent" BorderThickness="0"
                         Tag="{x:Bind}" Click="RemoveReviewItem_Click"
                         AutomationProperties.Name="{x:Bind Item.FileName}">
-                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+                    <FontIcon Glyph="{StaticResource GlyphRemove}" FontSize="12" />
                 </Button>
             </Grid>
         </DataTemplate>
@@ -190,7 +190,7 @@
                         Padding="8" Background="Transparent" BorderThickness="0"
                         Tag="{x:Bind}" Click="RemoveMod_Click"
                         AutomationProperties.Name="{x:Bind Title}">
-                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+                    <FontIcon Glyph="{StaticResource GlyphRemove}" FontSize="12" />
                 </Button>
             </Grid>
         </DataTemplate>
@@ -247,7 +247,7 @@
             <Button Grid.Column="2" VerticalAlignment="Center" AutomationProperties.AutomationId="ImportOptionsButton"
                     x:Uid="Import_OptionsButton">
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE713;" />
+                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphSettings}" />
                     <TextBlock x:Uid="Import_OptionsLabel" />
                 </StackPanel>
                 <Button.Flyout>
@@ -258,7 +258,7 @@
                                     HorizontalAlignment="Stretch"
                                     Command="{x:Bind ViewModel.RefreshLibraryIndexCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
+                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
                                     <TextBlock x:Uid="Import_RefreshLibraryIndex" />
                                 </StackPanel>
                             </Button>
@@ -278,17 +278,17 @@
                                 <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:RatingBadge Text="G" />
+                                    <controls:RatingBadge Text="{x:Bind helpers:RatingLabels.General}" />
                                     <TextBlock Text="{x:Bind ViewModel.AllAgesCount, Mode=OneWay}" VerticalAlignment="Center"
                                                Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:RatingBadge Text="R-18" />
+                                    <controls:RatingBadge Text="{x:Bind helpers:RatingLabels.R18}" />
                                     <TextBlock Text="{x:Bind ViewModel.R18Count, Mode=OneWay}" VerticalAlignment="Center"
                                                Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <controls:RatingBadge Text="R-18G" />
+                                    <controls:RatingBadge Text="{x:Bind helpers:RatingLabels.R18G}" />
                                     <TextBlock Text="{x:Bind ViewModel.R18GCount, Mode=OneWay}" VerticalAlignment="Center"
                                                Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                 </StackPanel>
@@ -356,7 +356,7 @@
                     <ComboBox Grid.Column="3" x:Uid="Import_RatingFilter" MinWidth="120"
                               SelectedIndex="{x:Bind ViewModel.ReviewFilterIndex, Mode=TwoWay}">
                         <ComboBoxItem x:Uid="Import_AllRatings" />
-                        <ComboBoxItem Content="G" /><ComboBoxItem Content="R-18" /><ComboBoxItem Content="R-18G" />
+                        <ComboBoxItem Content="{x:Bind helpers:RatingLabels.General}" /><ComboBoxItem Content="{x:Bind helpers:RatingLabels.R18}" /><ComboBoxItem Content="{x:Bind helpers:RatingLabels.R18G}" />
                     </ComboBox>
                 </Grid>
 
@@ -447,7 +447,7 @@
                                 DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" OverflowButtonVisibility="Auto"
                                 AutomationProperties.AutomationId="ImportSelectionCommands">
                         <AppBarButton x:Name="ReviewEditButton" x:Uid="Import_SelAuthor">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE77B;" /></AppBarButton.Icon>
+                            <AppBarButton.Icon><FontIcon Glyph="{StaticResource GlyphAuthor}" /></AppBarButton.Icon>
                             <AppBarButton.Flyout>
                                 <Flyout x:Name="ReviewEditFlyout" Placement="TopEdgeAlignedLeft">
                                     <StackPanel Width="300" Spacing="10">
@@ -471,14 +471,14 @@
                             <AppBarButton.Icon><FontIcon Glyph="&#xE7BA;" /></AppBarButton.Icon>
                             <AppBarButton.Flyout>
                                 <MenuFlyout Placement="TopEdgeAlignedLeft">
-                                    <MenuFlyoutItem Text="G" Tag="1" Click="ApplySelectionRating_Click" />
-                                    <MenuFlyoutItem Text="R-18" Tag="2" Click="ApplySelectionRating_Click" />
-                                    <MenuFlyoutItem Text="R-18G" Tag="3" Click="ApplySelectionRating_Click" />
+                                    <MenuFlyoutItem Text="{x:Bind helpers:RatingLabels.General}" Tag="1" Click="ApplySelectionRating_Click" />
+                                    <MenuFlyoutItem Text="{x:Bind helpers:RatingLabels.R18}" Tag="2" Click="ApplySelectionRating_Click" />
+                                    <MenuFlyoutItem Text="{x:Bind helpers:RatingLabels.R18G}" Tag="3" Click="ApplySelectionRating_Click" />
                                 </MenuFlyout>
                             </AppBarButton.Flyout>
                         </AppBarButton>
                         <AppBarButton x:Uid="Import_SelSearch" Click="SearchSelected_Click">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE721;" /></AppBarButton.Icon>
+                            <AppBarButton.Icon><FontIcon Glyph="{StaticResource GlyphSearch}" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarButton x:Uid="Import_SelAuthorCheck" Click="OpenAuthorCheck_Click"
                                       Visibility="{x:Bind ViewModel.AuthorCheckVisibility}">
@@ -486,7 +486,7 @@
                         </AppBarButton>
                         <AppBarSeparator />
                         <AppBarButton x:Uid="Import_SelRemove" Command="{x:Bind ViewModel.RemoveReviewSelectionCommand}">
-                            <AppBarButton.Icon><FontIcon Glyph="&#xE74D;" /></AppBarButton.Icon>
+                            <AppBarButton.Icon><FontIcon Glyph="{StaticResource GlyphDelete}" /></AppBarButton.Icon>
                         </AppBarButton>
                         <AppBarButton x:Uid="Import_SelClear" Click="ClearSelection_Click">
                             <AppBarButton.Icon><FontIcon Glyph="&#xE894;" /></AppBarButton.Icon>
@@ -519,9 +519,8 @@
                     <TextBlock x:Name="LinkInLibraryBlock"
                                TextWrapping="Wrap" IsTextSelectionEnabled="True"
                                Style="{StaticResource CaptionTextBlockStyle}"
-                               Visibility="{x:Bind ViewModel.LinkInLibraryVisibility, Mode=OneWay}">
-                        <TextBlock.Foreground><SolidColorBrush Color="#E8892B" /></TextBlock.Foreground>
-                    </TextBlock>
+                               Foreground="{ThemeResource AttentionTextBrush}"
+                               Visibility="{x:Bind ViewModel.LinkInLibraryVisibility, Mode=OneWay}" />
                 </StackPanel>
             </Border>
 
@@ -536,12 +535,12 @@
                 </Grid.ColumnDefinitions>
                 <Button x:Name="AddFilesButton" Click="ShowAddFilesOverlay_Click" x:Uid="Import_AddFilesButton">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE710;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphAdd}" />
                         <TextBlock x:Uid="Import_AddFilesLabel" />
                     </StackPanel>
                 </Button>
                 <Button Grid.Column="1" x:Uid="Import_MoreButton" Padding="10,5">
-                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE712;" />
+                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphMore}" />
                     <Button.Flyout>
                         <MenuFlyout Placement="TopEdgeAlignedLeft">
                             <MenuFlyoutItem x:Uid="Import_More_Undo"
@@ -569,7 +568,7 @@
                         IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}"
                         AutomationProperties.Name="{x:Bind ViewModel.ImportPlanText, Mode=OneWay}">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE896;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphImport}" />
                         <TextBlock x:Uid="Import_ConfirmButtonText" />
                     </StackPanel>
                 </Button>

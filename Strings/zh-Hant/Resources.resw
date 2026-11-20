@@ -2383,4 +2383,10 @@
   <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} 的卡片已隱藏，點一下顯示</value></data>
   <data name="TitleBar_RatingLast" xml:space="preserve"><value>至少要顯示一種分級</value></data>
   <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>探索</value></data>
+  <data name="Nav_ImportBusy" xml:space="preserve"><value>正在匯入</value></data>
+  <data name="Nav_ImportAnalyzing" xml:space="preserve"><value>正在分析，剩餘 {0} 個</value></data>
+  <data name="Cookie_WebViewFailed" xml:space="preserve"><value>無法啟動 WebView2：{0}</value></data>
+  <data name="Import_Error_FileExists" xml:space="preserve"><value>已有同名檔案</value></data>
+  <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>另一個作品已使用此檔名：{0}</value></data>
+  <data name="Format_LabelValue" xml:space="preserve"><value>{0}：{1}</value></data>
 </root>
