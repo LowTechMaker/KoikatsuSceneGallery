@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using SceneGallery.PluginSdk;
@@ -262,22 +263,26 @@ public partial class AuthorDetailViewModel : ObservableObject
         FillPreviews(PostPreviews, PostGroups, group => GetPreviewWidth(group.CoverAspectRatio));
     }
 
+    /// <summary>Lines each overview section shows (wave 17); "view all" opens the tab.</summary>
+    private const int PreviewLines = 2;
+
+    /// <summary>
+    /// Fills a section with what fits on <see cref="PreviewLines"/> lines of the
+    /// overview's width. The sections used to be one row that scrolled sideways
+    /// (a TV app's shelf); they now wrap like the home page's (ShelfLines).
+    /// </summary>
     private void FillPreviews<T>(
         ObservableCollection<T> target,
         IEnumerable<T> source,
         Func<T, double> getWidth)
     {
         target.Clear();
-        double usedWidth = 0;
-        foreach (var item in source)
-        {
-            var itemWidth = getWidth(item) + PreviewSpacing;
-            if (target.Count > 0 && usedWidth + itemWidth > _overviewPreviewWidth)
-                break;
-
+        // More than two lines' worth is never needed: the narrowest tile is 72 px.
+        var candidates = source.Take(Math.Max(1, (int)(_overviewPreviewWidth / 72) + 1) * PreviewLines).ToArray();
+        var widths = candidates.Select(item => getWidth(item) + PreviewSpacing).ToArray();
+        var count = ShelfLines.Fit(widths, _overviewPreviewWidth, 0, PreviewLines);
+        foreach (var item in candidates.Take(Math.Max(count, Math.Min(1, candidates.Length))))
             target.Add(item);
-            usedWidth += itemWidth;
-        }
     }
 
     private static double GetPreviewWidth(int width, int height) =>

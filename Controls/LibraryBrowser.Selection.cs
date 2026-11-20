@@ -302,7 +302,9 @@ public sealed partial class LibraryBrowser
         SetLoupeLayout(open: false);
         if (card is null || EntryOf(card) is not { } entry) return;
         GalleryGrid.ScrollIntoView(entry);
-        DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));
+        // Programmatic, not Keyboard: the keyboard focus rectangle drew a loud
+        // white frame around the tile after every close (live check, wave 16).
+        DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Programmatic));
     }
 
     private GalleryEntry? EntryOf(CardBase card)

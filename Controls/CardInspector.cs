@@ -416,7 +416,7 @@ internal sealed class CardInspector : UserControl
     private void ShowStack(IReadOnlyList<CardBase> cards)
     {
         const int Shown = 4;
-        const double CardHeight = PreviewHeight - 36;
+        const double CardHeight = PreviewHeight - 44;
         _stack.Children.Clear();
         var layers = cards.Take(Shown).ToArray();
         // Back to front, so the first selected card is on top.
@@ -444,9 +444,10 @@ internal sealed class CardInspector : UserControl
                 // Each card behind the top one turned and shifted a little more.
                 RenderTransform = new CompositeTransform
                 {
-                    Rotation = i * 5,
-                    TranslateX = i * 10,
-                    TranslateY = -i * 4,
+                    // Small enough that the back cards stay inside the pane (live check, wave 16).
+                    Rotation = i * 3,
+                    TranslateX = i * 5,
+                    TranslateY = -i * 3,
                 },
                 Opacity = 1 - i * 0.12,
             };

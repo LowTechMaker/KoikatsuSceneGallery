@@ -100,6 +100,17 @@
    SelectionChanged="Grid_SelectionChanged" DoubleTapped="Grid_DoubleTapped" PreviewKeyDown="Grid_PreviewKeyDown"
    ContainerContentChanging="Container_Changing" CanDragItems="True" DragItemsStarting="Drag_Starting" AutomationProperties.AutomationId="GalleryGrid">
    <GridView.ItemContainerTransitions><TransitionCollection/></GridView.ItemContainerTransitions>
+   <!-- The tile draws its own selection mark (GalleryEntry.IsSelected). The grid's own
+        selected background filled the whole cell, a grey block wider than the tile. -->
+   <GridView.Resources>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelected" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelectedPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelectedPressed" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundPressed" Color="Transparent"/>
+    <x:Boolean x:Key="GridViewItemSelectionCheckMarkVisualEnabled">False</x:Boolean>
+    <Thickness x:Key="GridViewItemSelectedBorderThickness">0</Thickness>
+   </GridView.Resources>
    <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4"/></ItemsPanelTemplate></GridView.ItemsPanel>
    <GridView.ItemContainerStyle><Style TargetType="GridViewItem">
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/>
