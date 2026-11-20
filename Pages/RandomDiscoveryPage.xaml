@@ -83,7 +83,7 @@
                                     Style="{StaticResource MediaOverlayBadgeStyle}"
                                     Visibility="{x:Bind IsJoker}">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon Glyph="&#xE8EF;" FontSize="12" Foreground="{ThemeResource MediaOverlayForegroundBrush}" />
+                                    <FontIcon Glyph="{StaticResource GlyphJoker}" FontSize="12" Foreground="{ThemeResource MediaOverlayForegroundBrush}" />
                                     <TextBlock Text="{x:Bind JokerText}" Foreground="{ThemeResource MediaOverlayForegroundBrush}"
                                                FontSize="11" FontWeight="SemiBold" />
                                 </StackPanel>
@@ -108,6 +108,19 @@
                 </StackPanel>
             </GridView.Footer>
         </GridView>
+        <!--  Poker mode: the hand stands in a card rack (user request, after a photo
+              of a poker card holder); the grid above is the classic endless round.  -->
+        <Grid x:Name="HandArea" Grid.Row="3" Visibility="Collapsed" RowSpacing="{StaticResource Space12}">
+            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <controls:CardHolder x:Name="Holder" />
+            <StackPanel x:Name="HandFooter" Grid.Row="1" Spacing="{StaticResource Space8}" HorizontalAlignment="Center"
+                        Visibility="Collapsed" Padding="0,0,0,8">
+                <TextBlock x:Name="HandEndText" TextAlignment="Center" AutomationProperties.LiveSetting="Polite"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Button x:Name="HandContinueButton" x:Uid="Discovery_Continue" Click="Continue_Click"
+                        Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" MinHeight="36" />
+            </StackPanel>
+        </Grid>
         <StackPanel x:Name="EmptyPanel" Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
                     MaxWidth="420" Padding="16" Spacing="{StaticResource Space12}" Visibility="Collapsed">
             <TextBlock x:Name="EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" />

@@ -131,6 +131,7 @@
     <x:String x:Key="GlyphLike">&#xEB51;</x:String>
     <x:String x:Key="GlyphHide">&#xED1A;</x:String>
     <x:String x:Key="GlyphSelected">&#xE73E;</x:String>
+    <x:String x:Key="GlyphJoker">&#xE8EF;</x:String>
     <x:String x:Key="GlyphOpen">&#xE8A7;</x:String>
     <x:String x:Key="GlyphOpenFolder">&#xED43;</x:String>
     <x:String x:Key="GlyphCopyFile">&#xE8C8;</x:String>

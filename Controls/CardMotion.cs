@@ -173,6 +173,62 @@ internal static class CardMotion
     }
 
     /// <summary>Stops any of these movements on <paramref name="element"/> and puts it back as laid out.</summary>
+    /// <summary>
+    /// A card dealt into the holder (random discovery's hand): it rises from
+    /// <paramref name="drop"/> pixels below and fades in, after
+    /// <paramref name="delay"/> so a hand arrives card by card.
+    /// </summary>
+    public static void Deal(UIElement element, float drop, TimeSpan delay)
+    {
+        if (!AnimationsEnabled) return;
+        ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var ease = Decelerate(compositor);
+
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = FlyDuration;
+        fade.DelayTime = delay;
+        fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+        var move = compositor.CreateVector3KeyFrameAnimation();
+        move.InsertKeyFrame(0, new Vector3(0, drop, 0));
+        move.InsertKeyFrame(1, Vector3.Zero, ease);
+        move.Duration = FlyDuration;
+        move.DelayTime = delay;
+        move.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>The pause between two cards of a dealt hand.</summary>
+    public static readonly TimeSpan DealStagger = TimeSpan.FromMilliseconds(35);
+
+    /// <summary>
+    /// A card drawn up out of the holder under the pointer (<paramref name="up"/>
+    /// true), or settling back into its slot. Goes from wherever it is, so a
+    /// quick pass over several cards never jumps.
+    /// </summary>
+    public static void Lift(UIElement element, bool up, float rise)
+    {
+        ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var target = up ? new Vector3(0, -rise, 0) : Vector3.Zero;
+        if (!AnimationsEnabled)
+        {
+            visual.StopAnimation("Translation");
+            visual.Properties.InsertVector3("Translation", target);
+            return;
+        }
+        var compositor = visual.Compositor;
+        var move = compositor.CreateVector3KeyFrameAnimation();
+        move.InsertKeyFrame(1, target, Ease(compositor));
+        move.Duration = up ? ReturnDuration : FlyDuration;
+        visual.StartAnimation("Translation", move);
+    }
+
     public static void Reset(UIElement element)
     {
         var visual = ElementCompositionPreview.GetElementVisual(element);

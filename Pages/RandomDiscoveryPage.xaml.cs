@@ -39,6 +39,10 @@ public sealed partial class RandomDiscoveryPage : Page
         NavigationCacheMode = NavigationCacheMode.Required;
         _items = new(DispatcherQueue, CanDrawMore, Append);
         DiscoveryGrid.ItemsSource = _items;
+        // The rack shows the hand as a whole, so it follows the collection
+        // after each burst of changes rather than item by item.
+        _items.CollectionChanged += (_, _) => QueueHandShow();
+        Holder.CardInvoked += OpenCard;
         AutomationProperties.SetName(DiscoveryGrid, UiText.Get("Discovery_Title.Text"));
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
         // The engine reports columns * 2; the discovery page only needs the column count itself.
@@ -121,7 +125,7 @@ public sealed partial class RandomDiscoveryPage : Page
 
     private void Origin_Changed(CardOriginSelection origin) => DispatcherQueue.TryEnqueue(ApplyConditions);
 
-    private void PokerMode_Changed() => DispatcherQueue.TryEnqueue(Restart);
+    private void PokerMode_Changed() => DispatcherQueue.TryEnqueue(() => { Restart(); QueueHandShow(); });
 
     private void CaptureFilter()
     {
@@ -242,14 +246,18 @@ public sealed partial class RandomDiscoveryPage : Page
             && (poker
                 ? _items.Count >= PokerHand.HandSize || _shuffle.Remaining == 0
                 : _shuffle.Remaining == 0);
-        RoundFooter.Visibility = complete ? Visibility.Visible : Visibility.Collapsed;
+        RoundFooter.Visibility = complete && !poker ? Visibility.Visible : Visibility.Collapsed;
+        DiscoveryGrid.Visibility = poker ? Visibility.Collapsed : Visibility.Visible;
+        HandArea.Visibility = poker && _items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        HandFooter.Visibility = complete && poker ? Visibility.Visible : Visibility.Collapsed;
         var endText = poker
             ? UiText.Get("Discovery_PokerHandEnd")
             : UiText.Format("Discovery_RoundEnd", _shuffle.Round);
         if (RoundEndText.Text != endText)
         {
             RoundEndText.Text = endText;
-            if (complete) FrameworkElementAutomationPeer.FromElement(RoundEndText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            HandEndText.Text = endText;
+            if (complete) FrameworkElementAutomationPeer.FromElement(poker ? HandEndText : RoundEndText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         }
         EmptyPanel.Visibility = !busy && !ErrorBar.IsOpen && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         bool noLibrary = _gallery.Cards.Count == 0;
@@ -300,6 +308,7 @@ public sealed partial class RandomDiscoveryPage : Page
         DispatcherQueue.TryEnqueue(() =>
         {
             if (!_active || firstNew >= _items.Count) return;
+            if (_settings.PokerHandEnabled) { Holder.FocusFirst(); return; }
             DiscoveryGrid.ScrollIntoView(_items[firstNew]);
             if (DiscoveryGrid.ContainerFromIndex(firstNew) is GridViewItem item) item.Focus(FocusState.Programmatic);
         });
@@ -307,9 +316,47 @@ public sealed partial class RandomDiscoveryPage : Page
 
     private void Item_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not DiscoveryItem entry) return;
+        if (e.ClickedItem is DiscoveryItem entry) OpenCard(entry);
+    }
+
+    private void OpenCard(DiscoveryItem entry)
+    {
         _returnIndex = _items.IndexOf(entry);
         new BrowseContext(UiText.Get("Discovery_Title.Text"), _items.Select(item => item.Card)).Open(Frame, entry.Card);
+    }
+
+    // ------------------------------------------------------------ the card rack (poker mode)
+
+    private bool _handShowQueued;
+    private readonly HashSet<SceneCard> _handCards = [];
+
+    private void QueueHandShow()
+    {
+        if (_handShowQueued) return;
+        _handShowQueued = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            _handShowQueued = false;
+            ShowHand();
+        });
+    }
+
+    private void ShowHand()
+    {
+        if (!_active || !_settings.PokerHandEnabled) return;
+        var hand = _items.ToList();
+        // The grid releases thumbnails as its containers recycle; the rack has
+        // no containers, so it lets go of the last hand's itself.
+        foreach (var gone in _handCards.Where(card => hand.All(item => !ReferenceEquals(item.Card, card))).ToList())
+        {
+            _gallery.ReleaseThumbnail(gone);
+            _handCards.Remove(gone);
+        }
+        foreach (var item in hand)
+        {
+            if (_handCards.Add(item.Card)) _gallery.RequestThumbnail(item.Card, ThumbnailWorkPriority.Visible);
+        }
+        Holder.Show(hand);
     }
 
     private void RestorePosition()

@@ -187,10 +187,11 @@ public partial class AuthorsViewModel : ObservableObject
         _galleryViewModel = galleryViewModel;
         _characterGalleryViewModel = characterGalleryViewModel;
         _coordinateGalleryViewModel = coordinateGalleryViewModel;
-        // Local sources have their own page, which is also where they can be
-        // imported into; a tab here would be a second, weaker entry point.
+        // Local sources are authors too, so they are a platform here, the last
+        // one (user request: "put the local authors in the platforms, not a
+        // button of their own"). Their own page stays for importing into them.
         foreach (var provider in _authorInfoService.ProviderInfos
-                     .Where(provider => !LocalSourceIdentity.IsLocal(provider.ProviderId)))
+                     .OrderBy(provider => LocalSourceIdentity.IsLocal(provider.ProviderId)))
         {
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
         }

@@ -42,6 +42,8 @@ internal static class Glyphs
     public const string Like = "\uEB51";
     public const string Hide = "\uED1A";
     public const string Selected = "\uE73E";
+    /// <summary>The joker in a dealt hand (random discovery).</summary>
+    public const string Joker = "\uE8EF";
 
     // ------------------------------------------------------------ actions
     public const string Open = "\uE8A7";

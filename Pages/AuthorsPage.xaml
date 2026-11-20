@@ -28,6 +28,7 @@
                           IsItemClickEnabled="False" SelectionMode="Single"
                           SelectionChanged="AuthorsGrid_SelectionChanged" DoubleTapped="AuthorsGrid_DoubleTapped"
                           PreviewKeyDown="AuthorsGrid_PreviewKeyDown"
+                          Padding="{x:Bind controls:UiMetrics.GridPadding}"
                           Loaded="AuthorsGrid_Loaded" SizeChanged="AuthorsGrid_SizeChanged">
                     <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" GroupHeaderPlacement="Top" /></ItemsPanelTemplate></GridView.ItemsPanel>
                     <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
@@ -198,17 +199,21 @@
                 QueryIcon="Find"
                 TextChanged="AuthorSearchBox_TextChanged" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                <!--  Wave 16: local sources left the pane; they are authors too.  -->
+                <!--  On the local tab: a new source is made by bringing cards in, which
+                      the local sources page does (its drop zone). Online refresh has
+                      nothing to do there, so the two swap.  -->
                 <Button
-                    x:Name="LocalSourcesButton"
-                    AutomationProperties.AutomationId="AuthorsLocalSourcesButton"
+                    x:Name="AddLocalButton"
+                    AutomationProperties.AutomationId="AuthorsAddLocalButton"
+                    Visibility="Collapsed"
                     Click="LocalSources_Click">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphLocalSources}" />
-                        <TextBlock x:Uid="Authors_LocalSourcesLabel" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphAdd}" />
+                        <TextBlock x:Uid="LocalSources_AddSource" />
                     </StackPanel>
                 </Button>
                 <Button
+                    x:Name="RefreshAllButton"
                     x:Uid="Authors_RefreshAll"
                     AutomationProperties.AutomationId="AuthorsRefreshAllButton"
                     IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
@@ -221,7 +226,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid x:Name="AuthorsContent" Grid.Row="2" ColumnSpacing="{StaticResource Space8}">
+        <Grid x:Name="AuthorsContent" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />

@@ -96,6 +96,30 @@ internal static class UiMetrics
     public const double LoupeEdgeButtonSize = 44;
     public static Thickness LoupePadding => new(16, 12, 16, 12);
 
+    // ------------------------------------------------------------ random discovery's card holder (a hand on a three-tier rack)
+
+    /// <summary>Tiers on the rack; the back one holds the most cards, as a real one does.</summary>
+    public const int HolderTiers = 3;
+    /// <summary>A card's height for its width (the gallery's thumbnails, 135 by 240).</summary>
+    public const double HolderCardAspect = 135.0 / 240;
+    /// <summary>The largest a card is drawn, however much room there is.</summary>
+    public const double HolderMaxCardWidth = 420;
+    /// <summary>Each next card's left edge, as a share of a card's width: the rest overlaps.</summary>
+    public const double HolderStep = 0.74;
+    /// <summary>How far each tier sits below the one behind it, as a share of a card's height.</summary>
+    public const double HolderTierDrop = 0.42;
+    /// <summary>The fan: degrees of turn per card away from the middle of its tier, and the dip along the arc.</summary>
+    public const double HolderFanDegrees = 2.2;
+    public const double HolderArc = 0.025;
+    /// <summary>How much of the front tier the tray hides, and how far it reaches below them.</summary>
+    public const double HolderTrayCover = 0.22;
+    public const double HolderTrayBelow = 0.16;
+    public const double HolderTrayPadding = 28;
+    public const double HolderTrayCorner = 18;
+    /// <summary>How far a card is drawn up out of the rack under the pointer or focus, as a share of its height.</summary>
+    public const double HolderLift = 0.30;
+    public const double HolderCardCorner = 6;
+
     // ------------------------------------------------------------ responsive breakpoints (all in code; there are no AdaptiveTriggers)
 
     /// <summary>Below this a page drops to one column: the library's toolbar wraps, the post page stacks, the title bar's origin selector compacts.</summary>

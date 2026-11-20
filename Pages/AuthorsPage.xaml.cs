@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -198,9 +199,18 @@ public sealed partial class AuthorsPage : Page
                 string.Equals(candidate.ProviderId, selected.ProviderId, StringComparison.OrdinalIgnoreCase))
             : _currentTab;
 
-        PlatformBar.Visibility = !named && ViewModel.ProviderTabs.Count > 1
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // With a platform named in the title bar, the bar still offers the
+        // local authors beside it: they belong to no platform, so naming one
+        // must not hide them.
+        var offered = 0;
+        foreach (var item in PlatformBar.Items)
+        {
+            var shown = item.Tag is AuthorProviderTabViewModel candidate
+                && (!named || LocalSourceIdentity.IsLocal(candidate.ProviderId) || ReferenceEquals(candidate, tab));
+            item.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            if (shown) offered++;
+        }
+        PlatformBar.Visibility = offered > 1 ? Visibility.Visible : Visibility.Collapsed;
         TitleText.Visibility = PlatformBar.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
         ShowTab(tab ?? ViewModel.ProviderTabs.FirstOrDefault());
@@ -220,6 +230,9 @@ public sealed partial class AuthorsPage : Page
         _currentTab = tab;
         TabHost.Content = tab;
         QuickJumpList.ItemsSource = tab?.QuickJumpItems;
+        var local = tab is not null && LocalSourceIdentity.IsLocal(tab.ProviderId);
+        AddLocalButton.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
+        RefreshAllButton.Visibility = local ? Visibility.Collapsed : Visibility.Visible;
         UpdateCount();
         SyncPlatformSelection();
     }
@@ -318,7 +331,9 @@ public sealed partial class AuthorsPage : Page
     private Controls.AuthorInspector AuthorPane()
     {
         if (_authorInspector is { } made) return made;
-        made = new Controls.AuthorInspector { Width = Controls.UiMetrics.AuthorPaneWidth, Margin = Controls.UiMetrics.InspectorMargin(Controls.UiMetrics.PaneGap / 2) };
+        // The library's spacing: the grid's own right padding holds its scroll
+        // bar, so the pane needs only the small gap past it.
+        made = new Controls.AuthorInspector { Width = Controls.UiMetrics.AuthorPaneWidth, Margin = Controls.UiMetrics.InspectorMargin(Controls.UiMetrics.PaneGapBesideGrid) };
         Grid.SetColumn(made, 2);
         AuthorsContent.Children.Add(made);
         made.OpenRequested += OpenAuthorDetail;
