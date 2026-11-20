@@ -82,7 +82,9 @@ public sealed partial class HomePage : Page
             ShowShelves(true);
             _inspector.ShowPreview = true;
             if (card is not null && TileOf(card) is { } tile)
-                tile.Focus(Microsoft.UI.Xaml.FocusState.Keyboard);
+                // Programmatic: the keyboard focus frame drew a white rectangle
+                // round the tile after every close (live check, wave 16 round 3).
+                tile.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
         };
         // While the loupe is open its keys win wherever focus is.
         PageRoot.PreviewKeyDown += (_, e) =>
