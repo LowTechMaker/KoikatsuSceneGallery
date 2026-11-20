@@ -23,7 +23,7 @@
         <KeyboardAccelerator Key="X" Invoked="Hide_Invoked" />
     </Page.KeyboardAccelerators>
 
-    <Grid Padding="24,16,24,16" RowSpacing="16">
+    <Grid Padding="{StaticResource DetailContentPadding}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -40,7 +40,7 @@
             <TextBlock
                 Margin="0,0,12,0"
                 VerticalAlignment="Center"
-                Style="{StaticResource TitleTextBlockStyle}"
+                Style="{StaticResource PageTitleTextBlockStyle}"
                 Text="{x:Bind ViewModel.Card.FileName, Mode=OneWay}" />
 
             <StackPanel
@@ -157,7 +157,7 @@
 
                 <TextBlock
                     x:Uid="Detail_FileInfo"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                    Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                 <StackPanel Spacing="4">
                     <TextBlock
@@ -249,7 +249,7 @@
                     Visibility="{x:Bind ViewModel.HasSiblingCards, Mode=OneWay}">
                     <TextBlock
                         x:Uid="Detail_SamePost"
-                        Style="{StaticResource SubtitleTextBlockStyle}" />
+                        Style="{StaticResource SectionTitleTextBlockStyle}" />
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}">

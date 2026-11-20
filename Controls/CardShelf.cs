@@ -65,7 +65,11 @@ internal sealed class CardShelf : Grid
     };
     private readonly Dictionary<string, Tile> _tiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
-    private readonly TextBlock _title = new() { Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] };
+    private readonly TextBlock _title = new()
+    {
+        Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"],
+        VerticalAlignment = VerticalAlignment.Center,
+    };
     private Tile[] _all = [];
     private bool _expanded;
     private double _laidOutWidth = -1;
@@ -89,7 +93,14 @@ internal sealed class CardShelf : Grid
         AutomationProperties.SetAutomationId(this, $"HomeShelf_{shelf.Key}");
         AutomationProperties.SetName(this, shelf.Title);
 
-        var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        // Centred as a whole: the header row is as tall as its buttons, and a
+        // title left at the top with the count centred put the count low.
+        var heading = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         _title.Text = shelf.Title;
         heading.Children.Add(_title);
         heading.Children.Add(_count);
@@ -339,27 +350,20 @@ internal sealed class CardShelf : Grid
             var menu = new MenuFlyout();
             menu.Opening += (_, _) => CardMenu.Fill(menu, [Card], () => open(Card), frame());
             _open.ContextFlyout = menu;
-            // Q, L and H on a focused tile, as the flag buttons' tooltips say.
-            // A key handler, not KeyboardAccelerators: those would be live
-            // app-wide, once per tile on the page.
+            // The card keys (CardKeys) on a focused tile, shown in the flag
+            // buttons' tooltips. A key handler, not KeyboardAccelerators: those
+            // would be live app-wide, once per tile on the page.
             KeyDown += (_, e) =>
             {
-                if (e.KeyStatus.WasKeyDown || IsModifierDown()) return;
-                CardFlag? which = e.Key switch
-                {
-                    Windows.System.VirtualKey.Q => CardFlag.Queued,
-                    Windows.System.VirtualKey.L => CardFlag.Liked,
-                    Windows.System.VirtualKey.H => CardFlag.Hidden,
-                    _ => null,
-                };
-                if (which is not { } chosen) return;
+                if (e.KeyStatus.WasKeyDown || CardKeys.IsModifierDown()) return;
+                if (CardKeys.Flag(e.Key) is not { } chosen) return;
                 flag(Card, chosen);
                 e.Handled = true;
             };
 
-            _queue = new FlagButton(CardFlag.Queued, Glyph(0xE718), Glyph(0xE841), "CardState_Queue", "CardState_Unqueue", "Q"); // Pin / PinFill
-            _like = new FlagButton(CardFlag.Liked, Glyph(0xEB51), Glyph(0xEB52), "CardState_Like", "CardState_Unlike", "L"); // Heart / HeartFill
-            _hide = new FlagButton(CardFlag.Hidden, Glyph(0xE894), Glyph(0xEB90), "CardState_Hide", "CardState_Unhide", "H"); // Clear / StatusErrorFull
+            _queue = new FlagButton(CardFlag.Queued, Glyph(0xE718), Glyph(0xE841), "CardState_Queue", "CardState_Unqueue", CardKeys.Letter(CardFlag.Queued)); // Pin / PinFill
+            _like = new FlagButton(CardFlag.Liked, Glyph(0xEB51), Glyph(0xEB52), "CardState_Like", "CardState_Unlike", CardKeys.Letter(CardFlag.Liked)); // Heart / HeartFill
+            _hide = new FlagButton(CardFlag.Hidden, Glyph(0xE894), Glyph(0xEB90), "CardState_Hide", "CardState_Unhide", CardKeys.Letter(CardFlag.Hidden)); // Clear / StatusErrorFull
             foreach (var button in new[] { _queue, _like, _hide })
             {
                 var which = button.Flag;
@@ -434,16 +438,6 @@ internal sealed class CardShelf : Grid
             var used = _states.Get(path)?.LastUsedAt is not null;
             _used.Visibility = used ? Visibility.Visible : Visibility.Collapsed;
             AutomationProperties.SetItemStatus(_open, used ? UiText.Get("CardState_Used") : "");
-        }
-
-        private static bool IsModifierDown()
-        {
-            foreach (var key in new[] { Windows.System.VirtualKey.Control, Windows.System.VirtualKey.Menu, Windows.System.VirtualKey.Shift, Windows.System.VirtualKey.LeftWindows })
-            {
-                if (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
-                    return true;
-            }
-            return false;
         }
 
         private void ShowFlags(bool show) => _flags.Visibility = show ? Visibility.Visible : Visibility.Collapsed;

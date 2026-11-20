@@ -58,6 +58,28 @@
     <Thickness x:Key="PageContentPadding">24,16,24,0</Thickness>
     <Thickness x:Key="PageContentPaddingClosed">24,16,24,24</Thickness>
     <x:Double x:Key="PageRowSpacing">12</x:Double>
+    <!--  A page that ends at the window's bottom edge with its own margin:
+          the card viewer and the post page.  -->
+    <Thickness x:Key="DetailContentPadding">24,16,24,16</Thickness>
+
+    <!--  Headings, sized for a desktop window (wave 11). The built-in Title
+          style (28 px) made every page open like a phone screen's big title;
+          a page title is now 20 px and a section heading 16 px semibold.
+          Empty-state messages keep SubtitleTextBlockStyle.  -->
+    <!--  Plain setters rather than BasedOn the built-in styles: this file is
+          its own merged dictionary, and a missed StaticResource here would
+          only show as a crash at start.  -->
+    <Style x:Key="PageTitleTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="28" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+    <Style x:Key="SectionTitleTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="22" />
+    </Style>
 
     <!--  Library tiles and the stacked cards behind a group (phase 108).  -->
     <CornerRadius x:Key="MediaTileCornerRadius">10</CornerRadius>

@@ -7,14 +7,14 @@
   <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="First_Invoked" />
   <KeyboardAccelerator Key="End" Modifiers="Control" Invoked="Last_Invoked" />
  </UserControl.KeyboardAccelerators>
- <Grid x:Name="RootLayout" Padding="24,16,24,0" RowSpacing="12" SizeChanged="Browser_SizeChanged">
+ <Grid x:Name="RootLayout" Padding="{StaticResource PageContentPadding}" RowSpacing="12" SizeChanged="Browser_SizeChanged">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
   <Grid x:Name="Header" ColumnSpacing="12" RowSpacing="8">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <StackPanel Spacing="4">
     <Button x:Name="BackButton" Visibility="Collapsed" x:Uid="SceneGallery_GroupBack" Click="Back_Click" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" />
-    <TextBlock x:Name="Heading" Style="{StaticResource TitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+    <TextBlock x:Name="Heading" Style="{StaticResource PageTitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
    </StackPanel>
    <!-- The count sits with the controls that change it rather than under the
         title: on its own line below a heading it was the loudest thing on a

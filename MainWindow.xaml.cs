@@ -695,8 +695,10 @@ public sealed partial class MainWindow : Window
     /// so the size difference is not decoration, it is what tells the reader
     /// which of these three words is the title of what they are looking at.
     /// </remarks>
-    private const double SelectedLibraryFontSize = 28;
-    private const double UnselectedLibraryFontSize = 16;
+    // The page title size (PageTitleTextBlockStyle, wave 11): at 28 the
+    // heading was a phone screen's big title.
+    private const double SelectedLibraryFontSize = 20;
+    private const double UnselectedLibraryFontSize = 14;
 
     private void UpdateLibrarySelectorEmphasis()
     {

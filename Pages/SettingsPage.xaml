@@ -44,14 +44,14 @@
         </Style>
     </Page.Resources>
 
-    <Grid Padding="24,24,24,0" RowSpacing="12" MaxWidth="1160" HorizontalAlignment="Stretch">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12" MaxWidth="1160" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel Spacing="6">
-            <TextBlock x:Uid="Settings_Title" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="Settings_Title" Style="{StaticResource PageTitleTextBlockStyle}" />
             <TextBlock x:Uid="Settings_Subtitle" Style="{StaticResource SettingsIntroStyle}" Margin="0" />
             <!-- Finds a setting on any tab: the same index the Ctrl+K palette uses. -->
             <AutoSuggestBox x:Name="SettingsSearch" x:Uid="Settings_Search" Width="360" MaxWidth="480" HorizontalAlignment="Left"
@@ -97,7 +97,7 @@
                         <TextBlock
                             x:Uid="Settings_DisplayHeader"
                             Margin="1,0,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard
                             x:Uid="SC_ShowFileNames"
@@ -198,7 +198,7 @@
                         <TextBlock
                             x:Uid="Settings_NavigationHeader"
                             Margin="1,12,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard
                             x:Uid="SC_Navigation"
@@ -223,7 +223,7 @@
                         <TextBlock
                             x:Uid="Settings_LanguageHeader"
                             Margin="1,12,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard
                             x:Uid="SC_Language"
@@ -418,7 +418,7 @@
                         <TextBlock
                             x:Uid="Settings_ModsHeader"
                             Margin="1,20,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard x:Uid="SC_KoikatsuGameFolder">
                             <controls:SettingsCard.HeaderIcon>
@@ -478,7 +478,7 @@
             <appControls:SettingsTab x:Uid="Settings_TabFilters" Glyph="&#xE71C;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
                     <StackPanel Spacing="8">
-                        <TextBlock x:Uid="Settings_SizeFiltersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock x:Uid="Settings_SizeFiltersHeader" Style="{StaticResource SectionTitleTextBlockStyle}" />
                         <TextBlock x:Uid="Settings_FiltersIntro" Style="{StaticResource SettingsIntroStyle}" />
                         <Border Style="{StaticResource FilterCardStyle}">
                             <StackPanel Spacing="12">
@@ -642,7 +642,7 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock x:Uid="Settings_SceneTagsHeader" Margin="0,20,0,4" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock x:Uid="Settings_SceneTagsHeader" Margin="0,20,0,4" Style="{StaticResource SectionTitleTextBlockStyle}" />
                         <Border Style="{StaticResource FilterCardStyle}">
                             <StackPanel Spacing="12">
                                 <Grid ColumnSpacing="12">
@@ -706,7 +706,7 @@
                         <TextBlock
                             x:Uid="Settings_CacheHeader"
                             Margin="1,0,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard
                             x:Uid="SC_CacheFolder"
@@ -775,7 +775,7 @@
                         <TextBlock
                             x:Uid="Settings_AdvancedHeader"
                             Margin="1,28,0,4"
-                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            Style="{StaticResource SectionTitleTextBlockStyle}" />
 
                         <controls:SettingsCard
                             x:Uid="SC_CacheBuffer"
@@ -814,7 +814,7 @@
                         <StackPanel Spacing="16">
                             <TextBlock
                                 x:Uid="Plugins_Header"
-                                Style="{StaticResource SubtitleTextBlockStyle}" />
+                                Style="{StaticResource SectionTitleTextBlockStyle}" />
                             <TextBlock
                                 x:Uid="Plugins_Desc"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"

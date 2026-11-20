@@ -20,7 +20,6 @@ public sealed partial class DetailPage : Page
         App.Services.GetRequiredService<AuthorInfoService>(),
         App.Services.GetRequiredService<GalleryViewModel>());
 
-    private readonly UserCardRatingStore _ratings = App.Services.GetRequiredService<UserCardRatingStore>();
     private readonly IAppLogger _logger = App.Services.GetRequiredService<IAppLogger>();
     private readonly UserRatingPicker _ratingPicker = new(large: false);
     private string? _ratingHash;
@@ -146,46 +145,29 @@ public sealed partial class DetailPage : Page
         _ratingHash = null;
         _ratingPicker.SetEnabled(false);
         ShowUserRating(null);
-        var roots = App.Services.GetRequiredService<SettingsViewModel>().FolderPaths.ToArray();
-        var hash = await Task.Run(() =>
-        {
-            _ratings.EnsureLoaded(roots);
-            return CardPayloadHash.TryCompute(card.FilePath);
-        });
+        var (hash, rating) = await CardRatingActions.LoadAsync(card);
         if (version != _ratingVersion) return;
         if (hash is null)
         {
             UserRatingStatus.Text = UiText.Get("Detail_UserRatingUnavailable");
             return;
         }
-
-        var rating = await _ratings.ResolveAsync(card.FilePath, hash);
-        if (version != _ratingVersion) return;
         _ratingHash = hash;
         _ratingPicker.SetEnabled(true);
         ShowUserRating(rating);
     }
 
-    private async Task SetUserRatingAsync(int rating)
+    private async Task SetUserRatingAsync(int? rating)
     {
         if (ViewModel.Card is not { } card || _ratingHash is not { } hash) return;
         var version = _ratingVersion;
-        var saved = await _ratings.SetAsync(card.FilePath, hash, rating);
+        var stored = await CardRatingActions.SaveAsync(card, hash, rating);
         if (version != _ratingVersion) return;
-        ShowUserRating(saved ? rating : _ratings.TryGetByHash(hash));
-        if (!saved) AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
+        ShowUserRating(stored);
     }
 
     private void ClearUserRating_Click(object sender, RoutedEventArgs e) =>
-        UiEventGuard.Run(_logger, "Detail.ClearUserRating", async () =>
-        {
-            if (ViewModel.Card is not { } card || _ratingHash is not { } hash) return;
-            var version = _ratingVersion;
-            var cleared = await _ratings.ClearAsync(card.FilePath, hash);
-            if (version != _ratingVersion) return;
-            ShowUserRating(_ratings.TryGetByHash(hash));
-            if (!cleared) AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
-        });
+        UiEventGuard.Run(_logger, "Detail.ClearUserRating", () => SetUserRatingAsync(null));
 
     private void ShowUserRating(int? rating)
     {

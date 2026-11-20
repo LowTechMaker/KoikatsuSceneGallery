@@ -52,7 +52,7 @@
                         </Style></GroupStyle.HeaderContainerStyle>
                         <GroupStyle.HeaderTemplate><DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,12,0,8" Visibility="{x:Bind ShowHeader}">
-                                <TextBlock Text="{x:Bind Header}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock Text="{x:Bind Header}" Style="{StaticResource SectionTitleTextBlockStyle}" />
                                 <TextBlock Text="{x:Bind CountText, Mode=OneWay}" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </DataTemplate></GroupStyle.HeaderTemplate>

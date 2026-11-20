@@ -18,7 +18,7 @@
             <TextBlock
                 x:Name="TitleText"
                 AutomationProperties.HeadingLevel="Level1"
-                Style="{StaticResource TitleTextBlockStyle}"
+                Style="{StaticResource PageTitleTextBlockStyle}"
                 Text="{x:Bind Title, Mode=OneWay}"
                 TextTrimming="CharacterEllipsis" />
             <TextBlock

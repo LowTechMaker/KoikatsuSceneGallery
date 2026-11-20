@@ -208,7 +208,7 @@
                     IsEnabled="{x:Bind ViewModel.IsReviewWorkspaceEnabled, Mode=OneWay}"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch">
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -224,7 +224,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="2">
-                <TextBlock x:Uid="Import_Title" Style="{StaticResource TitleTextBlockStyle}" />
+                <TextBlock x:Uid="Import_Title" Style="{StaticResource PageTitleTextBlockStyle}" />
                 <TextBlock Text="{x:Bind ViewModel.ReviewSummaryText, Mode=OneWay}"
                            Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}"
                            Style="{StaticResource CaptionTextBlockStyle}"

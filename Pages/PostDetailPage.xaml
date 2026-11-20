@@ -10,7 +10,7 @@
     xmlns:viewModels="using:KoikatsuSceneGallery.ViewModels"
     mc:Ignorable="d">
 
-    <ScrollViewer Padding="24,16,24,16">
+    <ScrollViewer Padding="{StaticResource DetailContentPadding}">
         <StackPanel MaxWidth="1440" HorizontalAlignment="Stretch" Spacing="16">
 
             <!-- Header -->
@@ -23,7 +23,7 @@
                 <StackPanel Spacing="4">
                     <TextBlock
                         x:Name="TitleText"
-                        Style="{StaticResource TitleTextBlockStyle}"
+                        Style="{StaticResource PageTitleTextBlockStyle}"
                         Text="{x:Bind ViewModel.DisplayTitle, Mode=OneWay}"
                         TextWrapping="Wrap" />
                     <TextBlock
@@ -159,7 +159,7 @@
                 Visibility="{x:Bind ViewModel.HasTags, Mode=OneWay}">
                 <TextBlock
                     x:Uid="PostDetail_TagsHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                    Style="{StaticResource SectionTitleTextBlockStyle}" />
                 <ItemsControl ItemsSource="{x:Bind ViewModel.Tags, Mode=OneWay}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -191,7 +191,7 @@
                 Visibility="{x:Bind ViewModel.HasDescription, Mode=OneWay}">
                 <TextBlock
                     x:Uid="PostDetail_DescriptionHeader"
-                    Style="{StaticResource SubtitleTextBlockStyle}" />
+                    Style="{StaticResource SectionTitleTextBlockStyle}" />
                 <RichTextBlock
                     x:Name="DescriptionText"
                     IsTextSelectionEnabled="True"

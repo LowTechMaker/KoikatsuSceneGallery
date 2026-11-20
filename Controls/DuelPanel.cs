@@ -81,7 +81,7 @@ internal sealed class DuelPanel : StackPanel
         var title = new TextBlock
         {
             Text = UiText.Get("Home_DuelTitle"),
-            Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
+            Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"],
         };
         ToolTipService.SetToolTip(title, UiText.Get("Home_DuelHint"));
         AutomationProperties.SetHelpText(this, UiText.Get("Home_DuelHint"));

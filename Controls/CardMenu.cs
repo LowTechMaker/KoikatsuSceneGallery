@@ -24,8 +24,6 @@ namespace KoikatsuSceneGallery.Controls;
 /// </remarks>
 internal static class CardMenu
 {
-    private static readonly string[] RatingLabels = ["G", "R-18", "R-18G"];
-
     /// <summary>Fills <paramref name="menu"/> for <paramref name="members"/> (one card, or a group with its cover first).</summary>
     /// <param name="open">Opens the card or group, as a click on the tile would.</param>
     /// <param name="frame">The frame "go to author" navigates; without one the item is left out.</param>
@@ -50,13 +48,13 @@ internal static class CardMenu
                 Text = count > 1 ? UiText.Format("CardMenu_RateMany", scenes.Length) : UiText.Get("CardMenu_Rate"),
                 Icon = new FontIcon { Glyph = "" },
             };
-            for (var i = 0; i < RatingLabels.Length; i++)
+            for (var i = 0; i < CardRatingActions.Labels.Length; i++)
             {
                 var value = i;
                 rating.Items.Add(new MenuFlyoutItem
                 {
-                    Text = RatingLabels[i],
-                    Command = new RelayAction(() => RateAsync(scenes, value)),
+                    Text = CardRatingActions.Labels[i],
+                    Command = new RelayAction(() => CardRatingActions.RateManyAsync(scenes, value)),
                 });
             }
 
@@ -64,7 +62,7 @@ internal static class CardMenu
             rating.Items.Add(new MenuFlyoutItem
             {
                 Text = UiText.Get("CardMenu_RateClear"),
-                Command = new RelayAction(() => RateAsync(scenes, null)),
+                Command = new RelayAction(() => CardRatingActions.RateManyAsync(scenes, null)),
             });
             menu.Items.Add(rating);
         }
@@ -123,47 +121,6 @@ internal static class CardMenu
     private static AuthorSummary? FindAuthor(AuthorDisplay author) =>
         App.Services.GetRequiredService<AuthorInfoService>().GetSummaries()
             .FirstOrDefault(summary => summary.Display.Key == author.Key);
-
-    /// <summary>
-    /// Sets (or clears) the user's own rating on every scene card in the tile.
-    /// Hashing reads each file, so it runs off the UI thread; the badges update
-    /// through the gallery's own rating-changed handling.
-    /// </summary>
-    private static async Task RateAsync(IReadOnlyList<SceneCard> cards, int? rating)
-    {
-        var store = App.Services.GetRequiredService<UserCardRatingStore>();
-        var settings = App.Services.GetRequiredService<SettingsViewModel>();
-        var roots = settings.FolderPaths.ToArray();
-        var hashed = await Task.Run(() =>
-        {
-            store.EnsureLoaded(roots);
-            return cards.Select(card => (card, hash: CardPayloadHash.TryCompute(card.FilePath))).ToArray();
-        });
-
-        var failed = 0;
-        foreach (var (card, hash) in hashed)
-        {
-            var ok = hash is not null && (rating is { } value
-                ? await store.SetAsync(card.FilePath, hash, value)
-                : await store.ClearAsync(card.FilePath, hash));
-            if (!ok) failed++;
-        }
-
-        if (failed > 0)
-        {
-            AppToast.Show(UiText.Get("Rating_SaveFailed"), InfoBarSeverity.Error, key: "rating-save");
-            return;
-        }
-
-        var label = rating is { } chosen ? RatingLabels[chosen] : UiText.Get("CardMenu_RateClear");
-        var message = cards.Count == 1
-            ? UiText.Format("CardMenu_RatedOne", label)
-            : UiText.Format("CardMenu_RatedMany", cards.Count, label);
-        // With the platform as the rating source the badge on the tile does not
-        // change, which reads as "it did not save" unless something says why.
-        if (!settings.UseUserRatings) message += " " + UiText.Get("CardMenu_RatedPlatformHint");
-        AppToast.Show(message, InfoBarSeverity.Success, key: "rating-save");
-    }
 
     /// <summary>A menu item's command: runs the action under the UI event guard.</summary>
     private sealed class RelayAction(Func<Task> run) : System.Windows.Input.ICommand

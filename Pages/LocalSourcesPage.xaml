@@ -103,14 +103,14 @@
             SourceTemplate="{StaticResource LocalSourceTileTemplate}" />
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock x:Uid="LocalSources_Title" Style="{StaticResource TitleTextBlockStyle}" />
+        <TextBlock x:Uid="LocalSources_Title" Style="{StaticResource PageTitleTextBlockStyle}" />
 
         <!--  Staging. Files arrive here before a source is chosen, so nothing is analyzed yet.  -->
         <Border
