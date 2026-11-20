@@ -96,7 +96,9 @@
   </StackPanel>
   <!-- A click selects (the details pane shows it); a double click or Enter opens.
        Extended: Ctrl and Shift select several, Ctrl+A all. -->
-  <GridView x:Name="GalleryGrid" Grid.Row="2" SelectionMode="Extended" IsItemClickEnabled="False"
+  <!-- Padding on the right: the overlay scroll bar runs in that gutter, between the
+       pictures and the details pane, instead of over the last column (user report). -->
+  <GridView x:Name="GalleryGrid" Grid.Row="2" Padding="0,0,16,0" SelectionMode="Extended" IsItemClickEnabled="False"
    SelectionChanged="Grid_SelectionChanged" DoubleTapped="Grid_DoubleTapped" PreviewKeyDown="Grid_PreviewKeyDown"
    ContainerContentChanging="Container_Changing" CanDragItems="True" DragItemsStarting="Drag_Starting" AutomationProperties.AutomationId="GalleryGrid">
    <GridView.ItemContainerTransitions><TransitionCollection/></GridView.ItemContainerTransitions>

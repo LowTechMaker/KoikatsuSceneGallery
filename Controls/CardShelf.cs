@@ -129,10 +129,13 @@ internal sealed class CardShelf : Grid
         _title.Text = shelf.Title;
         heading.Children.Add(_title);
         heading.Children.Add(_count);
+        // The buttons follow the heading, not the far right edge: pinned there
+        // they sat a long way from the title and the tiles they act on (user).
+        _actions.Margin = new Thickness(8, 0, 0, 0);
+        _actions.VerticalAlignment = VerticalAlignment.Center;
+        heading.Children.Add(_actions);
         var header = new Grid();
         header.Children.Add(heading);
-        _actions.HorizontalAlignment = HorizontalAlignment.Right;
-        header.Children.Add(_actions);
         Children.Add(header);
 
         AutomationProperties.SetAutomationId(_more, $"HomeShelf_{shelf.Key}_ShowAll");

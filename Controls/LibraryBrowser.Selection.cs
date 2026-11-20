@@ -34,7 +34,9 @@ public sealed partial class LibraryBrowser
         _inspector = new CardInspector
         {
             Width = InspectorWidth,
-            Margin = new Thickness(16, 4, 0, 16),
+            // Top flush with the grid (it sat 4 px lower). The gap on the left
+            // is narrow because the grid's own right padding holds its scroll bar.
+            Margin = new Thickness(4, 0, 0, 16),
             Frame = () => _frame,
         };
         Grid.SetRow(_inspector, 2);
@@ -244,6 +246,9 @@ public sealed partial class LibraryBrowser
         GalleryGrid.Opacity = open ? 0 : 1;
         GalleryGrid.IsHitTestVisible = !open;
         EmptyPanel.Opacity = open ? 0 : 1;
+        // Beside the loupe panel the pane needs its own gap; beside the grid the
+        // grid's scroll-bar gutter is the gap.
+        _inspector.Margin = new Thickness(open ? 16 : 4, 0, 0, 16);
         Grid.SetRow(_inspector, open ? 0 : 2);
         Grid.SetRowSpan(_inspector, open ? 3 : 1);
         if (_scope is null) MainWindow.Instance?.SetLibraryHeadingHidden(open);
