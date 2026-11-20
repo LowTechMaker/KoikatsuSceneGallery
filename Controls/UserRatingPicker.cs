@@ -81,7 +81,7 @@ internal sealed partial class UserRatingPicker : Grid
             // note - is not a rating. Handled here stops the button's click.
             accelerator.Invoked += (_, args) =>
             {
-                if (XamlRoot is { } root && ViewerChrome.IsEditing(root)) args.Handled = true;
+                if (XamlRoot is { } root && CardKeys.IsTyping(root)) args.Handled = true;
             };
             _buttons[i].KeyboardAccelerators.Add(accelerator);
         }

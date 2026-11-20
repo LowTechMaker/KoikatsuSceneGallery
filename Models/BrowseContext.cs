@@ -26,12 +26,8 @@ public sealed class BrowseContext(string title, IEnumerable<CardBase> cards, boo
     public void Open(Frame frame, CardBase card, bool replace = false)
     {
         ReturnPath = card.FilePath;
-        var page = card switch
-        {
-            CharacterCard => typeof(CharacterDetailPage), CoordinateCard => typeof(CoordinateDetailPage),
-            _ => typeof(DetailPage)
-        };
-        frame.Navigate(page, new BrowseNavigation(card, this));
+        // One viewer for every kind (wave 15): the loupe and the details pane.
+        frame.Navigate(typeof(CardViewerPage), new BrowseNavigation(card, this));
         if (replace && frame.BackStack.Count > 0) frame.BackStack.RemoveAt(frame.BackStack.Count - 1);
     }
 }

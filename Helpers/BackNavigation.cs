@@ -57,7 +57,7 @@ internal static class BackNavigation
         escape.Invoked += (_, args) =>
         {
             // Esc in a text box means "never mind this edit", not "leave".
-            if (page.XamlRoot is { } root && ViewerChrome.IsEditing(root)) return;
+            if (page.XamlRoot is { } root && CardKeys.IsTyping(root)) return;
             if (page.Frame is not { CanGoBack: true } frame) return;
             frame.GoBack();
             args.Handled = true;

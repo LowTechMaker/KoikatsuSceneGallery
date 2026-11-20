@@ -41,6 +41,18 @@ public sealed partial class LibraryBrowser
         Grid.SetColumn(_inspector, 1);
         RootLayout.Children.Add(_inspector);
         _inspector.OpenRequested += card => OpenInLoupe(card);
+        // A character's other version: in the loupe's place when it is open,
+        // otherwise in the pane only (the grid shows one tile per character).
+        _inspector.CardRequested += card =>
+        {
+            if (_loupe.IsOpen) _loupe.Replace(card);
+            else _inspector.Show([card]);
+        };
+        _inspector.CardGone += () =>
+        {
+            _loupe.Close(animate: false);
+            _inspector.Show([]);
+        };
 
         // The loupe covers the grid's cell only; the details pane stays beside it.
         _loupe = new CardLoupe();
@@ -202,7 +214,8 @@ public sealed partial class LibraryBrowser
         var index = -1;
         for (var i = 0; i < cards.Count; i++)
             if (ReferenceEquals(cards[i], card)) { index = i; break; }
-        if (index < 0) return;
+        // A card the grid does not show (a character's other version, from the pane): on its own.
+        if (index < 0) { cards = [card]; index = 0; }
         OpeningDetail?.Invoke();
         // The picture is large on the left now; the pane keeps the facts and actions.
         _inspector.ShowPreview = false;

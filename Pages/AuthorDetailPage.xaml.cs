@@ -377,19 +377,19 @@ public sealed partial class AuthorDetailPage : Page
         if (ReferenceEquals(TabPivot.SelectedItem, ScenesPivotItem) && ViewModel.Scenes.Count > 0)
         {
             SetRestoreSelectedTabOnBack(ScenesTabIndex);
-            Frame.Navigate(typeof(DetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, CharactersPivotItem) && ViewModel.Characters.Count > 0)
         {
             SetRestoreSelectedTabOnBack(CharactersTabIndex);
-            Frame.Navigate(typeof(CharacterDetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, CoordinatesPivotItem) && ViewModel.Coordinates.Count > 0)
         {
             SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-            Frame.Navigate(typeof(CoordinateDetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, PostsPivotItem) && ViewModel.Posts.Count > 0)
@@ -426,7 +426,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is SceneCard card)
         {
             SetRestoreSelectedTabOnBack(ScenesTabIndex);
-            Frame.Navigate(typeof(DetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -435,7 +435,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CharacterCard card)
         {
             SetRestoreSelectedTabOnBack(CharactersTabIndex);
-            Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -444,7 +444,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CoordinateCard card)
         {
             SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-            Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -610,13 +610,13 @@ public sealed partial class AuthorDetailPage : Page
 
         var path = preview.FilePath;
         var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), CreateScopedParameter(scene)); return; }
+        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(scene)); return; }
 
         var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(character)); return; }
+        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(character)); return; }
 
         var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
+        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(coordinate)); return; }
     }
 
     private void OverviewScenes_DragItemsStarting(object sender, DragItemsStartingEventArgs e)

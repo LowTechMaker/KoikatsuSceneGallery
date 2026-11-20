@@ -180,6 +180,25 @@ internal sealed class CardLoupe : Grid
         ShowAt(index >= 0 ? index : Math.Clamp(_index, 0, cards.Count - 1), notify: index < 0);
     }
 
+    /// <summary>
+    /// Shows <paramref name="card"/> in the current card's place: a character's
+    /// other version chosen in the details pane. Stepping on continues from there.
+    /// </summary>
+    public void Replace(CardBase card)
+    {
+        if (!IsOpen || _index < 0) return;
+        var index = IndexOf(card);
+        if (index >= 0)
+        {
+            ShowAt(index);
+            return;
+        }
+        var cards = _cards.ToArray();
+        cards[_index] = card;
+        _cards = cards;
+        ShowAt(_index);
+    }
+
     public void Close() => Close(animate: true);
 
     /// <summary>Closes; animated back into the card's tile when it can be found.</summary>

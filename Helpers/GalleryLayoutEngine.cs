@@ -25,6 +25,7 @@ internal sealed class GalleryLayoutEngine
     private ScrollViewer? _scrollViewer;
     private Action? _onScrollStop;
     private bool _sizeChangedHooked;
+    private ItemsWrapGrid? _hookedPanel;
 
     public GalleryLayoutEngine(
         double imageRatio,
@@ -95,12 +96,27 @@ internal sealed class GalleryLayoutEngine
         InvalidateAndRefit();
     }
 
+    /// <remarks>
+    /// The items panel can be asked before it has been measured (a library tab
+    /// opened for the first time, its cards still arriving). That used to give
+    /// up and wait for the grid itself to change size, and meanwhile every tile
+    /// took the size of its loading placeholder: a field of tiny icons for a
+    /// few seconds (user report). Now the grid's width stands in for the
+    /// panel's, a default size is set when neither is known, and the panel's
+    /// own first size change applies the real layout.
+    /// </remarks>
     public void ApplyLayout()
     {
-        if (_grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
+        if (_grid.ItemsPanelRoot is not ItemsWrapGrid panel)
             return;
+        HookPanel(panel);
 
-        double available = panel.ActualWidth;
+        double available = panel.ActualWidth > 0 ? panel.ActualWidth : _grid.ActualWidth;
+        if (available <= 0)
+        {
+            ApplyProvisional(panel);
+            return;
+        }
         int columns = Math.Max(1, (int)Math.Floor(available / (_baseItemWidth + CellOverheadW)));
 
         if (columns == _appliedColumns && available == _appliedAvailable)
@@ -110,12 +126,31 @@ internal sealed class GalleryLayoutEngine
         _setShuffleDisplayCount(columns * 2);
 
         double cellW = (available / columns) - 0.5;
+        panel.ItemWidth = cellW;
+        panel.ItemHeight = CellHeight(cellW);
+    }
+
+    private double CellHeight(double cellW)
+    {
         double imageH = Math.Max(0, cellW - ContentInsetW) * _imageRatio;
         double metadata = _metadataReserve ?? (_settingsViewModel.ShowFileNames ? FilenameReserve : 0);
-        double cellH = imageH + metadata + (CardMargin + CardInset) * 2;
+        return imageH + metadata + (CardMargin + CardInset) * 2;
+    }
 
+    // Before anything has been measured: tiles of the chosen size, not of their placeholders.
+    private void ApplyProvisional(ItemsWrapGrid panel)
+    {
+        if (!double.IsNaN(panel.ItemWidth)) return;
+        double cellW = _baseItemWidth + CellOverheadW;
         panel.ItemWidth = cellW;
-        panel.ItemHeight = cellH;
+        panel.ItemHeight = CellHeight(cellW);
+    }
+
+    private void HookPanel(ItemsWrapGrid panel)
+    {
+        if (ReferenceEquals(_hookedPanel, panel)) return;
+        _hookedPanel = panel;
+        panel.SizeChanged += (_, _) => ApplyLayout();
     }
 
     public void InvalidateAndRefit()

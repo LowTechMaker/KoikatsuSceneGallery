@@ -17,7 +17,7 @@ namespace KoikatsuSceneGallery.Helpers;
 /// <item><term>1 / 2 / 3</term><description>rate G / R-18 / R-18G (scene cards)</description></item>
 /// <item><term>Enter</term><description>open</description></item>
 /// </list>
-/// The letters were the detail page's first (DetailPage.xaml); the home page
+/// The letters were the old detail page's first; the home page
 /// briefly had Q/L/H, which taught one thing on one page and another on the next.
 /// Plain keys only: with Ctrl, Alt, Shift or Win down they belong to someone
 /// else (Ctrl+F is search).
@@ -49,6 +49,11 @@ internal static class CardKeys
         >= VirtualKey.NumberPad1 and <= VirtualKey.NumberPad3 => key - VirtualKey.NumberPad1,
         _ => null,
     };
+
+    /// <summary>Whether focus is in a text box: then a letter or a digit is typing, not a card key.</summary>
+    public static bool IsTyping(Microsoft.UI.Xaml.XamlRoot root)
+        => Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(root)
+            is Microsoft.UI.Xaml.Controls.TextBox or Microsoft.UI.Xaml.Controls.PasswordBox or Microsoft.UI.Xaml.Controls.RichEditBox;
 
     /// <summary>Whether Ctrl, Alt, Shift or a Windows key is held: then a plain card key is not meant.</summary>
     public static bool IsModifierDown()

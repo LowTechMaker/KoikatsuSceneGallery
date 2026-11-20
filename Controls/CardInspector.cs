@@ -63,6 +63,7 @@ internal sealed class CardInspector : UserControl
     private readonly TextBlock _ratingStatus = Secondary("");
     private readonly CardActionBar _actions = new();
     private readonly StackPanel _kind = new() { Spacing = 8 };
+    private readonly CharacterVersionsPanel _character = new();
     private readonly StackPanel _facts = new() { Spacing = 8 };
     private readonly MetadataPanel _metadata = new();
     private readonly Button _open = new() { Content = UiText.Get("Inspector_Open"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
@@ -83,6 +84,15 @@ internal sealed class CardInspector : UserControl
 
     /// <summary>The user asked to open the one selected card (the host decides how).</summary>
     public event Action<CardBase>? OpenRequested;
+
+    /// <summary>
+    /// The pane asks the host to show another card in its place: a character's
+    /// other version, chosen from the version list or left after a delete.
+    /// </summary>
+    public event Action<CardBase>? CardRequested;
+
+    /// <summary>The card shown was deleted and nothing is left to show in its place.</summary>
+    public event Action? CardGone;
 
     private bool _showPreview = true;
 
@@ -201,6 +211,9 @@ internal sealed class CardInspector : UserControl
         AutomationProperties.SetAutomationId(_actions, "CardInspector_Actions");
         _single.Children.Add(_actions);
         _single.Children.Add(_kind);
+        _character.VersionChosen += version => CardRequested?.Invoke(version);
+        _character.CharacterGone += () => CardGone?.Invoke();
+        _single.Children.Add(_character);
         _single.Children.Add(new TextBlock
         {
             Text = UiText.Get("Detail_FileInfo.Text"),
@@ -232,18 +245,28 @@ internal sealed class CardInspector : UserControl
         _actions.PixivUrl = links.PixivUrl;
         _actions.BepisDbUrl = links.BepisDbUrl;
 
+        // The kind's own facts: an outfit's name here; a character's (parsed,
+        // with its versions and their annotation) in CharacterVersionsPanel.
         _kind.Children.Clear();
-        switch (card)
+        if (card is CoordinateCard outfit)
         {
-            case CharacterCard chara:
-                _kind.Children.Add(Fact("Detail_CharaName.Text", chara.CharacterName));
-                _kind.Children.Add(Fact("Detail_CharaGame.Text", chara.Game.ToString()));
-                break;
-            case CoordinateCard coord:
-                _kind.Children.Add(Fact("Detail_CoordName.Text", coord.CoordinateName));
-                break;
+            _kind.Children.Add(new TextBlock
+            {
+                Text = UiText.Get("Detail_CoordInfo.Text"),
+                Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"],
+            });
+            _kind.Children.Add(Fact("Detail_CoordName.Text", outfit.CoordinateName));
         }
         _kind.Visibility = _kind.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (card is CharacterCard character)
+        {
+            _character.Visibility = Visibility.Visible;
+            _character.Show(character);
+        }
+        else
+        {
+            _character.Visibility = Visibility.Collapsed;
+        }
 
         _facts.Children.Clear();
         _facts.Children.Add(Fact("Detail_FileName.Text", card.FileName));
