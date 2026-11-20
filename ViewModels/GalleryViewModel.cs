@@ -365,6 +365,10 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
             _cardIndex.Clear();
 
             Lap();
+            // The last run's ratings, titles and tags, read alongside the card
+            // cache: the cached cards are labelled and filtered from them at
+            // once, and the home page need not wait for every sidecar.
+            var snapshot = Task.Run(() => _ratingResolver.LoadSnapshot([.. paths]), cancellationToken);
             var cached = await Task.Run(() => _cardCacheService.LoadAll(), cancellationToken);
             var configuredRoots = paths.Select(p => p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 .ToArray();
@@ -385,24 +389,36 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 staleThumbnails.UnionWith(presence.Missing);
                 timing?.Add(new(TimingLibrary, "thumbs.check", Lap(), [("folders", presence.FoldersListed), ("missing", presence.Missing.Count)]));
 
-                foreach (var chunk in relevantCached.Chunk(200))
+                // The cards are made off the UI thread, then put on screen in two
+                // steps: a first screenful, and everything else under one deferral.
+                // It used to be 200 at a time, and every chunk re-sorted and
+                // re-filtered the whole view so far: about 150 refreshes of a
+                // growing list, 10-13 s for 30,000 cards (startup_timing.log).
+                var made = await Task.Run(() => relevantCached
+                    .Select(kv => (kv.Key, Card: FromCache(kv.Value, staleThumbnails)))
+                    .ToArray(), cancellationToken);
+                var hadSnapshot = await snapshot;
+                const int FirstScreen = 200;
+                void Add(IEnumerable<(string Key, SceneCard Card)> part)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    using (CardsView.DeferRefresh())
+                    foreach (var (filePath, card) in part)
                     {
-                        foreach (var (filePath, entry) in chunk)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var card = FromCache(entry, staleThumbnails);
-                            if (card.ThumbnailPath is not null)
-                                _thumbnailPathCache[filePath] = card.ThumbnailPath;
-                            AssignRating(card);
-                            if (_cardIndex.TryAdd(card.FilePath, card))
-                                Cards.Add(card);
-                        }
+                        if (card.ThumbnailPath is not null)
+                            _thumbnailPathCache[filePath] = card.ThumbnailPath;
+                        AssignRating(card);
+                        if (_cardIndex.TryAdd(card.FilePath, card))
+                            Cards.Add(card);
                     }
-                    await Task.Yield();
-                    FirstCards();
+                }
+                using (CardsView.DeferRefresh())
+                    Add(made.Take(FirstScreen));
+                await Task.Yield();
+                FirstCards();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (made.Length > FirstScreen)
+                {
+                    using (CardsView.DeferRefresh())
+                        Add(made.Skip(FirstScreen));
                 }
                 ApplyFilter();
                 RaiseViewRefreshed();
@@ -412,6 +428,13 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                 // run. The home page may use it now, and its ratings are read now,
                 // alongside the scan, instead of after it.
                 _cacheShown = true;
+                // Labelled from the last run's ratings: settled for now. The read
+                // below corrects what changed since and raises RatingsChanged again.
+                if (hadSnapshot)
+                {
+                    RatingsSettled = true;
+                    RatingsChanged?.Invoke();
+                }
                 CachedCardsShown?.Invoke();
                 cachedRatings = ReloadRatingsAsync([.. paths], cancellationToken, final: false);
                 cachedRatings.Observe(_logger, "Gallery.ReloadCachedRatings");

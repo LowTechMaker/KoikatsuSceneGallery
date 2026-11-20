@@ -46,6 +46,7 @@ internal sealed class CardInspector : UserControl
     private readonly StackPanel _single = new() { Spacing = 16 };
     private readonly Image _preview = new() { Stretch = Stretch.Uniform, MaxHeight = PreviewHeight };
     private readonly ProgressivePreview _previewLoader;
+    private readonly Border _previewFrame = new();
     private readonly TextBlock _title = new()
     {
         Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"],
@@ -82,6 +83,22 @@ internal sealed class CardInspector : UserControl
 
     /// <summary>The user asked to open the one selected card (the host decides how).</summary>
     public event Action<CardBase>? OpenRequested;
+
+    private bool _showPreview = true;
+
+    /// <summary>
+    /// Whether the one-card view shows the picture. Off while the card is open
+    /// large beside the pane (the loupe), where it would only repeat it.
+    /// </summary>
+    public bool ShowPreview
+    {
+        get => _showPreview;
+        set
+        {
+            _showPreview = value;
+            _previewFrame.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
 
     /// <summary>What is shown now.</summary>
     public IReadOnlyList<CardBase> Cards => _cards;
@@ -134,13 +151,11 @@ internal sealed class CardInspector : UserControl
 
     private void BuildSingle()
     {
-        var frame = new Border
-        {
-            CornerRadius = (CornerRadius)Application.Current.Resources["ControlCornerRadius"],
-            Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
-            Height = PreviewHeight,
-            Child = _preview,
-        };
+        var frame = _previewFrame;
+        frame.CornerRadius = (CornerRadius)Application.Current.Resources["ControlCornerRadius"];
+        frame.Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
+        frame.Height = PreviewHeight;
+        frame.Child = _preview;
         AutomationProperties.SetAutomationId(_preview, "CardInspector_Preview");
         // A double click on the picture opens the card, like one on the tile.
         frame.DoubleTapped += (_, _) => RequestOpen();
@@ -197,7 +212,7 @@ internal sealed class CardInspector : UserControl
 
     private void ShowOne(CardBase card)
     {
-        _previewLoader.Show(card, 640);
+        if (_showPreview) _previewLoader.Show(card, 640);
 
         var info = _home?.Describe(card);
         _title.Text = card switch

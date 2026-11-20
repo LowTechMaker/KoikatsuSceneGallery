@@ -46,6 +46,7 @@ public sealed partial class LibraryBrowser
         _loupe = new CardLoupe();
         Grid.SetRow(_loupe, 2);
         RootLayout.Children.Add(_loupe);
+        _loupe.TileBounds = TileBounds;
         _loupe.CurrentChanged += Loupe_CurrentChanged;
         _loupe.Closed += Loupe_Closed;
         // After the loupe's own keys (arrows, Esc): the card keys act on the card on show.
@@ -199,7 +200,33 @@ public sealed partial class LibraryBrowser
             if (ReferenceEquals(cards[i], card)) { index = i; break; }
         if (index < 0) return;
         OpeningDetail?.Invoke();
+        // The picture is large on the left now; the pane keeps the facts and actions.
+        _inspector.ShowPreview = false;
         _loupe.Open(cards, index);
+    }
+
+    /// <summary>
+    /// Where the card's picture is in the grid, in the loupe's coordinates: what
+    /// the loupe zooms out of and back into. The tile is scrolled into view
+    /// first (the loupe may have stepped far from where it opened).
+    /// </summary>
+    private Windows.Foundation.Rect? TileBounds(CardBase card)
+    {
+        if (EntryOf(card) is not { } entry) return null;
+        if (GalleryGrid.ContainerFromItem(entry) is null)
+        {
+            GalleryGrid.ScrollIntoView(entry);
+            GalleryGrid.UpdateLayout();
+        }
+        if (GalleryGrid.ContainerFromItem(entry) is not FrameworkElement container) return null;
+        // The face picture: the largest image in the tile (the stack layers behind a group are smaller).
+        Image? picture = null;
+        foreach (var image in VisualTreeSearch.FindDescendants<Image>(container))
+            if (image.ActualWidth > (picture?.ActualWidth ?? 0)) picture = image;
+        FrameworkElement target = picture is { ActualWidth: > 0 } ? picture : container;
+        var bounds = target.TransformToVisual(_loupe).TransformBounds(
+            new Windows.Foundation.Rect(0, 0, target.ActualWidth, target.ActualHeight));
+        return bounds.Width > 0 && bounds.Height > 0 ? bounds : null;
     }
 
     // Stepping in the loupe moves the grid's selection with it, so the pane
@@ -222,6 +249,7 @@ public sealed partial class LibraryBrowser
 
     private void Loupe_Closed(CardBase? card)
     {
+        _inspector.ShowPreview = true;
         if (card is null || EntryOf(card) is not { } entry) return;
         GalleryGrid.ScrollIntoView(entry);
         DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));

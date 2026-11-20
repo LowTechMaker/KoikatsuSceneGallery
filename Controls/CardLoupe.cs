@@ -6,7 +6,10 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Composition;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 using Windows.System;
 
 namespace KoikatsuSceneGallery.Controls;
@@ -26,6 +29,8 @@ namespace KoikatsuSceneGallery.Controls;
 internal sealed class CardLoupe : Grid
 {
     private const int DecodeWidth = 2560;
+    private static readonly TimeSpan OpenDuration = TimeSpan.FromMilliseconds(260);
+    private static readonly TimeSpan CloseDuration = TimeSpan.FromMilliseconds(200);
 
     private readonly Image _image = new() { Stretch = Stretch.Uniform, CanDrag = true };
     private readonly ScrollViewer _scroll = new()
@@ -56,6 +61,10 @@ internal sealed class CardLoupe : Grid
     private readonly ToggleButton _actual = new() { Content = "100%", Padding = new Thickness(8, 4, 8, 4) };
     private readonly Button _close = IconButton("", "Loupe_Close", "LoupeClose");
 
+    // The loupe's own background, a child so it can fade without the picture.
+    private readonly Border _backdrop = new();
+    private readonly Grid _bar = new() { ColumnSpacing = 8, Padding = new Thickness(0, 0, 0, 8) };
+
     private IReadOnlyList<CardBase> _cards = [];
     private int _index = -1;
 
@@ -64,6 +73,15 @@ internal sealed class CardLoupe : Grid
 
     /// <summary>The user left the loupe; the host shows the grid again with this card selected.</summary>
     public event Action<CardBase?>? Closed;
+
+    /// <summary>
+    /// Where a card's tile is, in this control's coordinates, for the zoom in and
+    /// out; null when it is not on screen (then the loupe just appears). Set by
+    /// the host, which scrolls the tile into view first when asked.
+    /// </summary>
+    public Func<CardBase, Rect?>? TileBounds { get; set; }
+
+    private bool _closing;
 
     /// <summary>The card on show, or null when the loupe is closed.</summary>
     public CardBase? Current => _index >= 0 && _index < _cards.Count ? _cards[_index] : null;
@@ -75,7 +93,9 @@ internal sealed class CardLoupe : Grid
         _preview = new ProgressivePreview(_image);
         _filmstrip = new Filmstrip(card => ShowAt(IndexOf(card)));
         Visibility = Visibility.Collapsed;
-        Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
+        _backdrop.Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
+        SetRowSpan(_backdrop, 3);
+        Children.Add(_backdrop);
         AutomationProperties.SetAutomationId(this, "CardLoupe");
         AutomationProperties.SetName(this, UiText.Get("Loupe_Name"));
         AutomationProperties.SetAutomationId(_image, "LoupeImage");
@@ -87,7 +107,7 @@ internal sealed class CardLoupe : Grid
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var bar = new Grid { ColumnSpacing = 8, Padding = new Thickness(0, 0, 0, 8) };
+        var bar = _bar;
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
@@ -125,8 +145,24 @@ internal sealed class CardLoupe : Grid
     {
         if (cards.Count == 0) return;
         _cards = cards;
+        _closing = false;
+        index = Math.Clamp(index, 0, cards.Count - 1);
+        // Measured before the loupe covers the grid.
+        var from = CardMotion.AnimationsEnabled ? TileBounds?.Invoke(cards[index]) : null;
         Visibility = Visibility.Visible;
-        ShowAt(Math.Clamp(index, 0, cards.Count - 1));
+        ShowAt(index);
+        if (from is { } rect)
+        {
+            // Hidden until the first layout pass, then flown out of the tile.
+            Opacity = 0;
+            void Start(object? sender, object e)
+            {
+                LayoutUpdated -= Start;
+                Opacity = 1;
+                Zoom(rect, toTile: false, OpenDuration, null);
+            }
+            LayoutUpdated += Start;
+        }
         DispatcherQueue.TryEnqueue(() => Focus(FocusState.Programmatic));
     }
 
@@ -141,13 +177,102 @@ internal sealed class CardLoupe : Grid
         ShowAt(index >= 0 ? index : Math.Clamp(_index, 0, cards.Count - 1), notify: index < 0);
     }
 
-    public void Close()
+    public void Close() => Close(animate: true);
+
+    /// <summary>Closes; animated back into the card's tile when it can be found.</summary>
+    public void Close(bool animate)
     {
-        if (!IsOpen) return;
+        if (!IsOpen || _closing) return;
         var current = Current;
-        Visibility = Visibility.Collapsed;
-        _image.Source = null;
-        Closed?.Invoke(current);
+        Rect? to = animate && CardMotion.AnimationsEnabled && current is not null ? TileBounds?.Invoke(current) : null;
+        if (to is not { } rect)
+        {
+            Finish();
+            return;
+        }
+        _closing = true;
+        Zoom(rect, toTile: true, CloseDuration, Finish);
+
+        void Finish()
+        {
+            _closing = false;
+            Visibility = Visibility.Collapsed;
+            ResetVisual();
+            _image.Source = null;
+            Closed?.Invoke(current);
+        }
+    }
+
+    /// <summary>
+    /// Flies the picture between the tile and its place in the loupe: the
+    /// picture's fitted rectangle is scaled and moved onto the tile's (and
+    /// back); the background, the bar and the filmstrip fade with it.
+    /// </summary>
+    private void Zoom(Rect tile, bool toTile, TimeSpan duration, Action? done)
+    {
+        if (Current is not { } card || _scroll.ActualWidth <= 0 || _scroll.ActualHeight <= 0)
+        {
+            done?.Invoke();
+            return;
+        }
+        // The picture's rectangle inside the scroll viewer, fitted and centred.
+        double viewW = _scroll.ActualWidth, viewH = _scroll.ActualHeight;
+        var aspect = card.Width > 0 && card.Height > 0 ? (double)card.Width / card.Height : 16.0 / 9;
+        double fitW = Math.Min(viewW, viewH * aspect), fitH = fitW / aspect;
+        double fitX = (viewW - fitW) / 2, fitY = (viewH - fitH) / 2;
+        var origin = _scroll.TransformToVisual(this).TransformPoint(new Point(0, 0));
+        var scale = (float)(tile.Width / fitW);
+        var dx = (float)(tile.X - origin.X - fitX * scale);
+        var dy = (float)(tile.Y - origin.Y - fitY * scale);
+
+        ElementCompositionPreview.SetIsTranslationEnabled(_scroll, true);
+        var visual = ElementCompositionPreview.GetElementVisual(_scroll);
+        var compositor = visual.Compositor;
+        visual.CenterPoint = new System.Numerics.Vector3(0, 0, 0);
+        var easing = compositor.CreateCubicBezierEasingFunction(new(0.1f, 0.9f), new(0.2f, 1f));
+
+        var small = new System.Numerics.Vector3(scale, scale, 1);
+        var moved = new System.Numerics.Vector3(dx, dy, 0);
+        var scaleAnimation = compositor.CreateVector3KeyFrameAnimation();
+        scaleAnimation.InsertKeyFrame(0, toTile ? System.Numerics.Vector3.One : small);
+        scaleAnimation.InsertKeyFrame(1, toTile ? small : System.Numerics.Vector3.One, easing);
+        scaleAnimation.Duration = duration;
+        var moveAnimation = compositor.CreateVector3KeyFrameAnimation();
+        moveAnimation.InsertKeyFrame(0, toTile ? System.Numerics.Vector3.Zero : moved);
+        moveAnimation.InsertKeyFrame(1, toTile ? moved : System.Numerics.Vector3.Zero, easing);
+        moveAnimation.Duration = duration;
+
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, toTile ? 1f : 0f);
+        fade.InsertKeyFrame(1, toTile ? 0f : 1f);
+        fade.Duration = duration;
+
+        var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        visual.StartAnimation("Scale", scaleAnimation);
+        visual.StartAnimation("Translation", moveAnimation);
+        foreach (var part in new UIElement[] { _backdrop, _bar, _filmstrip })
+            ElementCompositionPreview.GetElementVisual(part).StartAnimation("Opacity", fade);
+        batch.End();
+        batch.Completed += (_, _) =>
+        {
+            if (!toTile) ResetVisual();
+            done?.Invoke();
+        };
+    }
+
+    private void ResetVisual()
+    {
+        var visual = ElementCompositionPreview.GetElementVisual(_scroll);
+        visual.StopAnimation("Scale");
+        visual.StopAnimation("Translation");
+        visual.Scale = System.Numerics.Vector3.One;
+        visual.Properties.InsertVector3("Translation", System.Numerics.Vector3.Zero);
+        foreach (var part in new UIElement[] { _backdrop, _bar, _filmstrip })
+        {
+            var partVisual = ElementCompositionPreview.GetElementVisual(part);
+            partVisual.StopAnimation("Opacity");
+            partVisual.Opacity = 1;
+        }
     }
 
     private void Step(int delta)
