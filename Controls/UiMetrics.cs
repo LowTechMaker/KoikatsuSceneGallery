@@ -107,6 +107,8 @@ internal static class UiMetrics
     public const double HomeMosaicGap = 4;
     /// <summary>A panel's mosaic: one large picture and four small ones in two rows beside it.</summary>
     public const int HomeMosaicCards = 5;
+    /// <summary>A compact panel (beside the featured card): one row of this many pictures.</summary>
+    public const int HomeMosaicCompactCards = 3;
     /// <summary>
     /// The column beside the featured card: the library's numbers, then the
     /// queued, recent and liked panels under them (user request). As wide as

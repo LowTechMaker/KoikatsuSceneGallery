@@ -81,20 +81,8 @@ internal sealed class HomePanel : UserControl
         Grid.SetColumn(_seeAll, 2);
         header.Children.Add(_seeAll);
 
-        // Two columns of small pictures beside a large one twice their size:
-        // every picture keeps the cards' own shape.
-        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _mosaic.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        _mosaic.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        _mosaic.SizeChanged += (_, e) =>
-        {
-            // Small pictures at the cards' ratio: two rows of them make the height.
-            var small = (e.NewSize.Width - 2 * UiMetrics.HomeMosaicGap) / 4;
-            var height = 2 * small * UiMetrics.HolderCardAspect + UiMetrics.HomeMosaicGap;
-            if (Math.Abs(_mosaic.Height - height) > 0.5) _mosaic.Height = height;
-        };
+        ConfigureMosaic();
+        _mosaic.SizeChanged += (_, e) => SizeMosaic(e.NewSize.Width);
 
         var body = new Grid();
         body.Children.Add(_mosaic);
@@ -122,6 +110,67 @@ internal sealed class HomePanel : UserControl
         Rebuild();
     }
 
+    private bool _compact;
+
+    /// <summary>
+    /// One row of three equal pictures instead of the large one and four:
+    /// for the panels stacked beside the featured card, where the full mosaic
+    /// made the top of the page taller than the window (user report).
+    /// </summary>
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            if (_compact == value) return;
+            _compact = value;
+            Unwatch();
+            _tiles.Clear();
+            _mosaic.Children.Clear();
+            ConfigureMosaic();
+            SizeMosaic(_mosaic.ActualWidth);
+            Rebuild();
+        }
+    }
+
+    private void ConfigureMosaic()
+    {
+        _mosaic.ColumnDefinitions.Clear();
+        _mosaic.RowDefinitions.Clear();
+        if (_compact)
+        {
+            for (var c = 0; c < UiMetrics.HomeMosaicCompactCards; c++)
+                _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _mosaic.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            return;
+        }
+        // Two columns of small pictures beside a large one twice their size:
+        // every picture keeps the cards' own shape.
+        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _mosaic.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _mosaic.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _mosaic.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+    }
+
+    /// <summary>The mosaic's height for its width: its small pictures at the cards' ratio.</summary>
+    private void SizeMosaic(double width)
+    {
+        if (width <= 0) return;
+        double height;
+        if (_compact)
+        {
+            var count = UiMetrics.HomeMosaicCompactCards;
+            height = (width - (count - 1) * UiMetrics.HomeMosaicGap) / count * UiMetrics.HolderCardAspect;
+        }
+        else
+        {
+            var small = (width - 2 * UiMetrics.HomeMosaicGap) / 4;
+            height = 2 * small * UiMetrics.HolderCardAspect + UiMetrics.HomeMosaicGap;
+        }
+        if (Math.Abs(_mosaic.Height - height) > 0.5) _mosaic.Height = height;
+    }
+
     /// <summary>The picture of a card on this panel, for the loupe's flight; null when it is not shown.</summary>
     public FrameworkElement? PictureOf(CardBase card)
         => _tiles.FirstOrDefault(tile => ReferenceEquals(tile.Card, card)).Image;
@@ -141,7 +190,7 @@ internal sealed class HomePanel : UserControl
         _empty.Visibility = total == 0 ? Visibility.Visible : Visibility.Collapsed;
         _mosaic.Opacity = total == 0 ? 0 : 1;
 
-        var shown = Shelf.Cards.Take(UiMetrics.HomeMosaicCards).ToArray();
+        var shown = Shelf.Cards.Take(_compact ? UiMetrics.HomeMosaicCompactCards : UiMetrics.HomeMosaicCards).ToArray();
         if (shown.Length == _tiles.Count && shown.Select((card, i) => ReferenceEquals(card, _tiles[i].Card)).All(same => same)) return;
 
         Unwatch();
@@ -167,8 +216,10 @@ internal sealed class HomePanel : UserControl
             menu.Opening += (_, _) => CardMenu.Fill(menu, [card], () => CardInvoked?.Invoke(Shelf, card), _frame());
             button.ContextFlyout = menu;
 
-            // The first card large on the left, the next four in a square of two by two.
-            if (i == 0) { Grid.SetRowSpan(button, 2); }
+            // Compact: one row of equal pictures. Otherwise the first card large
+            // on the left, the next four in a square of two by two.
+            if (_compact) Grid.SetColumn(button, i);
+            else if (i == 0) { Grid.SetRowSpan(button, 2); }
             else
             {
                 Grid.SetColumn(button, 1 + (i - 1) % 2);

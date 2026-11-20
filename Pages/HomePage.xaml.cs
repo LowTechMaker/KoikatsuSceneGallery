@@ -80,7 +80,13 @@ public sealed partial class HomePage : Page
         if (width <= 0) return;
         var gap = UiMetrics.HomePanelGap;
         var sideBySide = width >= UiMetrics.HomeFeaturedMinWidth + gap + UiMetrics.HomeSideColumnWidth;
-        foreach (var panel in _sidePanels) Move(panel, sideBySide ? _sideColumn : PanelsGrid);
+        foreach (var panel in _sidePanels)
+        {
+            Move(panel, sideBySide ? _sideColumn : PanelsGrid);
+            // Beside the featured card they are one row each, so the top of the
+            // page and the themes under it fit in the window (user report).
+            panel.Compact = sideBySide;
+        }
 
         var columns = (int)Math.Clamp(Math.Floor((width + gap) / (UiMetrics.HomePanelMinWidth + gap)), 1, UiMetrics.HomePanelColumns);
         PanelsGrid.ColumnSpacing = gap;
