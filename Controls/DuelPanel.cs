@@ -38,7 +38,7 @@ namespace KoikatsuSceneGallery.Controls;
 internal sealed class DuelPanel : StackPanel
 {
     /// <summary>The decoded width: a card is at most half of <see cref="DuelLayout.MaxWidthBoth"/>, at 2x scale.</summary>
-    private const int DecodeWidth = 1100;
+    private const int DecodeWidth = (int)DuelLayout.MaxWidthBoth;
 
     private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
     private readonly TextBlock _count = new()
@@ -76,19 +76,18 @@ internal sealed class DuelPanel : StackPanel
         AutomationProperties.SetAutomationId(_skip, "HomeDuel_Skip");
 
         var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        heading.Children.Add(new TextBlock
+        // The hint is the title's tooltip, not a line of its own: one line
+        // less keeps the panel a section rather than a banner.
+        var title = new TextBlock
         {
             Text = UiText.Get("Home_DuelTitle"),
-            Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"],
-        });
+            Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
+        };
+        ToolTipService.SetToolTip(title, UiText.Get("Home_DuelHint"));
+        AutomationProperties.SetHelpText(this, UiText.Get("Home_DuelHint"));
+        heading.Children.Add(title);
         heading.Children.Add(_count);
         Children.Add(heading);
-        Children.Add(new TextBlock
-        {
-            Text = UiText.Get("Home_DuelHint"),
-            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-            TextWrapping = TextWrapping.Wrap,
-        });
 
         _cards.Children.Add(_left);
         _cards.Children.Add(_right);
@@ -199,7 +198,7 @@ internal sealed class DuelPanel : StackPanel
     }
 
     /// <summary>A guess at everything but the pictures, until the panel has been measured once.</summary>
-    private const double ChromeGuess = 190;
+    private const double ChromeGuess = 140;
 
     // Sized by DuelLayout: as wide as the page allows, the whole panel at most
     // about half the window's height (seen live: by width alone it filled the
