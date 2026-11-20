@@ -40,6 +40,13 @@ namespace KoikatsuSceneGallery.Controls;
 /// <para>
 /// The first version (wave 14) put small arrows in a corner, closed on a
 /// double click and had only Fit / 100%; the user asked for a proper design.
+/// The second (wave 16) was still "ugly" (user, with a screenshot): a 320x180
+/// scene card stretched four times over was a blur, the library's toolbar
+/// stayed above it, the title repeated the details pane's, and a dark box
+/// around the picture read as letterboxing. So: the picture is never shown
+/// at more than twice its own pixels, the header is only back, position and
+/// zoom (the pane says what the card is), there is no box, and the host lets
+/// the loupe cover its whole content area.
 /// </para>
 /// </remarks>
 internal sealed class CardLoupe : Grid
@@ -52,22 +59,19 @@ internal sealed class CardLoupe : Grid
     private static readonly TimeSpan HintDuration = TimeSpan.FromSeconds(4);
 
     private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
-    private readonly HomeViewModel? _home = App.Services.GetService<HomeViewModel>();
 
     // ---- header
     private readonly Grid _bar = new() { ColumnSpacing = 12, Padding = new Thickness(0, 0, 0, 10) };
-    private readonly TextBlock _title = new()
+    private readonly Button _back = new()
     {
-        Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"],
-        TextTrimming = TextTrimming.CharacterEllipsis,
-        TextWrapping = TextWrapping.NoWrap,
+        Padding = new Thickness(10, 6, 12, 6),
+        Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
     };
-    private readonly TextBlock _subtitle = new()
+    private readonly TextBlock _backLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _position = new()
     {
-        Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
         Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-        TextTrimming = TextTrimming.CharacterEllipsis,
-        TextWrapping = TextWrapping.NoWrap,
+        VerticalAlignment = VerticalAlignment.Center,
     };
     private readonly Button _zoomOut = IconButton("", "Loupe_ZoomOut", "LoupeZoomOut");
     private readonly Button _zoomIn = IconButton("", "Loupe_ZoomIn", "LoupeZoomIn");
@@ -78,7 +82,6 @@ internal sealed class CardLoupe : Grid
         Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
     };
     private readonly Button _info = IconButton("", "Inspector_Toggle", "LoupeToggleInfo");
-    private readonly Button _close = IconButton("", "Loupe_Close", "LoupeClose");
 
     // ---- stage
     private readonly Border _stage = new();
@@ -180,10 +183,22 @@ internal sealed class CardLoupe : Grid
         _bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var heading = new StackPanel { Spacing = 0, VerticalAlignment = VerticalAlignment.Center };
-        AutomationProperties.SetAutomationId(_title, "LoupeTitle");
-        heading.Children.Add(_title);
-        heading.Children.Add(_subtitle);
+        // Back, and where in the list this card is. What the card is, the pane says.
+        var heading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        _backLabel.Text = UiText.Get("Loupe_BackLabel");
+        _back.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children = { new FontIcon { Glyph = "\uE72B", FontSize = 14 }, _backLabel },
+        };
+        var backTip = UiText.Get("Loupe_Close");
+        ToolTipService.SetToolTip(_back, backTip);
+        AutomationProperties.SetName(_back, backTip);
+        AutomationProperties.SetAutomationId(_back, "LoupeClose");
+        heading.Children.Add(_back);
+        AutomationProperties.SetAutomationId(_position, "LoupePosition");
+        heading.Children.Add(_position);
         _bar.Children.Add(heading);
 
         // Zoom: out, the level (click: back to fit, or to the close-up), in.
@@ -204,7 +219,6 @@ internal sealed class CardLoupe : Grid
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         actions.Children.Add(_info);
-        actions.Children.Add(_close);
         SetColumn(actions, 2);
         _bar.Children.Add(actions);
         Children.Add(_bar);
@@ -213,14 +227,12 @@ internal sealed class CardLoupe : Grid
         _zoomIn.Click += (_, _) => ZoomBy(WheelStep, null);
         _zoomLevel.Click += (_, _) => ToggleCloseUp(null);
         _info.Click += (_, _) => _settings.InspectorVisible = !_settings.InspectorVisible;
-        _close.Click += (_, _) => Close();
+        _back.Click += (_, _) => Close();
     }
 
     private void BuildStage()
     {
-        _stage.CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"];
-        // Darker than the page: the picture is the brightest thing on screen.
-        _stage.Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseAltBrush"];
+        // No box of its own: a darker frame read as letterboxing (user report).
         _stage.Child = _stageContent;
         SetRow(_stage, 1);
         Children.Add(_stage);
@@ -270,11 +282,11 @@ internal sealed class CardLoupe : Grid
             .Observe(App.Services.GetRequiredService<IAppLogger>(), "Loupe.PrepareDrag");
     }
 
-    /// <summary>Changes what the close button says (the viewer page goes back rather than to a grid).</summary>
+    /// <summary>Changes what the back button says (the viewer page goes back to a page, not to a grid).</summary>
     public void SetCloseTooltip(string text)
     {
-        ToolTipService.SetToolTip(_close, text);
-        AutomationProperties.SetName(_close, text);
+        ToolTipService.SetToolTip(_back, text);
+        AutomationProperties.SetName(_back, text);
     }
 
     // ------------------------------------------------------------ open, step, close
@@ -389,32 +401,31 @@ internal sealed class CardLoupe : Grid
         _index = index;
         var card = _cards[index];
         _preview.Show(card, card.Width > 0 ? Math.Min(card.Width, DecodeWidth) : DecodeWidth);
-        _title.Text = TitleOf(card);
-        _subtitle.Text = $"{card.FileName} · {index + 1} / {_cards.Count}";
-        ToolTipService.SetToolTip(_title, _title.Text);
+        _position.Text = $"{index + 1:N0} / {_cards.Count:N0}";
+        ToolTipService.SetToolTip(_position, card.FileName);
         _filmstrip.Show(_cards, index);
         SetEdgeButtons(_pointerOverStage);
         Fit();
         if (notify) CurrentChanged?.Invoke(card);
     }
 
-    /// <summary>What the card is, before what its file is called.</summary>
-    private string TitleOf(CardBase card) => card switch
-    {
-        CharacterCard { CharacterName.Length: > 0 } character => character.CharacterName,
-        CoordinateCard { CoordinateName.Length: > 0 } outfit => outfit.CoordinateName,
-        _ => _home?.Describe(card).Title ?? card.FileName,
-    };
-
     // ------------------------------------------------------------ zoom and pan
 
-    /// <summary>The picture's size when it fits the stage.</summary>
+    /// <summary>The most a picture is enlarged to fit: beyond twice its own pixels it is only blur.</summary>
+    private const double MaxFitScale = 2;
+
+    /// <summary>
+    /// The picture's size when it fits the stage, at most twice its own pixels:
+    /// a scene card is 320x180, and filling a large stage with it was a blur.
+    /// </summary>
     private Size FitSize()
     {
         double viewW = _scroll.ActualWidth, viewH = _scroll.ActualHeight;
         if (Current is not { } card || viewW <= 0 || viewH <= 0) return new Size(0, 0);
         var aspect = card.Width > 0 && card.Height > 0 ? (double)card.Width / card.Height : 16.0 / 9;
         var width = Math.Min(viewW, viewH * aspect);
+        if (card.Width > 0)
+            width = Math.Min(width, card.Width * MaxFitScale / (XamlRoot?.RasterizationScale ?? 1));
         return new Size(width, width / aspect);
     }
 
@@ -429,6 +440,14 @@ internal sealed class CardLoupe : Grid
         _image.Height = fit.Height;
         _scroll.ChangeView(0, 0, 1, disableAnimation: true);
         UpdateZoomState();
+    }
+
+    /// <summary>How many screen pixels one picture pixel takes now (1 = actual size).</summary>
+    private double PixelScale()
+    {
+        var fit = FitSize();
+        if (Current is not { Width: > 0 } card || fit.Width <= 0) return 1;
+        return fit.Width * _scroll.ZoomFactor * (XamlRoot?.RasterizationScale ?? 1) / card.Width;
     }
 
     /// <summary>The zoom at which one picture pixel is one screen pixel (at least fit).</summary>
@@ -471,10 +490,7 @@ internal sealed class CardLoupe : Grid
         // Fit: dragging the picture takes the card file out (to the game).
         // Zoomed in: dragging pans.
         _image.CanDrag = !zoomed;
-        var actual = ActualSizeZoom();
-        _zoomLevel.Content = zoomed
-            ? $"{Math.Round(_scroll.ZoomFactor / actual * 100)}%"
-            : UiText.Get("Loupe_Fit");
+        _zoomLevel.Content = $"{Math.Round(PixelScale() * 100)}%";
         _zoomOut.IsEnabled = zoomed;
         _zoomIn.IsEnabled = _scroll.ZoomFactor < MaxZoom - 0.01f;
         ProtectedCursor = InputSystemCursor.Create(zoomed ? InputSystemCursorShape.SizeAll : InputSystemCursorShape.Arrow);

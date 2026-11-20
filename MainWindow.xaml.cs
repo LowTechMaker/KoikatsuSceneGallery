@@ -195,6 +195,16 @@ public sealed partial class MainWindow : Window
         SetNavItemVisibility("authors", true);
     }
 
+    /// <summary>
+    /// Hides the library's tab heading while a card is open large over the
+    /// library (the loupe takes the whole content area); shown again after.
+    /// </summary>
+    internal void SetLibraryHeadingHidden(bool hidden)
+    {
+        if (!IsLibraryPage(NavFrame.CurrentSourcePageType)) return;
+        LibrarySelectorBar.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     /// <summary>Whether the tag page has something to show (the "More" menu and the palette offer it then).</summary>
     internal bool TagsOffered => _tagsEntry != NavEntryState.Hidden;
 

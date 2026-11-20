@@ -54,9 +54,12 @@ public sealed partial class LibraryBrowser
             _inspector.Show([]);
         };
 
-        // The loupe covers the grid's cell only; the details pane stays beside it.
+        // The loupe covers the browser's whole content column, toolbar and
+        // search included (they cluttered the view above the picture); the
+        // details pane stays beside it and grows to the same height.
         _loupe = new CardLoupe();
-        Grid.SetRow(_loupe, 2);
+        Grid.SetRow(_loupe, 0);
+        Grid.SetRowSpan(_loupe, 3);
         RootLayout.Children.Add(_loupe);
         _loupe.TileBounds = TileBounds;
         _loupe.CurrentChanged += Loupe_CurrentChanged;
@@ -219,7 +222,19 @@ public sealed partial class LibraryBrowser
         OpeningDetail?.Invoke();
         // The picture is large on the left now; the pane keeps the facts and actions.
         _inspector.ShowPreview = false;
+        SetLoupeLayout(open: true);
         _loupe.Open(cards, index);
+    }
+
+    /// <summary>
+    /// While the loupe is open the pane runs the full height beside it, and the
+    /// library's tab heading (drawn by the window over this control) steps aside.
+    /// </summary>
+    private void SetLoupeLayout(bool open)
+    {
+        Grid.SetRow(_inspector, open ? 0 : 2);
+        Grid.SetRowSpan(_inspector, open ? 3 : 1);
+        if (_scope is null) MainWindow.Instance?.SetLibraryHeadingHidden(open);
     }
 
     /// <summary>
@@ -274,6 +289,7 @@ public sealed partial class LibraryBrowser
     private void Loupe_Closed(CardBase? card)
     {
         _inspector.ShowPreview = true;
+        SetLoupeLayout(open: false);
         if (card is null || EntryOf(card) is not { } entry) return;
         GalleryGrid.ScrollIntoView(entry);
         DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));

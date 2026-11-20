@@ -2361,6 +2361,7 @@
   <data name="Loupe_ZoomLevelTip" xml:space="preserve"><value>适合 / 特写（双击图片；按 0 回到适合）</value></data>
   <data name="Loupe_Fit" xml:space="preserve"><value>适合</value></data>
   <data name="Loupe_Hint" xml:space="preserve"><value>← → 换卡 · 滚轮缩放 · 拖拽平移 · 双击特写 · Esc 返回</value></data>
+  <data name="Loupe_BackLabel" xml:space="preserve"><value>返回</value></data>
   <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>记录中</value></data>
   <data name="Browser_More" xml:space="preserve"><value>更多</value></data>
   <data name="Authors_LocalSources" xml:space="preserve"><value>本地收藏</value></data>
