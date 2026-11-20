@@ -1,20 +1,35 @@
 using System.Numerics;
 using Microsoft.UI.Composition;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Hosting;
 
 namespace KoikatsuSceneGallery.Controls;
 
 /// <summary>
-/// The app's one set of motion constants.
+/// The app's one place for motion: the tempo (durations, easing), whether
+/// animation is on at all, and the few movements everything uses.
 /// </summary>
 /// <remarks>
-/// Extracted from <see cref="StagedCardFlightAnimator"/>, which owned them
-/// first, so a second animation cannot quietly drift to a different tempo. The
-/// values are unchanged.
+/// <para>
+/// Extracted first from <see cref="StagedCardFlightAnimator"/>, so a second
+/// animation could not quietly drift to a different tempo. It became the
+/// app's motion scheduler when the user found the library opening, a group
+/// opening and the loupe each moving (or not moving) in their own way: every
+/// animation now takes its timing and its on/off from here.
+/// </para>
+/// <list type="bullet">
+/// <item><see cref="Entrance"/>: content arriving (a library tab, a page's grid) fades in and settles up.</item>
+/// <item><see cref="DrillIn"/>: going into something (a group) grows the new content out of where it was opened.</item>
+/// <item>The card flights (<see cref="StagedCardFlightAnimator"/>, the loupe, the group collapse) use
+/// <see cref="FlyDuration"/> / <see cref="ReturnDuration"/> and <see cref="Decelerate"/>.</item>
+/// </list>
 /// </remarks>
 internal static class CardMotion
 {
     public static readonly TimeSpan FlyDuration = TimeSpan.FromMilliseconds(260);
     public static readonly TimeSpan ReturnDuration = TimeSpan.FromMilliseconds(180);
+    /// <summary>Content arriving: shorter than a flight, it should not hold the eye.</summary>
+    public static readonly TimeSpan EnterDuration = TimeSpan.FromMilliseconds(220);
     public static readonly TimeSpan Stagger = TimeSpan.FromMilliseconds(18);
 
     /// <summary>
@@ -23,9 +38,65 @@ internal static class CardMotion
     /// </summary>
     public static readonly TimeSpan StaggerBudget = TimeSpan.FromMilliseconds(120);
 
+    /// <summary>Windows' own "show animations" setting; off means everything simply appears.</summary>
     public static bool AnimationsEnabled
         => new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
 
+    /// <summary>Standard: accelerates out, settles in. For things moving between two places.</summary>
     public static CompositionEasingFunction Ease(Compositor compositor)
         => compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(0.2f, 1f));
+
+    /// <summary>Decelerate: fast start, soft landing. For things arriving.</summary>
+    public static CompositionEasingFunction Decelerate(Compositor compositor)
+        => compositor.CreateCubicBezierEasingFunction(new Vector2(0.1f, 0.9f), new Vector2(0.2f, 1f));
+
+    /// <summary>
+    /// Content arriving: fades in while settling up from <paramref name="rise"/> pixels below.
+    /// </summary>
+    public static void Entrance(UIElement element, float rise = 16)
+    {
+        if (!AnimationsEnabled) return;
+        ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var ease = Decelerate(compositor);
+
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = EnterDuration;
+        var move = compositor.CreateVector3KeyFrameAnimation();
+        move.InsertKeyFrame(0, new Vector3(0, rise, 0));
+        move.InsertKeyFrame(1, Vector3.Zero, ease);
+        move.Duration = EnterDuration;
+
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>
+    /// Going into something: the new content grows out of <paramref name="origin"/>
+    /// (in the element's own coordinates, e.g. the centre of the tile that was opened)
+    /// while it fades in.
+    /// </summary>
+    public static void DrillIn(UIElement element, Vector2 origin)
+    {
+        if (!AnimationsEnabled) return;
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var ease = Decelerate(compositor);
+        visual.CenterPoint = new Vector3(origin, 0);
+
+        var grow = compositor.CreateVector3KeyFrameAnimation();
+        grow.InsertKeyFrame(0, new Vector3(0.85f, 0.85f, 1));
+        grow.InsertKeyFrame(1, Vector3.One, ease);
+        grow.Duration = FlyDuration;
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = FlyDuration;
+
+        visual.StartAnimation("Scale", grow);
+        visual.StartAnimation("Opacity", fade);
+    }
 }

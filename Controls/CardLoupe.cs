@@ -54,8 +54,9 @@ internal sealed class CardLoupe : Grid
     private const int DecodeWidth = 2560;
     private const float MaxZoom = 8;
     private const double WheelStep = 1.2;
-    private static readonly TimeSpan OpenDuration = TimeSpan.FromMilliseconds(260);
-    private static readonly TimeSpan CloseDuration = TimeSpan.FromMilliseconds(200);
+    // The app's motion tempo (CardMotion), like every other flight.
+    private static readonly TimeSpan OpenDuration = CardMotion.FlyDuration;
+    private static readonly TimeSpan CloseDuration = CardMotion.ReturnDuration;
     private static readonly TimeSpan HintDuration = TimeSpan.FromSeconds(4);
 
     private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
@@ -602,7 +603,7 @@ internal sealed class CardLoupe : Grid
         var visual = ElementCompositionPreview.GetElementVisual(_scroll);
         var compositor = visual.Compositor;
         visual.CenterPoint = new System.Numerics.Vector3(0, 0, 0);
-        var easing = compositor.CreateCubicBezierEasingFunction(new(0.1f, 0.9f), new(0.2f, 1f));
+        var easing = CardMotion.Decelerate(compositor);
 
         var small = new System.Numerics.Vector3(scale, scale, 1);
         var moved = new System.Numerics.Vector3(dx, dy, 0);

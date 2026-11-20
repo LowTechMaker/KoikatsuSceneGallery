@@ -171,6 +171,9 @@ public sealed partial class LibraryBrowser : UserControl
         if (_scope is null && (_adapter!.Cards.Count == 0 || _reload)) Load();
         else if (_detailContext?.ReturnPath is { } path) RestoreItem(path);
         if (_scope is null) ReloadIfFileCountChanged();
+        // Arriving at the library or another of its tabs: the grid comes in
+        // (CardMotion). The page itself is navigated to without a transition.
+        CardMotion.Entrance(GalleryGrid);
     }
     // A load cancelled by leaving the page leaves the gallery holding part of the folder.
     private void ReloadIfFileCountChanged() =>
@@ -383,12 +386,17 @@ public sealed partial class LibraryBrowser : UserControl
         _collapse.Finish();
         if (entry.IsGroup)
         {
+            // Where the group's tile is, for the cards to grow out of it.
+            var origin = GalleryGrid.ContainerFromItem(entry) is FrameworkElement tile
+                ? tile.TransformToVisual(GalleryGrid).TransformPoint(new Windows.Foundation.Point(tile.ActualWidth / 2, tile.ActualHeight / 2))
+                : new Windows.Foundation.Point(GalleryGrid.ActualWidth / 2, 0);
             // Inside the group nothing is selected yet: carried over, the
             // group's selection would select every card in it.
             GalleryGrid.SelectedItems.Clear();
             ApplySearch(); _returnPath = entry.Card.FilePath; _returnIndex = _items.IndexOf(entry);
             _returnOffset = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid)?.VerticalOffset ?? 0;
             _groupKey = entry.Key; _groupTitle = entry.Title; _groupSearch = ""; SetSearchText(""); Refresh(); ScrollFirst();
+            CardMotion.DrillIn(GalleryGrid, new System.Numerics.Vector2((float)origin.X, (float)origin.Y));
             BackButton.Focus(FocusState.Keyboard);
         }
         else OpenInLoupe(entry.Card);
