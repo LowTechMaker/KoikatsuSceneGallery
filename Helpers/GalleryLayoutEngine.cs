@@ -113,9 +113,14 @@ internal sealed class GalleryLayoutEngine
         HookPanel(panel);
 
         double available = panel.ActualWidth > 0 ? panel.ActualWidth : _grid.ActualWidth;
-        if (available <= 0)
+        // A width this small is a transient measure while the page is still
+        // being laid out, not a real grid: laid out from it, every tile was
+        // ~38 px for seconds (user report, three times). Default-sized tiles
+        // until a real width comes (the size-changed hooks call back here).
+        if (available < MinRealWidth)
         {
-            ApplyProvisional(panel);
+            ApplyProvisional(panel, force: true);
+            _appliedColumns = -1;
             return;
         }
         int columns = Math.Max(1, (int)Math.Floor(available / (_baseItemWidth + CellOverheadW)));
@@ -143,10 +148,13 @@ internal sealed class GalleryLayoutEngine
         return imageH + metadata + (CardMargin + CardInset) * 2;
     }
 
+    /// <summary>Narrower than this the panel has not been laid out for real yet.</summary>
+    private const double MinRealWidth = 200;
+
     // Before anything has been measured: tiles of the chosen size, not of their placeholders.
-    private void ApplyProvisional(ItemsWrapGrid panel)
+    private void ApplyProvisional(ItemsWrapGrid panel, bool force = false)
     {
-        if (!double.IsNaN(panel.ItemWidth)) return;
+        if (!force && !double.IsNaN(panel.ItemWidth)) return;
         double cellW = _baseItemWidth + CellOverheadW;
         panel.ItemWidth = cellW;
         panel.ItemHeight = CellHeight(cellW);

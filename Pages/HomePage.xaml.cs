@@ -151,10 +151,13 @@ public sealed partial class HomePage : Page
     private Windows.Foundation.Rect? TileBounds(CardBase card)
     {
         if (TileOf(card) is not { ActualWidth: > 0 } tile) return null;
-        var bounds = tile.TransformToVisual(_loupe).TransformBounds(
+        // Window coordinates (CardLoupe.TileBounds).
+        var bounds = tile.TransformToVisual(null).TransformBounds(
             new Windows.Foundation.Rect(0, 0, tile.ActualWidth, tile.ActualHeight));
+        var stage = _loupe.TransformToVisual(null).TransformBounds(
+            new Windows.Foundation.Rect(0, 0, _loupe.ActualWidth, _loupe.ActualHeight));
         // Off the visible part of the page: just appear and disappear.
-        if (bounds.Bottom < 0 || bounds.Top > _loupe.ActualHeight) return null;
+        if (bounds.Bottom < stage.Top || bounds.Top > stage.Bottom) return null;
         return bounds;
     }
 

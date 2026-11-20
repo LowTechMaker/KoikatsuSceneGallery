@@ -63,6 +63,7 @@ public sealed partial class LibraryBrowser
         RootLayout.Children.Add(_loupe);
         _loupe.TileBounds = TileBounds;
         _loupe.CurrentChanged += Loupe_CurrentChanged;
+        _loupe.Closing += () => SetLoupeLayout(open: false);
         _loupe.Closed += Loupe_Closed;
         // While the loupe is open its keys win wherever focus is (it may still be
         // on the grid behind, or in the details pane); typing in a text box is left alone.
@@ -265,7 +266,7 @@ public sealed partial class LibraryBrowser
         foreach (var image in VisualTreeSearch.FindDescendants<Image>(container))
             if (image.ActualWidth > (picture?.ActualWidth ?? 0)) picture = image;
         FrameworkElement target = picture is { ActualWidth: > 0 } ? picture : container;
-        var bounds = target.TransformToVisual(_loupe).TransformBounds(
+        var bounds = target.TransformToVisual(null).TransformBounds(
             new Windows.Foundation.Rect(0, 0, target.ActualWidth, target.ActualHeight));
         return bounds.Width > 0 && bounds.Height > 0 ? bounds : null;
     }

@@ -137,11 +137,22 @@ internal sealed class CardLoupe : Grid
     public event Action<CardBase?>? Closed;
 
     /// <summary>
-    /// Where a card's tile is, in this control's coordinates, for the zoom in and
-    /// out; null when it is not on screen (then the loupe just appears). Set by
-    /// the host, which scrolls the tile into view first when asked.
+    /// Where a card's tile is, in window coordinates (TransformToVisual(null)),
+    /// for the zoom in and out; null when it is not on screen (then the loupe
+    /// just appears). Set by the host, which scrolls the tile into view first.
+    /// Window coordinates, not the loupe's own: the host moves the loupe when
+    /// it opens and closes (it hides and shows its toolbar), and a rectangle
+    /// relative to the loupe went stale with it (user report: the picture flew
+    /// from a place above the tile).
     /// </summary>
     public Func<CardBase, Rect?>? TileBounds { get; set; }
+
+    /// <summary>
+    /// Raised as the loupe starts to close, before the tile is measured for the
+    /// flight back: the host puts its own layout back first (its toolbar), so
+    /// the tile is measured where it will be once the loupe is gone.
+    /// </summary>
+    public event Action? Closing;
 
     /// <summary>The card on show, or null when the loupe is closed.</summary>
     public CardBase? Current => _index >= 0 && _index < _cards.Count ? _cards[_index] : null;
@@ -361,6 +372,8 @@ internal sealed class CardLoupe : Grid
         var current = Current;
         _hintTimer.Stop();
         if (_scroll.ZoomFactor > 1.01f) Fit(); // the fly-back starts from the fitted picture
+        Closing?.Invoke();
+        UpdateLayout();
         Rect? to = animate && CardMotion.AnimationsEnabled && current is not null ? TileBounds?.Invoke(current) : null;
         if (to is not { } rect)
         {
@@ -574,7 +587,8 @@ internal sealed class CardLoupe : Grid
         }
         var fit = FitSize();
         double fitX = (_scroll.ActualWidth - fit.Width) / 2, fitY = (_scroll.ActualHeight - fit.Height) / 2;
-        var origin = _scroll.TransformToVisual(this).TransformPoint(new Point(0, 0));
+        // Both in window coordinates (see TileBounds).
+        var origin = _scroll.TransformToVisual(null).TransformPoint(new Point(0, 0));
         var scale = (float)(tile.Width / fit.Width);
         var dx = (float)(tile.X - origin.X - fitX * scale);
         var dy = (float)(tile.Y - origin.Y - fitY * scale);
