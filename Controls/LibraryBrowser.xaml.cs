@@ -558,8 +558,19 @@ public sealed partial class LibraryBrowser : UserControl
     private void Container_Changing(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
         if (args.Item is not GalleryEntry entry) return;
-        if (args.InRecycleQueue) { _adapter?.Thumbnail(entry.Card, true); return; }
-        args.RegisterUpdateCallback((_, phase) => { if (phase.Item is GalleryEntry item) _adapter?.Thumbnail(item.Card); });
+        if (args.InRecycleQueue)
+        {
+            _adapter?.Thumbnail(entry.Card, true);
+            if (entry.IsGroup) { _adapter?.Thumbnail(entry.SecondCard, true); _adapter?.Thumbnail(entry.ThirdCard, true); }
+            return;
+        }
+        args.RegisterUpdateCallback((_, phase) =>
+        {
+            if (phase.Item is not GalleryEntry item) return;
+            _adapter?.Thumbnail(item.Card);
+            // The cards fanned out behind a group's cover show their own pictures.
+            if (item.IsGroup) { _adapter?.Thumbnail(item.SecondCard); _adapter?.Thumbnail(item.ThirdCard); }
+        });
         _layout?.EnsureLayoutOnFirstContent();
     }
     private void RequestVisible()

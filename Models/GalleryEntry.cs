@@ -21,6 +21,22 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public bool IsGroup => Members.Count > 1;
     /// <summary>A third card peeks out of the stack only when there is a third card.</summary>
     public bool HasThirdLayer => Members.Count > 2;
+
+    /// <summary>The cards fanned out behind a group's cover (the cover itself when there is no such card).</summary>
+    public CardBase SecondCard => Members.Count > 1 ? Members[1] : Card;
+    public CardBase ThirdCard => Members.Count > 2 ? Members[2] : SecondCard;
+
+    /// <summary>
+    /// Room around a group's cover for the cards fanned behind it, drawn like
+    /// the details pane's stack of selected cards (user request); none for a
+    /// single card, whose picture fills its cell.
+    /// </summary>
+    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup
+        ? new Microsoft.UI.Xaml.Thickness(6, 10, 14, 8)
+        : new Microsoft.UI.Xaml.Thickness(0);
+
+    /// <summary>The number on a group's count badge.</summary>
+    public string MemberCountText => Members.Count.ToString();
     public bool ShowTitle { get; }
     /// <summary>
     /// The caption under the picture: title and author, or nothing at all when
