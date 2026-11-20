@@ -29,6 +29,9 @@ public sealed partial class HomePage : Page
     private readonly HomeFeatured _featured;
     private readonly HomeStats _stats = new();
     private readonly List<HomePanel> _panels = [];
+    /// <summary>The queued, recent and liked panels, which sit under the numbers when there is room.</summary>
+    private readonly List<HomePanel> _sidePanels = [];
+    private readonly StackPanel _sideColumn = new();
     private HomeShelf? _openShelf;
     private CardBase? _loupeCard;
     private bool _refreshQueued;
@@ -42,7 +45,9 @@ public sealed partial class HomePage : Page
         _featured.CardInvoked += OpenInLoupe;
         _stats.NewRequested += cards => Frame.Navigate(typeof(ShelfPage), new ShelfPageParameter(UiText.Get("Home_NewThisWeek"), cards));
         TopBand.Children.Add(_featured);
-        TopBand.Children.Add(_stats);
+        _sideColumn.Spacing = UiMetrics.HomePanelGap;
+        _sideColumn.Children.Add(_stats);
+        TopBand.Children.Add(_sideColumn);
 
         // Every shelf but the dealt hand, which is what the featured card steps through.
         foreach (var shelf in _viewModel.Shelves.Where(shelf => shelf.Key != HomeViewModel.DealKey))
@@ -53,6 +58,7 @@ public sealed partial class HomePage : Page
             // A panel hides itself when its shelf is empty: the rest close up.
             panel.RegisterPropertyChangedCallback(VisibilityProperty, (_, _) => LayOut());
             _panels.Add(panel);
+            if (shelf.Key is HomeViewModel.QueuedKey or HomeViewModel.RecentKey or HomeViewModel.LikedKey) _sidePanels.Add(panel);
             PanelsGrid.Children.Add(panel);
         }
         Dashboard.SizeChanged += (_, _) => LayOut();
@@ -62,15 +68,19 @@ public sealed partial class HomePage : Page
     // ------------------------------------------------------------ layout
 
     /// <summary>
-    /// As many panels per row as fit at their least width (at most three); the
-    /// featured card and the numbers side by side unless that leaves either
-    /// too narrow, then one above the other.
+    /// With room for both: the featured card on the left, and on the right the
+    /// library's numbers with the queued, recent and liked panels under them
+    /// (user request: they filled nothing there); today's themes below, as
+    /// many per row as fit (at most three). Without the room, everything
+    /// stacks and those three panels join the themes.
     /// </summary>
     private void LayOut()
     {
         var width = Dashboard.ActualWidth - Dashboard.Margin.Left - Dashboard.Margin.Right;
         if (width <= 0) return;
         var gap = UiMetrics.HomePanelGap;
+        var sideBySide = width >= UiMetrics.HomeFeaturedMinWidth + gap + UiMetrics.HomeSideColumnWidth;
+        foreach (var panel in _sidePanels) Move(panel, sideBySide ? _sideColumn : PanelsGrid);
 
         var columns = (int)Math.Clamp(Math.Floor((width + gap) / (UiMetrics.HomePanelMinWidth + gap)), 1, UiMetrics.HomePanelColumns);
         PanelsGrid.ColumnSpacing = gap;
@@ -78,7 +88,7 @@ public sealed partial class HomePage : Page
         PanelsGrid.ColumnDefinitions.Clear();
         PanelsGrid.RowDefinitions.Clear();
         for (var c = 0; c < columns; c++) PanelsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var shown = _panels.Where(panel => panel.Visibility == Visibility.Visible).ToArray();
+        var shown = _panels.Where(panel => panel.Visibility == Visibility.Visible && panel.Parent == PanelsGrid).ToArray();
         for (var r = 0; r < (shown.Length + columns - 1) / columns; r++) PanelsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         for (var i = 0; i < shown.Length; i++)
         {
@@ -86,20 +96,30 @@ public sealed partial class HomePage : Page
             Grid.SetColumn(shown[i], i % columns);
         }
 
-        var sideBySide = width >= UiMetrics.HomePanelMinWidth * 2 + gap;
         TopBand.ColumnSpacing = gap;
         TopBand.RowSpacing = gap;
         TopBand.ColumnDefinitions.Clear();
         TopBand.RowDefinitions.Clear();
         TopBand.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (sideBySide) TopBand.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(UiMetrics.HomeStatsWidth) });
+        if (sideBySide) TopBand.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(UiMetrics.HomeSideColumnWidth) });
         else
         {
             TopBand.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             TopBand.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         }
-        Grid.SetColumn(_stats, sideBySide ? 1 : 0);
-        Grid.SetRow(_stats, sideBySide ? 0 : 1);
+        Grid.SetColumn(_sideColumn, sideBySide ? 1 : 0);
+        Grid.SetRow(_sideColumn, sideBySide ? 0 : 1);
+        // Side by side, the featured card is as tall as the column beside it
+        // and keeps its picture in the middle; stacked, it is its own height.
+        _featured.VerticalAlignment = sideBySide ? VerticalAlignment.Stretch : VerticalAlignment.Top;
+    }
+
+    /// <summary>Puts a panel in another container, once; a no-op when it is already there.</summary>
+    private static void Move(FrameworkElement element, Panel target)
+    {
+        if (ReferenceEquals(element.Parent, target)) return;
+        (element.Parent as Panel)?.Children.Remove(element);
+        target.Children.Add(element);
     }
 
     // ------------------------------------------------------------ open in place (the loupe)

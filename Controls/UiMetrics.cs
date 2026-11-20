@@ -107,10 +107,16 @@ internal static class UiMetrics
     public const double HomeMosaicGap = 4;
     /// <summary>A panel's mosaic: one large picture and four small ones in two rows beside it.</summary>
     public const int HomeMosaicCards = 5;
-    /// <summary>The library numbers beside the featured card.</summary>
-    public const double HomeStatsWidth = 300;
+    /// <summary>
+    /// The column beside the featured card: the library's numbers, then the
+    /// queued, recent and liked panels under them (user request). As wide as
+    /// a panel at its least, so those panels look the same as the others.
+    /// </summary>
+    public const double HomeSideColumnWidth = HomePanelMinWidth;
+    /// <summary>The featured card is not put beside the side column when it would be narrower than this.</summary>
+    public const double HomeFeaturedMinWidth = 560;
     /// <summary>The featured picture's largest width, and the width it is decoded at.</summary>
-    public const double HomeFeaturedMaxPictureWidth = 640;
+    public const double HomeFeaturedMaxPictureWidth = 960;
     public const int HomeFeaturedDecodeWidth = 1280;
     /// <summary>How see-through the featured picture is behind the whole top band.</summary>
     public const double HomeFeaturedBackdropOpacity = 0.16;

@@ -117,9 +117,14 @@ internal sealed class HomeFeatured : UserControl
         Grid.SetColumn(info, 1);
         _content.Children.Add(info);
         // The picture at the cards' own shape, as wide as its column lets it be.
+        // Its height from the width the column really gives it (never more than
+        // the maximum): measured before the column's cap applied, it came out
+        // far too tall (user report).
+        pictureButton.VerticalAlignment = VerticalAlignment.Center;
         pictureButton.SizeChanged += (_, e) =>
         {
-            var height = e.NewSize.Width * UiMetrics.HolderCardAspect;
+            var width = Math.Min(e.NewSize.Width, UiMetrics.HomeFeaturedMaxPictureWidth);
+            var height = width * UiMetrics.HolderCardAspect;
             if (Math.Abs(_pictureFrame.Height - height) > 0.5) _pictureFrame.Height = height;
         };
 
