@@ -1016,7 +1016,7 @@ public sealed partial class ImportPage : Page
             {
                 Width = 260,
                 Height = 180,
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"],
                 Child = new Image
                 {
                     Source = new BitmapImage(thumbnailUri),

@@ -104,6 +104,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupCollapseAnimationEnabled { get; set; } = true;
 
+    /// <summary>Square corners instead of WinUI's rounded ones; applied at the next start.</summary>
+    [ObservableProperty]
+    public partial bool SquareCorners { get; set; }
+
     /// <summary>Whether the details pane beside a grid of cards is shown (Ctrl+I).</summary>
     [ObservableProperty]
     public partial bool InspectorVisible { get; set; } = true;
@@ -459,6 +463,14 @@ public partial class SettingsViewModel : ObservableObject
 
     // No event: each browser reads this at the moment a group closes, so a
     // change takes effect on the next collapse without disturbing anything.
+    partial void OnSquareCornersChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
     // Every browser listens through PropertyChanged, so the pane follows in all of them.
     partial void OnInspectorVisibleChanged(bool value)
     {
@@ -673,6 +685,7 @@ public partial class SettingsViewModel : ObservableObject
             RecordModeEnabled = config.RecordModeEnabled;
             GroupCollapseAnimationEnabled = config.GroupCollapseAnimationEnabled;
             InspectorVisible = config.InspectorVisible;
+            SquareCorners = config.SquareCorners;
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
@@ -979,6 +992,7 @@ public partial class SettingsViewModel : ObservableObject
                 RecordModeEnabled = RecordModeEnabled,
                 GroupCollapseAnimationEnabled = GroupCollapseAnimationEnabled,
                 InspectorVisible = InspectorVisible,
+                SquareCorners = SquareCorners,
                 CacheLength = CacheLength,
                 ThumbnailSize = ThumbnailSize,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,

@@ -284,7 +284,7 @@ internal sealed class CardShelf : Grid
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
             Background = new SolidColorBrush(Colors.Transparent),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"],
         };
         private readonly Image _image = new() { Stretch = Stretch.UniformToFill };
         private readonly StackPanel _flags = new()
@@ -337,7 +337,7 @@ internal sealed class CardShelf : Grid
             ToolTipService.SetToolTip(_open, card.FileName);
             _open.Content = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"],
                 Background = (Brush)Application.Current.Resources["ControlStrongFillColorDefaultBrush"],
                 Child = _image,
             };

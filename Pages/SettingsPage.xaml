@@ -110,6 +110,20 @@
                                 IsOn="{x:Bind ViewModel.ShowFileNames, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
+                        <!--  Square corners everywhere: the corner radius resources are
+                              set to zero at start (App.ApplyCornerStyle), so it takes
+                              effect after a restart.  -->
+                        <controls:SettingsCard
+                            x:Uid="SC_SquareCorners"
+                            AutomationProperties.AutomationId="SettingsSquareCornersCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE71A;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsSquareCornersToggle"
+                                IsOn="{x:Bind ViewModel.SquareCorners, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
                         <controls:SettingsCard
                             x:Uid="SC_RatingSource"
                             AutomationProperties.AutomationId="SettingsRatingSourceCard">
@@ -265,7 +279,7 @@
 
                         <TextBlock x:Uid="Settings_FoldersIntro" Style="{StaticResource SettingsIntroStyle}" />
                         <!-- Scene Folders -->
-                        <Border Padding="16" CornerRadius="8"
+                        <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                             <StackPanel Spacing="8">
@@ -315,7 +329,7 @@
                         </Border>
 
                         <!-- Character Card Folders -->
-                        <Border Padding="16" CornerRadius="8"
+                        <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                             <StackPanel Spacing="8">
@@ -365,7 +379,7 @@
                         </Border>
 
                         <!-- Coordinate Card Folders -->
-                        <Border Padding="16" CornerRadius="8"
+                        <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                             <StackPanel Spacing="8">

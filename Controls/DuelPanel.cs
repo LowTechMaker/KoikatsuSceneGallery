@@ -258,7 +258,7 @@ internal sealed class DuelPanel : StackPanel
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
             Background = new SolidColorBrush(Colors.Transparent),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"],
         };
         private readonly Image _image = new() { Stretch = Stretch.UniformToFill };
         private readonly Border _frame;
@@ -275,7 +275,7 @@ internal sealed class DuelPanel : StackPanel
             AutomationProperties.SetAutomationId(_open, automationId);
             _frame = new Border
             {
-                CornerRadius = new CornerRadius(8),
+                CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"],
                 Background = (Brush)Application.Current.Resources["ControlStrongFillColorDefaultBrush"],
                 Child = _image,
                 Height = 200,

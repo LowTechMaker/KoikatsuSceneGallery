@@ -106,7 +106,7 @@
                 <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" IsEnabled="{x:Bind CanSelect, Mode=OneWay}"
                           VerticalAlignment="Center" MinWidth="0" Padding="0"
                           AutomationProperties.Name="{x:Bind Item.FileName}" />
-                <Border Grid.Column="1" Width="64" Height="48" CornerRadius="4"
+                <Border Grid.Column="1" Width="64" Height="48" CornerRadius="{StaticResource ControlCornerRadius}"
                         Background="{ThemeResource ControlFillColorDefaultBrush}">
                     <Image Stretch="Uniform">
                         <Image.Source>
@@ -118,7 +118,7 @@
                     <TextBlock Text="{x:Bind Item.FileName}" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Item.SourceFilePath}"
                                TextTrimming="CharacterEllipsis" MaxLines="1" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border CornerRadius="4" Padding="6,1" VerticalAlignment="Center"
+                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,1" VerticalAlignment="Center"
                                 Background="{x:Bind pages:ImportPage.ToneBackground(Tone), Mode=OneWay}">
                             <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" FontSize="12"
                                        Foreground="{x:Bind pages:ImportPage.ToneForeground(Tone), Mode=OneWay}" />
@@ -159,7 +159,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Border Width="64" Height="48" CornerRadius="4"
+                <Border Width="64" Height="48" CornerRadius="{StaticResource ControlCornerRadius}"
                         Background="{ThemeResource ControlFillColorDefaultBrush}">
                     <FontIcon Glyph="&#xE7B8;" FontSize="22" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                 </Border>
@@ -309,7 +309,7 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </InfoBar>
 
-        <Border x:Name="DropZone" Grid.Row="2" CornerRadius="16" Margin="0,0,0,16"
+        <Border x:Name="DropZone" Grid.Row="2" CornerRadius="{StaticResource LargeCornerRadius}" Margin="0,0,0,16"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="2"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay}">
@@ -326,7 +326,7 @@
         </Border>
 
         <!-- The list: one card, sections inside it. -->
-        <Border Grid.Row="2" Padding="12,10,8,8" CornerRadius="12"
+        <Border Grid.Row="2" Padding="12,10,8,8" CornerRadius="{StaticResource LargeCornerRadius}"
                 Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
@@ -405,7 +405,7 @@
                     MaxWidth="560" MaxHeight="320" Margin="0,0,0,8" Padding="24"
                     HorizontalAlignment="Left" VerticalAlignment="Bottom"
                     IsTabStop="True" UseSystemFocusVisuals="False"
-                    CornerRadius="12" BorderThickness="1"
+                    CornerRadius="{StaticResource LargeCornerRadius}" BorderThickness="1"
                     BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
                     Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
                     SizeChanged="AddFilesOverlayCard_SizeChanged"
@@ -418,7 +418,7 @@
 
         <StackPanel Grid.Row="3" Spacing="8" Padding="0,0,0,16" Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
             <!-- Appears with a selection: everything that can be done to the selected cards, in one row. -->
-            <Border x:Name="SelectionBar" Padding="12,8" CornerRadius="10"
+            <Border x:Name="SelectionBar" Padding="12,8" CornerRadius="{StaticResource LargeCornerRadius}"
                     Visibility="{x:Bind ViewModel.ReviewSelectionEditorVisibility, Mode=OneWay}"
                     Background="{ThemeResource LayerFillColorAltBrush}"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1">

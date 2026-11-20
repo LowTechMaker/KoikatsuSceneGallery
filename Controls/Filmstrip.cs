@@ -142,7 +142,7 @@ internal sealed class Filmstrip : Grid
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             VerticalContentAlignment = VerticalAlignment.Stretch;
             Background = new SolidColorBrush(Colors.Transparent);
-            CornerRadius = new CornerRadius(6);
+            CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"];
             AutomationProperties.SetName(this, card.FileName);
             ToolTipService.SetToolTip(this, card.FileName);
 
@@ -150,7 +150,7 @@ internal sealed class Filmstrip : Grid
             _veil = new Border { Background = Veil, IsHitTestVisible = false, Visibility = Visibility.Collapsed };
             _frame = new Border
             {
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"],
                 BorderThickness = new Thickness(2),
                 Background = (Brush)Application.Current.Resources["ControlStrongFillColorDefaultBrush"],
                 Child = new Grid { Children = { _image, _veil } },

@@ -22,7 +22,24 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// <summary>A third card peeks out of the stack only when there is a third card.</summary>
     public bool HasThirdLayer => Members.Count > 2;
     public bool ShowTitle { get; }
-    public double MetadataHeight => ShowTitle ? 52 : 32;
+    /// <summary>
+    /// The caption under the picture: title and author, or nothing at all when
+    /// file names are switched off. That switch used to leave the author line
+    /// behind; the user asked for the picture and the rating badge only.
+    /// </summary>
+    public double MetadataHeight => ShowTitle ? 52 : 0;
+
+    private bool _isSelected;
+    /// <summary>
+    /// Whether the tile is selected in the grid. Kept here so the tile can draw
+    /// its own strong selection mark; the grid's default one, a thin accent
+    /// line, was hard to see on a picture.
+    /// </summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
     public string CountText => UiText.Format("SceneGallery_GroupCount", Members.Count);
     public AuthorDisplay? Author => (Card as IAuthorOwner)?.Author;
     public string AuthorText => Author?.Name ?? UiText.Get("SceneGallery_UnknownAuthor");

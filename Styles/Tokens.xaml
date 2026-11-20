@@ -82,6 +82,12 @@
     </Style>
 
     <!--  Library tiles and the stacked cards behind a group (phase 108).  -->
+    <!--  Every corner in the app comes from a resource, so the "square corners"
+          setting (App.ApplyCornerStyle) can set them all to zero at start:
+          ControlCornerRadius (4) and OverlayCornerRadius (8) are WinUI's own,
+          these two cover the sizes in between and above.  -->
+    <CornerRadius x:Key="SurfaceCornerRadius">6</CornerRadius>
+    <CornerRadius x:Key="LargeCornerRadius">12</CornerRadius>
     <CornerRadius x:Key="MediaTileCornerRadius">10</CornerRadius>
     <CornerRadius x:Key="MediaOverlayBadgeCornerRadius">4</CornerRadius>
 

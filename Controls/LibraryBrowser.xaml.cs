@@ -127,6 +127,7 @@ public sealed partial class LibraryBrowser : UserControl
         ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); _metadataOptionsTimer?.Stop();
         // The control is reused across navigations, so half-finished state must not survive.
         _collapse.Finish();
+        _loupe.Close();
         SetScopedMetadataSubscriptions(false);
         SetScopedRatingSubscriptions(false);
         if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.CancelPendingWork();
@@ -194,6 +195,7 @@ public sealed partial class LibraryBrowser : UserControl
                 foreach (var group in groups) _items.Add(new(group.Key, group.Members, VM.ShowFileNames));
             }
             RestoreSelection(selected);
+            _loupe.UpdateCards(VisibleCards());
         }
         Heading.Text = _groupKey is null ? _adapter.Title : _groupTitle;
         // Three cases, and only the middle one is the host's business:
@@ -247,7 +249,8 @@ public sealed partial class LibraryBrowser : UserControl
         EmptyDescription.Text = UiText.Get(_groupKey is not null ? "SceneGallery_GroupEmpty.Text" : _adapter.Cards.Count == 0 ? "SceneGallery_NoLibraryDescription" : "SceneGallery_NoResultsDescription");
         ClearButton.Content = UiText.Get(_groupKey is null ? "SceneGallery_ResetSearch.Content" : "Browser_ClearGroupSearch");
         ClearButton.Visibility = _adapter.Cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        _layout?.SetMetadataReserve(VM.ShowFileNames ? 58 : 38);
+        // With file names off the tile is the picture and its badge only (GalleryEntry.MetadataHeight).
+        _layout?.SetMetadataReserve(VM.ShowFileNames ? 58 : 6);
         DispatcherQueue.TryEnqueue(RequestVisible);
     }
     private CardBase[] ScopedCards()
@@ -334,7 +337,7 @@ public sealed partial class LibraryBrowser : UserControl
             _groupKey = entry.Key; _groupTitle = entry.Title; _groupSearch = ""; SetSearchText(""); Refresh(); ScrollFirst();
             BackButton.Focus(FocusState.Keyboard);
         }
-        else OpenDetail(entry.Card);
+        else OpenInLoupe(entry.Card);
     }
     private void OpenDetail(CardBase card)
     {

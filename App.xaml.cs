@@ -265,6 +265,7 @@ public partial class App : Application
             importViewModel,
             authorPostService);
 
+        ApplyCornerStyle(settingsViewModel.SquareCorners);
         _mainWindow = new MainWindow();
         var metadataShutdown = new ShutdownCoordinator(
         [
@@ -310,6 +311,27 @@ public partial class App : Application
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
         authorSourceCoordinator.EnsureLoadedAsync().Observe(_logger, "AuthorSource.InitialLoad");
+    }
+
+    /// <summary>
+    /// The "square corners" setting: every corner radius the app and WinUI's own
+    /// control templates read is a resource, so setting them to zero here,
+    /// before the window exists, squares every corner. Resources are read when
+    /// an element is created, hence a restart to switch.
+    /// </summary>
+    private void ApplyCornerStyle(bool square)
+    {
+        if (!square) return;
+        var zero = new CornerRadius(0);
+        foreach (var key in new[]
+        {
+            "ControlCornerRadius", "OverlayCornerRadius",
+            "SurfaceCornerRadius", "LargeCornerRadius",
+            "MediaTileCornerRadius", "MediaOverlayBadgeCornerRadius",
+        })
+        {
+            Resources[key] = zero;
+        }
     }
 
     private void RegisterServices(

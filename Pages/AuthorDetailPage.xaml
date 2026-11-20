@@ -23,7 +23,7 @@
                 </Grid.ColumnDefinitions>
                 <Border
                     Height="64"
-                    CornerRadius="4"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                     <Image
                         Stretch="UniformToFill"

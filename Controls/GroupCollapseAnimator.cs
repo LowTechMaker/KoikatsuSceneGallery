@@ -141,7 +141,7 @@ internal sealed class GroupCollapseAnimator(Canvas overlay)
         {
             Width = tile.Bounds.Width,
             Height = tile.Bounds.Height,
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"],
             IsHitTestVisible = false,
             Background = Application.Current.Resources["CardBackgroundFillColorDefaultBrush"] as Brush,
             Child = new Image

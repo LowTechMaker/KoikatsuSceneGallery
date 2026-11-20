@@ -25,6 +25,7 @@ public sealed partial class LibraryBrowser
     private const double InspectorWidth = 320;
 
     private CardInspector _inspector = null!;
+    private CardLoupe _loupe = null!;
     private bool _restoringSelection;
     private bool _wideEnoughForInspector = true;
 
@@ -39,7 +40,21 @@ public sealed partial class LibraryBrowser
         Grid.SetRow(_inspector, 2);
         Grid.SetColumn(_inspector, 1);
         RootLayout.Children.Add(_inspector);
-        _inspector.OpenRequested += card => OpenDetail(card);
+        _inspector.OpenRequested += card => OpenInLoupe(card);
+
+        // The loupe covers the grid's cell only; the details pane stays beside it.
+        _loupe = new CardLoupe();
+        Grid.SetRow(_loupe, 2);
+        RootLayout.Children.Add(_loupe);
+        _loupe.CurrentChanged += Loupe_CurrentChanged;
+        _loupe.Closed += Loupe_Closed;
+        // After the loupe's own keys (arrows, Esc): the card keys act on the card on show.
+        _loupe.KeyDown += (_, e) =>
+        {
+            if (e.Handled || e.KeyStatus.WasKeyDown || CardKeys.IsModifierDown()) return;
+            if (CardKeys.Flag(e.Key) is { } flag) { e.Handled = true; _inspector.Toggle(flag); }
+            else if (CardKeys.Rating(e.Key) is { } rating) { e.Handled = true; _inspector.RateFromKey(rating); }
+        };
 
         var tip = UiText.Get("Inspector_Toggle");
         ToolTipService.SetToolTip(InspectorToggle, tip);
@@ -86,6 +101,8 @@ public sealed partial class LibraryBrowser
 
     private void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        foreach (var removed in e.RemovedItems.OfType<GalleryEntry>()) removed.IsSelected = false;
+        foreach (var added in e.AddedItems.OfType<GalleryEntry>()) added.IsSelected = true;
         if (_restoringSelection) return;
         _inspector.Show(SelectedCards());
     }
@@ -169,6 +186,51 @@ public sealed partial class LibraryBrowser
             ? GalleryGrid.ItemFromContainer(item) as GalleryEntry
             : null;
     }
+
+    /// <summary>Every card the grid shows, group members together, in grid order: what the loupe steps through.</summary>
+    private IReadOnlyList<CardBase> VisibleCards() => [.. _items.SelectMany(entry => entry.Members)];
+
+    /// <summary>Opens a card large over the grid, in place, instead of going to its page.</summary>
+    private void OpenInLoupe(CardBase card)
+    {
+        var cards = VisibleCards();
+        var index = -1;
+        for (var i = 0; i < cards.Count; i++)
+            if (ReferenceEquals(cards[i], card)) { index = i; break; }
+        if (index < 0) return;
+        OpeningDetail?.Invoke();
+        _loupe.Open(cards, index);
+    }
+
+    // Stepping in the loupe moves the grid's selection with it, so the pane
+    // shows the card on show and closing lands on it.
+    private void Loupe_CurrentChanged(CardBase card)
+    {
+        if (EntryOf(card) is not { } entry) return;
+        if (GalleryGrid.SelectedItems.Count == 1 && ReferenceEquals(GalleryGrid.SelectedItems[0], entry) && _inspector.Cards is [var shown] && ReferenceEquals(shown, card))
+            return;
+        _restoringSelection = true;
+        try
+        {
+            GalleryGrid.SelectedItems.Clear();
+            GalleryGrid.SelectedItems.Add(entry);
+        }
+        finally { _restoringSelection = false; }
+        // A group's tile stands for all its cards, but the pane shows the one on show.
+        _inspector.Show([card]);
+    }
+
+    private void Loupe_Closed(CardBase? card)
+    {
+        if (card is null || EntryOf(card) is not { } entry) return;
+        GalleryGrid.ScrollIntoView(entry);
+        DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));
+    }
+
+    private GalleryEntry? EntryOf(CardBase card)
+        => _items.FirstOrDefault(entry => entry.Members.Any(member => ReferenceEquals(member, card)))
+            ?? _items.FirstOrDefault(entry => entry.Members.Any(member =>
+                string.Equals(member.FilePath, card.FilePath, StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>
     /// The cards a right-click acts on: the whole selection when the clicked

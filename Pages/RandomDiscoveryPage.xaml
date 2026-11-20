@@ -73,13 +73,13 @@
             </GridView.ItemContainerStyle>
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="models:DiscoveryItem">
-                    <Grid Margin="4" Padding="5" CornerRadius="8" BorderThickness="1"
+                    <Grid Margin="4" Padding="5" CornerRadius="{StaticResource OverlayCornerRadius}" BorderThickness="1"
                           BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                           ToolTipService.ToolTip="{x:Bind Card.FileName}">
                         <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                         <Grid>
-                            <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                 <Image x:Phase="1" Stretch="Uniform"
                                        Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
                             </Border>

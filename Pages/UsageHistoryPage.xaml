@@ -52,7 +52,7 @@
                             Width="64"
                             Height="40"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                            CornerRadius="4">
+                            CornerRadius="{StaticResource ControlCornerRadius}">
                             <Image Source="{x:Bind controls:LibraryBrowser.Thumbnail(ThumbnailUri)}"
                                    Stretch="UniformToFill" />
                         </Border>

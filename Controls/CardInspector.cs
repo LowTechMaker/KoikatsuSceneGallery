@@ -68,6 +68,7 @@ internal sealed class CardInspector : UserControl
 
     // Several cards.
     private readonly StackPanel _many = new() { Spacing = 12 };
+    private readonly Grid _stack = new() { Height = PreviewHeight, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _manyTitle = new() { Style = (Style)Application.Current.Resources["SectionTitleTextBlockStyle"] };
     private readonly StackPanel _manyActions = new() { Spacing = 8 };
 
@@ -312,6 +313,9 @@ internal sealed class CardInspector : UserControl
 
     private void BuildMany()
     {
+        AutomationProperties.SetAutomationId(_stack, "CardInspector_Stack");
+        AutomationProperties.SetAccessibilityView(_stack, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
+        _many.Children.Add(_stack);
         AutomationProperties.SetAutomationId(_manyTitle, "CardInspector_Count");
         _many.Children.Add(_manyTitle);
         _many.Children.Add(_manyActions);
@@ -321,6 +325,7 @@ internal sealed class CardInspector : UserControl
     {
         _metadata.FilePath = null;
         _manyTitle.Text = UiText.Format("Inspector_SelectedMany", cards.Count);
+        ShowStack(cards);
         _manyActions.Children.Clear();
         var paths = cards.Select(card => card.FilePath).ToArray();
         foreach (var flag in new[] { CardFlag.Queued, CardFlag.Liked, CardFlag.Hidden })
@@ -362,6 +367,66 @@ internal sealed class CardInspector : UserControl
         copy.Click += (_, _) => UiEventGuard.Run(_logger, "Inspector.CopyFiles",
             () => CardFileActions.CopyFilesAsync(paths, "Inspector.CopyFiles"));
         _manyActions.Children.Add(copy);
+    }
+
+    /// <summary>
+    /// The selection drawn as a fanned stack of its first few cards with the
+    /// count on top, so what is selected and how much shows at a glance.
+    /// </summary>
+    private void ShowStack(IReadOnlyList<CardBase> cards)
+    {
+        const int Shown = 4;
+        const double CardHeight = PreviewHeight - 36;
+        _stack.Children.Clear();
+        var layers = cards.Take(Shown).ToArray();
+        // Back to front, so the first selected card is on top.
+        for (var i = layers.Length - 1; i >= 0; i--)
+        {
+            var card = layers[i];
+            var width = card.Width > 0 && card.Height > 0
+                ? Math.Clamp(CardHeight * card.Width / card.Height, CardHeight * 0.6, CardHeight * 1.8)
+                : CardHeight * 16 / 9;
+            var image = new Image { Stretch = Stretch.UniformToFill };
+            if (card.ThumbnailUri is { } uri)
+                image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage { DecodePixelHeight = (int)(CardHeight * 2), UriSource = uri };
+            var layer = new Border
+            {
+                Width = width,
+                Height = CardHeight,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                CornerRadius = (CornerRadius)Application.Current.Resources["ControlCornerRadius"],
+                BorderThickness = new Thickness(1),
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorSecondaryBrush"],
+                Child = image,
+                RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5),
+                // Each card behind the top one turned and shifted a little more.
+                RenderTransform = new CompositeTransform
+                {
+                    Rotation = i * 5,
+                    TranslateX = i * 10,
+                    TranslateY = -i * 4,
+                },
+                Opacity = 1 - i * 0.12,
+            };
+            _stack.Children.Add(layer);
+        }
+        var count = new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Padding = new Thickness(10, 4, 10, 4),
+            CornerRadius = new CornerRadius(14),
+            Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+            Child = new TextBlock
+            {
+                Text = cards.Count.ToString(),
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = (Brush)Application.Current.Resources["TextOnAccentFillColorPrimaryBrush"],
+            },
+        };
+        _stack.Children.Add(count);
     }
 
     private void RateMany(int? rating)

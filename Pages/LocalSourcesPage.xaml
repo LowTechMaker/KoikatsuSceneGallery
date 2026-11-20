@@ -20,7 +20,7 @@
                 Height="64"
                 Margin="0,0,6,0"
                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                CornerRadius="6"
+                CornerRadius="{StaticResource SurfaceCornerRadius}"
                 ToolTipService.ToolTip="{x:Bind FileName}">
                 <Image
                     Source="{x:Bind ThumbnailPath, Mode=OneWay}"
@@ -52,7 +52,7 @@
                     x:Name="DropHighlight"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                     BorderThickness="3"
-                    CornerRadius="6"
+                    CornerRadius="{StaticResource SurfaceCornerRadius}"
                     IsHitTestVisible="False"
                     Opacity="0" />
             </Grid>
@@ -67,7 +67,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="2"
-                CornerRadius="6"
+                CornerRadius="{StaticResource SurfaceCornerRadius}"
                 DragEnter="SourceTile_DragEnter"
                 DragLeave="SourceTile_DragLeave"
                 DragOver="SourceTile_DragOver"
@@ -91,7 +91,7 @@
                     x:Name="DropHighlight"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                     BorderThickness="3"
-                    CornerRadius="6"
+                    CornerRadius="{StaticResource SurfaceCornerRadius}"
                     IsHitTestVisible="False"
                     Opacity="0" />
             </Grid>
@@ -121,7 +121,7 @@
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
             BorderThickness="2"
-            CornerRadius="12"
+            CornerRadius="{StaticResource LargeCornerRadius}"
             DragEnter="DropZone_DragEnter"
             DragLeave="DropZone_DragLeave"
             DragOver="DropZone_DragOver"
@@ -168,7 +168,7 @@
                             Width="64"
                             Height="64"
                             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                            CornerRadius="6"
+                            CornerRadius="{StaticResource SurfaceCornerRadius}"
                             Visibility="{x:Bind ViewModel.HasHiddenThumbnails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock
                                 HorizontalAlignment="Center"
@@ -202,7 +202,7 @@
                         AllowDrop="False"
                         Background="{ThemeResource AccentFillColorDefaultBrush}"
                         CanDrag="True"
-                        CornerRadius="12"
+                        CornerRadius="{StaticResource LargeCornerRadius}"
                         DragStarting="DragFolder_DragStarting"
                         DropCompleted="DragFolder_DropCompleted"
                         IsTabStop="True"

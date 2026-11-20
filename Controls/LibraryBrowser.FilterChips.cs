@@ -100,7 +100,7 @@ public sealed partial class LibraryBrowser
             var chip = new Button
             {
                 Padding = new Thickness(10, 3, 8, 3),
-                CornerRadius = new CornerRadius(12),
+                CornerRadius = (CornerRadius)Application.Current.Resources["LargeCornerRadius"],
                 Content = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
