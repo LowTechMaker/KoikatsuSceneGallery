@@ -536,7 +536,7 @@ internal sealed class CardInspector : UserControl
         var toggle = new ToggleButton
         {
             Tag = flag,
-            Content = new FontIcon { Glyph = glyph, FontSize = 14 },
+            Content = new FontIcon { Glyph = glyph, FontSize = UiMetrics.IconSize },
             Padding = new Thickness(8, 6, 8, 6),
         };
         AutomationProperties.SetAutomationId(toggle, $"CardInspector_{flag}");

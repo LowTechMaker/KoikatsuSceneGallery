@@ -209,7 +209,7 @@ internal sealed class CardLoupe : Grid
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
-            Children = { new FontIcon { Glyph = "\uE72B", FontSize = 14 }, _backLabel },
+            Children = { new FontIcon { Glyph = "\uE72B", FontSize = UiMetrics.IconSize }, _backLabel },
         };
         var backTip = UiText.Get("Loupe_Close");
         ToolTipService.SetToolTip(_back, backTip);
@@ -692,7 +692,7 @@ internal sealed class CardLoupe : Grid
     {
         var button = new Button
         {
-            Content = new FontIcon { Glyph = glyph, FontSize = 14 },
+            Content = new FontIcon { Glyph = glyph, FontSize = UiMetrics.IconSize },
             Padding = new Thickness(9, 7, 9, 7),
             Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
         };

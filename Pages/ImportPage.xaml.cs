@@ -481,7 +481,7 @@ public sealed partial class ImportPage : Page
     {
         // Below this the plan sentence would crowd the buttons; the button's name still says it.
         if (ImportPlanBlock is not null)
-            ImportPlanBlock.Visibility = width < 720 ? Visibility.Collapsed : Visibility.Visible;
+            ImportPlanBlock.Visibility = width < UiMetrics.NarrowLayoutWidth ? Visibility.Collapsed : Visibility.Visible;
     }
 
     // ── Review list ─────────────────────────────────────────────────

@@ -57,22 +57,22 @@
                     Foreground="{ThemeResource LiveTileOverlayForegroundBrush}"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     TextTrimming="CharacterEllipsis" />
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE8B9;" />
                         <TextBlock
                             x:Name="LiveSceneCount"
                             Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE77B;" />
                         <TextBlock
                             x:Name="LiveCharacterCount"
                             Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon FontSize="12" Foreground="{ThemeResource LiveTileOverlaySecondaryBrush}" Glyph="&#xE78A;" />
                         <TextBlock
                             x:Name="LiveCoordinateCount"
@@ -88,7 +88,7 @@
             x:Name="ClassicLayout"
             Padding="12"
             VerticalAlignment="Center"
-            ColumnSpacing="12">
+            ColumnSpacing="{StaticResource Space12}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -99,14 +99,14 @@
                 Width="48"
                 Height="48" />
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
                 <TextBlock
                     x:Name="ClassicName"
                     MaxLines="1"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     TextTrimming="CharacterEllipsis" />
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -116,7 +116,7 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -126,7 +126,7 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"

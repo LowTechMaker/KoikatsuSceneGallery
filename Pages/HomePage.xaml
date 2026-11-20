@@ -34,7 +34,7 @@
             <StackPanel
                 x:Name="Shelves"
                 Margin="0,0,16,24"
-                Spacing="16">
+                Spacing="{StaticResource Space16}">
                 <!--  "This or that" first; the shelves are added after it in code.  -->
                 <controls:DuelPanel x:Name="Duel" />
             </StackPanel>

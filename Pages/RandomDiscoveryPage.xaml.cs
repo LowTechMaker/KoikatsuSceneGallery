@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -389,7 +390,7 @@ public sealed partial class RandomDiscoveryPage : Page
     { VisualTreeSearch.FindDescendant<ScrollViewer>(DiscoveryGrid)?.ChangeView(null, 0, null, true); e.Handled = true; }
     private void Toolbar_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool narrow = e.NewSize.Width < 640;
+        bool narrow = e.NewSize.Width < UiMetrics.DiscoveryNarrowWidth;
         Grid.SetRow(Actions, narrow ? 1 : 0);
         Grid.SetColumn(Actions, narrow ? 0 : 1);
         Grid.SetColumnSpan(SearchBox, narrow ? 2 : 1);

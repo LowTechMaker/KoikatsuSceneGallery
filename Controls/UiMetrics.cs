@@ -96,6 +96,24 @@ internal static class UiMetrics
     public const double LoupeEdgeButtonSize = 44;
     public static Thickness LoupePadding => new(16, 12, 16, 12);
 
+    // ------------------------------------------------------------ responsive breakpoints (all in code; there are no AdaptiveTriggers)
+
+    /// <summary>Below this a page drops to one column: the library's toolbar wraps, the post page stacks, the title bar's origin selector compacts.</summary>
+    public const double WideLayoutWidth = 900;
+    /// <summary>Below this settings and import switch to their narrow layout.</summary>
+    public const double NarrowLayoutWidth = 720;
+    /// <summary>Random discovery's own narrow layout.</summary>
+    public const double DiscoveryNarrowWidth = 640;
+
+    // ------------------------------------------------------------ pictures and icons drawn in code
+
+    /// <summary>A gallery thumbnail's decode width (tiles, the duel's stand-in, the loupe's stand-in, live tiles).</summary>
+    public const int ThumbnailDecodeWidth = 400;
+    /// <summary>An icon inside a button (the Tokens.xaml IconSize, for code).</summary>
+    public const double IconSize = 14;
+    /// <summary>A progress ring beside a line of text (the Tokens.xaml RingSize, for code).</summary>
+    public const double RingSize = 16;
+
     // ------------------------------------------------------------ the authors page
 
     /// <summary>Cards shown in the authors page's details pane.</summary>

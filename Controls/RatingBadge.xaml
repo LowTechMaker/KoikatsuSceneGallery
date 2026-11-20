@@ -5,12 +5,12 @@
     <Grid>
         <Border x:Name="RestrictedBadge" Padding="6,2" CornerRadius="{StaticResource ControlCornerRadius}"
                 Visibility="Collapsed" Background="{ThemeResource RatingR18BadgeBrush}">
-            <TextBlock x:Name="RestrictedLabel" FontSize="12" FontWeight="SemiBold"
+            <TextBlock Style="{StaticResource BadgeTextStyle}" x:Name="RestrictedLabel"
                        Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
         </Border>
         <Border x:Name="GeneralBadge" Padding="6,2" CornerRadius="{StaticResource ControlCornerRadius}"
                 Visibility="Collapsed" Background="{ThemeResource RatingAllAgesBadgeBrush}">
-            <TextBlock Text="G" FontSize="12" FontWeight="SemiBold"
+            <TextBlock Style="{StaticResource BadgeTextStyle}" Text="G"
                        Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
         </Border>
     </Grid>

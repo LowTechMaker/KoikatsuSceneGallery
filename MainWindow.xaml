@@ -49,7 +49,7 @@
                     MaxWidth="680"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    ColumnSpacing="12">
+                    ColumnSpacing="{StaticResource Space12}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -146,13 +146,13 @@
                             Checked="RatingToggle_Changed"
                             Unchecked="RatingToggle_Changed">
                             <Grid>
-                                <Border x:Name="RatingToggleGOn" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
+                                <Border x:Name="RatingToggleGOn" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
                                         Background="{ThemeResource RatingAllAgesBadgeBrush}" BorderBrush="{ThemeResource RatingAllAgesBadgeBrush}">
-                                    <TextBlock Text="G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="G" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
                                 </Border>
-                                <Border x:Name="RatingToggleGOff" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
+                                <Border x:Name="RatingToggleGOff" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
                                         Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <TextBlock Text="G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="G" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                             </Grid>
                         </ToggleButton>
@@ -164,13 +164,13 @@
                             Checked="RatingToggle_Changed"
                             Unchecked="RatingToggle_Changed">
                             <Grid>
-                                <Border x:Name="RatingToggleR18On" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
+                                <Border x:Name="RatingToggleR18On" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
                                         Background="{ThemeResource RatingR18BadgeBrush}" BorderBrush="{ThemeResource RatingR18BadgeBrush}">
-                                    <TextBlock Text="R-18" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="R-18" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
                                 </Border>
-                                <Border x:Name="RatingToggleR18Off" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
+                                <Border x:Name="RatingToggleR18Off" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
                                         Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <TextBlock Text="R-18" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="R-18" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                             </Grid>
                         </ToggleButton>
@@ -182,13 +182,13 @@
                             Checked="RatingToggle_Changed"
                             Unchecked="RatingToggle_Changed">
                             <Grid>
-                                <Border x:Name="RatingToggleR18GOn" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
+                                <Border x:Name="RatingToggleR18GOn" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
                                         Background="{ThemeResource RatingR18GBadgeBrush}" BorderBrush="{ThemeResource RatingR18GBadgeBrush}">
-                                    <TextBlock Text="R-18G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="R-18G" Foreground="{ThemeResource RatingBadgeForegroundBrush}" />
                                 </Border>
-                                <Border x:Name="RatingToggleR18GOff" Padding="6,1" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
+                                <Border x:Name="RatingToggleR18GOff" Padding="{StaticResource BadgePadding}" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" Visibility="Collapsed"
                                         Background="Transparent" BorderBrush="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <TextBlock Text="R-18G" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Style="{StaticResource BadgeTextStyle}" Text="R-18G" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Border>
                             </Grid>
                         </ToggleButton>
@@ -217,7 +217,7 @@
             <!--  The palette's visible way in, for anyone who does not know
                   Ctrl+K. It names the shortcut so the button teaches it.  -->
             <TitleBar.RightHeader>
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                 <!--  Present only while something runs in the background; its
                       list replaces the refetch banner and the per-page
                       progress captions as the one place to look.  -->
@@ -228,7 +228,7 @@
                     Style="{StaticResource SubtleButtonStyle}"
                     Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <ProgressRing x:Name="ActivityRing" Width="16" Height="16" IsActive="False" />
+                        <ProgressRing x:Name="ActivityRing" Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="False" />
                         <TextBlock
                             x:Name="ActivityCount"
                             VerticalAlignment="Center"
@@ -236,17 +236,17 @@
                     </StackPanel>
                     <Button.Flyout>
                         <Flyout x:Name="ActivityFlyout" Placement="BottomEdgeAlignedRight">
-                            <StackPanel Width="360" Spacing="12">
+                            <StackPanel Width="360" Spacing="{StaticResource Space12}">
                                 <TextBlock x:Uid="Activity_Title" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                 <ItemsControl x:Name="ActivityList" AutomationProperties.AutomationId="ActivityList">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <StackPanel Spacing="16" />
+                                            <StackPanel Spacing="{StaticResource Space16}" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:ActivityItem">
-                                            <Grid ColumnSpacing="8" RowSpacing="4">
+                                            <Grid ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space4}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
@@ -311,8 +311,8 @@
                     AutomationProperties.AutomationId="PaletteButton"
                     Click="PaletteButton_Click"
                     Style="{StaticResource SubtleButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE721;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE721;" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"
@@ -448,7 +448,7 @@
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
-                    <Grid ColumnSpacing="8">
+                    <Grid ColumnSpacing="{StaticResource Space8}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -521,7 +521,7 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Style="{StaticResource FloatingSurfaceStyle}">
-                <StackPanel Spacing="8">
+                <StackPanel Spacing="{StaticResource Space8}">
                     <FontIcon HorizontalAlignment="Center" FontSize="40" Glyph="&#xE896;" />
                     <TextBlock x:Uid="Drop_OverlayTitle" HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBlock x:Uid="Drop_OverlayDescription" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -550,7 +550,7 @@
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             AutomationProperties.AutomationId="ToastHost"
-            Spacing="8">
+            Spacing="{StaticResource Space8}">
             <StackPanel.ChildrenTransitions>
                 <TransitionCollection>
                     <AddDeleteThemeTransition />

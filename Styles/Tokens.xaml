@@ -71,6 +71,34 @@
           the card viewer and the post page.  -->
     <Thickness x:Key="DetailContentPadding">24,16,24,16</Thickness>
 
+    <!--  The spacing scale (wave 2 of centralising values): Spacing, RowSpacing and
+          ColumnSpacing use these four steps instead of literals. About 200 uses of
+          4 / 8 / 12 / 16 were written out by hand across the pages.  -->
+    <x:Double x:Key="Space4">4</x:Double>
+    <x:Double x:Key="Space8">8</x:Double>
+    <x:Double x:Key="Space12">12</x:Double>
+    <x:Double x:Key="Space16">16</x:Double>
+
+    <!--  Sizes shared across pages.  -->
+    <x:Double x:Key="IconSize">14</x:Double>
+    <x:Double x:Key="RingSize">16</x:Double>
+    <!--  The message shown when a list is empty (library, tags, usage, rating, discovery, settings search).  -->
+    <x:Double x:Key="EmptyStateMaxWidth">480</x:Double>
+    <!--  A small label pill: the title bar's rating toggles, the import page's rating chip.  -->
+    <Thickness x:Key="BadgePadding">6,1</Thickness>
+
+    <!--  Small text styles that were set inline over and over.  -->
+    <Style x:Key="BadgeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="ChipTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style x:Key="TileTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
     <!--  Headings, sized for a desktop window (wave 11). The built-in Title
           style (28 px) made every page open like a phone screen's big title;
           a page title is now 20 px and a section heading 16 px semibold.

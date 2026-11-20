@@ -34,7 +34,7 @@
             <Setter Property="BorderThickness" Value="1" />
         </Style>
         <ItemsPanelTemplate x:Key="ResolutionChipPanel">
-            <appControls:WrapPanel Spacing="8" />
+            <appControls:WrapPanel Spacing="{StaticResource Space8}" />
         </ItemsPanelTemplate>
         <Style x:Key="ResolutionChipStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
             <Setter Property="Padding" Value="10,6" />
@@ -44,7 +44,7 @@
         </Style>
     </Page.Resources>
 
-    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12" MaxWidth="1160" HorizontalAlignment="Stretch">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}" MaxWidth="1160" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -91,7 +91,7 @@
             <!-- General Tab -->
             <appControls:SettingsTab x:Uid="Settings_TabGeneral" Glyph="&#xE713;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="{StaticResource Space8}">
 
                         <!-- Display Section -->
                         <TextBlock
@@ -207,7 +207,7 @@
                             <controls:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE700;" />
                             </controls:SettingsCard.HeaderIcon>
-                            <appControls:WrapPanel Spacing="12" MaxWidth="540">
+                            <appControls:WrapPanel Spacing="{StaticResource Space12}" MaxWidth="540">
                                 <CheckBox
                                     x:Uid="Settings_ShowGalleryNav"
                                     IsChecked="{x:Bind ViewModel.ShowGalleryNav, Mode=TwoWay}" />
@@ -262,25 +262,25 @@
             <!-- Folders Tab -->
             <appControls:SettingsTab x:Uid="Settings_TabFolders" Glyph="&#xE8B7;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="{StaticResource Space8}">
 
                         <TextBlock x:Uid="Settings_FoldersIntro" Style="{StaticResource SettingsIntroStyle}" />
                         <!-- Scene Folders -->
                         <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="8">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space8}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_FoldersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind ViewModel.FolderPaths.Count, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                     <Button Grid.Column="1" Command="{x:Bind ViewModel.AddFolderCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                                             <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                             <TextBlock x:Uid="Settings_AddFolder" />
                                         </StackPanel>
@@ -296,7 +296,7 @@
                                     SelectionMode="None">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
-                                            <Grid Padding="0,2" ColumnSpacing="12">
+                                            <Grid Padding="0,2" ColumnSpacing="{StaticResource Space12}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -305,7 +305,7 @@
                                                 <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -319,18 +319,18 @@
                         <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="8">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space8}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_CharaFoldersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind ViewModel.CharacterFolderPaths.Count, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                     <Button Grid.Column="1" Command="{x:Bind ViewModel.AddCharacterFolderCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                                             <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                             <TextBlock x:Uid="Settings_AddFolder" />
                                         </StackPanel>
@@ -346,7 +346,7 @@
                                     SelectionMode="None">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
-                                            <Grid Padding="0,2" ColumnSpacing="12">
+                                            <Grid Padding="0,2" ColumnSpacing="{StaticResource Space12}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -355,7 +355,7 @@
                                                 <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCharacterFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -369,18 +369,18 @@
                         <Border Padding="16" CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <StackPanel Spacing="8">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space8}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_CoordFoldersHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind ViewModel.CoordinateFolderPaths.Count, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                     <Button Grid.Column="1" Command="{x:Bind ViewModel.AddCoordinateFolderCommand}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                                             <FontIcon FontSize="16" Glyph="&#xE8DA;" />
                                             <TextBlock x:Uid="Settings_AddFolder" />
                                         </StackPanel>
@@ -396,7 +396,7 @@
                                     SelectionMode="None">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
-                                            <Grid Padding="0,2" ColumnSpacing="12">
+                                            <Grid Padding="0,2" ColumnSpacing="{StaticResource Space12}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -405,7 +405,7 @@
                                                 <FontIcon VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8B7;" />
                                                 <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind}" />
                                                 <Button x:Uid="Settings_RemoveFolder" Grid.Column="2" VerticalAlignment="Center" CommandParameter="{x:Bind}" Click="RemoveCoordinateFolder_Click" Style="{StaticResource SubtleButtonStyle}">
-                                                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -431,7 +431,7 @@
                                 <TextBlock MaxWidth="400" TextWrapping="Wrap" HorizontalAlignment="Right"
                                            Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                            Text="{x:Bind ViewModel.KoikatsuGameFolderStatus, Mode=OneWay}" />
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
                                     <Button x:Uid="Settings_Mods_Pick" Command="{x:Bind ViewModel.PickKoikatsuGameFolderCommand}" />
                                     <Button x:Uid="Settings_Mods_Clear" Command="{x:Bind ViewModel.ClearKoikatsuGameFolderCommand}" />
                                 </StackPanel>
@@ -448,7 +448,7 @@
                                 <TextBlock MaxWidth="400" TextWrapping="Wrap" HorizontalAlignment="Right"
                                            Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                            Text="{x:Bind ViewModel.KoikatsuSunshineGameFolderStatus, Mode=OneWay}" />
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
                                     <Button x:Uid="Settings_Mods_Pick" Command="{x:Bind ViewModel.PickKoikatsuSunshineGameFolderCommand}" />
                                     <Button x:Uid="Settings_Mods_Clear" Command="{x:Bind ViewModel.ClearKoikatsuSunshineGameFolderCommand}" />
                                 </StackPanel>
@@ -478,19 +478,19 @@
             <!-- Filters Tab -->
             <appControls:SettingsTab x:Uid="Settings_TabFilters" Glyph="&#xE71C;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="{StaticResource Space8}">
                         <TextBlock x:Uid="Settings_SizeFiltersHeader" Style="{StaticResource SectionTitleTextBlockStyle}" />
                         <TextBlock x:Uid="Settings_FiltersIntro" Style="{StaticResource SettingsIntroStyle}" />
                         <Border Style="{StaticResource FilterCardStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space12}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE91B;" FontSize="20" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_SceneResolutionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetResolutionFilterSummary(ViewModel.ResolutionFilterEnabled, ViewModel.AllowedResolutions.Count), Mode=OneWay}"
                                                    TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -519,8 +519,8 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
-                                    <Grid ColumnSpacing="8" HorizontalAlignment="Left" MaxWidth="360">
+                                <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.ResolutionFilterEnabled, Mode=OneWay}">
+                                    <Grid ColumnSpacing="{StaticResource Space8}" HorizontalAlignment="Left" MaxWidth="360">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -536,15 +536,15 @@
                         </Border>
 
                         <Border Style="{StaticResource FilterCardStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space12}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE77B;" FontSize="20" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_CharaResolutionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetResolutionFilterSummary(ViewModel.CharacterResolutionFilterEnabled, ViewModel.CharacterAllowedResolutions.Count), Mode=OneWay}"
                                                    TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -573,8 +573,8 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
-                                    <Grid ColumnSpacing="8" HorizontalAlignment="Left" MaxWidth="360">
+                                <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.CharacterResolutionFilterEnabled, Mode=OneWay}">
+                                    <Grid ColumnSpacing="{StaticResource Space8}" HorizontalAlignment="Left" MaxWidth="360">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -590,15 +590,15 @@
                         </Border>
 
                         <Border Style="{StaticResource FilterCardStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space12}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE790;" FontSize="20" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
                                         <TextBlock x:Uid="Settings_CoordResolutionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetResolutionFilterSummary(ViewModel.CoordinateResolutionFilterEnabled, ViewModel.CoordinateAllowedResolutions.Count), Mode=OneWay}"
                                                    TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -627,8 +627,8 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=OneWay}">
-                                    <Grid ColumnSpacing="8" HorizontalAlignment="Left" MaxWidth="360">
+                                <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.CoordinateResolutionFilterEnabled, Mode=OneWay}">
+                                    <Grid ColumnSpacing="{StaticResource Space8}" HorizontalAlignment="Left" MaxWidth="360">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -645,15 +645,15 @@
 
                         <TextBlock x:Uid="Settings_SceneTagsHeader" Margin="0,20,0,4" Style="{StaticResource SectionTitleTextBlockStyle}" />
                         <Border Style="{StaticResource FilterCardStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
+                            <StackPanel Spacing="{StaticResource Space12}">
+                                <Grid ColumnSpacing="{StaticResource Space12}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xEA86;" FontSize="20" VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Spacing="4">
+                                    <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}">
                                         <TextBlock x:Uid="Settings_PluginHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                         <TextBlock Text="{x:Bind GetPluginAnalysisSummary(ViewModel.PluginAnalysisEnabled), Mode=OneWay}"
                                                    TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -663,31 +663,31 @@
                                                   AutomationProperties.AutomationId="SettingsPluginAnalysisToggle" OnContent="" OffContent="" MinWidth="0" />
                                 </Grid>
                                 <TextBlock x:Uid="Settings_PluginDesc" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <StackPanel Spacing="12">
-                                    <appControls:WrapPanel Spacing="8">
+                                <StackPanel Spacing="{StaticResource Space12}">
+                                    <appControls:WrapPanel Spacing="{StaticResource Space8}">
                                         <Button
                                             Command="{x:Bind ViewModel.ScanMissingMetadataCommand}"
                                             IsEnabled="{x:Bind CanScanMetadata(ViewModel.PluginAnalysisEnabled, GalleryViewModel.IsNotParsingMetadata), Mode=OneWay}">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <FontIcon FontSize="14" Glyph="&#xE895;" />
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                                <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE895;" />
                                                 <TextBlock x:Uid="Settings_ScanMissing" />
                                             </StackPanel>
                                         </Button>
                                         <Button
                                             Command="{x:Bind ViewModel.RescanMetadataCommand}"
                                             IsEnabled="{x:Bind CanScanMetadata(ViewModel.PluginAnalysisEnabled, GalleryViewModel.IsNotParsingMetadata), Mode=OneWay}">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                                <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
                                                 <TextBlock x:Uid="Settings_RescanAll" />
                                             </StackPanel>
                                         </Button>
                                     </appControls:WrapPanel>
                                     <StackPanel
                                         Orientation="Horizontal"
-                                        Spacing="8"
+                                        Spacing="{StaticResource Space8}"
                                         VerticalAlignment="Center"
                                         Visibility="{x:Bind GalleryViewModel.IsParsingMetadata, Mode=OneWay}">
-                                        <ProgressRing Width="16" Height="16" IsActive="True" />
+                                        <ProgressRing Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="True" />
                                         <TextBlock x:Uid="Settings_ScanProgress" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind GalleryViewModel.PendingMetadataCount, Mode=OneWay}" />
                                     </StackPanel>
@@ -701,7 +701,7 @@
             <!-- Advanced Tab -->
             <appControls:SettingsTab x:Uid="Settings_TabAdvanced" Glyph="&#xE9F5;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="{StaticResource Space8}">
 
                         <!-- Cache Section -->
                         <TextBlock
@@ -728,7 +728,7 @@
                             <controls:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE7F1;" />
                             </controls:SettingsCard.HeaderIcon>
-                            <StackPanel Spacing="8">
+                            <StackPanel Spacing="{StaticResource Space8}">
                                 <TextBlock Text="{x:Bind ViewModel.CacheUsageText, Mode=OneWay}" TextWrapping="Wrap"
                                            AutomationProperties.LiveSetting="Polite" />
                                 <Button x:Uid="Settings_RefreshCache" Command="{x:Bind ViewModel.RefreshCacheUsageCommand}"
@@ -743,22 +743,22 @@
                             <controls:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE90F;" />
                             </controls:SettingsCard.HeaderIcon>
-                            <appControls:WrapPanel Spacing="8">
+                            <appControls:WrapPanel Spacing="{StaticResource Space8}">
                                 <Button Command="{x:Bind ViewModel.ChangeCacheFolderCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon FontSize="14" Glyph="&#xE8DA;" />
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8DA;" />
                                         <TextBlock x:Uid="Settings_ChangeFolder" />
                                     </StackPanel>
                                 </Button>
                                 <Button Command="{x:Bind ViewModel.ResetCacheFolderCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon FontSize="14" Glyph="&#xE777;" />
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE777;" />
                                         <TextBlock x:Uid="Settings_ResetDefault" />
                                     </StackPanel>
                                 </Button>
                                 <Button Click="ClearCache_Click">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE74D;" />
                                         <TextBlock x:Uid="Settings_ClearCache" />
                                     </StackPanel>
                                 </Button>
@@ -812,7 +812,7 @@
                     <StackPanel Spacing="20">
 
                         <!-- Overview -->
-                        <StackPanel Spacing="16">
+                        <StackPanel Spacing="{StaticResource Space16}">
                             <TextBlock
                                 x:Uid="Plugins_Header"
                                 Style="{StaticResource SectionTitleTextBlockStyle}" />
@@ -828,10 +828,10 @@
                         </StackPanel>
 
                         <!-- Installed Plugins -->
-                        <StackPanel Spacing="16">
+                        <StackPanel Spacing="{StaticResource Space16}">
                             <Button Click="OpenPluginsFolder_Click">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="14" Glyph="&#xE8DA;" />
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8DA;" />
                                     <TextBlock x:Uid="Plugins_OpenFolder" />
                                 </StackPanel>
                             </Button>
@@ -859,7 +859,7 @@
                                             CommandParameter="{x:Bind}">
                                             <Grid
                                                 Padding="16,12"
-                                                ColumnSpacing="12"
+                                                ColumnSpacing="{StaticResource Space12}"
                                                 CornerRadius="{StaticResource OverlayCornerRadius}"
                                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -876,7 +876,7 @@
                                                     Glyph="&#xEA86;" />
 
                                                 <StackPanel Grid.Column="1" Spacing="2">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                                                         <TextBlock
                                                             Style="{StaticResource BodyStrongTextBlockStyle}"
                                                             Text="{x:Bind Name}" />
@@ -929,7 +929,7 @@
 
                         <!-- Install Instructions -->
                         <Expander x:Uid="Plugins_InstallHelp" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
-                            <StackPanel Spacing="8">
+                            <StackPanel Spacing="{StaticResource Space8}">
                                 <TextBlock
                                     x:Uid="Plugins_InstallStepDownload"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -952,7 +952,7 @@
             <!-- Experimental Tab -->
             <appControls:SettingsTab x:Uid="Settings_TabOcd" Glyph="&#xE7BE;">
                 <ScrollViewer Style="{StaticResource SettingsScrollStyle}">
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="{StaticResource Space8}">
 
                         <InfoBar
                             x:Uid="Settings_OcdDesc"

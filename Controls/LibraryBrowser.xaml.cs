@@ -80,7 +80,7 @@ public sealed partial class LibraryBrowser : UserControl
     /// <summary>The card grid, for hosts that animate its containers on entry.</summary>
     internal GridView CardGrid => GalleryGrid;
 
-    public static BitmapImage? Thumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 400, UriSource = uri };
+    public static BitmapImage? Thumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth, UriSource = uri };
     // Only a few pixels of a stack layer show, so a small decode is plenty.
     public static BitmapImage? StackThumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 96, UriSource = uri };
     public void Initialize(LibraryKind kind, IReadOnlyList<CardBase>? scope = null, string? title = null)
@@ -123,7 +123,7 @@ public sealed partial class LibraryBrowser : UserControl
                 Spacing = 8,
                 Children =
                 {
-                    new FontIcon { Glyph = "\uE712", FontSize = 14 },
+                    new FontIcon { Glyph = "\uE712", FontSize = UiMetrics.IconSize },
                     new TextBlock { Text = UiText.Get("Browser_More") },
                 },
             },
@@ -558,7 +558,7 @@ public sealed partial class LibraryBrowser : UserControl
     }
     private void UpdateHeaderLayout(double width)
     {
-        bool narrow = width < 900;
+        bool narrow = width < UiMetrics.WideLayoutWidth;
         Grid.SetRow(SortControls, narrow ? 1 : 0); Grid.SetColumn(SortControls, narrow ? 0 : 1); Grid.SetColumnSpan(SortControls, narrow ? 2 : 1);
         Grid.SetRow(SearchActions, narrow ? 1 : 0); Grid.SetColumn(SearchActions, narrow ? 0 : 1); Grid.SetColumnSpan(SearchActions, narrow ? 2 : 1);
         // The window draws the library selector over this control. Once the

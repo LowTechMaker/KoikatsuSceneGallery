@@ -22,12 +22,12 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:PhaseToCancelButtonVisibilityConverter x:Key="PhaseToCancelButtonVisibilityConverter" />
         <DataTemplate x:Key="AuthorPickerItemTemplate" x:DataType="vm:SelectableAuthor">
-            <Grid Padding="4,6" ColumnSpacing="8">
+            <Grid Padding="4,6" ColumnSpacing="{StaticResource Space8}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <FontIcon FontSize="14" Glyph="&#xE77B;" VerticalAlignment="Center"
+                <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE77B;" VerticalAlignment="Center"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyTextBlockStyle}"
@@ -68,7 +68,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ReviewGroupTemplate" x:DataType="vm:ImportReviewRow">
-            <Grid Padding="40,8,8,2" ColumnSpacing="8">
+            <Grid Padding="40,8,8,2" ColumnSpacing="{StaticResource Space8}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -90,7 +90,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ReviewCardTemplate" x:DataType="vm:ImportItemReviewState">
-            <Grid Padding="40,6,4,6" ColumnSpacing="12">
+            <Grid Padding="40,6,4,6" ColumnSpacing="{StaticResource Space12}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="64" />
@@ -117,8 +117,8 @@
                 <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind Item.FileName}" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Item.SourceFilePath}"
                                TextTrimming="CharacterEllipsis" MaxLines="1" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="6,1" VerticalAlignment="Center"
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="{StaticResource BadgePadding}" VerticalAlignment="Center"
                                 Background="{x:Bind pages:ImportPage.ToneBackground(Tone), Mode=OneWay}">
                             <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" FontSize="12"
                                        Foreground="{x:Bind pages:ImportPage.ToneForeground(Tone), Mode=OneWay}" />
@@ -152,7 +152,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ReviewModCardTemplate" x:DataType="vm:ModReviewItem">
-            <Grid Padding="40,6,4,6" ColumnSpacing="12">
+            <Grid Padding="40,6,4,6" ColumnSpacing="{StaticResource Space12}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="64" />
                     <ColumnDefinition Width="*" />
@@ -168,7 +168,7 @@
                         <Run Text="{x:Bind Title}" FontWeight="SemiBold" />
                         <Run Text="  " /><Run Text="{x:Bind VersionText}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </TextBlock>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                         <ProgressRing Width="14" Height="14" IsActive="{x:Bind IsChecking, Mode=OneWay}"
                                       Visibility="{x:Bind IsChecking, Mode=OneWay}" />
                         <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" TextWrapping="Wrap"
@@ -208,7 +208,7 @@
                     IsEnabled="{x:Bind ViewModel.IsReviewWorkspaceEnabled, Mode=OneWay}"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch">
-    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -217,7 +217,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header: title, one-line summary, options. -->
-        <Grid ColumnSpacing="16">
+        <Grid ColumnSpacing="{StaticResource Space16}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -235,7 +235,7 @@
             </StackPanel>
             <!-- Out of the options flyout: it decides whether recognised cards wait for
                  review or go straight in, which is worth seeing before dropping files. -->
-            <StackPanel x:Uid="Import_AutoImportHost" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+            <StackPanel x:Uid="Import_AutoImportHost" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}"
                         VerticalAlignment="Center">
                 <TextBlock x:Uid="Import_AutoImportShort" VerticalAlignment="Center"
                            Style="{StaticResource CaptionTextBlockStyle}"
@@ -246,26 +246,26 @@
             </StackPanel>
             <Button Grid.Column="2" VerticalAlignment="Center" AutomationProperties.AutomationId="ImportOptionsButton"
                     x:Uid="Import_OptionsButton">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE713;" />
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE713;" />
                     <TextBlock x:Uid="Import_OptionsLabel" />
                 </StackPanel>
                 <Button.Flyout>
                     <Flyout Placement="BottomEdgeAlignedRight">
-                        <StackPanel Width="300" Spacing="12">
+                        <StackPanel Width="300" Spacing="{StaticResource Space12}">
                             <TextBlock x:Uid="Import_OptionsTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
                             <Button AutomationProperties.AutomationId="ImportRefreshLibraryIndexButton"
                                     HorizontalAlignment="Stretch"
                                     Command="{x:Bind ViewModel.RefreshLibraryIndexCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
                                     <TextBlock x:Uid="Import_RefreshLibraryIndex" />
                                 </StackPanel>
                             </Button>
                             <Button x:Name="CookieSetupButton" AutomationProperties.AutomationId="ImportCookieSetupButton"
                                     HorizontalAlignment="Stretch" Click="CookieSetup_Click" Visibility="Collapsed">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="14" Glyph="&#xE8C7;" />
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8C7;" />
                                     <TextBlock x:Uid="Import_CookieSetup" />
                                 </StackPanel>
                             </Button>
@@ -273,7 +273,7 @@
                                        SmallChange="1" SpinButtonPlacementMode="Compact"
                                        IsEnabled="{x:Bind ViewModel.IsIdle, Mode=OneWay}"
                                        Value="{x:Bind ViewModel.ArtworkSubfolderThreshold, Mode=TwoWay}" />
-                            <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="12"
+                            <controls:WrapPanel x:Uid="Import_RatingSummary" Spacing="{StaticResource Space12}"
                                                 Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
                                 <TextBlock x:Uid="Import_RatingSummaryLabel" Style="{StaticResource CaptionTextBlockStyle}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -316,7 +316,7 @@
             <Grid>
                 <controls:ImportDropZoneContent PickFilesRequested="PickFiles_Click"
                                                 Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}" />
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16"
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Space16}"
                             Visibility="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}">
                     <ProgressRing Width="56" Height="56" IsActive="True" HorizontalAlignment="Center" />
                     <TextBlock Text="{x:Bind ViewModel.AnalysisStatusText, Mode=OneWay}"
@@ -346,9 +346,9 @@
                     <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ReviewSelectionText, Mode=OneWay}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Space8}" VerticalAlignment="Center"
                                 Visibility="{x:Bind ViewModel.AnalysisLoadingVisibility, Mode=OneWay}">
-                        <ProgressRing Width="16" Height="16" IsActive="True" />
+                        <ProgressRing Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="True" />
                         <TextBlock Text="{x:Bind ViewModel.AnalysisStatusText, Mode=OneWay}" VerticalAlignment="Center"
                                    Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -416,14 +416,14 @@
             </Border>
         </Grid>
 
-        <StackPanel Grid.Row="3" Spacing="8" Padding="0,0,0,16" Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+        <StackPanel Grid.Row="3" Spacing="{StaticResource Space8}" Padding="0,0,0,16" Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
             <!-- Appears with a selection: everything that can be done to the selected cards, in one row. -->
             <Border x:Name="SelectionBar" Padding="12,8" CornerRadius="{StaticResource LargeCornerRadius}"
                     Visibility="{x:Bind ViewModel.ReviewSelectionEditorVisibility, Mode=OneWay}"
                     Background="{ThemeResource LayerFillColorAltBrush}"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1">
                 <StackPanel Spacing="6">
-                    <Grid ColumnSpacing="8">
+                    <Grid ColumnSpacing="{StaticResource Space8}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" MinWidth="160" />
@@ -526,7 +526,7 @@
             </Border>
 
             <!-- Footer: add more, what Import will do, and Import. -->
-            <Grid ColumnSpacing="8">
+            <Grid ColumnSpacing="{StaticResource Space8}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -535,13 +535,13 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Button x:Name="AddFilesButton" Click="ShowAddFilesOverlay_Click" x:Uid="Import_AddFilesButton">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE710;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE710;" />
                         <TextBlock x:Uid="Import_AddFilesLabel" />
                     </StackPanel>
                 </Button>
                 <Button Grid.Column="1" x:Uid="Import_MoreButton" Padding="10,5">
-                    <FontIcon FontSize="14" Glyph="&#xE712;" />
+                    <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE712;" />
                     <Button.Flyout>
                         <MenuFlyout Placement="TopEdgeAlignedLeft">
                             <MenuFlyoutItem x:Uid="Import_More_Undo"
@@ -568,8 +568,8 @@
                         Click="ConfirmImport_Click"
                         IsEnabled="{x:Bind ViewModel.CanConfirmImport, Mode=OneWay}"
                         AutomationProperties.Name="{x:Bind ViewModel.ImportPlanText, Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE896;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE896;" />
                         <TextBlock x:Uid="Import_ConfirmButtonText" />
                     </StackPanel>
                 </Button>
@@ -580,7 +580,7 @@
     <Grid x:Name="TransactionProgressOverlay" Grid.Row="1" Padding="24,16"
           Background="{ThemeResource LayerFillColorDefaultBrush}"
           Visibility="{x:Bind ViewModel.IsImporting, Mode=OneWay}">
-        <StackPanel MaxWidth="720" Spacing="8"
+        <StackPanel MaxWidth="720" Spacing="{StaticResource Space8}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
 
             <TextBlock Text="{x:Bind ViewModel.TransactionStatusText, Mode=OneWay}"

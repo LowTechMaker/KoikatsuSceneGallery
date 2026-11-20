@@ -39,7 +39,7 @@ public sealed partial class CardActionBar : StackPanel
 
         var more = new Button
         {
-            Content = new FontIcon { Glyph = "", FontSize = 14 },
+            Content = new FontIcon { Glyph = "", FontSize = UiMetrics.IconSize },
             Style = (Style)Application.Current.Resources["SubtleButtonStyle"],
             Padding = new Thickness(8, 6, 8, 6),
         };
@@ -83,7 +83,7 @@ public sealed partial class CardActionBar : StackPanel
                 Spacing = 6,
                 Children =
                 {
-                    new FontIcon { Glyph = glyph, FontSize = 14 },
+                    new FontIcon { Glyph = glyph, FontSize = UiMetrics.IconSize },
                     new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center },
                 },
             },

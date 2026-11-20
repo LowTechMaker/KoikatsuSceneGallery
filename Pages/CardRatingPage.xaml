@@ -20,7 +20,7 @@
             x:Name="CardPanel"
             Grid.Row="1"
             MaxWidth="960"
-            RowSpacing="12"
+            RowSpacing="{StaticResource Space12}"
             Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
@@ -65,10 +65,10 @@
         <StackPanel
             x:Name="StatusPanel"
             Grid.Row="1"
-            MaxWidth="480"
+            MaxWidth="{StaticResource EmptyStateMaxWidth}"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Spacing="12">
+            Spacing="{StaticResource Space12}">
             <ProgressRing x:Name="BusyRing" HorizontalAlignment="Center" IsActive="False" />
             <TextBlock
                 x:Name="StatusTitle"

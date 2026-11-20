@@ -25,7 +25,7 @@ public sealed partial class MainWindow : Window
     private bool _originSelectorAvailable;
 
     // The title and window buttons also need room beside the platform choices.
-    private const double CompactOriginSelectorWidth = 900;
+    private const double CompactOriginSelectorWidth = UiMetrics.WideLayoutWidth;
 
     /// <summary>The app's one window, for controls that open a section (the library's "More" menu).</summary>
     internal static MainWindow? Instance { get; private set; }

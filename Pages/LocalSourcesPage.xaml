@@ -76,7 +76,7 @@
                 <StackPanel
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Spacing="8">
+                    Spacing="{StaticResource Space8}">
                     <FontIcon
                         HorizontalAlignment="Center"
                         FontSize="28"
@@ -103,7 +103,7 @@
             SourceTemplate="{StaticResource LocalSourceTileTemplate}" />
     </Page.Resources>
 
-    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -126,7 +126,7 @@
             DragLeave="DropZone_DragLeave"
             DragOver="DropZone_DragOver"
             Drop="DropZone_Drop">
-            <StackPanel Spacing="12">
+            <StackPanel Spacing="{StaticResource Space12}">
                 <StackPanel
                     HorizontalAlignment="Center"
                     Spacing="6"
@@ -148,7 +148,7 @@
                 </StackPanel>
 
                 <StackPanel
-                    Spacing="12"
+                    Spacing="{StaticResource Space12}"
                     Visibility="{x:Bind ViewModel.HasStagedCards, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel
                         x:Name="StagedStrip"
@@ -181,7 +181,7 @@
                     <StackPanel
                         HorizontalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="12">
+                        Spacing="{StaticResource Space12}">
                         <TextBlock
                             VerticalAlignment="Center"
                             Text="{x:Bind ViewModel.PendingCountText, Mode=OneWay}" />

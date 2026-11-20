@@ -314,7 +314,7 @@ internal sealed class DuelPanel : StackPanel
             }
             // The gallery's thumbnail fills the frame until the sharp picture has decoded.
             _image.Source = card.ThumbnailUri is { } thumbnail
-                ? new BitmapImage { DecodePixelWidth = 400, UriSource = thumbnail }
+                ? new BitmapImage { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth, UriSource = thumbnail }
                 : null;
             pictures.GetAsync(card).ContinueWith(task =>
             {

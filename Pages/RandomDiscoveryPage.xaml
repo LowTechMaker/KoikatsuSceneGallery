@@ -16,17 +16,17 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <controls:PageHeader x:Uid="Discovery_Header" />
-        <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="8" RowSpacing="8" SizeChanged="Toolbar_SizeChanged">
+        <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}" SizeChanged="Toolbar_SizeChanged">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <AutoSuggestBox x:Name="SearchBox" x:Uid="SceneGallery_Search" QueryIcon="Find"
                             TextChanged="Search_Changed" QuerySubmitted="Search_Submitted"
                             AutomationProperties.AutomationId="DiscoverySearchBox" />
-            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
                 <Button x:Name="FilterButton" x:Uid="Discovery_Filters" MinHeight="36">
                     <Button.Flyout>
                         <Flyout>
-                            <StackPanel Width="260" Spacing="16">
+                            <StackPanel Width="260" Spacing="{StaticResource Space16}">
                                 <ComboBox x:Name="GameFilter" x:Uid="SceneGallery_Environment"
                                           HorizontalAlignment="Stretch" SelectionChanged="Game_Changed" />
                                 <ToggleSwitch x:Name="ResolutionFilter" x:Uid="Discovery_Resolution" Toggled="Filter_Changed" />
@@ -40,11 +40,11 @@
                 <Button x:Name="ResetButton" x:Uid="Discovery_Reset" Click="Reset_Click" MinHeight="36" />
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="2" Spacing="8">
+        <StackPanel Grid.Row="2" Spacing="{StaticResource Space8}">
             <TextBlock x:Name="ProgressText" Style="{StaticResource CaptionTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-            <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
-                <ProgressRing x:Name="BusyRing" Width="16" Height="16" IsActive="False" />
+            <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="{StaticResource Space8}" Visibility="Collapsed">
+                <ProgressRing x:Name="BusyRing" Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="False" />
                 <TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}" />
             </StackPanel>
             <InfoBar x:Name="ErrorBar" x:Uid="Discovery_Error" Severity="Error" IsOpen="False" IsClosable="False">
@@ -99,8 +99,8 @@
                 </DataTemplate>
             </GridView.ItemTemplate>
             <GridView.Footer>
-                <StackPanel x:Name="RoundFooter" Padding="16,24" Spacing="12" Visibility="Collapsed"
-                            HorizontalAlignment="Center" MaxWidth="480">
+                <StackPanel x:Name="RoundFooter" Padding="16,24" Spacing="{StaticResource Space12}" Visibility="Collapsed"
+                            HorizontalAlignment="Center" MaxWidth="{StaticResource EmptyStateMaxWidth}">
                     <TextBlock x:Name="RoundEndText" TextWrapping="Wrap" TextAlignment="Center"
                                AutomationProperties.LiveSetting="Polite" />
                     <Button x:Name="ContinueButton" x:Uid="Discovery_Continue" Click="Continue_Click"
@@ -109,7 +109,7 @@
             </GridView.Footer>
         </GridView>
         <StackPanel x:Name="EmptyPanel" Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    MaxWidth="420" Padding="16" Spacing="12" Visibility="Collapsed">
+                    MaxWidth="420" Padding="16" Spacing="{StaticResource Space12}" Visibility="Collapsed">
             <TextBlock x:Name="EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" />
             <TextBlock x:Name="EmptyDescription" TextWrapping="Wrap" TextAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

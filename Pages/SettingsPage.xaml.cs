@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
 using SceneGallery.PluginSdk;
 using Windows.System;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -359,7 +360,7 @@ public sealed partial class SettingsPage : Page
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.Navigate", ViewModel.LoadAsync);
     }
 
-    private const double NarrowWidth = 720;
+    private const double NarrowWidth = UiMetrics.NarrowLayoutWidth;
     private bool _syncingCategory;
 
     private IReadOnlyList<KoikatsuSceneGallery.Controls.SettingsTab> Tabs =>

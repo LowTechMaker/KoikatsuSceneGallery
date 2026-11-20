@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -88,7 +89,7 @@ public sealed partial class PostDetailPage : Page
     private void UpdateLayoutForWidth()
     {
         MainImageFrame.MaxHeight = Math.Clamp(ActualHeight - 270, 200, 640);
-        bool wide = ContentGrid.ActualWidth >= 900 && ViewModel.HasLocalImages;
+        bool wide = ContentGrid.ActualWidth >= UiMetrics.WideLayoutWidth && ViewModel.HasLocalImages;
         ContentGrid.ColumnDefinitions[1].Width = wide ? new GridLength(340) : new GridLength(0);
         Grid.SetColumn(PostInfoPanel, wide ? 1 : 0);
         Grid.SetRow(PostInfoPanel, wide ? 0 : 1);

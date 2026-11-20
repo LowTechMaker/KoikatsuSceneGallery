@@ -3,6 +3,7 @@ using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Helpers;
 
@@ -33,7 +34,7 @@ internal sealed class ProgressivePreview(Image image)
             return;
         }
 
-        var standIn = new BitmapImage { DecodePixelWidth = 400, UriSource = thumbnail };
+        var standIn = new BitmapImage { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth, UriSource = thumbnail };
         image.Source = standIn;
         LoadFullAsync(card, decodeWidth, generation, standIn)
             .Observe(App.Services.GetRequiredService<IAppLogger>(), "Detail.LoadPreview");

@@ -315,7 +315,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
             return cached;
         // Tiles flex with the window, so decode for the widest one rather
         // than the old fixed 280.
-        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 400 };
+        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth };
         _imageCache[path] = img;
         return img;
     }
