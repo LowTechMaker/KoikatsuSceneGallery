@@ -49,10 +49,14 @@ public sealed partial class LibraryBrowser
         _loupe.TileBounds = TileBounds;
         _loupe.CurrentChanged += Loupe_CurrentChanged;
         _loupe.Closed += Loupe_Closed;
-        // After the loupe's own keys (arrows, Esc): the card keys act on the card on show.
-        _loupe.KeyDown += (_, e) =>
+        // While the loupe is open its keys win wherever focus is (it may still be
+        // on the grid behind, or in the details pane); typing in a text box is left alone.
+        PreviewKeyDown += (_, e) =>
         {
-            if (e.Handled || e.KeyStatus.WasKeyDown || CardKeys.IsModifierDown()) return;
+            if (!_loupe.IsOpen || e.OriginalSource is TextBox or AutoSuggestBox or PasswordBox) return;
+            if (CardKeys.IsModifierDown()) return;
+            if (_loupe.HandleKey(e.Key)) { e.Handled = true; return; }
+            if (e.KeyStatus.WasKeyDown) return;
             if (CardKeys.Flag(e.Key) is { } flag) { e.Handled = true; _inspector.Toggle(flag); }
             else if (CardKeys.Rating(e.Key) is { } rating) { e.Handled = true; _inspector.RateFromKey(rating); }
         };

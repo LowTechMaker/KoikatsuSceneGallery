@@ -18,7 +18,17 @@ public sealed partial class HomePage : Page
     private readonly HomeViewModel _viewModel = App.Services.GetRequiredService<HomeViewModel>();
     private readonly CardStateService _states = App.Services.GetRequiredService<CardStateService>();
     private readonly GalleryViewModel _gallery = App.Services.GetRequiredService<GalleryViewModel>();
+    private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
+    private readonly CardInspector _inspector = new() { Width = 320, Margin = new Microsoft.UI.Xaml.Thickness(16, 0, 0, 16) };
+    private readonly CardLoupe _loupe = new() { Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 16) };
+    private readonly List<CardShelf> _rows = [];
+    private HomeShelf? _selectedShelf;
+    private CardBase? _selected;
+    private bool _wideEnoughForInspector = true;
     private bool _refreshQueued;
+
+    /// <summary>Below this page width the pane would squeeze the shelves; it hides.</summary>
+    private const double InspectorMinPageWidth = 820;
 
     public HomePage()
     {
@@ -28,7 +38,9 @@ public sealed partial class HomePage : Page
         foreach (var shelf in _viewModel.Shelves)
         {
             var row = new CardShelf(shelf, () => Frame);
-            row.CardInvoked += OpenCard;
+            row.CardInvoked += OpenInLoupe;
+            row.CardSelected += Select;
+            _rows.Add(row);
             row.FlagInvoked += ToggleFlag;
             if (shelf.Key == HomeViewModel.DealKey)
             {
@@ -41,6 +53,109 @@ public sealed partial class HomePage : Page
                 AddThemeActions(row, shelf);
             Shelves.Children.Add(row);
         }
+        InitDetails();
+    }
+
+    // ------------------------------------------------------------ select, inspect, open in place
+
+    private void InitDetails()
+    {
+        Microsoft.UI.Xaml.Controls.Grid.SetRow(_inspector, 1);
+        Microsoft.UI.Xaml.Controls.Grid.SetColumn(_inspector, 1);
+        PageRoot.Children.Add(_inspector);
+        _inspector.Frame = () => Frame;
+        _inspector.OpenRequested += card =>
+        {
+            if (_selectedShelf is { } shelf) OpenInLoupe(shelf, card);
+        };
+
+        Microsoft.UI.Xaml.Controls.Grid.SetRow(_loupe, 1);
+        PageRoot.Children.Add(_loupe);
+        _loupe.TileBounds = TileBounds;
+        _loupe.CurrentChanged += card => ShowSelection(card);
+        _loupe.Closed += card =>
+        {
+            _inspector.ShowPreview = true;
+            if (card is not null && TileOf(card) is { } tile)
+                tile.Focus(Microsoft.UI.Xaml.FocusState.Keyboard);
+        };
+        // While the loupe is open its keys win wherever focus is.
+        PageRoot.PreviewKeyDown += (_, e) =>
+        {
+            if (!_loupe.IsOpen || e.OriginalSource is TextBox or AutoSuggestBox) return;
+            if (CardKeys.IsModifierDown()) return;
+            if (_loupe.HandleKey(e.Key)) { e.Handled = true; return; }
+            if (e.KeyStatus.WasKeyDown) return;
+            if (CardKeys.Flag(e.Key) is { } flag) { e.Handled = true; _inspector.Toggle(flag); }
+            else if (CardKeys.Rating(e.Key) is { } rating) { e.Handled = true; _inspector.RateFromKey(rating); }
+        };
+
+        _settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.InspectorVisible)) UpdateInspectorVisibility();
+        };
+        PageRoot.SizeChanged += (_, e) =>
+        {
+            var wide = e.NewSize.Width >= InspectorMinPageWidth;
+            if (wide == _wideEnoughForInspector) return;
+            _wideEnoughForInspector = wide;
+            UpdateInspectorVisibility();
+        };
+        UpdateInspectorVisibility();
+    }
+
+    private void UpdateInspectorVisibility()
+        => _inspector.Visibility = _settings.InspectorVisible && _wideEnoughForInspector
+            ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    private void Inspector_Invoked(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs e)
+    {
+        _settings.InspectorVisible = !_settings.InspectorVisible;
+        e.Handled = true;
+    }
+
+    private void Select(HomeShelf shelf, CardBase card)
+    {
+        _selectedShelf = shelf;
+        ShowSelection(card);
+    }
+
+    /// <summary>Marks the card on every shelf that shows it and puts it in the details pane.</summary>
+    private void ShowSelection(CardBase card)
+    {
+        _selected = card;
+        foreach (var row in _rows) row.ShowSelected(card.FilePath);
+        _inspector.Show([card]);
+    }
+
+    /// <summary>Opens a shelf's card large over the shelves, stepping through that shelf.</summary>
+    private void OpenInLoupe(HomeShelf shelf, CardBase card)
+    {
+        var cards = shelf.Cards.ToArray();
+        var index = Array.FindIndex(cards, c => ReferenceEquals(c, card));
+        if (index < 0) return;
+        _selectedShelf = shelf;
+        ShowSelection(card);
+        _inspector.ShowPreview = false;
+        _loupe.Open(cards, index);
+    }
+
+    private Microsoft.UI.Xaml.FrameworkElement? TileOf(CardBase card)
+    {
+        // The shelf the card was opened from first: the same card can be on several.
+        foreach (var row in _rows.OrderBy(r => ReferenceEquals(r.Shelf, _selectedShelf) ? 0 : 1))
+            if (row.PictureOf(card) is { } picture) return picture;
+        return null;
+    }
+
+    private Windows.Foundation.Rect? TileBounds(CardBase card)
+    {
+        if (TileOf(card) is not { ActualWidth: > 0 } tile) return null;
+        var bounds = tile.TransformToVisual(_loupe).TransformBounds(
+            new Windows.Foundation.Rect(0, 0, tile.ActualWidth, tile.ActualHeight));
+        // Off the visible part of the page: just appear and disappear.
+        if (bounds.Bottom < 0 || bounds.Top > _loupe.ActualHeight) return null;
+        return bounds;
     }
 
     // A themed shelf: "see all" when today's theme is an author (their page);
@@ -97,6 +212,7 @@ public sealed partial class HomePage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
+        _loupe.Close(animate: false);
         _gallery.CardsReloaded -= QueueRefresh;
         _gallery.CardsReloaded -= Reconcile;
         _viewModel.CardInfoChanged -= QueueRefresh;
@@ -144,9 +260,6 @@ public sealed partial class HomePage : Page
             Duel.Refresh();
         });
     }
-
-    private void OpenCard(HomeShelf shelf, CardBase card)
-        => new BrowseContext(shelf.Title, shelf.Cards).Open(Frame, card);
 
     private async void ToggleFlag(CardBase card, CardFlag flag)
     {

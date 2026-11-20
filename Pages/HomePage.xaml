@@ -3,12 +3,24 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:KoikatsuSceneGallery.Controls">
-    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
+    <Grid
+        x:Name="PageRoot"
+        Padding="{StaticResource PageContentPadding}"
+        RowSpacing="{StaticResource PageRowSpacing}">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="I" Modifiers="Control" Invoked="Inspector_Invoked" />
+        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <controls:PageHeader x:Uid="Home_Header" />
+        <!--  The second column is the details pane (CardInspector, added in code),
+              the same one the library has; the loupe covers the shelves' cell.  -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <controls:PageHeader x:Uid="Home_Header" Grid.ColumnSpan="2" />
         <!--  The shelves are built in code (HomePage.xaml.cs): one CardShelf
               per HomeViewModel shelf, in the view model's order.  -->
         <ScrollViewer

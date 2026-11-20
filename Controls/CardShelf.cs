@@ -76,8 +76,33 @@ internal sealed class CardShelf : Grid
     private bool _rebuildQueued;
     private bool _subscribed;
 
-    /// <summary>The user opened a card.</summary>
+    /// <summary>The user opened a card: a double click or Enter on its tile.</summary>
     public event Action<HomeShelf, CardBase>? CardInvoked;
+
+    /// <summary>The user selected a card: a click on its tile (the details pane shows it).</summary>
+    public event Action<HomeShelf, CardBase>? CardSelected;
+
+    private string? _selectedPath;
+
+    /// <summary>Marks the tile of the selected card, if this shelf shows it.</summary>
+    public void ShowSelected(string? path)
+    {
+        _selectedPath = path;
+        foreach (var tile in _tiles.Values)
+            tile.SetSelected(path is not null && string.Equals(tile.Card.FilePath, path, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The picture of the card's tile when it is on screen in this shelf: what the loupe zooms out of.</summary>
+    public FrameworkElement? PictureOf(CardBase card)
+    {
+        foreach (var child in _panel.Children)
+            if (child is Tile tile && string.Equals(tile.Card.FilePath, card.FilePath, StringComparison.OrdinalIgnoreCase))
+                return tile.Picture;
+        return null;
+    }
+
+    /// <summary>The cards on this shelf, in order.</summary>
+    public HomeShelf Shelf => _shelf;
 
     /// <summary>The user asked to set or clear a flag on a card from the shelf.</summary>
     public event Action<CardBase, CardFlag>? FlagInvoked;
@@ -232,11 +257,13 @@ internal sealed class CardShelf : Grid
             {
                 _tiles[key] = tile = new Tile(card, _states,
                     opened => CardInvoked?.Invoke(_shelf, opened),
+                    selected => CardSelected?.Invoke(_shelf, selected),
                     (flagged, flag) => FlagInvoked?.Invoke(flagged, flag),
                     _frame);
             }
             tile.SetAutomationIds($"HomeShelf_{_shelf.Key}_Tile{i}");
             tile.UpdateState();
+            tile.SetSelected(_selectedPath is not null && string.Equals(card.FilePath, _selectedPath, StringComparison.OrdinalIgnoreCase));
             if (_home is not null) tile.UpdateText(_home.Describe(card));
             kept.Add(key);
             tiles[i] = tile;
@@ -314,15 +341,31 @@ internal sealed class CardShelf : Grid
             },
         };
         private readonly HomeCardCaption _caption = new();
+        // The selection mark, like the library's: a thick accent frame and a light wash.
+        private readonly Border _selectedMark = new()
+        {
+            BorderThickness = new Thickness(3),
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed,
+        };
         private bool _pointerOver;
         private bool _thumbnailRequested;
 
         public CardBase Card { get; }
 
+        /// <summary>The picture part of the tile (not the caption).</summary>
+        public FrameworkElement Picture => _open;
+
+        public void SetSelected(bool selected)
+        {
+            _selectedMark.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetItemStatus(_open, selected ? UiText.Get("Home_TileSelected") : "");
+        }
+
         /// <summary>Caption, tooltip and accessible name from what the home page knows about the card.</summary>
         public void UpdateText(HomeCardInfo info) => _caption.Show(info, _open);
 
-        public Tile(CardBase card, CardStateService states, Action<CardBase> open, Action<CardBase, CardFlag> flag, Func<Frame?> frame)
+        public Tile(CardBase card, CardStateService states, Action<CardBase> open, Action<CardBase> select, Action<CardBase, CardFlag> flag, Func<Frame?> frame)
         {
             Card = card;
             _states = states;
@@ -341,7 +384,19 @@ internal sealed class CardShelf : Grid
                 Background = (Brush)Application.Current.Resources["ControlStrongFillColorDefaultBrush"],
                 Child = _image,
             };
-            _open.Click += (_, _) => open(Card);
+            // A click selects (the page's details pane shows it); a double click
+            // or Enter opens it large in place. It used to open on a click,
+            // like a phone album.
+            _open.Click += (_, _) => select(Card);
+            _open.DoubleTapped += (_, e) => { e.Handled = true; open(Card); };
+            _open.PreviewKeyDown += (_, e) =>
+            {
+                if (e.Key != Windows.System.VirtualKey.Enter || e.KeyStatus.WasKeyDown) return;
+                e.Handled = true;
+                open(Card);
+            };
+            _selectedMark.CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"];
+            _selectedMark.BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
             // Dragged out like a gallery tile, through the same funnel, so it
             // is recorded as used and in record mode alike. CanDrag alone does
             // nothing on a button; see ButtonDragOut.
@@ -381,7 +436,7 @@ internal sealed class CardShelf : Grid
 
             // The flag buttons come after the open button in the tree, so Tab
             // from a focused tile walks into them once focus has shown them.
-            var picture = new Grid { Children = { _open, _used, _flags } };
+            var picture = new Grid { Children = { _open, _selectedMark, _used, _flags } };
             Children.Add(picture);
 
             // What the card is and who made it, not what the file is called.

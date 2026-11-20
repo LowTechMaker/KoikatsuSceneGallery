@@ -137,7 +137,7 @@ internal sealed class CardLoupe : Grid
         _image.DragStarting += (_, e) => DetailNavigationHelper.HandleDragStartingAsync(Current, e)
             .Observe(App.Services.GetRequiredService<IAppLogger>(), "Loupe.PrepareDrag");
         _scroll.SizeChanged += (_, _) => ApplyZoom();
-        KeyDown += Loupe_KeyDown;
+        AutomationProperties.SetAutomationId(_scroll, "LoupeScroll");
     }
 
     /// <summary>Shows <paramref name="cards"/>[<paramref name="index"/>] over the grid.</summary>
@@ -163,7 +163,10 @@ internal sealed class CardLoupe : Grid
             }
             LayoutUpdated += Start;
         }
-        DispatcherQueue.TryEnqueue(() => Focus(FocusState.Programmatic));
+        // Focus inside the loupe, not left on the grid behind it: there the
+        // arrows moved the grid's hidden selection (and the details pane with
+        // it) instead of the card on show.
+        DispatcherQueue.TryEnqueue(() => _scroll.Focus(FocusState.Programmatic));
     }
 
     /// <summary>The grid's list changed under the loupe (a refresh); keeps the current card when it is still there.</summary>
@@ -320,18 +323,24 @@ internal sealed class CardLoupe : Grid
         }
     }
 
-    private void Loupe_KeyDown(object sender, KeyRoutedEventArgs e)
+    /// <summary>
+    /// The loupe's own keys, whichever element has focus: the host calls this
+    /// from a tunnelling handler, ahead of the scroll viewer (which would pan
+    /// with the arrows) and of the grid behind. Returns whether it was one.
+    /// </summary>
+    public bool HandleKey(VirtualKey key)
     {
-        switch (e.Key)
+        if (!IsOpen) return false;
+        switch (key)
         {
             case VirtualKey.Left: Step(-1); break;
             case VirtualKey.Right: Step(1); break;
             case VirtualKey.Home: ShowAt(0); break;
             case VirtualKey.End: ShowAt(_cards.Count - 1); break;
             case VirtualKey.Escape: Close(); break;
-            default: return; // Q / F / X and 1-3 go on to the host (LibraryBrowser)
+            default: return false; // Q / F / X and 1-3 are the host's (LibraryBrowser)
         }
-        e.Handled = true;
+        return true;
     }
 
     private int IndexOf(CardBase card)
