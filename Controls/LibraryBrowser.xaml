@@ -23,6 +23,12 @@
         title: on its own line below a heading it was the loudest thing on a
         page whose subject is the cards. -->
    <StackPanel x:Name="SortControls" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+    <!-- Loading, analysing or making thumbnails: a small ring and a word beside the count, in the
+         toolbar line. It used to be a row of its own under the search box, which pushed the grid
+         down and back up every time it came and went (user report). -->
+    <StackPanel x:Name="BusyStatus" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,4,0" Visibility="Collapsed">
+     <ProgressRing x:Name="BusyRing" Width="14" Height="14"/><TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+    </StackPanel>
     <TextBlock x:Name="ResultCount" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
     <!-- Tag, not index: SortOption gains values over time and a silent
          off-by-one here would sort by the wrong column with no compile error. -->
@@ -90,9 +96,6 @@
    </Grid>
    <!-- Active filters, each removable (LibraryBrowser.FilterChips.cs). -->
    <local:WrapPanel x:Name="FilterChips" Spacing="6" Visibility="Collapsed" AutomationProperties.AutomationId="GalleryFilterChips"/>
-   <StackPanel x:Name="BusyStatus" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
-    <ProgressRing x:Name="BusyRing" Width="14" Height="14"/><TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}"/>
-   </StackPanel>
   </StackPanel>
   <!-- A click selects (the details pane shows it); a double click or Enter opens.
        Extended: Ctrl and Shift select several, Ctrl+A all. -->
