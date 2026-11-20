@@ -671,7 +671,8 @@ public sealed partial class MainWindow : Window
     {
         // Every page arrives the same way (CardMotion). The library's pages do
         // it themselves, on their grid, under the tab heading that stays put.
-        if (!IsLibraryPage(e.SourcePageType) && e.Content is UIElement page)
+        // The home page arrives panel by panel itself (CardMotion.EnterStaggered).
+        if (!IsLibraryPage(e.SourcePageType) && e.SourcePageType != typeof(HomePage) && e.Content is UIElement page)
             CardMotion.Entrance(page);
 
         if (e.SourcePageType == typeof(SettingsPage))

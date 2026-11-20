@@ -89,7 +89,10 @@ internal static class CardMotion
     /// <summary>
     /// Content arriving: fades in while settling up from <paramref name="rise"/> pixels below.
     /// </summary>
-    public static void Entrance(UIElement element, float rise = 16)
+    public static void Entrance(UIElement element, float rise = 16) => Entrance(element, rise, TimeSpan.Zero);
+
+    /// <summary>The same arrival, after <paramref name="delay"/> (hidden until then).</summary>
+    public static void Entrance(UIElement element, float rise, TimeSpan delay)
     {
         if (!AnimationsEnabled) return;
         ElementCompositionPreview.SetIsTranslationEnabled(element, true);
@@ -101,10 +104,14 @@ internal static class CardMotion
         fade.InsertKeyFrame(0, 0);
         fade.InsertKeyFrame(1, 1, ease);
         fade.Duration = EnterDuration;
+        fade.DelayTime = delay;
+        fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
         var move = compositor.CreateVector3KeyFrameAnimation();
         move.InsertKeyFrame(0, new Vector3(0, rise, 0));
         move.InsertKeyFrame(1, Vector3.Zero, ease);
         move.Duration = EnterDuration;
+        move.DelayTime = delay;
+        move.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
 
         visual.StartAnimation("Opacity", fade);
         visual.StartAnimation("Translation", move);
@@ -202,6 +209,58 @@ internal static class CardMotion
 
         visual.StartAnimation("Opacity", fade);
         visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>The pause between two panels of a dashboard arriving (the home page).</summary>
+    public static readonly TimeSpan PanelStagger = TimeSpan.FromMilliseconds(45);
+    /// <summary>The most a group of panels waits in all, however many there are.</summary>
+    public static readonly TimeSpan PanelStaggerBudget = TimeSpan.FromMilliseconds(320);
+
+    /// <summary>
+    /// Several things arriving one after another (the home page's panels, or
+    /// the themes after a reroll): each the <see cref="Entrance"/> move, each
+    /// a little later than the one before, within <see cref="PanelStaggerBudget"/>.
+    /// </summary>
+    public static void EnterStaggered(IReadOnlyList<UIElement> elements, float rise = 16)
+    {
+        if (!AnimationsEnabled || elements.Count == 0) return;
+        var step = elements.Count > 1
+            ? TimeSpan.FromTicks(Math.Min(PanelStagger.Ticks, PanelStaggerBudget.Ticks / (elements.Count - 1)))
+            : TimeSpan.Zero;
+        for (var i = 0; i < elements.Count; i++) Entrance(elements[i], rise, step * i);
+    }
+
+    /// <summary>
+    /// A group of things going away together before they are replaced (the
+    /// themes on a reroll): a quick fade and a small sink, then
+    /// <paramref name="done"/>, which swaps them and brings them back in.
+    /// Without animation <paramref name="done"/> runs at once.
+    /// </summary>
+    public static void LeaveTogether(IReadOnlyList<UIElement> elements, Action done, float sink = 8)
+    {
+        if (!AnimationsEnabled || elements.Count == 0)
+        {
+            done();
+            return;
+        }
+        var compositor = ElementCompositionPreview.GetElementVisual(elements[0]).Compositor;
+        var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        foreach (var element in elements)
+        {
+            ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+            var visual = ElementCompositionPreview.GetElementVisual(element);
+            var ease = Ease(compositor);
+            var fade = compositor.CreateScalarKeyFrameAnimation();
+            fade.InsertKeyFrame(1, 0, ease);
+            fade.Duration = CrossfadeDuration;
+            var move = compositor.CreateVector3KeyFrameAnimation();
+            move.InsertKeyFrame(1, new Vector3(0, sink, 0), ease);
+            move.Duration = CrossfadeDuration;
+            visual.StartAnimation("Opacity", fade);
+            visual.StartAnimation("Translation", move);
+        }
+        batch.End();
+        batch.Completed += (_, _) => done();
     }
 
     /// <summary>The pause between two cards of a dealt hand.</summary>

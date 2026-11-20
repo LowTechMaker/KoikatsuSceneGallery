@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
         <!--  "New themes" in the header's actions, not a row under the panels: that
               row was what still pushed the page past a maximised window (user report).  -->
-        <controls:PageHeader x:Uid="Home_Header">
+        <controls:PageHeader x:Name="Header" x:Uid="Home_Header">
             <controls:PageHeader.Actions>
                 <Button
                     x:Name="RerollButton"

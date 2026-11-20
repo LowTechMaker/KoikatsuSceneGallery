@@ -214,13 +214,53 @@ public sealed partial class HomePage : Page
         Frame.Navigate(typeof(ShelfPage), new ShelfPageParameter(shelf.Title, [.. shelf.Cards]));
     }
 
-    private void Reroll_Click(object sender, RoutedEventArgs e) => _viewModel.RerollThemes();
+    /// <summary>
+    /// New themes: today's theme panels go together, the new ones come in one
+    /// after another (CardMotion), so the change reads as a new hand rather
+    /// than pictures flickering in place.
+    /// </summary>
+    private void Reroll_Click(object sender, RoutedEventArgs e)
+    {
+        RerollButton.IsEnabled = false;
+        var themes = ThemePanels();
+        CardMotion.LeaveTogether(themes, () => DispatcherQueue.TryEnqueue(() =>
+        {
+            _viewModel.RerollThemes();
+            // The panels rebuild from their shelves on the next tick; arrive after that.
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                var arriving = ThemePanels();
+                CardMotion.EnterStaggered(arriving, rise: 12);
+                // A panel whose new theme came out empty is hidden now: it still
+                // carries the fade, so it is brought back to normal for next time.
+                foreach (var gone in themes.Except(arriving)) CardMotion.Entrance(gone, 0);
+                RerollButton.IsEnabled = true;
+            });
+        }));
+    }
+
+    private UIElement[] ThemePanels() => [.. _panels
+        .Where(panel => panel.Shelf.Key.StartsWith(HomeViewModel.ThemeKeyPrefix, StringComparison.Ordinal)
+            && panel.Visibility == Visibility.Visible)];
+
+    /// <summary>
+    /// The page arriving: the header, the featured card, the numbers and the
+    /// panels beside them, then the rest, one after another (CardMotion).
+    /// </summary>
+    private void PlayEntrance()
+    {
+        List<UIElement> order = [Header, _featured, .. _sideColumn.Children];
+        order.AddRange(_panels.Where(panel => panel.Parent == PanelsGrid && panel.Visibility == Visibility.Visible)
+            .OrderBy(Grid.GetRow).ThenBy(Grid.GetColumn));
+        CardMotion.EnterStaggered(order);
+    }
 
     // ------------------------------------------------------------ keeping up
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        PlayEntrance();
         _gallery.CardsReloaded += QueueRefresh;
         _gallery.CardsReloaded += Reconcile;
         // The sidecars are read after the cards: tags (for the themes) come then.
