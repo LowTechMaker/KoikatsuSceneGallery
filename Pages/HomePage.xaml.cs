@@ -73,8 +73,13 @@ public sealed partial class HomePage : Page
         PageRoot.Children.Add(_loupe);
         _loupe.TileBounds = TileBounds;
         _loupe.CurrentChanged += card => ShowSelection(card);
+        // The loupe is a translucent card panel: the shelves behind it go while
+        // it is open, and come back as it starts to close (so the tile can be
+        // measured for the flight home).
+        _loupe.Closing += () => ShowShelves(true);
         _loupe.Closed += card =>
         {
+            ShowShelves(true);
             _inspector.ShowPreview = true;
             if (card is not null && TileOf(card) is { } tile)
                 tile.Focus(Microsoft.UI.Xaml.FocusState.Keyboard);
@@ -138,6 +143,13 @@ public sealed partial class HomePage : Page
         ShowSelection(card);
         _inspector.ShowPreview = false;
         _loupe.Open(cards, index);
+        ShowShelves(false);
+    }
+
+    private void ShowShelves(bool show)
+    {
+        ShelvesScroll.Opacity = show ? 1 : 0;
+        ShelvesScroll.IsHitTestVisible = show;
     }
 
     private Microsoft.UI.Xaml.FrameworkElement? TileOf(CardBase card)

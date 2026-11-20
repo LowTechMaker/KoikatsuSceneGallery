@@ -24,6 +24,7 @@
         <!--  The shelves are built in code (HomePage.xaml.cs): one CardShelf
               per HomeViewModel shelf, in the view model's order.  -->
         <ScrollViewer
+            x:Name="ShelvesScroll"
             Grid.Row="1"
             AutomationProperties.AutomationId="HomeScroll"
             VerticalScrollBarVisibility="Auto">

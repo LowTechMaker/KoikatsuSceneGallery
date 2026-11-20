@@ -547,7 +547,11 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         => AwaitedUiPublication.InvokeBlocking(
             action => _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => action()),
             () => { using (CardsView.DeferRefresh()) applyBatch(); },
-            TimeSpan.FromSeconds(10), token);
+            // 30 s, not 10: at start the UI thread is busy putting the scene
+            // cache on screen, and a character or outfit batch that gave up
+            // abandoned that whole load (crash.log, AuthorSource.InitialLoad),
+            // which then started over only when its tab was opened.
+            TimeSpan.FromSeconds(30), token);
 
     public virtual void Activate()
     {

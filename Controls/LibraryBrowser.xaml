@@ -111,7 +111,10 @@
     <x:Boolean x:Key="GridViewItemSelectionCheckMarkVisualEnabled">False</x:Boolean>
     <Thickness x:Key="GridViewItemSelectedBorderThickness">0</Thickness>
    </GridView.Resources>
-   <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4"/></ItemsPanelTemplate></GridView.ItemsPanel>
+   <!-- A size from the start (GalleryLayoutEngine fits it to the width at once): without one,
+        a tab opened for the first time laid out its ~1,800 cards at the size of their loading
+        placeholders, a field of tiny icons for seconds (user report, four times). -->
+   <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4" ItemWidth="248" ItemHeight="248"/></ItemsPanelTemplate></GridView.ItemsPanel>
    <GridView.ItemContainerStyle><Style TargetType="GridViewItem">
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/>
     <Setter Property="Margin" Value="0"/><Setter Property="Padding" Value="0"/><Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="0"/>

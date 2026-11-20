@@ -239,6 +239,11 @@ public sealed partial class LibraryBrowser
         // go while the loupe is up, and so does the room kept for the tabs.
         Header.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         SearchArea.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        // The loupe is a translucent card panel now; the grid behind it goes
+        // (not collapsed: that would lose its scroll position and containers).
+        GalleryGrid.Opacity = open ? 0 : 1;
+        GalleryGrid.IsHitTestVisible = !open;
+        EmptyPanel.Opacity = open ? 0 : 1;
         Grid.SetRow(_inspector, open ? 0 : 2);
         Grid.SetRowSpan(_inspector, open ? 3 : 1);
         if (_scope is null) MainWindow.Instance?.SetLibraryHeadingHidden(open);

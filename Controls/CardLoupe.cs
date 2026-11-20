@@ -175,8 +175,14 @@ internal sealed class CardLoupe : Grid
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // The page behind does not show through while the loupe is up.
-        Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
+        // A panel like the details pane beside it (user: "make it like the
+        // details panel, it looks more harmonious"): the same card surface,
+        // stroke, corners and padding. The host hides what is behind it.
+        Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"];
+        BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+        BorderThickness = new Thickness(1);
+        CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"];
+        Padding = new Thickness(16, 12, 16, 12);
 
         BuildHeader();
         BuildStage();
