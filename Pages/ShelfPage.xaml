@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--  A home page panel's whole list ("see all"): the library browser, scoped to
+      the shelf's cards, under the shelf's name. A XAML page, not a code-only one:
+      Frame.Navigate to a code-only Page crashed (see CardViewerPage).  -->
+<Page
+    x:Class="KoikatsuSceneGallery.Pages.ShelfPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:KoikatsuSceneGallery.Controls">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space4}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <controls:PageHeader x:Name="Header" />
+        <controls:LibraryBrowser x:Name="Browser" Grid.Row="1" />
+    </Grid>
+</Page>

@@ -96,6 +96,29 @@ internal static class UiMetrics
     public const double LoupeEdgeButtonSize = 44;
     public static Thickness LoupePadding => new(16, 12, 16, 12);
 
+    // ------------------------------------------------------------ the home page (a dashboard of panels)
+
+    /// <summary>A panel is never narrower than this; the page fits as many per row as this allows, at most <see cref="HomePanelColumns"/>.</summary>
+    public const double HomePanelMinWidth = 380;
+    public const int HomePanelColumns = 3;
+    /// <summary>Between two panels, and between the top band and the panels.</summary>
+    public const double HomePanelGap = 12;
+    /// <summary>Between the thumbnails inside a panel's mosaic.</summary>
+    public const double HomeMosaicGap = 4;
+    /// <summary>A panel's mosaic: one large picture and four small ones in two rows beside it.</summary>
+    public const int HomeMosaicCards = 5;
+    /// <summary>The library numbers beside the featured card.</summary>
+    public const double HomeStatsWidth = 300;
+    /// <summary>The featured picture's largest width, and the width it is decoded at.</summary>
+    public const double HomeFeaturedMaxPictureWidth = 640;
+    public const int HomeFeaturedDecodeWidth = 1280;
+    /// <summary>How see-through the featured picture is behind the whole top band.</summary>
+    public const double HomeFeaturedBackdropOpacity = 0.16;
+    /// <summary>Tags named under the featured card's title.</summary>
+    public const int HomeFeaturedTags = 4;
+    /// <summary>"New this week" counts files added within this many days.</summary>
+    public const int HomeNewDays = 7;
+
     // ------------------------------------------------------------ random discovery's card holder (a hand on a three-tier rack)
 
     /// <summary>Tiers on the rack; the back one holds the most cards, as a real one does.</summary>

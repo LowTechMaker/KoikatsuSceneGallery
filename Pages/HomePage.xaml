@@ -3,40 +3,37 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:KoikatsuSceneGallery.Controls">
+    <!--  A dashboard (user's pick): today's featured card beside the library's
+          numbers, then the shelves as panels, two or three to a row. No details
+          pane: a click opens the card in place (the loupe), and a panel's
+          "see all" opens its whole list in the library's browser.  -->
     <Grid
         x:Name="PageRoot"
         Padding="{StaticResource PageContentPadding}"
         RowSpacing="{StaticResource PageRowSpacing}">
-        <Grid.KeyboardAccelerators>
-            <KeyboardAccelerator Key="I" Modifiers="Control" Invoked="Inspector_Invoked" />
-        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <!--  The second column is the details pane (CardInspector, added in code),
-              the same one the library has; the loupe covers the shelves' cell.  -->
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <controls:PageHeader x:Uid="Home_Header" Grid.ColumnSpan="2" />
-        <!--  The shelves are built in code (HomePage.xaml.cs): one CardShelf
-              per HomeViewModel shelf, in the view model's order.  -->
+        <controls:PageHeader x:Uid="Home_Header" />
         <ScrollViewer
             x:Name="ShelvesScroll"
             Grid.Row="1"
             AutomationProperties.AutomationId="HomeScroll"
             VerticalScrollBarVisibility="Auto">
-            <!--  The right margin is room for the vertical scroll bar, which WinUI
-                  draws over the content: without it the bar covers the shelf
-                  headers' buttons (seen live at 1920x1080).  -->
+            <!--  The right margin is the scroll bar's gutter, as in the library.  -->
             <StackPanel
-                x:Name="Shelves"
+                x:Name="Dashboard"
                 Margin="0,0,16,24"
-                Spacing="{StaticResource Space16}">
-                <!--  "This or that" first; the shelves are added after it in code.  -->
-                <controls:DuelPanel x:Name="Duel" />
+                Spacing="{x:Bind controls:UiMetrics.HomePanelGap}">
+                <Grid x:Name="TopBand" />
+                <Grid x:Name="PanelsGrid" />
+                <Button
+                    x:Name="RerollButton"
+                    x:Uid="Home_ThemesRerollButton"
+                    AutomationProperties.AutomationId="HomeThemesReroll"
+                    HorizontalAlignment="Left"
+                    Click="Reroll_Click" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -2389,4 +2389,19 @@
   <data name="Import_Error_FileExists" xml:space="preserve"><value>已有同名檔案</value></data>
   <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>另一個作品已使用此檔名：{0}</value></data>
   <data name="Format_LabelValue" xml:space="preserve"><value>{0}：{1}</value></data>
+  <data name="Home_SeeAll" xml:space="preserve"><value>查看全部</value></data>
+  <data name="Home_Featured" xml:space="preserve"><value>今日推薦</value></data>
+  <data name="Home_FeaturedEmpty" xml:space="preserve"><value>暫時沒有可推薦的場景。</value></data>
+  <data name="Home_FeaturedQueue" xml:space="preserve"><value>想試</value></data>
+  <data name="Home_FeaturedNext" xml:space="preserve"><value>換一張</value></data>
+  <data name="Home_Stats" xml:space="preserve"><value>收藏庫</value></data>
+  <data name="Home_StatsScenes" xml:space="preserve"><value>{0} 個場景</value></data>
+  <data name="Home_StatsNew" xml:space="preserve"><value>本週新增 {0} 張</value></data>
+  <data name="Home_StatsUnrated" xml:space="preserve"><value>{0} 張還沒有你的分級</value></data>
+  <data name="Home_StatsImportIdle" xml:space="preserve"><value>匯入：閒置</value></data>
+  <data name="Home_StatsImporting" xml:space="preserve"><value>正在匯入…</value></data>
+  <data name="Home_StatsAnalyzing" xml:space="preserve"><value>正在分析，剩餘 {0} 個</value></data>
+  <data name="Home_ShelfCount" xml:space="preserve"><value>{0} 張卡片</value></data>
+  <data name="Home_NewThisWeek" xml:space="preserve"><value>本週新增</value></data>
+  <data name="Home_ThemesRerollButton.Content" xml:space="preserve"><value>換一批主題</value></data>
 </root>

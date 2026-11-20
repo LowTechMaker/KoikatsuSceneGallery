@@ -3,204 +3,194 @@ using KoikatsuSceneGallery.Helpers;
 using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
-using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace KoikatsuSceneGallery.Pages;
 
 /// <summary>
-/// The start page: a few shelves that answer "which scene do I play now"
-/// without searching, filtering or choosing a platform first.
+/// The home page as a dashboard: the featured card and the library's numbers
+/// on top, the shelves (queued, recent, liked, today's themes) as panels below.
 /// </summary>
+/// <remarks>
+/// Redesigned on the user's request: the rows of wrapping thumbnails read
+/// like a TV app, the details pane beside them took a third of the width for
+/// one card, and the pair to choose between gave way to a single featured
+/// card. Clicking any picture opens it in place (the loupe) among its panel's
+/// cards; a panel's "see all" opens its list in the library's browser.
+/// </remarks>
 public sealed partial class HomePage : Page
 {
     private readonly HomeViewModel _viewModel = App.Services.GetRequiredService<HomeViewModel>();
     private readonly CardStateService _states = App.Services.GetRequiredService<CardStateService>();
     private readonly GalleryViewModel _gallery = App.Services.GetRequiredService<GalleryViewModel>();
-    private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
-    private readonly CardInspector _inspector = new() { Width = UiMetrics.InspectorWidth, Margin = UiMetrics.InspectorMargin(UiMetrics.PaneGap) };
-    private readonly CardLoupe _loupe = new() { Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 16) };
-    private readonly List<CardShelf> _rows = [];
-    private HomeShelf? _selectedShelf;
-    private CardBase? _selected;
-    private bool _wideEnoughForInspector = true;
+    private readonly CardLoupe _loupe = new() { Margin = new Thickness(0, 0, 0, 16) };
+    private readonly HomeFeatured _featured;
+    private readonly HomeStats _stats = new();
+    private readonly List<HomePanel> _panels = [];
+    private HomeShelf? _openShelf;
+    private CardBase? _loupeCard;
     private bool _refreshQueued;
-
-    /// <summary>Below this page width the pane would squeeze the shelves; it hides.</summary>
-    private const double InspectorMinPageWidth = UiMetrics.InspectorMinHostWidth;
 
     public HomePage()
     {
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
 
-        foreach (var shelf in _viewModel.Shelves)
+        _featured = new HomeFeatured(_viewModel);
+        _featured.CardInvoked += OpenInLoupe;
+        _stats.NewRequested += cards => Frame.Navigate(typeof(ShelfPage), new ShelfPageParameter(UiText.Get("Home_NewThisWeek"), cards));
+        TopBand.Children.Add(_featured);
+        TopBand.Children.Add(_stats);
+
+        // Every shelf but the dealt hand, which is what the featured card steps through.
+        foreach (var shelf in _viewModel.Shelves.Where(shelf => shelf.Key != HomeViewModel.DealKey))
         {
-            var row = new CardShelf(shelf, () => Frame);
-            row.CardInvoked += OpenInLoupe;
-            row.CardSelected += Select;
-            _rows.Add(row);
-            row.FlagInvoked += ToggleFlag;
-            if (shelf.Key == HomeViewModel.DealKey)
-            {
-                var again = new Button { Content = UiText.Get("Home_DealAgain") };
-                AutomationProperties.SetAutomationId(again, "HomeDealAgain");
-                again.Click += (_, _) => _viewModel.DealAgain();
-                row.AddAction(again);
-            }
-            if (shelf.Key.StartsWith(HomeViewModel.ThemeKeyPrefix, StringComparison.Ordinal))
-                AddThemeActions(row, shelf);
-            Shelves.Children.Add(row);
+            var panel = new HomePanel(shelf, () => Frame);
+            panel.CardInvoked += OpenInLoupe;
+            panel.SeeAllRequested += SeeAll;
+            // A panel hides itself when its shelf is empty: the rest close up.
+            panel.RegisterPropertyChangedCallback(VisibilityProperty, (_, _) => LayOut());
+            _panels.Add(panel);
+            PanelsGrid.Children.Add(panel);
         }
-        InitDetails();
+        Dashboard.SizeChanged += (_, _) => LayOut();
+        InitLoupe();
     }
 
-    // ------------------------------------------------------------ select, inspect, open in place
+    // ------------------------------------------------------------ layout
 
-    private void InitDetails()
+    /// <summary>
+    /// As many panels per row as fit at their least width (at most three); the
+    /// featured card and the numbers side by side unless that leaves either
+    /// too narrow, then one above the other.
+    /// </summary>
+    private void LayOut()
     {
-        Microsoft.UI.Xaml.Controls.Grid.SetRow(_inspector, 1);
-        Microsoft.UI.Xaml.Controls.Grid.SetColumn(_inspector, 1);
-        PageRoot.Children.Add(_inspector);
-        _inspector.Frame = () => Frame;
-        _inspector.OpenRequested += card =>
-        {
-            if (_selectedShelf is { } shelf) OpenInLoupe(shelf, card);
-        };
+        var width = Dashboard.ActualWidth - Dashboard.Margin.Left - Dashboard.Margin.Right;
+        if (width <= 0) return;
+        var gap = UiMetrics.HomePanelGap;
 
-        Microsoft.UI.Xaml.Controls.Grid.SetRow(_loupe, 1);
+        var columns = (int)Math.Clamp(Math.Floor((width + gap) / (UiMetrics.HomePanelMinWidth + gap)), 1, UiMetrics.HomePanelColumns);
+        PanelsGrid.ColumnSpacing = gap;
+        PanelsGrid.RowSpacing = gap;
+        PanelsGrid.ColumnDefinitions.Clear();
+        PanelsGrid.RowDefinitions.Clear();
+        for (var c = 0; c < columns; c++) PanelsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var shown = _panels.Where(panel => panel.Visibility == Visibility.Visible).ToArray();
+        for (var r = 0; r < (shown.Length + columns - 1) / columns; r++) PanelsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        for (var i = 0; i < shown.Length; i++)
+        {
+            Grid.SetRow(shown[i], i / columns);
+            Grid.SetColumn(shown[i], i % columns);
+        }
+
+        var sideBySide = width >= UiMetrics.HomePanelMinWidth * 2 + gap;
+        TopBand.ColumnSpacing = gap;
+        TopBand.RowSpacing = gap;
+        TopBand.ColumnDefinitions.Clear();
+        TopBand.RowDefinitions.Clear();
+        TopBand.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        if (sideBySide) TopBand.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(UiMetrics.HomeStatsWidth) });
+        else
+        {
+            TopBand.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            TopBand.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+        Grid.SetColumn(_stats, sideBySide ? 1 : 0);
+        Grid.SetRow(_stats, sideBySide ? 0 : 1);
+    }
+
+    // ------------------------------------------------------------ open in place (the loupe)
+
+    private void InitLoupe()
+    {
+        Grid.SetRow(_loupe, 1);
         PageRoot.Children.Add(_loupe);
         _loupe.TileBounds = TileBounds;
-        _loupe.CurrentChanged += card => ShowSelection(card);
-        // The loupe is a translucent card panel: the shelves behind it go while
-        // it is open, and come back as it starts to close (so the tile can be
-        // measured for the flight home).
-        _loupe.Closing += () => ShowShelves(true);
+        _loupe.CurrentChanged += card => _loupeCard = card;
+        // The loupe is a translucent panel: the dashboard behind it goes while
+        // it is open, and comes back as it starts to close (so the picture can
+        // be measured for the flight home).
+        _loupe.Closing += () => ShowDashboard(true);
         _loupe.Closed += card =>
         {
-            ShowShelves(true);
-            _inspector.ShowPreview = true;
-            if (card is not null && TileOf(card) is { } tile)
-                // Programmatic: the keyboard focus frame drew a white rectangle
-                // round the tile after every close (live check, wave 16 round 3).
-                tile.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+            ShowDashboard(true);
+            if (card is not null && PictureOf(card) is Control tile)
+                tile.Focus(FocusState.Programmatic);
         };
-        // While the loupe is open its keys win wherever focus is.
+        // While the loupe is open its keys win wherever focus is: arrows, zoom,
+        // and the card keys (queue, like, hide, rate), now that no details pane
+        // takes them.
         PageRoot.PreviewKeyDown += (_, e) =>
         {
             if (!_loupe.IsOpen || e.OriginalSource is TextBox or AutoSuggestBox) return;
             if (CardKeys.IsModifierDown()) return;
             if (_loupe.HandleKey(e.Key)) { e.Handled = true; return; }
-            if (e.KeyStatus.WasKeyDown) return;
-            if (CardKeys.Flag(e.Key) is { } flag) { e.Handled = true; _inspector.Toggle(flag); }
-            else if (CardKeys.Rating(e.Key) is { } rating) { e.Handled = true; _inspector.RateFromKey(rating); }
+            if (e.KeyStatus.WasKeyDown || _loupeCard is not { } card) return;
+            if (CardKeys.Flag(e.Key) is { } flag) { e.Handled = true; ToggleFlag(card, flag); }
+            else if (CardKeys.Rating(e.Key) is { } rating && card is SceneCard scene)
+            {
+                e.Handled = true;
+                _ = CardRatingActions.RateManyAsync([scene], rating);
+            }
         };
-
-        _settings.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(SettingsViewModel.InspectorVisible)) UpdateInspectorVisibility();
-        };
-        PageRoot.SizeChanged += (_, e) =>
-        {
-            var wide = e.NewSize.Width >= InspectorMinPageWidth;
-            if (wide == _wideEnoughForInspector) return;
-            _wideEnoughForInspector = wide;
-            UpdateInspectorVisibility();
-        };
-        UpdateInspectorVisibility();
     }
 
-    private void UpdateInspectorVisibility()
-        => _inspector.Visibility = _settings.InspectorVisible && _wideEnoughForInspector
-            ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
-    private void Inspector_Invoked(Microsoft.UI.Xaml.Input.KeyboardAccelerator sender, Microsoft.UI.Xaml.Input.KeyboardAcceleratorInvokedEventArgs e)
-    {
-        _settings.InspectorVisible = !_settings.InspectorVisible;
-        e.Handled = true;
-    }
-
-    private void Select(HomeShelf shelf, CardBase card)
-    {
-        _selectedShelf = shelf;
-        ShowSelection(card);
-    }
-
-    /// <summary>Marks the card on every shelf that shows it and puts it in the details pane.</summary>
-    private void ShowSelection(CardBase card)
-    {
-        _selected = card;
-        foreach (var row in _rows) row.ShowSelected(card.FilePath);
-        _inspector.Show([card]);
-    }
-
-    /// <summary>Opens a shelf's card large over the shelves, stepping through that shelf.</summary>
     private void OpenInLoupe(HomeShelf shelf, CardBase card)
     {
         var cards = shelf.Cards.ToArray();
         var index = Array.FindIndex(cards, c => ReferenceEquals(c, card));
         if (index < 0) return;
-        _selectedShelf = shelf;
-        ShowSelection(card);
-        _inspector.ShowPreview = false;
+        _openShelf = shelf;
+        _loupeCard = card;
         _loupe.Open(cards, index);
-        ShowShelves(false);
+        ShowDashboard(false);
     }
 
-    private void ShowShelves(bool show)
+    private void ShowDashboard(bool show)
     {
         ShelvesScroll.Opacity = show ? 1 : 0;
         ShelvesScroll.IsHitTestVisible = show;
     }
 
-    private Microsoft.UI.Xaml.FrameworkElement? TileOf(CardBase card)
+    private FrameworkElement? PictureOf(CardBase card)
     {
-        // The shelf the card was opened from first: the same card can be on several.
-        foreach (var row in _rows.OrderBy(r => ReferenceEquals(r.Shelf, _selectedShelf) ? 0 : 1))
-            if (row.PictureOf(card) is { } picture) return picture;
-        return null;
+        // The panel the card was opened from first: one card can be on several.
+        if (ReferenceEquals(_openShelf, _viewModel.Deal) && _featured.PictureOf(card) is { } featured) return featured;
+        foreach (var panel in _panels.OrderBy(p => ReferenceEquals(p.Shelf, _openShelf) ? 0 : 1))
+            if (panel.PictureOf(card) is { } picture) return picture;
+        return _featured.PictureOf(card);
     }
 
     private Windows.Foundation.Rect? TileBounds(CardBase card)
     {
-        if (TileOf(card) is not { ActualWidth: > 0 } tile) return null;
+        if (PictureOf(card) is not { ActualWidth: > 0 } tile) return null;
         // Window coordinates (CardLoupe.TileBounds).
-        var bounds = tile.TransformToVisual(null).TransformBounds(
-            new Windows.Foundation.Rect(0, 0, tile.ActualWidth, tile.ActualHeight));
-        var stage = _loupe.TransformToVisual(null).TransformBounds(
-            new Windows.Foundation.Rect(0, 0, _loupe.ActualWidth, _loupe.ActualHeight));
+        var bounds = tile.TransformToVisual(null).TransformBounds(new Windows.Foundation.Rect(0, 0, tile.ActualWidth, tile.ActualHeight));
+        var stage = _loupe.TransformToVisual(null).TransformBounds(new Windows.Foundation.Rect(0, 0, _loupe.ActualWidth, _loupe.ActualHeight));
         // Off the visible part of the page: just appear and disappear.
         if (bounds.Bottom < stage.Top || bounds.Top > stage.Bottom) return null;
         return bounds;
     }
 
-    // A themed shelf: "see all" when today's theme is an author (their page);
-    // the first one also carries the one button that rerolls the group.
-    private void AddThemeActions(CardShelf row, HomeShelf shelf)
-    {
-        var seeAll = new Button { Content = UiText.Get("Home_ThemeSeeAll") };
-        AutomationProperties.SetAutomationId(seeAll, $"HomeShelf_{shelf.Key}_SeeAll");
-        seeAll.Click += (_, _) =>
-        {
-            if (shelf.SubjectKey is { } key && _viewModel.AuthorFor(key) is { } summary)
-                Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
-        };
-        void Follow(HomeShelf themed)
-            => seeAll.Visibility = themed is { Theme: ThemeKind.Author, SubjectKey: not null }
-                ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-        row.ThemeChanged += Follow;
-        Follow(shelf);
-        row.AddAction(seeAll);
+    // ------------------------------------------------------------ see all
 
-        if (shelf.Key == HomeViewModel.ThemeKeyPrefix + "0")
+    private void SeeAll(HomeShelf shelf)
+    {
+        // Today's author has a page of their own; any other shelf opens its list.
+        if (shelf is { Theme: ThemeKind.Author, SubjectKey: { } key } && _viewModel.AuthorFor(key) is { } summary)
         {
-            var reroll = new Button { Content = UiText.Get("Home_ThemesReroll") };
-            AutomationProperties.SetAutomationId(reroll, "HomeThemesReroll");
-            reroll.Click += (_, _) => _viewModel.RerollThemes();
-            row.AddAction(reroll);
+            Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+            return;
         }
+        Frame.Navigate(typeof(ShelfPage), new ShelfPageParameter(shelf.Title, [.. shelf.Cards]));
     }
+
+    private void Reroll_Click(object sender, RoutedEventArgs e) => _viewModel.RerollThemes();
+
+    // ------------------------------------------------------------ keeping up
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -216,14 +206,13 @@ public sealed partial class HomePage : Page
         // page is usable from then on, and corrects itself when the scan is done.
         _gallery.CachedCardsShown += QueueRefresh;
         _states.StateChanged += State_Changed;
-        // The shelves ask for thumbnails of cards the gallery may not have
+        // The panels ask for thumbnails of cards the gallery may not have
         // shown, and leaving the gallery cancelled its thumbnail session.
         _gallery.ActivateThumbnailRequests();
         if (_gallery.Cards.Count == 0) _ = _gallery.LoadCardsCommand.ExecuteAsync(null);
         await _states.EnsureLoadedAsync();
         _viewModel.Refresh();
-        // Queued, used and hidden are only known now: the pair is checked again.
-        Duel.Refresh();
+        _stats.Refresh();
         Reconcile();
     }
 
@@ -241,10 +230,9 @@ public sealed partial class HomePage : Page
     }
 
     // Finds states whose card was moved or renamed outside the app. Runs in
-    // the background; whatever it re-attaches comes back through StateChanged,
-    // which refreshes the shelves. Skipped while the scene library is still
-    // loading: half-loaded, most states would look orphaned, and CardsReloaded
-    // calls this again when the load is done.
+    // the background; whatever it re-attaches comes back through StateChanged.
+    // Skipped while the scene library is still loading: half-loaded, most
+    // states would look orphaned, and CardsReloaded calls this again.
     private void Reconcile()
     {
         if (_gallery.IsLoading) return;
@@ -256,12 +244,11 @@ public sealed partial class HomePage : Page
     }
 
     // Raised off the UI thread, once per card: a batch of ten changes should
-    // rebuild the shelves once.
+    // rebuild the panels once.
     private void State_Changed(string path) => QueueRefresh();
 
     private void Gallery_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        // The filter, and whether hidden cards count (the tiles' "N more").
         if (e.PropertyName is nameof(GalleryViewModel.RatingFilter) or nameof(GalleryViewModel.ShowHiddenCards)) QueueRefresh();
     }
 
@@ -273,8 +260,7 @@ public sealed partial class HomePage : Page
         {
             _refreshQueued = false;
             _viewModel.Refresh();
-            // A card queued or hidden elsewhere (or a reload) leaves the pair.
-            Duel.Refresh();
+            _stats.Refresh();
         });
     }
 

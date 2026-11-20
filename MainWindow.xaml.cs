@@ -421,6 +421,26 @@ public sealed partial class MainWindow : Window
         foreach (var (button, _, _, _, _) in RatingToggles)
             // Its own tooltip object, so a refused click can open it.
             ToolTipService.SetToolTip(button, new ToolTip());
+        ShapeRatingSegments();
+    }
+
+    /// <summary>
+    /// Rounds the outer corners of the first and last segments' fill to the
+    /// frame's inside, so a coloured end segment does not poke out of it. Read
+    /// from the resource, so the square-corners setting squares them too.
+    /// </summary>
+    private void ShapeRatingSegments()
+    {
+        var frame = (CornerRadius)Application.Current.Resources["ControlCornerRadius"];
+        var inner = Math.Max(0, frame.TopLeft - RatingFilterFrame.BorderThickness.Left);
+        var toggles = RatingToggles;
+        for (var i = 0; i < toggles.Length; i++)
+        {
+            var left = i == 0 ? inner : 0;
+            var right = i == toggles.Length - 1 ? inner : 0;
+            if (toggles[i].On is Border on) on.CornerRadius = new CornerRadius(left, right, right, left);
+            if (toggles[i].Off is Border off) off.CornerRadius = new CornerRadius(left, right, right, left);
+        }
     }
 
     /// <summary>
@@ -495,14 +515,14 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The toggles, unless rating filtering is switched off in the settings. At
-    /// about 130 px they need no narrow-window fallback.
+    /// The segments, unless rating filtering is switched off in the settings. At
+    /// about 150 px they need no narrow-window fallback.
     /// </summary>
     private void UpdateRatingFilterLayout()
     {
-        if (RatingFilterGroup is null) return;
+        if (RatingFilterFrame is null) return;
         var enabled = App.Services.GetRequiredService<SettingsViewModel>().RatingFilterEnabled;
-        RatingFilterGroup.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        RatingFilterFrame.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -656,7 +676,8 @@ public sealed partial class MainWindow : Window
 
         if (e.SourcePageType == typeof(SettingsPage))
             NavView.SelectedItem = NavView.SettingsItem;
-        else if (e.SourcePageType == typeof(HomePage))
+        // A home page panel's "see all" belongs to the home page.
+        else if (e.SourcePageType == typeof(HomePage) || e.SourcePageType == typeof(ShelfPage))
             NavView.SelectedItem = HomeNavItem;
         else if (e.SourcePageType == typeof(FeatureUnavailablePage))
             NavView.SelectedItem = e.Parameter switch

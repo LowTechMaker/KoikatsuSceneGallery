@@ -105,6 +105,38 @@
     <Style x:Key="ChipTextStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11" />
     </Style>
+    <!--  A picture that is a button (the home page's panels): no chrome of its own,
+          a light wash under the pointer, the system focus frame for the keyboard.  -->
+    <Style x:Key="PlainTileButtonStyle" TargetType="Button">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid x:Name="Root" Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver"><VisualState.Setters><Setter Target="Wash.Opacity" Value="1" /></VisualState.Setters></VisualState>
+                                <VisualState x:Name="Pressed"><VisualState.Setters><Setter Target="Wash.Opacity" Value="1" /><Setter Target="Root.Opacity" Value="0.85" /></VisualState.Setters></VisualState>
+                                <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="Root.Opacity" Value="0.5" /></VisualState.Setters></VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        <Border x:Name="Wash" Opacity="0" IsHitTestVisible="False"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="TileTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>

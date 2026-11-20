@@ -2389,4 +2389,19 @@
   <data name="Import_Error_FileExists" xml:space="preserve"><value>A file with this name already exists</value></data>
   <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>Another artwork already uses this file name: {0}</value></data>
   <data name="Format_LabelValue" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Home_SeeAll" xml:space="preserve"><value>See all</value></data>
+  <data name="Home_Featured" xml:space="preserve"><value>Today's pick</value></data>
+  <data name="Home_FeaturedEmpty" xml:space="preserve"><value>No scene to suggest yet.</value></data>
+  <data name="Home_FeaturedQueue" xml:space="preserve"><value>Want to try</value></data>
+  <data name="Home_FeaturedNext" xml:space="preserve"><value>Another one</value></data>
+  <data name="Home_Stats" xml:space="preserve"><value>Library</value></data>
+  <data name="Home_StatsScenes" xml:space="preserve"><value>{0} scenes</value></data>
+  <data name="Home_StatsNew" xml:space="preserve"><value>{0} new this week</value></data>
+  <data name="Home_StatsUnrated" xml:space="preserve"><value>{0} without your rating</value></data>
+  <data name="Home_StatsImportIdle" xml:space="preserve"><value>Import: nothing running</value></data>
+  <data name="Home_StatsImporting" xml:space="preserve"><value>Importing…</value></data>
+  <data name="Home_StatsAnalyzing" xml:space="preserve"><value>Analyzing, {0} pending</value></data>
+  <data name="Home_ShelfCount" xml:space="preserve"><value>{0} cards</value></data>
+  <data name="Home_NewThisWeek" xml:space="preserve"><value>New this week</value></data>
+  <data name="Home_ThemesRerollButton.Content" xml:space="preserve"><value>New themes</value></data>
 </root>
