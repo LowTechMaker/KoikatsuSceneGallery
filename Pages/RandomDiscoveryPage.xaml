@@ -73,16 +73,12 @@
             </GridView.ItemContainerStyle>
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="models:DiscoveryItem">
-                    <Grid Margin="4" Padding="5" CornerRadius="{StaticResource OverlayCornerRadius}" BorderThickness="1"
-                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                          ToolTipService.ToolTip="{x:Bind Card.FileName}">
+                    <!--  The library's tile (Google Photos-like): edge to edge, a thin gap, no frame.  -->
+                    <Grid Margin="1" ToolTipService.ToolTip="{x:Bind Card.FileName}">
                         <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid>
-                            <Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                <Image x:Phase="1" Stretch="Uniform"
-                                       Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
-                            </Border>
+                        <Grid Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <Image x:Phase="1" Stretch="UniformToFill"
+                                   Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
                             <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                                     Style="{StaticResource MediaOverlayBadgeStyle}"
                                     Visibility="{x:Bind IsJoker}">
@@ -93,7 +89,7 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <StackPanel Grid.Row="1" Padding="8,6" Spacing="2">
+                        <StackPanel Grid.Row="1" Height="40" Padding="2,4,2,0" Spacing="0" Visibility="{x:Bind CaptionVisibility}">
                             <TextBlock Text="{x:Bind Card.FileName}" TextTrimming="CharacterEllipsis" MaxLines="1" />
                             <TextBlock Text="{x:Bind Card.Author.Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
                                        Style="{StaticResource CaptionTextBlockStyle}"

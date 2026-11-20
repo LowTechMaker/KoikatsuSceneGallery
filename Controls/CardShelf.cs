@@ -175,10 +175,20 @@ internal sealed class CardShelf : Grid
     /// <summary>Buttons shown at the right of the heading, such as "deal again".</summary>
     public void AddAction(Button button) => _actions.Children.Add(button);
 
+    private readonly ViewModels.SettingsViewModel _settings = App.Services.GetRequiredService<ViewModels.SettingsViewModel>();
+
+    // The app-wide "show file names" switch hides the tiles' captions here too.
+    private void Settings_Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ViewModels.SettingsViewModel.ShowFileNames)) return;
+        foreach (var tile in _tiles.Values) tile.ShowCaption(_settings.ShowFileNames);
+    }
+
     private void Subscribe()
     {
         if (_subscribed) return;
         _subscribed = true;
+        _settings.PropertyChanged += Settings_Changed;
         _shelf.Cards.CollectionChanged += Cards_Changed;
         _shelf.TitleChanged += Title_Changed;
         _states.StateChanged += State_Changed;
@@ -201,6 +211,7 @@ internal sealed class CardShelf : Grid
     {
         if (!_subscribed) return;
         _subscribed = false;
+        _settings.PropertyChanged -= Settings_Changed;
         _shelf.Cards.CollectionChanged -= Cards_Changed;
         _shelf.TitleChanged -= Title_Changed;
         _states.StateChanged -= State_Changed;
@@ -263,6 +274,7 @@ internal sealed class CardShelf : Grid
             }
             tile.SetAutomationIds($"HomeShelf_{_shelf.Key}_Tile{i}");
             tile.UpdateState();
+            tile.ShowCaption(_settings.ShowFileNames);
             tile.SetSelected(_selectedPath is not null && string.Equals(card.FilePath, _selectedPath, StringComparison.OrdinalIgnoreCase));
             if (_home is not null) tile.UpdateText(_home.Describe(card));
             kept.Add(key);
@@ -355,6 +367,10 @@ internal sealed class CardShelf : Grid
 
         /// <summary>The picture part of the tile (not the caption).</summary>
         public FrameworkElement Picture => _open;
+
+        /// <summary>The title and author under the picture, as the "show file names" setting says.</summary>
+        public void ShowCaption(bool show)
+            => _caption.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 
         public void SetSelected(bool selected)
         {

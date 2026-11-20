@@ -41,7 +41,8 @@ public sealed partial class RandomDiscoveryPage : Page
         AutomationProperties.SetName(DiscoveryGrid, UiText.Get("Discovery_Title.Text"));
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
         // The engine reports columns * 2; the discovery page only needs the column count itself.
-        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings, 62);
+        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings,
+            _settings.ShowFileNames ? GalleryEntry.CaptionHeight : 0);
         _searchTimer = DispatcherQueue.CreateTimer();
         _searchTimer.Interval = TimeSpan.FromMilliseconds(250);
         _searchTimer.IsRepeating = false;
@@ -71,6 +72,8 @@ public sealed partial class RandomDiscoveryPage : Page
         _settings.BrowseOriginChanged += Origin_Changed;
         _settings.PokerHandEnabledChanged += PokerMode_Changed;
         _layout.BaseItemWidth = _settings.ThumbnailSize.ToPixels();
+        // The app-wide "show file names" switch may have changed since.
+        _layout.SetMetadataReserve(_settings.ShowFileNames ? GalleryEntry.CaptionHeight : 0);
         _gallery.Activate();
         if (!_initialized)
         {

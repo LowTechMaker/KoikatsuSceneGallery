@@ -6,8 +6,11 @@ namespace KoikatsuSceneGallery.Helpers;
 
 internal sealed class GalleryLayoutEngine
 {
-    private const double CardMargin = 4;
-    private const double CardInset = 4 + 1;
+    // The tile's margin (half the gap between two pictures) and the inset of the
+    // picture inside it. Pictures sit edge to edge with a thin gap, like Google
+    // Photos (user request); the tiles used to be cards, 4 px apart, framed.
+    private const double CardMargin = 1;
+    private const double CardInset = 0;
     private const double CellOverheadW = CardMargin * 2;
     private const double ContentInsetW = (CardMargin + CardInset) * 2;
     private const double FilenameReserve = 30;

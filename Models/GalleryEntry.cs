@@ -27,7 +27,10 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// file names are switched off. That switch used to leave the author line
     /// behind; the user asked for the picture and the rating badge only.
     /// </summary>
-    public double MetadataHeight => ShowTitle ? 52 : 0;
+    public double MetadataHeight => ShowTitle ? CaptionHeight : 0;
+
+    /// <summary>The title and author lines under the picture (LibraryBrowser and the layout reserve).</summary>
+    public const double CaptionHeight = 40;
 
     private bool _isSelected;
     /// <summary>

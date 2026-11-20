@@ -301,6 +301,9 @@ internal sealed class DuelPanel : StackPanel
         public void Show(CardBase card, HomeCardInfo info, DecodedPictures pictures)
         {
             _caption.Show(info, _open);
+            // The app-wide "show file names" switch (read each time a pair is shown).
+            _caption.Visibility = App.Services.GetRequiredService<ViewModels.SettingsViewModel>().ShowFileNames
+                ? Visibility.Visible : Visibility.Collapsed;
             if (ReferenceEquals(Card, card)) return;
             Card = card;
             var generation = ++_generation;
