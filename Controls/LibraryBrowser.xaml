@@ -122,41 +122,59 @@
     <Setter Property="Margin" Value="0"/><Setter Property="Padding" Value="0"/><Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="0"/>
    </Style></GridView.ItemContainerStyle>
    <GridView.ItemTemplate><DataTemplate x:DataType="models:GalleryEntry">
-    <!-- Like Google Photos (user request): the pictures sit edge to edge with a thin gap
-         (GalleryLayoutEngine.CardMargin), no card frame, background or padding around them.
-         With file names on, the title and the author go under the picture; off, it is the
-         picture and its badges only. A group is its cover with the count badge (the cards
-         that used to peek out behind it needed room around every tile). -->
+    <!-- Two looks, by the "show file names" setting (GalleryEntry, GalleryLayoutEngine.SetChrome).
+         Photo mode (off), like Google Photos: pictures edge to edge with a thin gap, the badges
+         on the picture, a group's next cards fanned out behind its cover.
+         Card mode (on): a framed card with a rounded, inset picture and everything else under
+         it, so nothing covers the picture: the title, then the author with the version, the
+         group's count and the rating as small chips; a group's sheets stack under the card. -->
     <Grid Margin="{x:Bind TileMargin}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
      <!-- Filled when it opens (LibraryBrowser.CardMenu.cs): what it offers depends on the tile. -->
      <Grid.ContextFlyout><MenuFlyout Opening="CardMenu_Opening"/></Grid.ContextFlyout>
      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-     <!-- Card mode (file names on): the card behind the picture and its caption. -->
-     <Border Grid.RowSpan="2" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+
+     <!-- Card mode: a group's sheets, each a little narrower, showing under the card. -->
+     <Border Grid.RowSpan="2" Margin="16,16,16,0" Visibility="{x:Bind SheetThird}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+     <Border Grid.RowSpan="2" Margin="8,8,8,4" Visibility="{x:Bind SheetBehind}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+     <!-- Card mode: the card. Opaque underneath, so the sheets do not show through it. -->
+     <Border Grid.RowSpan="2" Margin="{x:Bind CardFrameMargin}" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"/>
+     <Border Grid.RowSpan="2" Margin="{x:Bind CardFrameMargin}" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+
      <Grid Margin="{x:Bind PictureInset}">
-      <!-- A group, like the details pane's stack of selected cards: its next two cards
-           fanned out behind the cover (their own pictures), the count on a round badge. -->
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="0.7"
+      <!-- Photo mode: a group's next two cards fanned out behind the cover. -->
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind FanThird}" RenderTransformOrigin="0.5,0.5" Opacity="0.7"
               BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
        <Border.RenderTransform><CompositeTransform Rotation="7" TranslateX="6" TranslateY="-4"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(ThirdCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
-      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind IsGroup}" RenderTransformOrigin="0.5,0.5" Opacity="0.85"
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind FanBehind}" RenderTransformOrigin="0.5,0.5" Opacity="0.85"
               BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
        <Border.RenderTransform><CompositeTransform Rotation="3.5" TranslateX="3" TranslateY="-2"/></Border.RenderTransform>
        <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(SecondCard.ThumbnailUri), Mode=OneWay}"/>
       </Border>
-      <Grid Margin="{x:Bind FaceMargin}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-       <Image x:Phase="1" Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}"/>
+      <!-- The cover. Its picture is a brush so its corners follow PictureCorners. -->
+      <Grid Margin="{x:Bind FaceMargin}">
+       <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+       <Border CornerRadius="{x:Bind PictureCorners}">
+        <Border.Background><ImageBrush Stretch="UniformToFill" ImageSource="{x:Bind local:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}"/></Border.Background>
+       </Border>
        <!-- Until the thumbnail exists: a pulse that says "loading" rather than a flat
             block that looks stuck. Shown off the path only; the image pipeline is untouched. -->
-      <Border Background="{ThemeResource SubtleFillColorTertiaryBrush}" Visibility="{x:Bind local:LibraryBrowser.PlaceholderVisibility(Card.ThumbnailUri), Mode=OneWay}" Loaded="Placeholder_Loaded">
-       <FontIcon Glyph="&#xE91B;" FontSize="20" Foreground="{ThemeResource TextFillColorDisabledBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-      </Border>
+       <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource SubtleFillColorTertiaryBrush}" Visibility="{x:Bind local:LibraryBrowser.PlaceholderVisibility(Card.ThumbnailUri), Mode=OneWay}" Loaded="Placeholder_Loaded">
+        <FontIcon Glyph="&#xE91B;" FontSize="20" Foreground="{ThemeResource TextFillColorDisabledBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+       </Border>
+       <!-- Photo mode: the badges on the picture. -->
        <local:RatingBadge HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Text="{x:Bind RatingText, Mode=OneWay}" Visibility="{x:Bind BadgesOnPicture}" />
-       <!-- One badge for both facts: a second Border would crowd the corner. -->
-      <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Visibility="{x:Bind VersionBadgeOnPicture, Mode=OneWay}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/><TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/></StackPanel></Border>
+       <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Visibility="{x:Bind VersionBadgeOnPicture, Mode=OneWay}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+         <TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/>
+         <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/>
+        </StackPanel>
+       </Border>
        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6" MinWidth="26" Height="26" Padding="8,0" CornerRadius="13"
                Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind GroupBadgeOnPicture}"
                AutomationProperties.Name="{x:Bind CountText}">
@@ -166,31 +184,44 @@
        <!-- The selection mark (GalleryEntry.IsSelected): an accent frame inside the picture,
             a light accent wash and a check in the corner. -->
        <Grid IsHitTestVisible="False" Visibility="{x:Bind IsSelected, Mode=OneWay}">
-        <Border Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.2"/>
-        <Border BorderThickness="3" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"/>
+        <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.2"/>
+        <Border CornerRadius="{x:Bind PictureCorners}" BorderThickness="3" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"/>
         <Border Width="24" Height="24" Margin="8" CornerRadius="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="{ThemeResource AccentFillColorDefaultBrush}">
-        <FontIcon Glyph="&#xE73E;" FontSize="14" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+         <FontIcon Glyph="&#xE73E;" FontSize="14" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
         </Border>
        </Grid>
       </Grid>
      </Grid>
-     <!-- Card mode: the title, then the author with the rating, the group's count and the
-          versions beside it; nothing covers the picture. -->
-     <StackPanel Grid.Row="1" Height="{x:Bind MetadataHeight}" Padding="8,5,8,0" Spacing="2" Visibility="{x:Bind ShowTitle}">
-      <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1"/>
-      <Grid ColumnSpacing="6">
+
+     <!-- Card mode: the caption. Title on the first line; the author (or a quiet "no author")
+          on the second, with the version, the group's count and the rating as chips beside it. -->
+     <Grid Grid.Row="1" Height="{x:Bind MetadataHeight}" Margin="{x:Bind CardFrameMargin}" Padding="10,8,10,8" RowSpacing="4" Visibility="{x:Bind ShowTitle}">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" FontWeight="SemiBold"/>
+      <Grid Grid.Row="1" ColumnSpacing="6">
        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-       <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
-                  Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-        <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Visibility="{x:Bind VersionInCaption, Mode=OneWay}" VerticalAlignment="Center"
-                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-        <TextBlock Text="{x:Bind CountText}" Visibility="{x:Bind GroupInCaption}" VerticalAlignment="Center"
-                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+       <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+        <FontIcon Glyph="&#xE77B;" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+        <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind HasAuthor, Mode=OneWay}"/>
+        <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind NoAuthor, Mode=OneWay}"/>
+       </StackPanel>
+       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+        <Border Height="20" Padding="7,0" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind VersionInCaption, Mode=OneWay}">
+         <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Border>
+        <Border Height="20" Padding="7,0" CornerRadius="10" Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind GroupInCaption}"
+                AutomationProperties.Name="{x:Bind CountText}">
+         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <FontIcon Glyph="&#xE8B9;" FontSize="11" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+          <TextBlock Text="{x:Bind MemberCountText}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+         </StackPanel>
+        </Border>
         <local:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" VerticalAlignment="Center"/>
        </StackPanel>
       </Grid>
-     </StackPanel>
+     </Grid>
     </Grid>
    </DataTemplate></GridView.ItemTemplate>
   </GridView>

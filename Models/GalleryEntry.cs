@@ -31,7 +31,7 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// the details pane's stack of selected cards (user request); none for a
     /// single card, whose picture fills its cell.
     /// </summary>
-    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup
+    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup && !ShowTitle
         ? new Microsoft.UI.Xaml.Thickness(6, 10, 14, 8)
         : new Microsoft.UI.Xaml.Thickness(0);
 
@@ -45,23 +45,41 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     /// </summary>
     public double MetadataHeight => ShowTitle ? CaptionHeight : 0;
 
-    /// <summary>The title and author lines under the picture (LibraryBrowser and the layout reserve).</summary>
-    public const double CaptionHeight = 44;
+    /// <summary>The caption under the picture in card mode: title, then author and badges (LibraryBrowser, the layout reserve).</summary>
+    public const double CaptionHeight = 58;
+
+    /// <summary>The plainer two-line caption random discovery puts under its pictures.</summary>
+    public const double SimpleCaptionHeight = 44;
 
     // Two looks, by the "show file names" setting (GalleryLayoutEngine.SetChrome):
     // photo mode, pictures edge to edge with their badges on them; card mode, a
     // framed card with everything (title, author, rating, count, versions) under
     // the picture so nothing covers it (user request).
-    public const double PhotoMargin = 1, CardModeMargin = 4, CardModeInset = 5;
+    public const double PhotoMargin = 1, CardModeMargin = 4, CardModeInset = 6;
+    /// <summary>Room under every card in card mode, where a group's stacked sheets show.</summary>
+    public const double StackRoom = 8;
     public Microsoft.UI.Xaml.Thickness TileMargin => new(ShowTitle ? CardModeMargin : PhotoMargin);
     public Microsoft.UI.Xaml.Thickness PictureInset => ShowTitle
         ? new Microsoft.UI.Xaml.Thickness(CardModeInset, CardModeInset, CardModeInset, 0)
         : new Microsoft.UI.Xaml.Thickness(0);
+    /// <summary>The card itself leaves <see cref="StackRoom"/> under it for the sheets of a group.</summary>
+    public Microsoft.UI.Xaml.Thickness CardFrameMargin => new(0, 0, 0, StackRoom);
+    /// <summary>The picture's corners: rounded inside a card, square edge to edge.</summary>
+    public Microsoft.UI.Xaml.CornerRadius PictureCorners => new(ShowTitle ? 4 : 0);
     public bool BadgesOnPicture => !ShowTitle;
     public bool GroupBadgeOnPicture => IsGroup && !ShowTitle;
     public bool VersionBadgeOnPicture => HasVersionBadge && !ShowTitle;
     public bool VersionInCaption => HasVersionBadge && ShowTitle;
     public bool GroupInCaption => IsGroup && ShowTitle;
+    /// <summary>Photo mode: a group's next cards fanned out behind its cover.</summary>
+    public bool FanBehind => IsGroup && !ShowTitle;
+    public bool FanThird => HasThirdLayer && !ShowTitle;
+    /// <summary>Card mode: a group's sheets stacked under the card, like paper.</summary>
+    public bool SheetBehind => IsGroup && ShowTitle;
+    public bool SheetThird => HasThirdLayer && ShowTitle;
+    /// <summary>"No author" says itself quietly; a known author is ordinary secondary text.</summary>
+    public bool HasAuthor => Author is not null;
+    public bool NoAuthor => Author is null;
 
     private bool _isSelected;
     /// <summary>

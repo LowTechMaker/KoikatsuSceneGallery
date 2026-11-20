@@ -87,7 +87,7 @@ public sealed partial class LibraryBrowser : UserControl
     {
         _scope = scope; _scopeTitle = title;
         _adapter = App.Services.GetRequiredService<LibraryRegistry>().Get(kind);
-        _layout = new(_adapter.ImageRatio, GalleryGrid, DispatcherQueue, count => { if (_scope is null) VM.SetShuffleDisplayCount(count); }, _settings, _settings.ShowFileNames ? GalleryEntry.CaptionHeight : 0);
+        _layout = new(_adapter.ImageRatio, GalleryGrid, DispatcherQueue, count => { if (_scope is null) VM.SetShuffleDisplayCount(count); }, _settings, _settings.ShowFileNames ? GalleryEntry.CaptionHeight + GalleryEntry.StackRoom : 0);
         if (_scope is not null)
         {
             RootLayout.Padding = new Thickness(0,12,0,0);
@@ -310,7 +310,7 @@ public sealed partial class LibraryBrowser : UserControl
         ClearButton.Content = UiText.Get(_groupKey is null ? "SceneGallery_ResetSearch.Content" : "Browser_ClearGroupSearch");
         ClearButton.Visibility = _adapter.Cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         // With file names off the tile is the picture and its badge only (GalleryEntry.MetadataHeight).
-        _layout?.SetMetadataReserve(VM.ShowFileNames ? GalleryEntry.CaptionHeight : 0);
+        _layout?.SetMetadataReserve(VM.ShowFileNames ? GalleryEntry.CaptionHeight + GalleryEntry.StackRoom : 0);
         // Card mode with file names on, photo mode without (GalleryEntry.TileMargin).
         _layout?.SetChrome(
             VM.ShowFileNames ? GalleryEntry.CardModeMargin : GalleryEntry.PhotoMargin,
