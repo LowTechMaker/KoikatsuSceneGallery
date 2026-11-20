@@ -14,7 +14,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 internal sealed class LocalSourceStore
 {
-    public const string DocumentFileName = "source.json";
+    public const string DocumentFileName = AppFiles.LocalSource;
 
     /// <summary>Stored avatar file name, without its extension.</summary>
     public const string AvatarBaseName = "avatar";

@@ -48,7 +48,7 @@ public sealed partial class LocalImportViewModel : ObservableObject
     /// — tens of thousands of them on a real library, which freezes the UI.
     /// Matches the debounce AuthorsViewModel uses for the same event.
     /// </remarks>
-    private static readonly TimeSpan TileRebuildDebounce = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan TileRebuildDebounce = AppTiming.RebuildDebounce;
 
     private readonly ImportService _importService;
     private readonly ImportExecutionCoordinator _executionCoordinator;

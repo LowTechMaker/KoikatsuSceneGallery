@@ -19,9 +19,9 @@ public sealed class ModInstallService
         _logger = logger;
     }
 
-    public static string LogPath => Path.Combine(AppPaths.LocalFolder, "mod-installs.jsonl");
+    public static string LogPath => Path.Combine(AppPaths.LocalFolder, AppFiles.ModInstallLog);
 
-    private static string BackupRoot => Path.Combine(AppPaths.LocalFolder, "mod-backups");
+    private static string BackupRoot => Path.Combine(AppPaths.LocalFolder, AppFiles.ModBackupsFolder);
 
     public async Task<IReadOnlyList<ModInstallTarget>> GetTargetsAsync()
     {
@@ -68,7 +68,7 @@ public sealed class ModInstallService
     public Task<IReadOnlyList<ModInstallOutcome>> InstallAsync(IReadOnlyList<ModInstallStep> steps, CancellationToken ct)
     {
         var now = DateTimeOffset.Now;
-        var backup = Path.Combine(BackupRoot, now.ToString("yyyyMMdd-HHmmss"));
+        var backup = Path.Combine(BackupRoot, now.ToString(AppFiles.BackupTimestampFormat));
         return Task.Run(() =>
         {
             var outcomes = ModInstaller.Execute(steps, backup, LogPath, now, ct);

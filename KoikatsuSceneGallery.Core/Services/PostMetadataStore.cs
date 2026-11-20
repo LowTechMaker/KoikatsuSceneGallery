@@ -28,7 +28,7 @@ internal enum SidecarUnbindResult
 internal sealed class PostMetadataStore
 {
     public const string MetadataDirectoryName = LibraryMetadataDirectory.Name;
-    public const string FetchedDataDirectoryName = "fetched_data";
+    public const string FetchedDataDirectoryName = AppFiles.PostSidecarFolder;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

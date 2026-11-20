@@ -83,7 +83,7 @@ internal sealed record CardStateDocument(int SchemaVersion, IReadOnlyList<CardSt
 /// </remarks>
 internal sealed class CardStateStore
 {
-    public const string FileName = "card_states.json";
+    public const string FileName = AppFiles.CardStates;
     public const int CurrentSchemaVersion = 1;
 
     private static readonly JsonSerializerOptions JsonOptions = new()

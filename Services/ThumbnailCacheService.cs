@@ -15,7 +15,7 @@ public class ThumbnailCacheService
     public string CacheFolder => _cacheFolder;
 
     public static string DefaultCacheFolder =>
-        Path.Combine(AppPaths.LocalFolder, "gallery_temp");
+        Path.Combine(AppPaths.LocalFolder, AppFiles.ThumbnailCacheFolder);
 
     public ThumbnailCacheService(IAppLogger logger, string? cacheFolder = null)
     {

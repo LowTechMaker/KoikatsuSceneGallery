@@ -250,8 +250,8 @@ public partial class ImportViewModel : ObservableObject
     partial void OnLinkInLibraryTextChanged(string value) => OnPropertyChanged(nameof(LinkInLibraryVisibility));
 
     internal const int MissingNamesShown = 8;
-    private static readonly TimeSpan LinkMatchDebounce = TimeSpan.FromMilliseconds(400);
-    private static readonly TimeSpan LinkMatchFetchWait = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan LinkMatchDebounce = AppTiming.ImportLinkMatchDebounce;
+    private static readonly TimeSpan LinkMatchFetchWait = AppTiming.ImportFetchWait;
     private readonly PostLinkLookup _postLinkLookup;
     private CancellationTokenSource? _linkMatchCts;
     private Task _linkMatchTask = Task.CompletedTask;
@@ -698,7 +698,7 @@ public partial class ImportViewModel : ObservableObject
     // Cards and mods unpacked from an archive, by staged path: the archive they came from.
     private readonly Dictionary<string, string> _archiveOrigins = new(StringComparer.OrdinalIgnoreCase);
 
-    private static string StagingRoot => Path.Combine(AppPaths.LocalFolder, "import-staging");
+    private static string StagingRoot => Path.Combine(AppPaths.LocalFolder, AppFiles.ImportStagingFolder);
 
     /// <summary>The outcome of the last import: cards, mods, links and what was skipped, in one place.</summary>
     [ObservableProperty] public partial bool ShowImportResult { get; set; }
@@ -1785,7 +1785,7 @@ public partial class ImportViewModel : ObservableObject
         var plans = new List<ImportItemPlan>();
         var planItems = new List<ImportItem>();
         var claimed = new Dictionary<string, string>(PathComparison.Comparer);
-        var backup = new OverwriteBackup(Path.Combine(AppPaths.LocalFolder, "import-overwritten", DateTime.Now.ToString("yyyyMMdd-HHmmss")));
+        var backup = new OverwriteBackup(Path.Combine(AppPaths.LocalFolder, AppFiles.ImportOverwrittenFolder, DateTime.Now.ToString(AppFiles.BackupTimestampFormat)));
         var linked = new List<ImportItem>();
 
         foreach (var conflict in conflicts)
@@ -2256,7 +2256,7 @@ public partial class ImportViewModel : ObservableObject
         ShowRejectedWarning = true;
 
         _warningTimer?.Stop();
-        _warningTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _warningTimer = new DispatcherTimer { Interval = AppTiming.ToastLong };
         _warningTimer.Tick += (_, _) =>
         {
             _warningTimer.Stop();

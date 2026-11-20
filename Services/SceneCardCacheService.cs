@@ -7,7 +7,7 @@ namespace KoikatsuSceneGallery.Services;
 
 public sealed class SceneCardCacheService : IDisposable
 {
-    private const string CacheFileName = "scene_cards.json";
+    private const string CacheFileName = AppFiles.SceneCardCache;
     private readonly string _cachePath;
     private readonly IAppLogger _logger;
     private readonly ConcurrentDictionary<string, CachedCardEntry> _cache = new(StringComparer.OrdinalIgnoreCase);

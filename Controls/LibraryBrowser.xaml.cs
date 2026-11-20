@@ -70,9 +70,9 @@ public sealed partial class LibraryBrowser : UserControl
         InitializeComponent();
         _view = new AdvancedCollectionView(_items, false);
         GalleryGrid.ItemsSource = _view;
-        _refresh = DispatcherQueue.CreateTimer(); _refresh.Interval = TimeSpan.FromMilliseconds(80); _refresh.IsRepeating = false;
+        _refresh = DispatcherQueue.CreateTimer(); _refresh.Interval = AppTiming.ViewRefreshDebounce; _refresh.IsRepeating = false;
         _refresh.Tick += (_, _) => Refresh();
-        _search = DispatcherQueue.CreateTimer(); _search.Interval = TimeSpan.FromMilliseconds(200); _search.IsRepeating = false;
+        _search = DispatcherQueue.CreateTimer(); _search.Interval = AppTiming.SearchDebounce; _search.IsRepeating = false;
         _search.Tick += (_, _) => ApplySearch();
         InitInspector();
         Loaded += (_, _) => _layout?.OnLoaded(RequestVisible);

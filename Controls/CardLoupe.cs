@@ -58,7 +58,7 @@ internal sealed class CardLoupe : Grid
     // The app's motion tempo (CardMotion), like every other flight.
     private static readonly TimeSpan OpenDuration = CardMotion.FlyDuration;
     private static readonly TimeSpan CloseDuration = CardMotion.ReturnDuration;
-    private static readonly TimeSpan HintDuration = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan HintDuration = AppTiming.HintDuration;
 
     private readonly SettingsViewModel _settings = App.Services.GetRequiredService<SettingsViewModel>();
 

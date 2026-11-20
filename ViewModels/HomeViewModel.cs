@@ -62,7 +62,7 @@ internal sealed class HomeViewModel
     public const string LikedKey = "liked";
 
     /// <summary>How many cards a state shelf shows before "see all" is the way to the rest.</summary>
-    public const int ShelfLimit = 30;
+    public const int ShelfLimit = AppLimits.ShelfSize;
 
     private readonly ILibrary _scenes;
     private readonly CardStateService _states;

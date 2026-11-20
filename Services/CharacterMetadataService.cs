@@ -11,7 +11,7 @@ public sealed class CharacterMetadataService : MetadataCacheService<CharacterCar
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public CharacterMetadataService(IAppLogger logger) : base(logger, "chara_metadata.v2.json", JsonOptions) { }
+    public CharacterMetadataService(IAppLogger logger) : base(logger, AppFiles.CharacterMetadataCache, JsonOptions) { }
 
     protected override CharacterMetadata Parse(CharacterCard card)
         => CharacterCardParser.TryParseWithDetails(card.FilePath) ?? CharacterMetadata.Unknown;

@@ -36,7 +36,7 @@ internal static class LocalSourceEditor
     private static readonly ResourceLoader ResLoader = new();
 
     /// <summary>How many candidate pictures a picker lists.</summary>
-    private const int MaxCandidates = 240;
+    private const int MaxCandidates = AppLimits.SourceCoverCandidates;
 
     private sealed record Candidate(string Path, string Label);
 

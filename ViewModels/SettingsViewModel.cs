@@ -113,7 +113,7 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool InspectorVisible { get; set; } = true;
 
     [ObservableProperty]
-    public partial double CacheLength { get; set; } = 4;
+    public partial double CacheLength { get; set; } = AppLimits.DefaultCacheLength;
 
     [ObservableProperty]
     public partial ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;

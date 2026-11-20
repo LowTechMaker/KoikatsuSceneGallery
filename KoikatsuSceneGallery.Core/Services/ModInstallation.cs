@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -59,7 +60,7 @@ public sealed class InstalledModIndex
             .ToList();
 
         var found = new ConcurrentBag<InstalledMod>();
-        Parallel.ForEach(files, new ParallelOptions { CancellationToken = ct, MaxDegreeOfParallelism = 4 }, path =>
+        Parallel.ForEach(files, new ParallelOptions { CancellationToken = ct, MaxDegreeOfParallelism = AppLimits.IoWorkers }, path =>
         {
             if (readManifest(path) is { } manifest) found.Add(new InstalledMod(path, manifest));
         });

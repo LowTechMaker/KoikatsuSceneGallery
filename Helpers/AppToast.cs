@@ -21,8 +21,8 @@ namespace KoikatsuSceneGallery.Helpers;
 internal static class AppToast
 {
     private const int MaxVisible = 3;
-    private static readonly TimeSpan ShortDuration = TimeSpan.FromSeconds(4);
-    private static readonly TimeSpan LongDuration = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan ShortDuration = AppTiming.ToastShort;
+    private static readonly TimeSpan LongDuration = AppTiming.ToastLong;
 
     private static Panel? _host;
     private static DispatcherQueue? _dispatcher;

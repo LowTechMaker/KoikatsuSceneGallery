@@ -99,7 +99,7 @@ internal static class CookieSetupDialogService
                 {
                     while (!token.IsCancellationRequested && !completed)
                     {
-                        await Task.Delay(500, token).ConfigureAwait(false);
+                        await Task.Delay(AppTiming.CookiePoll, token).ConfigureAwait(false);
                         _ = dispatcherQueue.TryEnqueue(
                             () => TryCompleteAsync().Observe(logger, "CookieSetup.CompleteFromPolling"));
                     }

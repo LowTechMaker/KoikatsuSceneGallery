@@ -55,13 +55,13 @@ internal sealed record ThemeShelf(ThemeKind Kind, string? Subject, string? Subje
 internal static class HomeThemes
 {
     public const int MinCards = 6;
-    public const int MaxCards = 30;
+    public const int MaxCards = AppLimits.ShelfSize;
     /// <summary>Cards not used for this many days count as dusty.</summary>
     public const int DustyDays = 30;
     /// <summary>"Never played" is offered once this many visible cards have been used (the user's choice).</summary>
     public const int NeverPlayedAfter = 50;
     /// <summary>The largest pHash distance (of 64 bits) that still looks alike.</summary>
-    public const int SimilarDistance = 10;
+    public const int SimilarDistance = AppLimits.SimilarThemeHashDistance;
 
     private const int AuthorDraws = 2;
     private const int TagDraws = 2;

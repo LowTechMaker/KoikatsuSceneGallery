@@ -8,7 +8,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 internal sealed class ImportTransactionExecutor
 {
-    private const int MaxRenameAttempts = 1000;
+    private const int MaxRenameAttempts = AppLimits.RenameAttempts;
 
     private readonly PostMetadataStore _metadataStore;
 

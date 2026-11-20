@@ -6,7 +6,7 @@ namespace KoikatsuSceneGallery.Services;
 
 public class SettingsService
 {
-    private const string ConfigFileName = "config.json";
+    private const string ConfigFileName = AppFiles.Settings;
     private readonly string _configPath;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -110,7 +110,7 @@ public class SettingsService
         /// thumbnail generation and memory/CPU. Advanced setting; 4 is the WinUI
         /// default.
         /// </summary>
-        public double CacheLength { get; set; } = 4;
+        public double CacheLength { get; set; } = AppLimits.DefaultCacheLength;
 
         /// <summary>Preferred base width for all gallery thumbnail grids.</summary>
         public ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;

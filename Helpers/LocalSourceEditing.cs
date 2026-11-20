@@ -21,7 +21,7 @@ namespace KoikatsuSceneGallery.Helpers;
 internal static class LocalSourceEditing
 {
     /// <summary>How many of a source cards are offered as avatar candidates.</summary>
-    private const int MaxCardCandidates = 240;
+    private const int MaxCardCandidates = AppLimits.SourceCoverCandidates;
 
     private static readonly ResourceLoader ResLoader = new();
 

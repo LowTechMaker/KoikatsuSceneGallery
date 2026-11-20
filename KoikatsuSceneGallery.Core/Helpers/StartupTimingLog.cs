@@ -1,4 +1,5 @@
 using System.Text;
+using KoikatsuSceneGallery.Services;
 
 namespace KoikatsuSceneGallery.Helpers;
 
@@ -18,7 +19,7 @@ internal sealed record StartupPhase(string Library, string Phase, long Milliseco
 /// </summary>
 internal static class StartupTimingLog
 {
-    public const string FileName = "startup_timing.log";
+    public const string FileName = AppFiles.StartupTimingLog;
     public const int KeepStarts = 50;
 
     public static string Format(string startId, DateTimeOffset at, StartupPhase phase)

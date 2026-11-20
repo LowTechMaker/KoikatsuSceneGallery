@@ -5,6 +5,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
@@ -93,7 +94,7 @@ public partial class AuthorProviderTabViewModel : ObservableObject
 /// </summary>
 public partial class AuthorsViewModel : ObservableObject
 {
-    private static readonly TimeSpan RebuildDebounce = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan RebuildDebounce = AppTiming.RebuildDebounce;
     private static readonly ResourceLoader ResLoader = new();
 
     private readonly AuthorInfoService _authorInfoService;

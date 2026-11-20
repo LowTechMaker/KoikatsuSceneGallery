@@ -20,7 +20,7 @@ public enum SortOption
 
 public static class ShuffleConstants
 {
-    public const int PoolSize = 20;
+    public const int PoolSize = AppLimits.ShufflePool;
 }
 
 public abstract partial class GalleryViewModelBase : ObservableObject
@@ -551,7 +551,7 @@ public abstract partial class GalleryViewModelBase : ObservableObject
             // cache on screen, and a character or outfit batch that gave up
             // abandoned that whole load (crash.log, AuthorSource.InitialLoad),
             // which then started over only when its tab was opened.
-            TimeSpan.FromSeconds(30), token);
+            AppTiming.ScanBatchUiWait, token);
 
     public virtual void Activate()
     {

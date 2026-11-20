@@ -9,12 +9,13 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Controls;
 
 public sealed partial class AuthorLiveTileControl : UserControl
 {
-    private static readonly TimeSpan CycleInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan CycleInterval = AppTiming.LiveTileCycle;
     private static readonly TimeSpan AnimationDuration = Controls.CardMotion.AmbientDuration;
 
     private DispatcherQueueTimer? _cycleTimer;
@@ -212,7 +213,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
         _cycleTimer = DispatcherQueue.CreateTimer();
         _cycleTimer.IsRepeating = false;
-        _cycleTimer.Interval = CycleInterval + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 4000));
+        _cycleTimer.Interval = CycleInterval + TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)AppTiming.LiveTileJitter.TotalMilliseconds));
         _cycleTimer.Tick += OnCycleTick;
         _cycleTimer.Start();
     }

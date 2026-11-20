@@ -474,7 +474,7 @@ public sealed partial class SettingsPage : Page
             card.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
             card.BorderThickness = new Thickness(2);
             var timer = DispatcherQueue.CreateTimer();
-            timer.Interval = TimeSpan.FromSeconds(3);
+            timer.Interval = AppTiming.SettingsHighlight;
             timer.IsRepeating = false;
             timer.Tick += (_, _) =>
             {

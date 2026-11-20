@@ -44,11 +44,11 @@ public sealed partial class RandomDiscoveryPage : Page
         _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings,
             _settings.ShowFileNames ? GalleryEntry.SimpleCaptionHeight : 0);
         _searchTimer = DispatcherQueue.CreateTimer();
-        _searchTimer.Interval = TimeSpan.FromMilliseconds(250);
+        _searchTimer.Interval = AppTiming.SearchDebounce;
         _searchTimer.IsRepeating = false;
         _searchTimer.Tick += (_, _) => ApplyConditions();
         _refreshTimer = DispatcherQueue.CreateTimer();
-        _refreshTimer.Interval = TimeSpan.FromMilliseconds(150);
+        _refreshTimer.Interval = AppTiming.DiscoveryRefresh;
         _refreshTimer.IsRepeating = false;
         _refreshTimer.Tick += (_, _) => RefreshCandidates();
         foreach (var name in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") })
@@ -351,7 +351,7 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         if (!_active || _refreshTimer.IsRunning) return;
         // Rebuilding the candidate pool is O(cards); back off while a scan floods the collection.
-        _refreshTimer.Interval = TimeSpan.FromMilliseconds(_loading || _gallery.IsLoading ? 400 : 150);
+        _refreshTimer.Interval = _loading || _gallery.IsLoading ? AppTiming.DiscoveryRefreshWhileLoading : AppTiming.DiscoveryRefresh;
         _refreshTimer.Start();
     }
     private void Cards_Changed(object? sender, NotifyCollectionChangedEventArgs e) => QueueRefresh();

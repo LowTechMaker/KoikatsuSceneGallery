@@ -34,7 +34,7 @@ public sealed partial class AuthorsPage : Page
         ((INotifyCollectionChanged)ViewModel.ProviderTabs).CollectionChanged += (_, _) =>
             DispatcherQueue.TryEnqueue(() => { RebuildPlatformBar(); ApplySelectedPlatform(); });
         _searchTimer = DispatcherQueue.CreateTimer();
-        _searchTimer.Interval = TimeSpan.FromMilliseconds(200); _searchTimer.IsRepeating = false;
+        _searchTimer.Interval = AppTiming.SearchDebounce; _searchTimer.IsRepeating = false;
         _searchTimer.Tick += (_, _) => ViewModel.SearchText = AuthorSearchBox.Text;
         var find = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F, Modifiers = Windows.System.VirtualKeyModifiers.Control };
         find.Invoked += (_, e) => { AuthorSearchBox.Focus(FocusState.Programmatic); e.Handled = true; };

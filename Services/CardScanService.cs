@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -15,7 +16,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
     protected CardScanService()
     {
-        _debounceTimer = new System.Timers.Timer(300);
+        _debounceTimer = new System.Timers.Timer(AppTiming.FileWatchSettle.TotalMilliseconds);
         _debounceTimer.AutoReset = false;
         _debounceTimer.Elapsed += (_, _) => FlushPendingChanges();
     }
@@ -48,7 +49,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         IEnumerable<string> folderPaths,
         Action<List<TCard>> onBatch,
         CancellationToken cancellationToken = default,
-        int batchSize = 200,
+        int batchSize = AppLimits.ScanBatchSize,
         Func<FileInfo, bool>? skip = null)
     {
         return Task.Run(() =>
@@ -169,7 +170,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             // Scanning opens every card and parses its header.  Unbounded use of a
             // high-core CPU competes directly with the UI thread and thumbnail work;
             // four workers retain disk parallelism without causing scroll hitching.
-            MaxDegreeOfParallelism = Math.Min(4, Math.Max(1, Environment.ProcessorCount - 1)),
+            MaxDegreeOfParallelism = AppLimits.IoWorkers,
         };
 
     private TCard? TryCreateCard(string filePath) =>

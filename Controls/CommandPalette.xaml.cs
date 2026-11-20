@@ -88,7 +88,7 @@ public sealed partial class CommandPalette : UserControl
         if (_debounce is null)
         {
             _debounce = DispatcherQueue.CreateTimer();
-            _debounce.Interval = TimeSpan.FromMilliseconds(120);
+            _debounce.Interval = AppTiming.PaletteDebounce;
             _debounce.IsRepeating = false;
             _debounce.Tick += (_, _) => { if (IsOpen) Refresh(); };
         }

@@ -1,3 +1,5 @@
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 public enum ThumbnailWorkPriority
@@ -12,8 +14,8 @@ public enum ThumbnailWorkPriority
 /// </summary>
 public sealed class ThumbnailPriorityScheduler : IDisposable
 {
-    private const int DefaultCapacity = 128;
-    private const int DefaultWorkerCount = 2;
+    private const int DefaultCapacity = AppLimits.ThumbnailQueue;
+    private const int DefaultWorkerCount = AppLimits.ThumbnailWorkers;
 
     // These short queue-only critical sections are also entered during WinUI
     // container realization. Monitor waits on an STA pump COM/window messages,

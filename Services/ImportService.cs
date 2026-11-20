@@ -142,7 +142,7 @@ public sealed class ImportService
     {
         await Parallel.ForEachAsync(items, new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            MaxDegreeOfParallelism = AppLimits.IoWorkers,
             CancellationToken = ct,
         }, async (item, token) =>
         {
@@ -532,7 +532,7 @@ public sealed class ImportService
         }, enqueue, debounce, ct);
 
     /// <summary>How long a resolution pass may take before it is worth recording.</summary>
-    private const long SlowResolutionMs = 750;
+    private static readonly int SlowResolutionMs = (int)AppTiming.SlowResolution.TotalMilliseconds;
 
     /// <summary>
     /// Records the timing of a resolution pass that was slow, or that had to

@@ -88,7 +88,7 @@ internal sealed class SceneRatingResolver(PluginService plugins, UserCardRatingS
     /// </summary>
     public bool HasPosts { get; private set; }
 
-    private const string SnapshotFileName = "scene_posts.json";
+    private const string SnapshotFileName = AppFiles.ScenePostsSnapshot;
     private const int SnapshotVersion = 1;
     private static string SnapshotPath => Path.Combine(AppPaths.LocalFolder, SnapshotFileName);
 

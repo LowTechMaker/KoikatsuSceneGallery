@@ -61,7 +61,7 @@ public sealed class PluginService
         _pluginStorageDirectory = pluginStorageDirectory;
         _pluginLogPath = Path.Combine(
             Path.GetDirectoryName(pluginStorageDirectory) ?? pluginStorageDirectory,
-            "plugins.log");
+            AppFiles.PluginsLog);
     }
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
@@ -70,7 +70,7 @@ public sealed class PluginService
     private string ResolvePluginsDirectory()
     {
         var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var primary = Path.Combine(baseDir, "Plugins");
+        var primary = Path.Combine(baseDir, AppFiles.PluginsFolder);
         if (HasPluginAssemblies(primary)) return primary;
 
         // Packaged dev launches (VS F5 / dotnet run) execute from the AppX
@@ -80,7 +80,7 @@ public sealed class PluginService
         if (string.Equals(Path.GetFileName(baseDir), "AppX", StringComparison.OrdinalIgnoreCase)
             && Path.GetDirectoryName(baseDir) is { } parent)
         {
-            var sibling = Path.Combine(parent, "Plugins");
+            var sibling = Path.Combine(parent, AppFiles.PluginsFolder);
             if (HasPluginAssemblies(sibling)) return sibling;
         }
         return primary;

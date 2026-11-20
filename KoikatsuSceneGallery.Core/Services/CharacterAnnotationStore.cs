@@ -24,7 +24,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </remarks>
 internal class CharacterAnnotationStore
 {
-    public const string DocumentFileName = "characters.json";
+    public const string DocumentFileName = AppFiles.CharacterAnnotations;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

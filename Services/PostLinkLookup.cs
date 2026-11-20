@@ -1,4 +1,5 @@
 using SceneGallery.PluginSdk;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -9,7 +10,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </summary>
 internal sealed class PostLinkLookup
 {
-    private static readonly TimeSpan PerLinkTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan PerLinkTimeout = AppTiming.PostLinkTimeout;
 
     private readonly IReadOnlyList<IPostLinkInspector> _inspectors;
     private readonly IAppLogger _logger;

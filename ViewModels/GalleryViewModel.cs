@@ -398,7 +398,7 @@ public partial class GalleryViewModel : GalleryViewModelBase, IDisposable
                     .Select(kv => (kv.Key, Card: FromCache(kv.Value, staleThumbnails)))
                     .ToArray(), cancellationToken);
                 var hadSnapshot = await snapshot;
-                const int FirstScreen = 200;
+                const int FirstScreen = AppLimits.FirstScreenCards;
                 void Add(IEnumerable<(string Key, SceneCard Card)> part)
                 {
                     foreach (var (filePath, card) in part)

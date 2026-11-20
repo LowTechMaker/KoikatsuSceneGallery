@@ -11,7 +11,7 @@ public sealed class SceneMetadataService : MetadataCacheService<SceneCard, Scene
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public SceneMetadataService(IAppLogger logger) : base(logger, "scene_metadata.json", JsonOptions) { }
+    public SceneMetadataService(IAppLogger logger) : base(logger, AppFiles.SceneMetadataCache, JsonOptions) { }
 
     protected override SceneMetadata Parse(SceneCard card)
     {

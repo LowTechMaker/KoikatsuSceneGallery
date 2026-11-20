@@ -25,7 +25,7 @@ internal sealed record UserCardRatingDocument(int SchemaVersion, IReadOnlyList<U
 /// </remarks>
 internal sealed class UserCardRatingStore
 {
-    public const string FileName = "user_ratings.json";
+    public const string FileName = AppFiles.UserRatings;
     public const int CurrentSchemaVersion = 1;
 
     private static readonly JsonSerializerOptions JsonOptions = new()

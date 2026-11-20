@@ -39,7 +39,7 @@ public partial class App : Application
         _coordinateMetadataService = new CoordinateMetadataService(_logger);
         _pluginService = new PluginService(
             _logger,
-            Path.Combine(AppPaths.LocalFolder, "Plugins"));
+            Path.Combine(AppPaths.LocalFolder, AppFiles.PluginsFolder));
         _localSourceRegistry = new LocalSourceRegistry(_logger);
         InitializeComponent();
 
@@ -287,7 +287,7 @@ public partial class App : Application
             closing = true;
             try
             {
-                if (!await metadataShutdown.WaitAsync(TimeSpan.FromSeconds(5)))
+                if (!await metadataShutdown.WaitAsync(AppTiming.ShutdownWait))
                     _logger.LogError("App.MetadataShutdownTimeout", new TimeoutException());
             }
             catch (Exception ex) { _logger.LogError("App.MetadataShutdown", ex); }
