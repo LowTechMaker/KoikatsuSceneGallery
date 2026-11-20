@@ -110,19 +110,6 @@
                                 IsOn="{x:Bind ViewModel.ShowFileNames, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
-                        <!--  Square corners everywhere: the corner radius resources are
-                              set to zero at start (App.ApplyCornerStyle), so it takes
-                              effect after a restart.  -->
-                        <controls:SettingsCard
-                            x:Uid="SC_SquareCorners"
-                            AutomationProperties.AutomationId="SettingsSquareCornersCard">
-                            <controls:SettingsCard.HeaderIcon>
-                                <FontIcon Glyph="&#xE71A;" />
-                            </controls:SettingsCard.HeaderIcon>
-                            <ToggleSwitch
-                                AutomationProperties.AutomationId="SettingsSquareCornersToggle"
-                                IsOn="{x:Bind ViewModel.SquareCorners, Mode=TwoWay}" />
-                        </controls:SettingsCard>
 
                         <controls:SettingsCard
                             x:Uid="SC_RatingSource"
@@ -983,6 +970,38 @@
                             <ToggleSwitch
                                 AutomationProperties.AutomationId="SettingsVisualSimilarityToggle"
                                 IsOn="{x:Bind ViewModel.UseVisualSimilarity, Mode=TwoWay}" />
+                        </controls:SettingsCard>
+
+                        <!--  The library's thumbnail size: it was a switch in the library's
+                              toolbar, and in use it was hardly ever touched (user).  -->
+                        <controls:SettingsCard
+                            x:Uid="SC_ThumbnailSize"
+                            AutomationProperties.AutomationId="SettingsThumbnailSizeCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE91B;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ComboBox
+                                MinWidth="160"
+                                AutomationProperties.AutomationId="SettingsThumbnailSizeCombo"
+                                SelectedIndex="{x:Bind ViewModel.ThumbnailSizeIndex, Mode=TwoWay}">
+                                <ComboBoxItem x:Uid="Gallery_ThumbnailSizeSmall" />
+                                <ComboBoxItem x:Uid="Gallery_ThumbnailSizeMedium" />
+                                <ComboBoxItem x:Uid="Gallery_ThumbnailSizeLarge" />
+                            </ComboBox>
+                        </controls:SettingsCard>
+
+                        <!--  Square corners everywhere: the corner radius resources are
+                              set to zero at start (App.ApplyCornerStyle), so it takes
+                              effect after a restart.  -->
+                        <controls:SettingsCard
+                            x:Uid="SC_SquareCorners"
+                            AutomationProperties.AutomationId="SettingsSquareCornersCard">
+                            <controls:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE71A;" />
+                            </controls:SettingsCard.HeaderIcon>
+                            <ToggleSwitch
+                                AutomationProperties.AutomationId="SettingsSquareCornersToggle"
+                                IsOn="{x:Bind ViewModel.SquareCorners, Mode=TwoWay}" />
                         </controls:SettingsCard>
 
                     </StackPanel>

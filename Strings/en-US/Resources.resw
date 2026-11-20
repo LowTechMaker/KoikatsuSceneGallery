@@ -2350,6 +2350,8 @@
   <data name="Inspector_Toggle" xml:space="preserve"><value>Details pane (Ctrl+I)</value></data>
   <data name="SC_SquareCorners.Header" xml:space="preserve"><value>Square corners</value></data>
   <data name="SC_SquareCorners.Description" xml:space="preserve"><value>Use square corners instead of rounded ones everywhere. Takes effect after restarting the app.</value></data>
+  <data name="SC_ThumbnailSize.Header" xml:space="preserve"><value>Thumbnail size</value></data>
+  <data name="SC_ThumbnailSize.Description" xml:space="preserve"><value>How large the library's thumbnails are.</value></data>
   <data name="Loupe_Name" xml:space="preserve"><value>Card viewer</value></data>
   <data name="Loupe_Previous" xml:space="preserve"><value>Previous card (Left)</value></data>
   <data name="Loupe_Next" xml:space="preserve"><value>Next card (Right)</value></data>

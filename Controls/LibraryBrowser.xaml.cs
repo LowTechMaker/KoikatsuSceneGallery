@@ -547,8 +547,7 @@ public sealed partial class LibraryBrowser : UserControl
         SortDescendingItem.IsChecked = ordered && !ascending;
     }
 
-    private void Size_Changed(object sender, SelectionChangedEventArgs e) { if (_adapter is not null && SizeSegmented.SelectedIndex >= 0) _settings.ThumbnailSize = (ThumbnailSizePreference)SizeSegmented.SelectedIndex; }
-    private void UpdateSize(ThumbnailSizePreference preference) { SizeSegmented.SelectedIndex = (int)preference; if (_layout is not null) _layout.BaseItemWidth = preference.ToPixels(); }
+    private void UpdateSize(ThumbnailSizePreference preference) { if (_layout is not null) _layout.BaseItemWidth = preference.ToPixels(); }
     private void ScrollFirst() { if (_items.Count > 0) GalleryGrid.ScrollIntoView(_items[0]); }
     private void Search_Invoked(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs e) { SearchBox.Focus(FocusState.Keyboard); e.Handled = true; }
     private void First_Invoked(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs e) { ScrollFirst(); e.Handled = true; }

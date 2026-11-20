@@ -42,7 +42,6 @@ public static class SettingsSearchIndex
     public static IReadOnlyList<SettingsSearchEntry> Entries { get; } =
     [
         Card("SC_ShowFileNames", General),
-        Card("SC_SquareCorners", General),
         Card("SC_RatingSource", General),
         Card("SC_RatingFilterEnabled", General),
         Card("SC_ScrollToTop", General),
@@ -82,6 +81,8 @@ public static class SettingsSearchIndex
         Heading("Plugins_Header", Plugins),
 
         Card("SC_VisualSimilarity", Experimental),
+        Card("SC_ThumbnailSize", Experimental),
+        Card("SC_SquareCorners", Experimental),
     ];
 
     private static SettingsSearchEntry Card(string uid, int tab) => new(uid, tab, IsCard: true);

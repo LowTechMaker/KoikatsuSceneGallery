@@ -55,14 +55,8 @@
       </MenuFlyout>
      </DropDownButton.Flyout>
     </DropDownButton>
-    <!-- Three exclusive values: a segmented control shows all of them and takes
-         one click, where a ComboBox hides two thirds of the choice behind a
-         menu. Both design systems draw the line at about five. -->
-    <toolkit:Segmented x:Name="SizeSegmented" x:Uid="Gallery_ThumbnailSizeComboBox" AutomationProperties.AutomationId="GallerySizeSegmented" SelectedIndex="1" SelectionChanged="Size_Changed">
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeSmall"/>
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeMedium"/>
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeLarge"/>
-    </toolkit:Segmented>
+    <!-- The thumbnail size switch moved to Settings > OCD: in use it was hardly ever touched
+         (user), and the toolbar is the busiest line of the library. -->
     <ToggleButton x:Name="InspectorToggle" AutomationProperties.AutomationId="GalleryInspectorToggle" Click="InspectorToggle_Click" Padding="8,6"><FontIcon Glyph="&#xE8A0;" FontSize="14"/></ToggleButton>
    </StackPanel>
   </Grid>

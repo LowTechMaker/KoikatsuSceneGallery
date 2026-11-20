@@ -2350,6 +2350,8 @@
   <data name="Inspector_Toggle" xml:space="preserve"><value>详细信息窗格（Ctrl+I）</value></data>
   <data name="SC_SquareCorners.Header" xml:space="preserve"><value>直角</value></data>
   <data name="SC_SquareCorners.Description" xml:space="preserve"><value>全部改用直角，不使用圆角。重新启动应用后生效。</value></data>
+  <data name="SC_ThumbnailSize.Header" xml:space="preserve"><value>缩略图大小</value></data>
+  <data name="SC_ThumbnailSize.Description" xml:space="preserve"><value>收藏库缩略图的大小。</value></data>
   <data name="Loupe_Name" xml:space="preserve"><value>卡片检视</value></data>
   <data name="Loupe_Previous" xml:space="preserve"><value>上一张（←）</value></data>
   <data name="Loupe_Next" xml:space="preserve"><value>下一张（→）</value></data>

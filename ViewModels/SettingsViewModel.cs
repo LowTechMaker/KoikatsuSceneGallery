@@ -118,6 +118,13 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;
 
+    /// <summary>The thumbnail size as the settings page's combo box index (small, medium, large).</summary>
+    public int ThumbnailSizeIndex
+    {
+        get => (int)ThumbnailSize;
+        set { if (value >= 0) ThumbnailSize = (ThumbnailSizePreference)value; }
+    }
+
     [ObservableProperty]
     public partial bool PluginAnalysisEnabled { get; set; }
 
@@ -497,6 +504,7 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnThumbnailSizeChanged(ThumbnailSizePreference value)
     {
+        OnPropertyChanged(nameof(ThumbnailSizeIndex));
         if (_isLoading)
             return;
 
