@@ -413,6 +413,8 @@ internal sealed class CardLoupe : Grid
         var target = _index + delta;
         if (target < 0 || target >= _cards.Count) return;
         ShowAt(target);
+        // The next picture comes up in the same place, not with a hard cut.
+        CardMotion.Crossfade(_image);
     }
 
     private void ShowAt(int index, bool notify = true)
@@ -672,7 +674,7 @@ internal sealed class CardLoupe : Grid
         _hint.Opacity = 1;
         var fade = visual.Compositor.CreateScalarKeyFrameAnimation();
         fade.InsertKeyFrame(1, show ? 1f : 0f);
-        fade.Duration = TimeSpan.FromMilliseconds(show ? 150 : 600);
+        fade.Duration = show ? CardMotion.FadeInDuration : CardMotion.FadeOutDuration;
         visual.StartAnimation("Opacity", fade);
     }
 

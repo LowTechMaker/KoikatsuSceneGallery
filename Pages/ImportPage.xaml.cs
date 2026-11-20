@@ -150,20 +150,20 @@ public sealed partial class ImportPage : Page
     {
         var storyboard = new Storyboard();
         storyboard.Children.Add(BuildCardAnimation(
-            "TranslateY", from: 24, to: 0, milliseconds: 220,
-            easing: new CubicEase { EasingMode = EasingMode.EaseOut }));
-        storyboard.Children.Add(BuildCardOpacityAnimation(from: 0, to: 1, milliseconds: 140));
+            "TranslateY", from: 24, to: 0, CardMotion.EnterDuration, CardMotion.XamlDecelerate()));
+        storyboard.Children.Add(BuildCardOpacityAnimation(from: 0, to: 1, CardMotion.FadeInDuration));
         return storyboard;
     }
 
+    // Tempos from CardMotion, the app's one motion schedule.
     private DoubleAnimation BuildCardAnimation(
-        string property, double from, double to, int milliseconds, EasingFunctionBase? easing = null)
+        string property, double from, double to, TimeSpan duration, EasingFunctionBase? easing = null)
     {
         var animation = new DoubleAnimation
         {
             From = from,
             To = to,
-            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+            Duration = CardMotion.Xaml(duration),
             EasingFunction = easing,
         };
         Storyboard.SetTarget(animation, _addFilesCardTransform);
@@ -171,13 +171,13 @@ public sealed partial class ImportPage : Page
         return animation;
     }
 
-    private DoubleAnimation BuildCardOpacityAnimation(double from, double to, int milliseconds)
+    private DoubleAnimation BuildCardOpacityAnimation(double from, double to, TimeSpan duration)
     {
         var animation = new DoubleAnimation
         {
             From = from,
             To = to,
-            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+            Duration = CardMotion.Xaml(duration),
         };
         Storyboard.SetTarget(animation, AddFilesOverlayCard);
         Storyboard.SetTargetProperty(animation, "Opacity");
@@ -265,13 +265,14 @@ public sealed partial class ImportPage : Page
         _addFilesCardTransform.CenterX = AddFilesOverlayCard.ActualWidth / 2;
         _addFilesCardTransform.CenterY = AddFilesOverlayCard.ActualHeight / 2;
 
-        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var easing = CardMotion.XamlAccelerate();
+        var duration = CardMotion.CollapseIntoDuration;
         var storyboard = new Storyboard();
-        storyboard.Children.Add(BuildCardAnimation("TranslateX", 0, buttonCentre.X - cardCentre.X, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("TranslateY", 0, buttonCentre.Y - cardCentre.Y, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("ScaleX", 1, 0.12, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("ScaleY", 1, 0.12, 300, easing));
-        storyboard.Children.Add(BuildCardOpacityAnimation(1, 0, 300));
+        storyboard.Children.Add(BuildCardAnimation("TranslateX", 0, buttonCentre.X - cardCentre.X, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("TranslateY", 0, buttonCentre.Y - cardCentre.Y, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleX", 1, 0.12, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleY", 1, 0.12, duration, easing));
+        storyboard.Children.Add(BuildCardOpacityAnimation(1, 0, duration));
 
         var completion = new TaskCompletionSource();
         storyboard.Completed += (_, _) => completion.TrySetResult();

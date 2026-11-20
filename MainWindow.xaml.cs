@@ -649,6 +649,11 @@ public sealed partial class MainWindow : Window
 
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
+        // Every page arrives the same way (CardMotion). The library's pages do
+        // it themselves, on their grid, under the tab heading that stays put.
+        if (!IsLibraryPage(e.SourcePageType) && e.Content is UIElement page)
+            CardMotion.Entrance(page);
+
         if (e.SourcePageType == typeof(SettingsPage))
             NavView.SelectedItem = NavView.SettingsItem;
         else if (e.SourcePageType == typeof(HomePage))

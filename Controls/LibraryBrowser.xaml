@@ -182,8 +182,5 @@
    <Button x:Name="ClearButton" Click="Clear_Click" HorizontalAlignment="Center"/>
    <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" HorizontalAlignment="Center"/>
   </StackPanel>
-  <!-- Last child, so the collapse snapshots draw over the grid. Shares the
-       grid's coordinate space, which a Popup would not. -->
-  <Canvas x:Name="CollapseOverlay" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"/>
  </Grid>
 </UserControl>

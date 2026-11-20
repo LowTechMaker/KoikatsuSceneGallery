@@ -32,6 +32,42 @@ internal static class CardMotion
     public static readonly TimeSpan EnterDuration = TimeSpan.FromMilliseconds(220);
     public static readonly TimeSpan Stagger = TimeSpan.FromMilliseconds(18);
 
+    // ---- fades
+    /// <summary>Something small appearing (a hint, a badge).</summary>
+    public static readonly TimeSpan FadeInDuration = TimeSpan.FromMilliseconds(150);
+    /// <summary>Something small leaving on its own, unhurried (the loupe's key hints).</summary>
+    public static readonly TimeSpan FadeOutDuration = TimeSpan.FromMilliseconds(600);
+    /// <summary>One picture giving way to the next in the same place (stepping in the loupe).</summary>
+    public static readonly TimeSpan CrossfadeDuration = TimeSpan.FromMilliseconds(140);
+
+    // ---- a panel flying into the control that opened it (the import page's add-files card)
+    public static readonly TimeSpan CollapseIntoDuration = TimeSpan.FromMilliseconds(300);
+
+    // ---- ambient motion: loops and slow cycles that are not a response to a click
+    /// <summary>An author tile turning to its next picture.</summary>
+    public static readonly TimeSpan AmbientDuration = TimeSpan.FromMilliseconds(600);
+    /// <summary>One breath of a loading placeholder.</summary>
+    public static readonly TimeSpan PulseDuration = TimeSpan.FromMilliseconds(1400);
+
+    // ---- the tag cloud (TagCloudMotion): its own, slower choreography, kept here with the rest
+    public static readonly TimeSpan TagRevealDuration = TimeSpan.FromMilliseconds(460);
+    public static readonly TimeSpan TagEnterStagger = TimeSpan.FromMilliseconds(26);
+    public static readonly TimeSpan TagSwapOutDuration = TimeSpan.FromMilliseconds(160);
+    public static readonly TimeSpan CloudArrivalDuration = TimeSpan.FromMilliseconds(700);
+    public static readonly TimeSpan CloudArrivalBudget = TimeSpan.FromMilliseconds(700);
+    public static readonly TimeSpan CloudSwapDuration = TimeSpan.FromMilliseconds(320);
+    public static readonly TimeSpan CloudSwapStagger = TimeSpan.FromMilliseconds(10);
+    public static readonly TimeSpan CloudSwapBudget = TimeSpan.FromMilliseconds(220);
+
+    /// <summary>A XAML storyboard's duration from one of the tempos above.</summary>
+    public static Microsoft.UI.Xaml.Duration Xaml(TimeSpan duration) => new(duration);
+
+    /// <summary>XAML storyboard easings matching <see cref="Decelerate"/> (arriving) and an accelerating leave.</summary>
+    public static Microsoft.UI.Xaml.Media.Animation.EasingFunctionBase XamlDecelerate()
+        => new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut };
+    public static Microsoft.UI.Xaml.Media.Animation.EasingFunctionBase XamlAccelerate()
+        => new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseIn };
+
     /// <summary>
     /// Total time the staggered launches may span. Beyond this the per-item
     /// delay shrinks, so a full viewport does not take seconds to settle.
@@ -72,6 +108,90 @@ internal static class CardMotion
 
         visual.StartAnimation("Opacity", fade);
         visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>
+    /// Leaving what was drilled into: the content shrinks back towards
+    /// <paramref name="origin"/> (where it was opened from) and fades, then
+    /// <paramref name="done"/> runs, which puts up what it returns to. Without
+    /// animation <paramref name="done"/> runs at once.
+    /// </summary>
+    public static void DrillOut(UIElement element, Vector2 origin, Action done)
+    {
+        if (!AnimationsEnabled)
+        {
+            done();
+            return;
+        }
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var ease = Ease(compositor);
+        visual.CenterPoint = new Vector3(origin, 0);
+
+        var shrink = compositor.CreateVector3KeyFrameAnimation();
+        shrink.InsertKeyFrame(1, new Vector3(0.85f, 0.85f, 1), ease);
+        shrink.Duration = ReturnDuration;
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(1, 0, ease);
+        fade.Duration = ReturnDuration;
+
+        var batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        visual.StartAnimation("Scale", shrink);
+        visual.StartAnimation("Opacity", fade);
+        batch.End();
+        batch.Completed += (_, _) => done();
+    }
+
+    /// <summary>
+    /// Arriving back where a drill-in started: the content settles in from a
+    /// little larger, around <paramref name="origin"/>, as if the camera pulled back.
+    /// </summary>
+    public static void PullBack(UIElement element, Vector2 origin)
+    {
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        if (!AnimationsEnabled)
+        {
+            visual.Scale = Vector3.One;
+            visual.Opacity = 1;
+            return;
+        }
+        var compositor = visual.Compositor;
+        var ease = Decelerate(compositor);
+        visual.CenterPoint = new Vector3(origin, 0);
+
+        var settle = compositor.CreateVector3KeyFrameAnimation();
+        settle.InsertKeyFrame(0, new Vector3(1.08f, 1.08f, 1));
+        settle.InsertKeyFrame(1, Vector3.One, ease);
+        settle.Duration = FlyDuration;
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = FlyDuration;
+
+        visual.StartAnimation("Scale", settle);
+        visual.StartAnimation("Opacity", fade);
+    }
+
+    /// <summary>Stops any of these movements on <paramref name="element"/> and puts it back as laid out.</summary>
+    public static void Reset(UIElement element)
+    {
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        visual.StopAnimation("Scale");
+        visual.StopAnimation("Opacity");
+        visual.Scale = Vector3.One;
+        visual.Opacity = 1;
+    }
+
+    /// <summary>One picture giving way to the next in the same place: a quick fade up from dim.</summary>
+    public static void Crossfade(UIElement element)
+    {
+        if (!AnimationsEnabled) return;
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var fade = visual.Compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0.35f);
+        fade.InsertKeyFrame(1, 1, Decelerate(visual.Compositor));
+        fade.Duration = CrossfadeDuration;
+        visual.StartAnimation("Opacity", fade);
     }
 
     /// <summary>

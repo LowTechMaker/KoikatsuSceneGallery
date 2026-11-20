@@ -53,7 +53,10 @@ public sealed partial class LibraryBrowser : UserControl
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _search;
     private readonly Dictionary<(CardBase, string?, string?), string> _keys = [];
     private GalleryLayoutEngine? _layout;
-    private readonly GroupCollapseAnimator _collapse;
+    // Where the open group's tile was, in the grid's coordinates: opening grows
+    // the group's cards out of it, closing shrinks them back into it (CardMotion).
+    private System.Numerics.Vector2 _drillOrigin;
+    private bool _leavingGroup;
     private Frame? _frame;
     private bool _active, _reload, _syncing, _entriesDetached;
     private string? _groupKey, _groupTitle, _returnPath;
@@ -71,7 +74,6 @@ public sealed partial class LibraryBrowser : UserControl
         _refresh.Tick += (_, _) => Refresh();
         _search = DispatcherQueue.CreateTimer(); _search.Interval = TimeSpan.FromMilliseconds(200); _search.IsRepeating = false;
         _search.Tick += (_, _) => ApplySearch();
-        _collapse = new(CollapseOverlay);
         InitInspector();
         Loaded += (_, _) => _layout?.OnLoaded(RequestVisible);
     }
@@ -183,7 +185,8 @@ public sealed partial class LibraryBrowser : UserControl
     {
         ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); _metadataOptionsTimer?.Stop();
         // The control is reused across navigations, so half-finished state must not survive.
-        _collapse.Finish();
+        _leavingGroup = false;
+        CardMotion.Reset(GalleryGrid);
         _loupe.Close();
         SetScopedMetadataSubscriptions(false);
         SetScopedRatingSubscriptions(false);
@@ -383,7 +386,6 @@ public sealed partial class LibraryBrowser : UserControl
     /// <summary>Opens a tile: a group drills down, a single card opens its details.</summary>
     private void OpenEntry(GalleryEntry entry)
     {
-        _collapse.Finish();
         if (entry.IsGroup)
         {
             // Where the group's tile is, for the cards to grow out of it.
@@ -396,7 +398,8 @@ public sealed partial class LibraryBrowser : UserControl
             ApplySearch(); _returnPath = entry.Card.FilePath; _returnIndex = _items.IndexOf(entry);
             _returnOffset = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid)?.VerticalOffset ?? 0;
             _groupKey = entry.Key; _groupTitle = entry.Title; _groupSearch = ""; SetSearchText(""); Refresh(); ScrollFirst();
-            CardMotion.DrillIn(GalleryGrid, new System.Numerics.Vector2((float)origin.X, (float)origin.Y));
+            _drillOrigin = new System.Numerics.Vector2((float)origin.X, (float)origin.Y);
+            if (_settings.GroupCollapseAnimationEnabled) CardMotion.DrillIn(GalleryGrid, _drillOrigin);
             BackButton.Focus(FocusState.Keyboard);
         }
         else OpenInLoupe(entry.Card);
@@ -420,31 +423,35 @@ public sealed partial class LibraryBrowser : UserControl
         var cards = _scope is null ? VM.CardsView.OfType<CardBase>().ToArray() : ScopedCards();
         return new(_scopeTitle ?? _adapter!.Title, GalleryGrouping.Create(cards, Key).SelectMany(g => g.Members));
     }
+    /// <summary>
+    /// Closes the open group, the way opening it in reverse (CardMotion): its
+    /// cards shrink back into where the group's tile was and fade, then the
+    /// library comes back around that tile as if the camera pulled back. It
+    /// replaces the flight of each card's snapshot into the stacked tile.
+    /// </summary>
     private void Back_Click(object sender, RoutedEventArgs e)
     {
-        var collapsingKey = _groupKey;
-        // Measured before the rebuild destroys the containers; the flight itself
-        // has to wait until the stacked tile exists to fly towards.
-        var captured = _settings.GroupCollapseAnimationEnabled
-            ? _collapse.Capture(GalleryGrid)
-            : [];
-        _groupKey = null; _groupSearch = ""; SetSearchText(MainQuery); Refresh();
-        RestoreItem(_returnPath, _returnIndex, _returnOffset);
-        if (captured.Count == 0 || collapsingKey is null) return;
-        // Queued behind RestoreItem's own callback, so layout and the scroll
-        // restore have both settled before the destination is measured.
-        DispatcherQueue.TryEnqueue(() => StartCollapseFlight(captured, collapsingKey));
+        if (_leavingGroup) return;
+        if (!_settings.GroupCollapseAnimationEnabled)
+        {
+            LeaveGroup();
+            return;
+        }
+        _leavingGroup = true;
+        CardMotion.DrillOut(GalleryGrid, _drillOrigin, () =>
+        {
+            if (!_leavingGroup) return; // left the page meanwhile
+            _leavingGroup = false;
+            LeaveGroup();
+            // After RestoreItem's own callback, so the scroll is back where the tile was.
+            DispatcherQueue.TryEnqueue(() => CardMotion.PullBack(GalleryGrid, _drillOrigin));
+        });
     }
 
-    private void StartCollapseFlight(IReadOnlyList<CapturedTile> captured, string key)
+    private void LeaveGroup()
     {
-        if (!_active) return;
-        GalleryGrid.UpdateLayout();
-        // The collapsed entry's Key is the group key by construction, which is a
-        // more direct handle than RestoreItem's path match.
-        var target = _items.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
-        if (target is null || GalleryGrid.ContainerFromItem(target) is not FrameworkElement tile) return;
-        _collapse.Play(captured, tile);
+        _groupKey = null; _groupSearch = ""; SetSearchText(MainQuery); Refresh();
+        RestoreItem(_returnPath, _returnIndex, _returnOffset);
     }
     private void RestoreItem(string? path, int fallback = 0, double? offset = null)
     {

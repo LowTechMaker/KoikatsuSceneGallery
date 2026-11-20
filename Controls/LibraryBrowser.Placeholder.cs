@@ -59,7 +59,7 @@ public sealed partial class LibraryBrowser
             pulse.InsertKeyFrame(0f, 1f);
             pulse.InsertKeyFrame(0.5f, 0.45f);
             pulse.InsertKeyFrame(1f, 1f);
-            pulse.Duration = TimeSpan.FromMilliseconds(1400);
+            pulse.Duration = CardMotion.PulseDuration;
             pulse.IterationBehavior = AnimationIterationBehavior.Count;
             pulse.IterationCount = PlaceholderPulses;
             _placeholderPulse = pulse;

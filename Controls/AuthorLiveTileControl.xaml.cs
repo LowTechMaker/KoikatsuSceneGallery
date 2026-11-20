@@ -15,7 +15,7 @@ namespace KoikatsuSceneGallery.Controls;
 public sealed partial class AuthorLiveTileControl : UserControl
 {
     private static readonly TimeSpan CycleInterval = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(600);
+    private static readonly TimeSpan AnimationDuration = Controls.CardMotion.AmbientDuration;
 
     private DispatcherQueueTimer? _cycleTimer;
     private int _currentIndex;
@@ -248,9 +248,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
         if (_inSlide is not null) return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(this).Compositor;
-        _easing ??= compositor.CreateCubicBezierEasingFunction(
-            new Vector2(0.4f, 0f),
-            new Vector2(0.2f, 1f));
+        _easing ??= Controls.CardMotion.Ease(compositor);
 
         var h = (float)RootGrid.ActualHeight;
 
