@@ -263,6 +263,50 @@ internal static class CardMotion
         batch.Completed += (_, _) => done();
     }
 
+    /// <summary>
+    /// The next of a set taking the place of the last (the home page's featured
+    /// card turning): it comes in from <paramref name="shift"/> pixels to the
+    /// side while it fades up. Negative <paramref name="shift"/> for going back.
+    /// </summary>
+    public static void Turn(UIElement element, float shift = 24)
+    {
+        if (!AnimationsEnabled) return;
+        ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var ease = Decelerate(compositor);
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = FlyDuration;
+        var move = compositor.CreateVector3KeyFrameAnimation();
+        move.InsertKeyFrame(0, new Vector3(shift, 0, 0));
+        move.InsertKeyFrame(1, Vector3.Zero, ease);
+        move.Duration = FlyDuration;
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>
+    /// A bar filling from the left over <paramref name="duration"/>: how long
+    /// until something changes by itself (the featured card's next turn).
+    /// <see cref="Countdown(UIElement, TimeSpan?)"/> with null empties it and
+    /// stops (paused). Always linear: it is a clock, not a movement.
+    /// </summary>
+    public static void Countdown(UIElement bar, TimeSpan? duration)
+    {
+        var visual = ElementCompositionPreview.GetElementVisual(bar);
+        visual.StopAnimation("Scale");
+        visual.Scale = new Vector3(0, 1, 1);
+        if (duration is not { } length || !AnimationsEnabled) return;
+        var compositor = visual.Compositor;
+        var fill = compositor.CreateVector3KeyFrameAnimation();
+        fill.InsertKeyFrame(0, new Vector3(0, 1, 1));
+        fill.InsertKeyFrame(1, Vector3.One, compositor.CreateLinearEasingFunction());
+        fill.Duration = length;
+        visual.StartAnimation("Scale", fill);
+    }
+
     /// <summary>The pause between two cards of a dealt hand.</summary>
     public static readonly TimeSpan DealStagger = TimeSpan.FromMilliseconds(35);
 

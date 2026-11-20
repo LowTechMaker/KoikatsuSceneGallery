@@ -122,6 +122,10 @@ internal static class UiMetrics
     public const int HomeFeaturedDecodeWidth = 1280;
     /// <summary>How see-through the featured picture is behind the whole top band.</summary>
     public const double HomeFeaturedBackdropOpacity = 0.16;
+    /// <summary>How many of the dealt hand the featured card turns through, each a small picture in the strip under it.</summary>
+    public const int HomeFeaturedCount = 6;
+    public const double HomeFeaturedStripWidth = 64;
+    public const int HomeFeaturedStripDecodeWidth = 128;
     /// <summary>Tags named under the featured card's title.</summary>
     public const int HomeFeaturedTags = 4;
     /// <summary>"New this week" counts files added within this many days.</summary>

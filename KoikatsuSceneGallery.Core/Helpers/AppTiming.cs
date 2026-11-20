@@ -55,6 +55,8 @@ internal static class AppTiming
     public static readonly TimeSpan ToastLong = TimeSpan.FromSeconds(8);
     /// <summary>The loupe's line of key hints, as long as a short toast.</summary>
     public static readonly TimeSpan HintDuration = ToastShort;
+    /// <summary>The home page's featured card turns to the next one this often (not while the pointer is on it).</summary>
+    public static readonly TimeSpan FeaturedCycle = TimeSpan.FromSeconds(7);
     /// <summary>A setting found by the settings search stays highlighted this long.</summary>
     public static readonly TimeSpan SettingsHighlight = TimeSpan.FromSeconds(3);
     /// <summary>An author tile turns to its next picture about this often (plus up to <see cref="LiveTileJitter"/>).</summary>

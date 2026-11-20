@@ -12,14 +12,17 @@ using ToggleButton = Microsoft.UI.Xaml.Controls.Primitives.ToggleButton;
 namespace KoikatsuSceneGallery.Controls;
 
 /// <summary>
-/// The home page's card of the day: one scene, large, with what it is and
-/// three things to do with it (open, queue, another one).
+/// The home page's featured scenes: one large at a time with what it is and
+/// what to do with it, turning to the next on its own every few seconds, and a
+/// strip of small pictures under it to pick one directly.
 /// </summary>
 /// <remarks>
-/// It replaces the pair to choose between (user's pick: one featured card at
-/// the top of a dashboard). The cards come from the dealt hand
-/// (<see cref="HomeViewModel.Deal"/>): "another one" steps through it and
-/// deals a fresh hand at its end. The picture is drawn from the file itself,
+/// It replaces the pair to choose between (user's pick: a featured card at
+/// the top of a dashboard), and shows several since (user request): the first
+/// <see cref="UiMetrics.HomeFeaturedCount"/> of the dealt hand
+/// (<see cref="HomeViewModel.Deal"/>), every <see cref="AppTiming.FeaturedCycle"/>,
+/// holding still while the pointer is on it, the loupe is open or the page is
+/// away. A new hand comes with the page's "new themes". The picture is drawn from the file itself,
 /// not the thumbnail, because it is the one large picture on the page; the
 /// same picture, faint, lies behind the whole band.
 /// </remarks>
@@ -53,7 +56,18 @@ internal sealed class HomeFeatured : UserControl
     };
     private readonly Button _open = new() { Content = UiText.Get("Inspector_Open"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
     private readonly ToggleButton _queue = new();
-    private readonly Button _next = new();
+    private readonly StackPanel _details = new() { Spacing = 6 };
+    private readonly StackPanel _strip = new() { Orientation = Orientation.Horizontal, Spacing = 6 };
+    private readonly List<(Border Frame, CardBase Card)> _stripItems = [];
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _cycle;
+    private bool _hovered, _suspended;
+    private float _turnShift = 24;
+    private readonly Border _countdown = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+        CornerRadius = new CornerRadius(1.5),
+    };
     private readonly TextBlock _empty = new()
     {
         Text = UiText.Get("Home_FeaturedEmpty"),
@@ -92,28 +106,37 @@ internal sealed class HomeFeatured : UserControl
                 AppToast.Show(UiText.Get("CardState_SaveFailed"), InfoBarSeverity.Error, key: "card-state");
             ShowQueued();
         };
-        _next.Content = IconLabel(Glyphs.Shuffle, UiText.Get("Home_FeaturedNext"));
-        AutomationProperties.SetAutomationId(_next, "HomeFeaturedNext");
-        _next.Click += (_, _) => Next();
-
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         actions.Children.Add(_open);
         actions.Children.Add(_queue);
-        actions.Children.Add(_next);
 
-        var info = new StackPanel { Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
-        info.Children.Add(_heading);
-        info.Children.Add(_title);
-        info.Children.Add(_author);
-        info.Children.Add(_rating);
-        info.Children.Add(_tags);
-        info.Children.Add(new Border { Height = 4 });
+        _details.Children.Add(_heading);
+        _details.Children.Add(_title);
+        _details.Children.Add(_author);
+        _details.Children.Add(_rating);
+        _details.Children.Add(_tags);
+        AutomationProperties.SetAutomationId(_strip, "HomeFeaturedStrip");
+        var info = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        info.Children.Add(_details);
         info.Children.Add(actions);
+        info.Children.Add(_strip);
 
         _content.ColumnSpacing = 20;
         _content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star), MaxWidth = UiMetrics.HomeFeaturedMaxPictureWidth });
         _content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-        _content.Children.Add(pictureButton);
+        // Under the picture, a thin bar filling up to the next turn (CardMotion.Countdown):
+        // it says the card changes by itself, and when; empty while held still.
+        var countdownTrack = new Grid
+        {
+            Height = 3,
+            CornerRadius = new CornerRadius(1.5),
+            Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
+        };
+        countdownTrack.Children.Add(_countdown);
+        var pictureColumn = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        pictureColumn.Children.Add(pictureButton);
+        pictureColumn.Children.Add(countdownTrack);
+        _content.Children.Add(pictureColumn);
         Grid.SetColumn(info, 1);
         _content.Children.Add(info);
         // The picture at the cards' own shape, as wide as its column lets it be.
@@ -141,9 +164,34 @@ internal sealed class HomeFeatured : UserControl
             Child = band,
         };
 
-        _home.Deal.Cards.CollectionChanged += (_, _) => DispatcherQueue.TryEnqueue(Show);
+        _cycle = DispatcherQueue.CreateTimer();
+        _cycle.Interval = AppTiming.FeaturedCycle;
+        _cycle.Tick += (_, _) => Select(_index + 1);
+        // Holds still while the pointer is on it: someone reading it should not
+        // have it change under them (user request).
+        PointerEntered += (_, _) => { _hovered = true; UpdateCycle(); };
+        PointerExited += (_, _) => { _hovered = false; UpdateCycle(); };
+        PointerCanceled += (_, _) => { _hovered = false; UpdateCycle(); };
+
+        _home.Deal.Cards.CollectionChanged += (_, _) => DispatcherQueue.TryEnqueue(NewHand);
         _states.StateChanged += path => DispatcherQueue.TryEnqueue(() => { if (_card?.FilePath == path) ShowQueued(); });
-        Show();
+        NewHand();
+    }
+
+    /// <summary>Stops turning (the page went away, or the loupe is open over it).</summary>
+    public void Suspend() { _suspended = true; UpdateCycle(); }
+
+    /// <summary>Turns again, from a full interval.</summary>
+    public void Resume() { _suspended = false; UpdateCycle(); }
+
+    private IReadOnlyList<CardBase> Featured() => [.. _home.Deal.Cards.Take(UiMetrics.HomeFeaturedCount)];
+
+    private void UpdateCycle()
+    {
+        _cycle.Stop();
+        var running = !_hovered && !_suspended && Featured().Count > 1;
+        if (running) _cycle.Start();
+        CardMotion.Countdown(_countdown, running ? AppTiming.FeaturedCycle : null);
     }
 
     /// <summary>The picture, for the loupe's flight; null when nothing is featured.</summary>
@@ -154,23 +202,62 @@ internal sealed class HomeFeatured : UserControl
         if (_card is { } card) CardInvoked?.Invoke(_home.Deal, card);
     }
 
-    private void Next()
+    /// <summary>A new hand: the strip is built again and the first card shown.</summary>
+    private void NewHand()
     {
-        _index++;
-        if (_index >= _home.Deal.Cards.Count)
+        _strip.Children.Clear();
+        _stripItems.Clear();
+        var cards = Featured();
+        for (var i = 0; i < cards.Count; i++)
         {
-            _index = 0;
-            _home.DealAgain();   // Show follows through the collection change
-            return;
+            var card = cards[i];
+            var index = i;
+            var frame = new Border
+            {
+                Width = UiMetrics.HomeFeaturedStripWidth,
+                Height = UiMetrics.HomeFeaturedStripWidth * UiMetrics.HolderCardAspect,
+                CornerRadius = (CornerRadius)Application.Current.Resources["ControlCornerRadius"],
+                BorderThickness = new Thickness(2),
+                Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
+                Child = new Image
+                {
+                    Stretch = Stretch.UniformToFill,
+                    Source = new BitmapImage { DecodePixelWidth = UiMetrics.HomeFeaturedStripDecodeWidth, UriSource = new Uri(card.FilePath) },
+                },
+            };
+            var button = new Button { Style = (Style)Application.Current.Resources["PlainTileButtonStyle"], Content = frame };
+            AutomationProperties.SetName(button, card.FileName);
+            ToolTipService.SetToolTip(button, card.FileName);
+            button.Click += (_, _) => Select(index);
+            _strip.Children.Add(button);
+            _stripItems.Add((frame, card));
         }
+        _strip.Visibility = cards.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        _index = 0;
         Show();
+        CardMotion.EnterStaggered([.. _strip.Children], rise: 6);
+    }
+
+    /// <summary>Shows the featured card at <paramref name="index"/> (wrapping), and starts the interval again.</summary>
+    private void Select(int index)
+    {
+        var count = Featured().Count;
+        if (count == 0) return;
+        var next = ((index % count) + count) % count;
+        // Forward comes in from the right, a pick further left from the left.
+        _turnShift = next >= _index || (index > _index && next == 0) ? 24 : -24;
+        _index = next;
+        Show();
+        UpdateCycle();
     }
 
     private void Show()
     {
-        var cards = _home.Deal.Cards;
+        var cards = Featured();
         if (_index >= cards.Count) _index = 0;
         _card = cards.Count > 0 ? cards[_index] : null;
+        for (var i = 0; i < _stripItems.Count; i++)
+            _stripItems[i].Frame.BorderBrush = (Brush)Application.Current.Resources[i == _index ? "AccentFillColorDefaultBrush" : "ControlStrokeColorDefaultBrush"];
         _content.Visibility = _card is null ? Visibility.Collapsed : Visibility.Visible;
         _empty.Visibility = _card is null ? Visibility.Visible : Visibility.Collapsed;
         if (_card is not { } card) return;
@@ -189,7 +276,10 @@ internal sealed class HomeFeatured : UserControl
         _backdrop.Source = source;
         AutomationProperties.SetName(_open, $"{UiText.Get("Inspector_Open")} {info.Title}");
         ShowQueued();
-        CardMotion.Crossfade(_content);
+        // The picture and the words change; the buttons and the strip stay put.
+        CardMotion.Turn(_pictureFrame, _turnShift);
+        CardMotion.Turn(_details, _turnShift);
+        UpdateCycle();
     }
 
     private void ShowQueued()

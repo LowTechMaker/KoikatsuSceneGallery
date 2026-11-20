@@ -143,6 +143,7 @@ public sealed partial class HomePage : Page
         _loupe.Closed += card =>
         {
             ShowDashboard(true);
+            _featured.Resume();
             if (card is not null && PictureOf(card) is Control tile)
                 tile.Focus(FocusState.Programmatic);
         };
@@ -173,6 +174,7 @@ public sealed partial class HomePage : Page
         _loupeCard = card;
         _loupe.Open(cards, index);
         ShowDashboard(false);
+        _featured.Suspend();
     }
 
     private void ShowDashboard(bool show)
@@ -226,6 +228,8 @@ public sealed partial class HomePage : Page
         CardMotion.LeaveTogether(themes, () => DispatcherQueue.TryEnqueue(() =>
         {
             _viewModel.RerollThemes();
+            // The featured cards are part of "something new" too (user request).
+            _viewModel.DealAgain();
             // The panels rebuild from their shelves on the next tick; arrive after that.
             DispatcherQueue.TryEnqueue(() =>
             {
@@ -261,6 +265,7 @@ public sealed partial class HomePage : Page
     {
         base.OnNavigatedTo(e);
         PlayEntrance();
+        _featured.Resume();
         _gallery.CardsReloaded += QueueRefresh;
         _gallery.CardsReloaded += Reconcile;
         // The sidecars are read after the cards: tags (for the themes) come then.
@@ -285,6 +290,7 @@ public sealed partial class HomePage : Page
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         _loupe.Close(animate: false);
+        _featured.Suspend();
         _gallery.CardsReloaded -= QueueRefresh;
         _gallery.CardsReloaded -= Reconcile;
         _viewModel.CardInfoChanged -= QueueRefresh;
