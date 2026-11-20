@@ -2382,4 +2382,5 @@
   <data name="TitleBar_RatingOn" xml:space="preserve"><value>显示 {0} 的卡片，点一下隐藏</value></data>
   <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} 的卡片已隐藏，点一下显示</value></data>
   <data name="TitleBar_RatingLast" xml:space="preserve"><value>至少要显示一种分级</value></data>
+  <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>探索</value></data>
 </root>

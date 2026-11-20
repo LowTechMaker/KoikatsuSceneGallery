@@ -2382,4 +2382,5 @@
   <data name="TitleBar_RatingOn" xml:space="preserve"><value>Showing {0} cards. Click to hide them.</value></data>
   <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} cards are hidden. Click to show them.</value></data>
   <data name="TitleBar_RatingLast" xml:space="preserve"><value>At least one rating has to be shown</value></data>
+  <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>Explore</value></data>
 </root>

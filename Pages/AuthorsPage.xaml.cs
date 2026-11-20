@@ -28,6 +28,7 @@ public sealed partial class AuthorsPage : Page
         App.Services.GetRequiredService<SettingsViewModel>().BrowseOriginChanged +=
             _ => DispatcherQueue.TryEnqueue(ApplySelectedPlatform);
         InitializeComponent();
+        TitleText.Text = UiText.Get("Authors_Header.Title");
         NavigationCacheMode = NavigationCacheMode.Required;
         // The tabs arrive once the providers are known, which is after this
         // page may already be on screen.
@@ -134,22 +135,20 @@ public sealed partial class AuthorsPage : Page
         PlatformBar.Items.Clear();
         foreach (var tab in ViewModel.ProviderTabs)
         {
-            // FontSize on the bar does not reach the items — the container's
-            // template sizes its own text — so it is set per item. 24 SemiLight
-            // is what the pivot headers used to read at (PivotHeaderItemFontSize
-            // and PivotHeaderItemThemeFontWeight in WinUI's generic.xaml).
+            // Sized per item (the bar's FontSize does not reach them) by
+            // UpdatePlatformEmphasis, as the library's selector is.
             PlatformBar.Items.Add(new SelectorBarItem
             {
                 Text = LabelFor(tab),
                 Tag = tab,
-                FontSize = 24,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiLight,
+                VerticalAlignment = VerticalAlignment.Bottom,
             });
             tab.PropertyChanged += Tab_PropertyChanged;
             _watched.Add(tab);
         }
         PlatformBar.SelectedItem = PlatformBar.Items.FirstOrDefault(item => ReferenceEquals(item.Tag, _currentTab));
         _syncing = false;
+        UpdatePlatformEmphasis();
     }
 
     private bool _platformBarRebuildPending;
@@ -163,10 +162,20 @@ public sealed partial class AuthorsPage : Page
     /// spells these from the same resource, and "Fanbox" beside "FANBOX" reads
     /// as two different things.
     /// </remarks>
-    private static string LabelFor(AuthorProviderTabViewModel tab)
+    // The name only: the platform is the page's title here, as a card kind is
+    // in the library, and the count sits beside the sort as it does there.
+    private static string LabelFor(AuthorProviderTabViewModel tab) => PlatformDisplayName.For(tab.ProviderId);
+
+    /// <summary>The selected platform reads as the title, the others small and quiet (the library's selector).</summary>
+    private void UpdatePlatformEmphasis()
     {
-        var name = PlatformDisplayName.For(tab.ProviderId);
-        return tab.CountText.Length > 0 ? $"{name} {tab.CountText}" : name;
+        foreach (var item in PlatformBar.Items)
+        {
+            var selected = ReferenceEquals(item, PlatformBar.SelectedItem);
+            item.FontSize = selected ? Controls.UiMetrics.SelectorTitleFontSize : Controls.UiMetrics.SelectorOtherFontSize;
+            item.FontWeight = selected ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
+            item.Opacity = selected ? 1 : Controls.UiMetrics.SelectorOtherOpacity;
+        }
     }
 
     /// <summary>
@@ -192,6 +201,7 @@ public sealed partial class AuthorsPage : Page
         PlatformBar.Visibility = !named && ViewModel.ProviderTabs.Count > 1
             ? Visibility.Visible
             : Visibility.Collapsed;
+        TitleText.Visibility = PlatformBar.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
         ShowTab(tab ?? ViewModel.ProviderTabs.FirstOrDefault());
         // ShowTab returns early when the platform has not changed, and the
@@ -253,6 +263,7 @@ public sealed partial class AuthorsPage : Page
 
     private void PlatformBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
+        UpdatePlatformEmphasis();
         if (_syncing) return;
         if (sender.SelectedItem is { Tag: AuthorProviderTabViewModel tab })
             ShowTab(tab);
@@ -275,11 +286,9 @@ public sealed partial class AuthorsPage : Page
     /// did, so repeating it here would say the same number twice on one screen.
     /// </summary>
     private void UpdateCount()
-        => AuthorCount.Text = PlatformBar.Visibility == Visibility.Visible
-            ? string.Empty
-            : _currentTab is { AuthorCount: > 0 } tab
-                ? UiText.Format("Authors_TotalCount", tab.AuthorCount)
-                : string.Empty;
+        => AuthorCount.Text = _currentTab is { AuthorCount: > 0 } tab
+            ? UiText.Format("Authors_TotalCount", tab.AuthorCount)
+            : string.Empty;
 
     private void JumpButton_Click(object sender, RoutedEventArgs e)
     {

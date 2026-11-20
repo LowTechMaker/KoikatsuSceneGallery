@@ -18,10 +18,10 @@ internal static class UiMetrics
 {
     // ------------------------------------------------------------ panes beside content
 
-    /// <summary>The details pane (CardInspector) beside a grid, a shelf page or the viewer.</summary>
-    public const double InspectorWidth = 320;
-    /// <summary>The authors page's details pane (AuthorInspector).</summary>
-    public const double AuthorPaneWidth = 300;
+    /// <summary>The details pane (CardInspector) beside a grid, a shelf page or the viewer. 360, not 320: the user found it narrow.</summary>
+    public const double InspectorWidth = 360;
+    /// <summary>The authors page's details pane (AuthorInspector): the same width as the cards' pane.</summary>
+    public const double AuthorPaneWidth = InspectorWidth;
     /// <summary>Below this width a host hides its pane rather than squeeze the content to a column or two.</summary>
     public const double InspectorMinHostWidth = 820;
     /// <summary>Between a pane and what is beside it.</summary>
@@ -114,8 +114,18 @@ internal static class UiMetrics
     /// <summary>A progress ring beside a line of text (the Tokens.xaml RingSize, for code).</summary>
     public const double RingSize = 16;
 
+    // ------------------------------------------------------------ a selector that is the page's title (library kinds, author platforms)
+
+    /// <summary>The selected entry is the title (PageTitleTextBlockStyle's size); the others small and quiet.</summary>
+    public const double SelectorTitleFontSize = 20;
+    public const double SelectorOtherFontSize = 14;
+    public const double SelectorOtherOpacity = 0.6;
+
     // ------------------------------------------------------------ the authors page
 
-    /// <summary>Cards shown in the authors page's details pane.</summary>
-    public const int AuthorPanePreviews = 6;
+    /// <summary>Cards shown in the authors page's details pane, in rows of <see cref="AuthorPanePreviewColumns"/>.</summary>
+    public const int AuthorPanePreviews = 9;
+    public const int AuthorPanePreviewColumns = 3;
+    public const double AuthorPanePreviewGap = 6;
+    public const double AuthorAvatarSize = 56;
 }

@@ -109,96 +109,68 @@
         </DataTemplate>
     </Page.Resources>
 
-    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
+    <!--  The same layout as the library (user request: the two pages should look
+          like one app): the platforms are the title, as the library's card kinds
+          are, with the count and sort on their right; the search box below with
+          the page's actions beside it, where the library has filter and random.  -->
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <controls:PageHeader x:Uid="Authors_Header">
-            <controls:PageHeader.Actions>
-                <!--  Progress beside the button that started it, not floating
-                      in the gap between the title and the actions.  -->
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
-                <!--  Wave 16: local sources left the pane; they are authors too.  -->
-                <Button
-                    x:Name="LocalSourcesButton"
-                    AutomationProperties.AutomationId="AuthorsLocalSourcesButton"
-                    Click="LocalSources_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8F4;" />
-                        <TextBlock x:Uid="Authors_LocalSourcesLabel" />
-                    </StackPanel>
-                </Button>
+        <Grid ColumnSpacing="{StaticResource Space12}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <!--  The title when there is no platform to pick (one platform, or the title bar names it).  -->
+            <TextBlock
+                x:Name="TitleText"
+                AutomationProperties.HeadingLevel="Level1"
+                VerticalAlignment="Bottom"
+                Style="{StaticResource PageTitleTextBlockStyle}"
+                TextTrimming="CharacterEllipsis" />
+            <!--  The platforms, when there is a choice: the selected one is the
+                  title (large), the others small and quiet - the library's selector.  -->
+            <SelectorBar
+                x:Name="PlatformBar"
+                x:Uid="Authors_PlatformBar"
+                AutomationProperties.AutomationId="AuthorsPlatformBar"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed"
+                SelectionChanged="PlatformBar_SelectionChanged" />
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="{StaticResource Space8}"
+                VerticalAlignment="Center">
+                <!--  Refreshing: a ring and a word beside the count, as the library's busy status.  -->
                 <StackPanel
                     Orientation="Horizontal"
                     VerticalAlignment="Center"
-                    Spacing="{StaticResource Space8}"
+                    Spacing="6"
+                    Margin="0,0,4,0"
                     Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}">
-                    <ProgressRing
-                        Width="{StaticResource RingSize}"
-                        Height="{StaticResource RingSize}"
-                        IsActive="True" />
+                    <ProgressRing Width="14" Height="14" IsActive="True" />
                     <TextBlock
                         VerticalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource CaptionTextBlockStyle}"
                         Text="{x:Bind ViewModel.RefreshProgress, Mode=OneWay}" />
                 </StackPanel>
-                <Button
-                    x:Uid="Authors_RefreshAll"
-                    AutomationProperties.AutomationId="AuthorsRefreshAllButton"
-                    IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
-                    Command="{x:Bind ViewModel.RefreshAllCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
-                        <TextBlock x:Uid="Authors_RefreshAllLabel" />
-                    </StackPanel>
-                </Button>
-                </StackPanel>
-            </controls:PageHeader.Actions>
-        </controls:PageHeader>
-
-        <Grid Grid.Row="1" ColumnSpacing="{StaticResource Space8}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <AutoSuggestBox
-                x:Name="AuthorSearchBox"
-                x:Uid="Authors_SearchBox"
-                AutomationProperties.AutomationId="AuthorSearchBox"
-                Height="32"
-                QueryIcon="Find"
-                TextChanged="AuthorSearchBox_TextChanged" />
-
-            <!--  The count belongs with the controls that change it, not inside
-                  the platform's name. It read as "Fanbox (26)" — a heading
-                  carrying a statistic — which is how the galleries used to do
-                  it before the same move was made there.  -->
-            <StackPanel
-                Grid.Column="1"
-                Orientation="Horizontal"
-                Spacing="{StaticResource Space8}"
-                VerticalAlignment="Center">
                 <TextBlock
                     x:Name="AuthorCount"
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     VerticalAlignment="Center"
                     Margin="0,0,4,0" />
-                <!--  Same control as the galleries' sort: three exclusive
-                      values behind one button, with the current one on its
-                      face. A ComboBox here spelt the same thing differently
-                      two pages apart.  -->
                 <DropDownButton
                     x:Name="SortButton"
                     x:Uid="Authors_Sort"
-                    AutomationProperties.AutomationId="AuthorSortButton"
-                    Height="32">
+                    AutomationProperties.AutomationId="AuthorSortButton">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
                         <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8CB;" />
                         <TextBlock x:Name="SortLabel" />
@@ -214,26 +186,42 @@
             </StackPanel>
         </Grid>
 
-        <!--  Only present while the choice is real: the title bar names the
-              platform whenever one is selected, and repeating that here as a
-              selected tab said the same thing twice, louder than the control
-              that actually decides it.
+        <Grid Grid.Row="1" ColumnSpacing="{StaticResource Space8}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <AutoSuggestBox
+                x:Name="AuthorSearchBox"
+                x:Uid="Authors_SearchBox"
+                AutomationProperties.AutomationId="AuthorSearchBox"
+                QueryIcon="Find"
+                TextChanged="AuthorSearchBox_TextChanged" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                <!--  Wave 16: local sources left the pane; they are authors too.  -->
+                <Button
+                    x:Name="LocalSourcesButton"
+                    AutomationProperties.AutomationId="AuthorsLocalSourcesButton"
+                    Click="LocalSources_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE8F4;" />
+                        <TextBlock x:Uid="Authors_LocalSourcesLabel" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Uid="Authors_RefreshAll"
+                    AutomationProperties.AutomationId="AuthorsRefreshAllButton"
+                    IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
+                    Command="{x:Bind ViewModel.RefreshAllCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="&#xE72C;" />
+                        <TextBlock x:Uid="Authors_RefreshAllLabel" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
 
-              SelectorBar rather than Segmented: this is the same underlined
-              text strip the library selector uses, and it is what this page
-              looked like when the platforms were pivot headers. Segmented's
-              filled pills read as a filter chip row — a different promise from
-              "these are the sections of this page".  -->
-        <SelectorBar
-            x:Name="PlatformBar"
-            x:Uid="Authors_PlatformBar"
-            Grid.Row="2"
-            AutomationProperties.AutomationId="AuthorsPlatformBar"
-            HorizontalAlignment="Left"
-            Visibility="Collapsed"
-            SelectionChanged="PlatformBar_SelectionChanged" />
-
-        <Grid x:Name="AuthorsContent" Grid.Row="3" ColumnSpacing="{StaticResource Space8}">
+        <Grid x:Name="AuthorsContent" Grid.Row="2" ColumnSpacing="{StaticResource Space8}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />

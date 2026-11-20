@@ -358,30 +358,6 @@
                         <FontIcon Glyph="&#xE8B9;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!--  Wave 16: the pane has five entries (home, library, authors,
-                      import, settings). These four pages are reached from the
-                      library's "More" menu, the authors page and Ctrl+K instead;
-                      the items stay, collapsed, as the targets the code selects.  -->
-                <NavigationViewItem
-                    x:Name="ExploreNavItem"
-                    x:Uid="Nav_Explore"
-                    AutomationProperties.AutomationId="ExploreNavItem"
-                    Visibility="Collapsed"
-                    IsExpanded="True"
-                    SelectsOnInvoked="False"
-                    Tag="explore">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE909;" /></NavigationViewItem.Icon>
-                    <NavigationViewItem.MenuItems>
-                        <NavigationViewItem x:Name="DiscoveryNavItem" x:Uid="Nav_Discovery"
-                                            Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
-                            <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B1;" /></NavigationViewItem.Icon>
-                        </NavigationViewItem>
-                        <NavigationViewItem x:Name="RatingNavItem" x:Uid="Nav_Rating"
-                                            Tag="rating" AutomationProperties.AutomationId="RatingNavItem">
-                            <NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>
-                        </NavigationViewItem>
-                    </NavigationViewItem.MenuItems>
-                </NavigationViewItem>
                 <!--  Hidden only when the selected platform has no authors; with
                       no author plugin at all it opens a page naming the plugin
                       (see ApplyNavVisibility).  -->
@@ -395,6 +371,15 @@
                         <FontIcon Glyph="&#xE716;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <!--  The pages that look at the library another way. They hid in the
+                      library's "More" menu (wave 16) and nobody found them (user:
+                      "hidden better than a corruption case"); a labelled section in
+                      the pane puts them in sight without crowding the main three.  -->
+                <NavigationViewItemHeader x:Name="ExploreNavHeader" x:Uid="Nav_ExploreHeader" />
+                <NavigationViewItem x:Name="DiscoveryNavItem" x:Uid="Nav_Discovery"
+                                    Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B1;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <!--  Same rule as authors: hidden for a platform without tags,
                       explained when no platform plugin is installed.  -->
                 <NavigationViewItem
@@ -407,6 +392,42 @@
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8EC;" />
                     </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="RatingNavItem" x:Uid="Nav_Rating"
+                                    Tag="rating" AutomationProperties.AutomationId="RatingNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <!--  The row navigates to the log; the switch on the right turns
+                      recording on and off without leaving the page you are on.  -->
+                <NavigationViewItem
+                    x:Name="UsageNavItem"
+                    x:Uid="Nav_Usage"
+                    AutomationProperties.AutomationId="UsageNavItem"
+                    Tag="usage"
+                    ToolTipService.ToolTip="{x:Null}">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE81C;" />
+                    </NavigationViewItem.Icon>
+                    <Grid ColumnSpacing="{StaticResource Space8}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            x:Uid="Nav_Usage_Label"
+                            VerticalAlignment="Center"
+                            TextTrimming="CharacterEllipsis" />
+                        <ToggleSwitch
+                            x:Name="RecordModeNavToggle"
+                            x:Uid="Record_NavToggle"
+                            Grid.Column="1"
+                            MinWidth="0"
+                            AutomationProperties.AutomationId="RecordModeNavToggle"
+                            OffContent=""
+                            OnContent=""
+                            PointerPressed="RecordModeNavToggle_PointerPressed"
+                            Toggled="RecordModeNavToggle_Toggled" />
+                    </Grid>
                 </NavigationViewItem>
                 <NavigationViewItem
                     x:Name="LocalSourcesNavItem"
@@ -435,39 +456,6 @@
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE710;" />
                     </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <!--  The row navigates to the log; the switch on the right turns
-                      recording on and off without leaving the page you are on.  -->
-                <NavigationViewItem
-                    x:Name="UsageNavItem"
-                    x:Uid="Nav_Usage"
-                    AutomationProperties.AutomationId="UsageNavItem"
-                    Tag="usage"
-                    ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE81C;" />
-                    </NavigationViewItem.Icon>
-                    <Grid ColumnSpacing="{StaticResource Space8}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock
-                            x:Uid="Nav_Usage_Label"
-                            VerticalAlignment="Center"
-                            TextTrimming="CharacterEllipsis" />
-                        <ToggleSwitch
-                            x:Name="RecordModeNavToggle"
-                            x:Uid="Record_NavToggle"
-                            Grid.Column="1"
-                            MinWidth="0"
-                            AutomationProperties.AutomationId="RecordModeNavToggle"
-                            OffContent=""
-                            OnContent=""
-                            PointerPressed="RecordModeNavToggle_PointerPressed"
-                            Toggled="RecordModeNavToggle_Toggled" />
-                    </Grid>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
             <Grid>
