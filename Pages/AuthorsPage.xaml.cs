@@ -20,6 +20,8 @@ public sealed partial class AuthorsPage : Page
     public AuthorsPage()
     {
         ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
+        // The details pane, with its hint, as soon as the page is in the tree (wave 17).
+        Loaded += (_, _) => AuthorPane();
         // Switching between two platforms that both have authors leaves this
         // page open, so the picker has to follow rather than wait for the next
         // navigation.
@@ -299,10 +301,39 @@ public sealed partial class AuthorsPage : Page
             AuthorTileLayout.Apply(grid);
     }
 
-    private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
+    // ------------------------------------------------------------ select, then open (wave 17)
+
+    private Controls.AuthorInspector? _authorInspector;
+
+    /// <summary>The details pane beside the grid, made once the page is in the tree.</summary>
+    private Controls.AuthorInspector AuthorPane()
     {
-        if (e.ClickedItem is AuthorSummary summary)
-            OpenAuthorDetail(summary);
+        if (_authorInspector is { } made) return made;
+        made = new Controls.AuthorInspector { Width = 300, Margin = new Thickness(8, 4, 0, 16) };
+        Grid.SetColumn(made, 2);
+        AuthorsContent.Children.Add(made);
+        made.OpenRequested += OpenAuthorDetail;
+        made.RefreshRequested += summary => UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(), "Authors.RefreshOne", () => ViewModel.RefreshOneAsync(summary));
+        return _authorInspector = made;
+    }
+
+    private void AuthorsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => AuthorPane().Show((sender as GridView)?.SelectedItem as AuthorSummary);
+
+    private void AuthorsGrid_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is not AuthorSummary summary) return;
+        e.Handled = true;
+        OpenAuthorDetail(summary);
+    }
+
+    private void AuthorsGrid_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter || e.KeyStatus.WasKeyDown) return;
+        if ((sender as GridView)?.SelectedItem is not AuthorSummary summary) return;
+        e.Handled = true;
+        OpenAuthorDetail(summary);
     }
 
     private void OpenProfile_Click(object sender, RoutedEventArgs e)

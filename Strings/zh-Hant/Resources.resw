@@ -2362,6 +2362,12 @@
   <data name="Loupe_Fit" xml:space="preserve"><value>適合</value></data>
   <data name="Loupe_Hint" xml:space="preserve"><value>← → 換卡 · 滾輪縮放 · 拖曳平移 · 雙擊特寫 · Esc 返回</value></data>
   <data name="Loupe_BackLabel" xml:space="preserve"><value>返回</value></data>
+  <data name="AuthorInspector_Empty" xml:space="preserve"><value>選取一位作者即可查看資訊。雙擊或按 Enter 開啟作者頁面。</value></data>
+  <data name="AuthorInspector_Open" xml:space="preserve"><value>開啟作者頁面</value></data>
+  <data name="AuthorInspector_Profile" xml:space="preserve"><value>開啟線上個人頁面</value></data>
+  <data name="AuthorInspector_Refresh" xml:space="preserve"><value>重新整理</value></data>
+  <data name="AuthorInspector_Counts" xml:space="preserve"><value>場景 {0} · 角色 {1} · 服裝 {2}</value></data>
+  <data name="AuthorInspector_Updated" xml:space="preserve"><value>最後更新 {0}</value></data>
   <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>記錄中</value></data>
   <data name="Browser_More" xml:space="preserve"><value>更多</value></data>
   <data name="Authors_LocalSources" xml:space="preserve"><value>本地收藏</value></data>

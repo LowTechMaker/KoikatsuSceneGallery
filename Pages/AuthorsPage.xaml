@@ -22,8 +22,12 @@
               picker below appears only when there is something to pick.  -->
         <DataTemplate x:Key="AuthorTabTemplate" x:DataType="viewModels:AuthorProviderTabViewModel">
             <Grid>
+                <!--  Wave 17: a click selects (the details pane beside the grid says
+                      who it is); a double click or Enter opens the author's page.  -->
                 <GridView x:Name="AuthorsGrid" ItemsSource="{x:Bind GroupedAuthors.View}"
-                          IsItemClickEnabled="True" ItemClick="AuthorsGrid_ItemClick" SelectionMode="None"
+                          IsItemClickEnabled="False" SelectionMode="Single"
+                          SelectionChanged="AuthorsGrid_SelectionChanged" DoubleTapped="AuthorsGrid_DoubleTapped"
+                          PreviewKeyDown="AuthorsGrid_PreviewKeyDown"
                           Loaded="AuthorsGrid_Loaded" SizeChanged="AuthorsGrid_SizeChanged">
                     <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" GroupHeaderPlacement="Top" /></ItemsPanelTemplate></GridView.ItemsPanel>
                     <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
@@ -229,9 +233,11 @@
             Visibility="Collapsed"
             SelectionChanged="PlatformBar_SelectionChanged" />
 
-        <Grid Grid.Row="3" ColumnSpacing="8">
+        <Grid x:Name="AuthorsContent" Grid.Row="3" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <!--  The details pane (AuthorInspector, added in code).  -->
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
