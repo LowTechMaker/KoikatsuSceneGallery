@@ -550,7 +550,7 @@ public sealed partial class LibraryBrowser : UserControl
         var needsLeftColumn = Heading.Visibility == Visibility.Visible;
         var sharesTheSelectorLine = underSelector && !needsLeftColumn && !narrow;
         RootLayout.Padding = new Thickness(
-            24, underSelector && !sharesTheSelectorLine ? SelectorLineHeight : 16, 24, 0);
+            24, underSelector && !sharesTheSelectorLine && !_loupeLayout ? SelectorLineHeight : 16, 24, 0);
         // The short sort controls need a title-height row only when they share
         // the selector's line. The search row then starts below both controls.
         Header.MinHeight = sharesTheSelectorLine ? SelectorLineHeight - 24 : 0;

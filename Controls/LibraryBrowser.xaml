@@ -60,7 +60,7 @@
     <ToggleButton x:Name="InspectorToggle" AutomationProperties.AutomationId="GalleryInspectorToggle" Click="InspectorToggle_Click" Padding="8,6"><FontIcon Glyph="&#xE8A0;" FontSize="14"/></ToggleButton>
    </StackPanel>
   </Grid>
-  <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
+  <StackPanel x:Name="SearchArea" Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
    <Grid x:Name="SearchRow" ColumnSpacing="8" RowSpacing="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

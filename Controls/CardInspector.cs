@@ -107,6 +107,8 @@ internal sealed class CardInspector : UserControl
         {
             _showPreview = value;
             _previewFrame.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            // Open, beside a card that is already open large, would do nothing.
+            _open.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 

@@ -232,10 +232,19 @@ public sealed partial class LibraryBrowser
     /// </summary>
     private void SetLoupeLayout(bool open)
     {
+        _loupeLayout = open;
+        // The toolbar and the search row span both columns, so with the pane
+        // running the full height they drew over it (user report, "wtf"): they
+        // go while the loupe is up, and so does the room kept for the tabs.
+        Header.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        SearchArea.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         Grid.SetRow(_inspector, open ? 0 : 2);
         Grid.SetRowSpan(_inspector, open ? 3 : 1);
         if (_scope is null) MainWindow.Instance?.SetLibraryHeadingHidden(open);
+        UpdateHeaderLayout(RootLayout.ActualWidth);
     }
+
+    private bool _loupeLayout;
 
     /// <summary>
     /// Where the card's picture is in the grid, in the loupe's coordinates: what
