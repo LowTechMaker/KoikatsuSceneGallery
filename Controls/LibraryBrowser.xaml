@@ -127,11 +127,14 @@
          With file names on, the title and the author go under the picture; off, it is the
          picture and its badges only. A group is its cover with the count badge (the cards
          that used to peek out behind it needed room around every tile). -->
-    <Grid Margin="1" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
+    <Grid Margin="{x:Bind TileMargin}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
      <!-- Filled when it opens (LibraryBrowser.CardMenu.cs): what it offers depends on the tile. -->
      <Grid.ContextFlyout><MenuFlyout Opening="CardMenu_Opening"/></Grid.ContextFlyout>
      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-     <Grid>
+     <!-- Card mode (file names on): the card behind the picture and its caption. -->
+     <Border Grid.RowSpan="2" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"/>
+     <Grid Margin="{x:Bind PictureInset}">
       <!-- A group, like the details pane's stack of selected cards: its next two cards
            fanned out behind the cover (their own pictures), the count on a round badge. -->
       <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="0.7"
@@ -151,11 +154,11 @@
       <Border Background="{ThemeResource SubtleFillColorTertiaryBrush}" Visibility="{x:Bind local:LibraryBrowser.PlaceholderVisibility(Card.ThumbnailUri), Mode=OneWay}" Loaded="Placeholder_Loaded">
        <FontIcon Glyph="&#xE91B;" FontSize="20" Foreground="{ThemeResource TextFillColorDisabledBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
       </Border>
-       <local:RatingBadge HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Text="{x:Bind RatingText, Mode=OneWay}" />
+       <local:RatingBadge HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Text="{x:Bind RatingText, Mode=OneWay}" Visibility="{x:Bind BadgesOnPicture}" />
        <!-- One badge for both facts: a second Border would crowd the corner. -->
-      <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Visibility="{x:Bind HasVersionBadge, Mode=OneWay}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/><TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/></StackPanel></Border>
+      <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Visibility="{x:Bind VersionBadgeOnPicture, Mode=OneWay}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/><TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/></StackPanel></Border>
        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6" MinWidth="26" Height="26" Padding="8,0" CornerRadius="13"
-               Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind IsGroup}"
+               Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind GroupBadgeOnPicture}"
                AutomationProperties.Name="{x:Bind CountText}">
         <TextBlock Text="{x:Bind MemberCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
@@ -171,9 +174,22 @@
        </Grid>
       </Grid>
      </Grid>
-     <StackPanel Grid.Row="1" Height="{x:Bind MetadataHeight}" Padding="2,4,2,0" Spacing="0" Visibility="{x:Bind ShowTitle}">
+     <!-- Card mode: the title, then the author with the rating, the group's count and the
+          versions beside it; nothing covers the picture. -->
+     <StackPanel Grid.Row="1" Height="{x:Bind MetadataHeight}" Padding="8,5,8,0" Spacing="2" Visibility="{x:Bind ShowTitle}">
       <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1"/>
-      <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+      <Grid ColumnSpacing="6">
+       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
+                  Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Visibility="{x:Bind VersionInCaption, Mode=OneWay}" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <TextBlock Text="{x:Bind CountText}" Visibility="{x:Bind GroupInCaption}" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+        <local:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" VerticalAlignment="Center"/>
+       </StackPanel>
+      </Grid>
      </StackPanel>
     </Grid>
    </DataTemplate></GridView.ItemTemplate>

@@ -9,10 +9,23 @@ internal sealed class GalleryLayoutEngine
     // The tile's margin (half the gap between two pictures) and the inset of the
     // picture inside it. Pictures sit edge to edge with a thin gap, like Google
     // Photos (user request); the tiles used to be cards, 4 px apart, framed.
-    private const double CardMargin = 1;
-    private const double CardInset = 0;
-    private const double CellOverheadW = CardMargin * 2;
-    private const double ContentInsetW = (CardMargin + CardInset) * 2;
+    // The tile's margin (half the gap between two tiles) and the inset of the
+    // picture inside it. Photo mode (file names off): edge to edge, a thin gap,
+    // like Google Photos. Card mode (file names on): framed cards with their
+    // caption and badges under the picture. Set by the host (SetChrome).
+    private double CardMargin = 1;
+    private double CardInset = 0;
+    private double CellOverheadW => CardMargin * 2;
+    private double ContentInsetW => (CardMargin + CardInset) * 2;
+
+    /// <summary>Photo mode or card mode: the tile margin and the picture's inset in it.</summary>
+    public void SetChrome(double margin, double inset)
+    {
+        if (CardMargin == margin && CardInset == inset) return;
+        CardMargin = margin;
+        CardInset = inset;
+        InvalidateAndRefit();
+    }
     private const double FilenameReserve = 30;
     private double _baseItemWidth = 240;
 

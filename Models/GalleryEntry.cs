@@ -46,7 +46,22 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public double MetadataHeight => ShowTitle ? CaptionHeight : 0;
 
     /// <summary>The title and author lines under the picture (LibraryBrowser and the layout reserve).</summary>
-    public const double CaptionHeight = 40;
+    public const double CaptionHeight = 44;
+
+    // Two looks, by the "show file names" setting (GalleryLayoutEngine.SetChrome):
+    // photo mode, pictures edge to edge with their badges on them; card mode, a
+    // framed card with everything (title, author, rating, count, versions) under
+    // the picture so nothing covers it (user request).
+    public const double PhotoMargin = 1, CardModeMargin = 4, CardModeInset = 5;
+    public Microsoft.UI.Xaml.Thickness TileMargin => new(ShowTitle ? CardModeMargin : PhotoMargin);
+    public Microsoft.UI.Xaml.Thickness PictureInset => ShowTitle
+        ? new Microsoft.UI.Xaml.Thickness(CardModeInset, CardModeInset, CardModeInset, 0)
+        : new Microsoft.UI.Xaml.Thickness(0);
+    public bool BadgesOnPicture => !ShowTitle;
+    public bool GroupBadgeOnPicture => IsGroup && !ShowTitle;
+    public bool VersionBadgeOnPicture => HasVersionBadge && !ShowTitle;
+    public bool VersionInCaption => HasVersionBadge && ShowTitle;
+    public bool GroupInCaption => IsGroup && ShowTitle;
 
     private bool _isSelected;
     /// <summary>

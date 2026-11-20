@@ -311,6 +311,10 @@ public sealed partial class LibraryBrowser : UserControl
         ClearButton.Visibility = _adapter.Cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         // With file names off the tile is the picture and its badge only (GalleryEntry.MetadataHeight).
         _layout?.SetMetadataReserve(VM.ShowFileNames ? GalleryEntry.CaptionHeight : 0);
+        // Card mode with file names on, photo mode without (GalleryEntry.TileMargin).
+        _layout?.SetChrome(
+            VM.ShowFileNames ? GalleryEntry.CardModeMargin : GalleryEntry.PhotoMargin,
+            VM.ShowFileNames ? GalleryEntry.CardModeInset : 0);
         DispatcherQueue.TryEnqueue(RequestVisible);
     }
     private CardBase[] ScopedCards()

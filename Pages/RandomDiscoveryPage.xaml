@@ -89,7 +89,7 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <StackPanel Grid.Row="1" Height="40" Padding="2,4,2,0" Spacing="0" Visibility="{x:Bind CaptionVisibility}">
+                        <StackPanel Grid.Row="1" Height="44" Padding="2,4,2,0" Spacing="0" Visibility="{x:Bind CaptionVisibility}">
                             <TextBlock Text="{x:Bind Card.FileName}" TextTrimming="CharacterEllipsis" MaxLines="1" />
                             <TextBlock Text="{x:Bind Card.Author.Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
                                        Style="{StaticResource CaptionTextBlockStyle}"
