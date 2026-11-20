@@ -2403,5 +2403,5 @@
   <data name="Home_StatsAnalyzing" xml:space="preserve"><value>正在分析，剩餘 {0} 個</value></data>
   <data name="Home_ShelfCount" xml:space="preserve"><value>{0} 張卡片</value></data>
   <data name="Home_NewThisWeek" xml:space="preserve"><value>本週新增</value></data>
-  <data name="Home_ThemesRerollButton.Content" xml:space="preserve"><value>換一批主題</value></data>
+  <data name="Home_ThemesRerollLabel.Text" xml:space="preserve"><value>換一批主題</value></data>
 </root>

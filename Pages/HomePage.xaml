@@ -15,7 +15,21 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <controls:PageHeader x:Uid="Home_Header" />
+        <!--  "New themes" in the header's actions, not a row under the panels: that
+              row was what still pushed the page past a maximised window (user report).  -->
+        <controls:PageHeader x:Uid="Home_Header">
+            <controls:PageHeader.Actions>
+                <Button
+                    x:Name="RerollButton"
+                    AutomationProperties.AutomationId="HomeThemesReroll"
+                    Click="Reroll_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
+                        <TextBlock x:Uid="Home_ThemesRerollLabel" />
+                    </StackPanel>
+                </Button>
+            </controls:PageHeader.Actions>
+        </controls:PageHeader>
         <ScrollViewer
             x:Name="ShelvesScroll"
             Grid.Row="1"
@@ -24,16 +38,10 @@
             <!--  The right margin is the scroll bar's gutter, as in the library.  -->
             <StackPanel
                 x:Name="Dashboard"
-                Margin="0,0,16,24"
+                Margin="0,0,16,4"
                 Spacing="{x:Bind controls:UiMetrics.HomePanelGap}">
                 <Grid x:Name="TopBand" />
                 <Grid x:Name="PanelsGrid" />
-                <Button
-                    x:Name="RerollButton"
-                    x:Uid="Home_ThemesRerollButton"
-                    AutomationProperties.AutomationId="HomeThemesReroll"
-                    HorizontalAlignment="Left"
-                    Click="Reroll_Click" />
             </StackPanel>
         </ScrollViewer>
     </Grid>
