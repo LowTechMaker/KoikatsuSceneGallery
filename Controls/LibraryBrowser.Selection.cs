@@ -250,7 +250,14 @@ public sealed partial class LibraryBrowser
     // shows the card on show and closing lands on it.
     private void Loupe_CurrentChanged(CardBase card)
     {
-        if (EntryOf(card) is not { } entry) return;
+        // A card with no tile of its own (a character's other version, chosen in
+        // the pane): the pane shows it all the same, or its version list would
+        // keep marking the card shown before (user report).
+        if (EntryOf(card) is not { } entry)
+        {
+            _inspector.Show([card]);
+            return;
+        }
         if (GalleryGrid.SelectedItems.Count == 1 && ReferenceEquals(GalleryGrid.SelectedItems[0], entry) && _inspector.Cards is [var shown] && ReferenceEquals(shown, card))
             return;
         _restoringSelection = true;

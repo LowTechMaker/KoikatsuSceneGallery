@@ -118,6 +118,16 @@
                 <!--  Progress beside the button that started it, not floating
                       in the gap between the title and the actions.  -->
                 <StackPanel Orientation="Horizontal" Spacing="12">
+                <!--  Wave 16: local sources left the pane; they are authors too.  -->
+                <Button
+                    x:Name="LocalSourcesButton"
+                    AutomationProperties.AutomationId="AuthorsLocalSourcesButton"
+                    Click="LocalSources_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE8F4;" />
+                        <TextBlock x:Uid="Authors_LocalSourcesLabel" />
+                    </StackPanel>
+                </Button>
                 <StackPanel
                     Orientation="Horizontal"
                     VerticalAlignment="Center"

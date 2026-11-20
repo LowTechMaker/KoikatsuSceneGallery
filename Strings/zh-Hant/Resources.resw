@@ -2356,6 +2356,16 @@
   <data name="Loupe_Close" xml:space="preserve"><value>回到格狀清單（Esc）</value></data>
   <data name="Loupe_ActualSize" xml:space="preserve"><value>實際大小</value></data>
   <data name="Loupe_Back" xml:space="preserve"><value>返回（Esc）</value></data>
+  <data name="Loupe_ZoomOut" xml:space="preserve"><value>縮小（-）</value></data>
+  <data name="Loupe_ZoomIn" xml:space="preserve"><value>放大（+）</value></data>
+  <data name="Loupe_ZoomLevelTip" xml:space="preserve"><value>適合 / 特寫（雙擊圖片；按 0 回到適合）</value></data>
+  <data name="Loupe_Fit" xml:space="preserve"><value>適合</value></data>
+  <data name="Loupe_Hint" xml:space="preserve"><value>← → 換卡 · 滾輪縮放 · 拖曳平移 · 雙擊特寫 · Esc 返回</value></data>
+  <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>記錄中</value></data>
+  <data name="Browser_More" xml:space="preserve"><value>更多</value></data>
+  <data name="Authors_LocalSources" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="Authors_LocalSourcesLabel.Text" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="Record_MenuToggle" xml:space="preserve"><value>記錄模式</value></data>
   <data name="Home_TileSelected" xml:space="preserve"><value>已選取</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>分級篩選</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>啟用分級篩選</value></data>

@@ -2356,6 +2356,16 @@
   <data name="Loupe_Close" xml:space="preserve"><value>Back to the grid (Esc)</value></data>
   <data name="Loupe_ActualSize" xml:space="preserve"><value>Actual size</value></data>
   <data name="Loupe_Back" xml:space="preserve"><value>Back (Esc)</value></data>
+  <data name="Loupe_ZoomOut" xml:space="preserve"><value>Zoom out (-)</value></data>
+  <data name="Loupe_ZoomIn" xml:space="preserve"><value>Zoom in (+)</value></data>
+  <data name="Loupe_ZoomLevelTip" xml:space="preserve"><value>Fit / close-up (double-click the picture; 0 fits)</value></data>
+  <data name="Loupe_Fit" xml:space="preserve"><value>Fit</value></data>
+  <data name="Loupe_Hint" xml:space="preserve"><value>← → next card · wheel zooms · drag pans · double-click close-up · Esc back</value></data>
+  <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>Recording</value></data>
+  <data name="Browser_More" xml:space="preserve"><value>More</value></data>
+  <data name="Authors_LocalSources" xml:space="preserve"><value>Local sources</value></data>
+  <data name="Authors_LocalSourcesLabel.Text" xml:space="preserve"><value>Local sources</value></data>
+  <data name="Record_MenuToggle" xml:space="preserve"><value>Record mode</value></data>
   <data name="Home_TileSelected" xml:space="preserve"><value>Selected</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>

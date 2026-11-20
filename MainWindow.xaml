@@ -285,6 +285,24 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
+                <!--  Record mode is on: says so where it is always in sight (it used
+                      to be a badge on the usage entry, which left the pane), and
+                      opens the log.  -->
+                <Button
+                    x:Name="RecordingButton"
+                    AutomationProperties.AutomationId="RecordingButton"
+                    VerticalAlignment="Center"
+                    Click="RecordingButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
+                        <TextBlock
+                            x:Uid="Record_TitleBarLabel"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button
                     x:Name="PaletteButton"
                     x:Uid="Palette_OpenButton"
@@ -340,13 +358,15 @@
                         <FontIcon Glyph="&#xE8B9;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!--  Both are "one card at a time, decide something" modes, so they
-                      share a heading. Expanded by default: the group is there to
-                      name what the two have in common, not to hide them.  -->
+                <!--  Wave 16: the pane has five entries (home, library, authors,
+                      import, settings). These four pages are reached from the
+                      library's "More" menu, the authors page and Ctrl+K instead;
+                      the items stay, collapsed, as the targets the code selects.  -->
                 <NavigationViewItem
                     x:Name="ExploreNavItem"
                     x:Uid="Nav_Explore"
                     AutomationProperties.AutomationId="ExploreNavItem"
+                    Visibility="Collapsed"
                     IsExpanded="True"
                     SelectsOnInvoked="False"
                     Tag="explore">
@@ -370,8 +390,7 @@
                     x:Uid="Nav_Authors"
                     AutomationProperties.AutomationId="AuthorsNavItem"
                     Tag="authors"
-                    ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE716;" />
                     </NavigationViewItem.Icon>
@@ -394,7 +413,8 @@
                     x:Uid="Nav_LocalSources"
                     AutomationProperties.AutomationId="LocalSourcesNavItem"
                     Tag="localsources"
-                    ToolTipService.ToolTip="{x:Null}">
+                    ToolTipService.ToolTip="{x:Null}"
+                    Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8F4;" />
                     </NavigationViewItem.Icon>
@@ -423,7 +443,8 @@
                     x:Uid="Nav_Usage"
                     AutomationProperties.AutomationId="UsageNavItem"
                     Tag="usage"
-                    ToolTipService.ToolTip="{x:Null}">
+                    ToolTipService.ToolTip="{x:Null}"
+                    Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>

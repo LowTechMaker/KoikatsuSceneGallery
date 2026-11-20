@@ -76,10 +76,14 @@ public sealed partial class MainWindow
             (UsageNavItem, "", "usage history log record"),
         })
         {
-            if (item.Visibility != Visibility.Visible) continue;
+            // Wave 16 took discovery, rating, tags, local sources and usage out
+            // of the pane; the palette still offers every page there is.
+            var tag = item.Tag as string ?? "";
+            if (tag == "tags" && !TagsOffered) continue;
+            if (tag is "home" or "authors" or "import" && item.Visibility != Visibility.Visible) continue;
             var target = item;
             var title = target == UsageNavItem ? UiText.Get("Nav_Usage_Label.Text") : item.Content as string ?? "";
-            list.Add(Candidate(PaletteCategory.Command, glyph, title, "", page, () => SelectNavItem(target), english));
+            list.Add(Candidate(PaletteCategory.Command, glyph, title, "", page, () => NavigateToSection(tag), english));
         }
 
         var settings = UiText.Get("Palette_Settings");

@@ -26,6 +26,7 @@ internal sealed class GalleryLayoutEngine
     private Action? _onScrollStop;
     private bool _sizeChangedHooked;
     private ItemsWrapGrid? _hookedPanel;
+    private ItemsWrapGrid? _appliedPanel;
 
     public GalleryLayoutEngine(
         double imageRatio,
@@ -119,8 +120,13 @@ internal sealed class GalleryLayoutEngine
         }
         int columns = Math.Max(1, (int)Math.Floor(available / (_baseItemWidth + CellOverheadW)));
 
-        if (columns == _appliedColumns && available == _appliedAvailable)
+        // Skipped only when this very panel already has the size: the grid can
+        // replace its items panel (a reload), and the new one starts without a
+        // size, every tile as small as its placeholder (user report, twice).
+        if (columns == _appliedColumns && available == _appliedAvailable
+            && ReferenceEquals(panel, _appliedPanel) && !double.IsNaN(panel.ItemWidth))
             return;
+        _appliedPanel = panel;
         _appliedColumns = columns;
         _appliedAvailable = available;
         _setShuffleDisplayCount(columns * 2);
@@ -161,7 +167,10 @@ internal sealed class GalleryLayoutEngine
 
     public void EnsureLayoutOnFirstContent()
     {
-        if (_appliedColumns < 0)
+        // Also when the grid has put in a new items panel since the last layout.
+        var unsized = _grid.ItemsPanelRoot is ItemsWrapGrid panel
+            && (!ReferenceEquals(panel, _appliedPanel) || double.IsNaN(panel.ItemWidth));
+        if (_appliedColumns < 0 || unsized)
         {
             _dispatcherQueue.TryEnqueue(() =>
             {

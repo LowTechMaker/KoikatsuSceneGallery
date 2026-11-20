@@ -27,9 +27,13 @@ public sealed partial class MainWindow : Window
     // The title and window buttons also need room beside the platform choices.
     private const double CompactOriginSelectorWidth = 900;
 
+    /// <summary>The app's one window, for controls that open a section (the library's "More" menu).</summary>
+    internal static MainWindow? Instance { get; private set; }
+
     public MainWindow()
     {
         InitializeComponent();
+        Instance = this;
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -184,10 +188,15 @@ public sealed partial class MainWindow : Window
         _tagsEntry = CardOriginNavPolicy.Tags(
             vm.EffectiveBrowseOrigin, tagCloud.HasAnyPlatform, tagCloud.PlatformsOfferingTags);
         _importEntry = CardOriginNavPolicy.Import(App.Services.GetService<ImportViewModel>() is not null);
-        SetNavItemVisibility("authors", _authorsEntry != NavEntryState.Hidden);
-        SetNavItemVisibility("localsources", CardOriginNavPolicy.ShowLocalSources(vm.EffectiveBrowseOrigin));
-        SetNavItemVisibility("tags", _tagsEntry != NavEntryState.Hidden);
+        // Wave 16: authors is always in the pane (local sources are authors too:
+        // without a platform plugin the entry opens them); tags and local
+        // sources are no longer pane entries, so their state only decides what
+        // the library's "More" menu and the palette offer.
+        SetNavItemVisibility("authors", true);
     }
+
+    /// <summary>Whether the tag page has something to show (the "More" menu and the palette offer it then).</summary>
+    internal bool TagsOffered => _tagsEntry != NavEntryState.Hidden;
 
     private NavEntryState _authorsEntry = NavEntryState.Hidden;
     private NavEntryState _tagsEntry = NavEntryState.Hidden;
@@ -244,11 +253,11 @@ public sealed partial class MainWindow : Window
     {
         var tip = UiText.Get(enabled ? "Record_NavToggleOn" : "Record_NavToggleOff");
         ToolTipService.SetToolTip(RecordModeNavToggle, tip);
-        ToolTipService.SetToolTip(UsageNavItem, enabled ? tip : null);
-        UsageNavItem.InfoBadge = enabled
-            ? new InfoBadge { Style = (Style)Application.Current.Resources["AttentionDotInfoBadgeStyle"] }
-            : null;
+        ToolTipService.SetToolTip(RecordingButton, tip);
+        RecordingButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private void RecordingButton_Click(object sender, RoutedEventArgs e) => NavigateToSection("usage");
 
     /// <summary>
     /// Keeps a tap on the switch from also selecting the row. Without this the
@@ -638,27 +647,29 @@ public sealed partial class MainWindow : Window
             NavView.SelectedItem = e.Parameter switch
             {
                 "authors" => AuthorsNavItem,
-                "tags" => TagsNavItem,
+                "tags" => LibraryNavItem,
                 _ => ImportNavItem,
             };
         else if (e.SourcePageType == typeof(AuthorsPage))
             NavView.SelectedItem = AuthorsNavItem;
         else if (e.SourcePageType == typeof(ImportPage))
             NavView.SelectedItem = ImportNavItem;
+        // Pages reached from the library's "More" menu keep the library selected,
+        // the local sources the authors entry (wave 16).
         else if (e.SourcePageType == typeof(RandomDiscoveryPage))
-            NavView.SelectedItem = DiscoveryNavItem;
+            NavView.SelectedItem = LibraryNavItem;
         // Both pages navigate to AuthorDetailPage, so returning from one has to
         // restore the item the user actually came from.
         else if (e.SourcePageType == typeof(LocalSourcesPage))
-            NavView.SelectedItem = LocalSourcesNavItem;
+            NavView.SelectedItem = AuthorsNavItem;
         // The tag cloud hosts a scoped browser that navigates on to a detail
         // page, so coming back has to reselect this entry.
         else if (e.SourcePageType == typeof(TagCloudPage))
-            NavView.SelectedItem = TagsNavItem;
+            NavView.SelectedItem = LibraryNavItem;
         else if (e.SourcePageType == typeof(UsageHistoryPage))
-            NavView.SelectedItem = UsageNavItem;
+            NavView.SelectedItem = LibraryNavItem;
         else if (e.SourcePageType == typeof(CardRatingPage))
-            NavView.SelectedItem = RatingNavItem;
+            NavView.SelectedItem = LibraryNavItem;
         var isLibraryPage = IsLibraryPage(e.SourcePageType);
         LibrarySelectorBar.Visibility = isLibraryPage
             ? Visibility.Visible
@@ -816,9 +827,15 @@ public sealed partial class MainWindow : Window
         NavFrame.Navigate(typeof(FeatureUnavailablePage), feature);
     }
 
-    private void NavigateToNavItem(NavigationViewItem item)
+    private void NavigateToNavItem(NavigationViewItem item) => NavigateToSection(item.Tag as string ?? "");
+
+    /// <summary>
+    /// Opens a section by its pane tag, whether or not it has a pane entry (the
+    /// pages wave 16 took out of the pane are opened from menus and the palette).
+    /// </summary>
+    internal void NavigateToSection(string tag)
     {
-        switch (item.Tag)
+        switch (tag)
         {
             case "home":
                 if (NavFrame.CurrentSourcePageType != typeof(HomePage))
@@ -835,14 +852,18 @@ public sealed partial class MainWindow : Window
             case "library":
                 NavigateToSelectedLibraryPage();
                 break;
-            case "authors" when _authorsEntry == NavEntryState.NeedsPlugin:
-            case "tags" when _tagsEntry == NavEntryState.NeedsPlugin:
-            case "import" when _importEntry == NavEntryState.NeedsPlugin:
-                ShowFeatureUnavailable((string)item.Tag);
-                break;
             case "authors" when App.Services.GetRequiredService<AuthorsViewModel>().HasProviderTabs:
                 if (NavFrame.CurrentSourcePageType != typeof(AuthorsPage))
                     NavFrame.Navigate(typeof(AuthorsPage));
+                break;
+            // No platform authors to list: the local sources are the authors there are.
+            case "authors":
+                if (NavFrame.CurrentSourcePageType != typeof(LocalSourcesPage))
+                    NavFrame.Navigate(typeof(LocalSourcesPage));
+                break;
+            case "tags" when _tagsEntry == NavEntryState.NeedsPlugin:
+            case "import" when _importEntry == NavEntryState.NeedsPlugin:
+                ShowFeatureUnavailable(tag);
                 break;
             case "localsources":
                 if (NavFrame.CurrentSourcePageType != typeof(LocalSourcesPage))

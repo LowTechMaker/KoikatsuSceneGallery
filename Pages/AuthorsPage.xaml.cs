@@ -320,6 +320,9 @@ public sealed partial class AuthorsPage : Page
     private void OpenAuthorDetail(AuthorSummary summary)
         => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
 
+    private void LocalSources_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        => Frame.Navigate(typeof(LocalSourcesPage));
+
     private void EditLocal_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: AuthorSummary summary })

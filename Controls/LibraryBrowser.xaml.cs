@@ -103,6 +103,60 @@ public sealed partial class LibraryBrowser : UserControl
         _adapter.WatchFolders(() => { _reload = true; if (_active) Load(); });
         _settings.ThumbnailSizeChanged += preference => { if (_active) UpdateSize(preference); };
         BuildFilters();
+        BuildMoreMenu();
+    }
+
+    /// <summary>
+    /// The library's "More" menu (wave 16): the pages that left the navigation
+    /// pane (random discovery, rating, tags, usage) and the record-mode switch
+    /// that lived on the usage entry. The library page only, not scoped browsers.
+    /// </summary>
+    private void BuildMoreMenu()
+    {
+        var more = new DropDownButton
+        {
+            Content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                Children =
+                {
+                    new FontIcon { Glyph = "\uE712", FontSize = 14 },
+                    new TextBlock { Text = UiText.Get("Browser_More") },
+                },
+            },
+        };
+        AutomationProperties.SetAutomationId(more, "GalleryMoreButton");
+        AutomationProperties.SetName(more, UiText.Get("Browser_More"));
+        var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
+        menu.Opening += (_, _) =>
+        {
+            menu.Items.Clear();
+            void Page(string key, string glyph, string tag, string id)
+            {
+                var item = new MenuFlyoutItem { Text = UiText.Get(key), Icon = new FontIcon { Glyph = glyph } };
+                AutomationProperties.SetAutomationId(item, id);
+                item.Click += (_, _) => MainWindow.Instance?.NavigateToSection(tag);
+                menu.Items.Add(item);
+            }
+            Page("Nav_Discovery.Content", "\uE8B1", "discovery", "GalleryMoreDiscovery");
+            Page("Nav_Rating.Content", "\uE734", "rating", "GalleryMoreRating");
+            if (MainWindow.Instance?.TagsOffered == true)
+                Page("Nav_Tags.Content", "\uE8EC", "tags", "GalleryMoreTags");
+            Page("Nav_Usage_Label.Text", "\uE81C", "usage", "GalleryMoreUsage");
+            menu.Items.Add(new MenuFlyoutSeparator());
+            var record = new ToggleMenuFlyoutItem
+            {
+                Text = UiText.Get("Record_MenuToggle"),
+                IsChecked = _settings.RecordModeEnabled,
+                Icon = new FontIcon { Glyph = "\uE7C8" },
+            };
+            AutomationProperties.SetAutomationId(record, "GalleryMoreRecord");
+            record.Click += (_, _) => _settings.RecordModeEnabled = record.IsChecked;
+            menu.Items.Add(record);
+        };
+        more.Flyout = menu;
+        SearchActions.Children.Add(more);
     }
     public void Activate(Frame frame)
     {
