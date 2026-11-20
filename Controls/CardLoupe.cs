@@ -68,6 +68,13 @@ internal sealed class CardLoupe : Grid
     private IReadOnlyList<CardBase> _cards = [];
     private int _index = -1;
 
+    /// <summary>Changes what the close button says (the viewer page goes back rather than to a grid).</summary>
+    public void SetCloseTooltip(string text)
+    {
+        ToolTipService.SetToolTip(_close, text);
+        AutomationProperties.SetName(_close, text);
+    }
+
     /// <summary>The card on show changed (stepping, or the filmstrip); the host moves its selection.</summary>
     public event Action<CardBase>? CurrentChanged;
 
@@ -124,6 +131,10 @@ internal sealed class CardLoupe : Grid
         Children.Add(bar);
 
         _scroll.Content = _image;
+        // On from the start: ResetVisual stops a "Translation" animation, which
+        // throws when translation was never enabled (a loupe closed without
+        // having zoomed, as on the viewer page; user report: close did nothing).
+        ElementCompositionPreview.SetIsTranslationEnabled(_scroll, true);
         SetRow(_scroll, 1);
         Children.Add(_scroll);
         SetRow(_filmstrip, 2);
@@ -219,9 +230,16 @@ internal sealed class CardLoupe : Grid
         {
             _closing = false;
             Visibility = Visibility.Collapsed;
-            ResetVisual();
-            _image.Source = null;
-            Closed?.Invoke(current);
+            try
+            {
+                ResetVisual();
+                _image.Source = null;
+            }
+            finally
+            {
+                // Whatever the visual reset does, the host must hear it closed.
+                Closed?.Invoke(current);
+            }
         }
     }
 

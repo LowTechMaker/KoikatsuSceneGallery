@@ -2355,6 +2355,7 @@
   <data name="Loupe_Next" xml:space="preserve"><value>下一張（→）</value></data>
   <data name="Loupe_Close" xml:space="preserve"><value>回到格狀清單（Esc）</value></data>
   <data name="Loupe_ActualSize" xml:space="preserve"><value>實際大小</value></data>
+  <data name="Loupe_Back" xml:space="preserve"><value>返回（Esc）</value></data>
   <data name="Home_TileSelected" xml:space="preserve"><value>已選取</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>分級篩選</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>啟用分級篩選</value></data>

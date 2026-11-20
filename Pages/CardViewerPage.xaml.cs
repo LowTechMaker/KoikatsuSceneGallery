@@ -40,6 +40,7 @@ public sealed partial class CardViewerPage : Page
         root.Children.Add(_inspector);
 
         _inspector.ShowPreview = false; // the loupe shows the picture
+        _loupe.SetCloseTooltip(UiText.Get("Loupe_Back"));
         _inspector.Frame = () => Frame;
         _inspector.CardRequested += card => _loupe.Replace(card);
         _inspector.CardGone += GoBack;

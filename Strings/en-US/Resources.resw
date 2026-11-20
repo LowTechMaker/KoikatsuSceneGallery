@@ -2355,6 +2355,7 @@
   <data name="Loupe_Next" xml:space="preserve"><value>Next card (Right)</value></data>
   <data name="Loupe_Close" xml:space="preserve"><value>Back to the grid (Esc)</value></data>
   <data name="Loupe_ActualSize" xml:space="preserve"><value>Actual size</value></data>
+  <data name="Loupe_Back" xml:space="preserve"><value>Back (Esc)</value></data>
   <data name="Home_TileSelected" xml:space="preserve"><value>Selected</value></data>
   <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
   <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>
