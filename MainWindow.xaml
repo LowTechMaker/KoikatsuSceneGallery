@@ -475,10 +475,20 @@
                         AutomationProperties.AutomationId="LibraryCoordinatesSelectorItem" />
                 </SelectorBar>
 
+                <!--  No content transitions: the Frame's default NavigationThemeTransition
+                      slid every page up on top of CardMotion's entrance, and only the
+                      library (navigated with SuppressNavigationTransitionInfo) went
+                      without it, so it looked unlike every other page (user report).
+                      CardMotion is the one place page motion comes from.  -->
                 <Frame
                     x:Name="NavFrame"
                     AutomationProperties.AutomationId="NavFrame"
-                    Navigated="NavFrame_Navigated" />
+                    Navigating="NavFrame_Navigating"
+                    Navigated="NavFrame_Navigated">
+                    <Frame.ContentTransitions>
+                        <TransitionCollection />
+                    </Frame.ContentTransitions>
+                </Frame>
             </Grid>
         </NavigationView>
 

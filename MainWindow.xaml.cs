@@ -667,13 +667,29 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// True while the page being navigated to replaces another of the
+    /// library's tabs (scenes, characters, coordinates): then only the grid
+    /// moves, under a heading that stays put. Coming from anywhere else, the
+    /// whole library arrives like any page. Read by LibraryBrowser.Activate.
+    /// </summary>
+    internal bool ArrivingFromLibraryTab { get; private set; }
+
+    private void NavFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+        => ArrivingFromLibraryTab = IsLibraryPage(NavFrame.CurrentSourcePageType) && IsLibraryPage(e.SourcePageType);
+
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
-        // Every page arrives the same way (CardMotion). The library's pages do
-        // it themselves, on their grid, under the tab heading that stays put.
-        // The home page arrives panel by panel itself (CardMotion.EnterStaggered).
-        if (!IsLibraryPage(e.SourcePageType) && e.SourcePageType != typeof(HomePage) && e.Content is UIElement page)
+        // Every page arrives the same way (CardMotion.Entrance). The home page
+        // arrives panel by panel itself (CardMotion.EnterStaggered); a library
+        // tab replacing another moves only its grid (LibraryBrowser.Activate).
+        if (e.SourcePageType != typeof(HomePage) && !(IsLibraryPage(e.SourcePageType) && ArrivingFromLibraryTab)
+            && e.Content is UIElement page)
+        {
             CardMotion.Entrance(page);
+            // The library's tab heading lives here, over the frame: it arrives with its page.
+            if (IsLibraryPage(e.SourcePageType)) CardMotion.Entrance(LibrarySelectorBar);
+        }
 
         if (e.SourcePageType == typeof(SettingsPage))
             NavView.SelectedItem = NavView.SettingsItem;

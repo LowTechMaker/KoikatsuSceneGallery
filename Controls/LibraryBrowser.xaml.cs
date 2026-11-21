@@ -120,9 +120,11 @@ public sealed partial class LibraryBrowser : UserControl
         if (_scope is null && (_adapter!.Cards.Count == 0 || _reload)) Load();
         else if (_detailContext?.ReturnPath is { } path) RestoreItem(path);
         if (_scope is null) ReloadIfFileCountChanged();
-        // Arriving at the library or another of its tabs: the grid comes in
-        // (CardMotion). The page itself is navigated to without a transition.
-        CardMotion.Entrance(GalleryGrid);
+        // Switching between the library's tabs, only the grid comes in (CardMotion),
+        // under a heading that stays put. Arriving from another page, the whole
+        // page comes in instead (MainWindow.NavFrame_Navigated), and a browser
+        // inside another page (author, shelf) arrives with that page.
+        if (_scope is null && MainWindow.Instance?.ArrivingFromLibraryTab == true) CardMotion.Entrance(GalleryGrid);
     }
     // A load cancelled by leaving the page leaves the gallery holding part of the folder.
     private void ReloadIfFileCountChanged() =>
