@@ -124,7 +124,12 @@ public sealed partial class LibraryBrowser : UserControl
         // under a heading that stays put. Arriving from another page, the whole
         // page comes in instead (MainWindow.NavFrame_Navigated), and a browser
         // inside another page (author, shelf) arrives with that page.
-        if (_scope is null && MainWindow.Instance?.ArrivingFromLibraryTab == true) CardMotion.Entrance(GalleryGrid);
+        // From the side of the tab it went to (user request: a left/right switch should move).
+        if (_scope is null && MainWindow.Instance is { ArrivingFromLibraryTab: true } window)
+        {
+            CardMotion.SwitchTab(SearchArea, window.LibraryTabStep);
+            CardMotion.SwitchTab(GalleryGrid, window.LibraryTabStep);
+        }
     }
     // A load cancelled by leaving the page leaves the gallery holding part of the folder.
     private void ReloadIfFileCountChanged() =>

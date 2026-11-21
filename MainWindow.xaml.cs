@@ -675,8 +675,17 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal bool ArrivingFromLibraryTab { get; private set; }
 
+    /// <summary>How many tabs along the library moved (negative to the left): which side the new tab comes in from.</summary>
+    internal int LibraryTabStep { get; private set; }
+
     private void NavFrame_Navigating(object sender, NavigatingCancelEventArgs e)
-        => ArrivingFromLibraryTab = IsLibraryPage(NavFrame.CurrentSourcePageType) && IsLibraryPage(e.SourcePageType);
+    {
+        ArrivingFromLibraryTab = IsLibraryPage(NavFrame.CurrentSourcePageType) && IsLibraryPage(e.SourcePageType);
+        LibraryTabStep = ArrivingFromLibraryTab ? LibraryTabIndex(e.SourcePageType) - LibraryTabIndex(NavFrame.CurrentSourcePageType) : 0;
+    }
+
+    private static int LibraryTabIndex(Type? pageType)
+        => pageType == typeof(CharacterGalleryPage) ? 1 : pageType == typeof(CoordinateGalleryPage) ? 2 : 0;
 
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {

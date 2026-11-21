@@ -268,7 +268,10 @@ internal static class CardMotion
     /// card turning): it comes in from <paramref name="shift"/> pixels to the
     /// side while it fades up. Negative <paramref name="shift"/> for going back.
     /// </summary>
-    public static void Turn(UIElement element, float shift = 24)
+    public static void Turn(UIElement element, float shift = 24) => Slide(element, new Vector3(shift, 0, 0));
+
+    /// <summary>Comes in from <paramref name="from"/> (an offset) to its place while fading up.</summary>
+    private static void Slide(UIElement element, Vector3 from)
     {
         if (!AnimationsEnabled) return;
         ElementCompositionPreview.SetIsTranslationEnabled(element, true);
@@ -280,11 +283,28 @@ internal static class CardMotion
         fade.InsertKeyFrame(1, 1, ease);
         fade.Duration = FlyDuration;
         var move = compositor.CreateVector3KeyFrameAnimation();
-        move.InsertKeyFrame(0, new Vector3(shift, 0, 0));
+        move.InsertKeyFrame(0, from);
         move.InsertKeyFrame(1, Vector3.Zero, ease);
         move.Duration = FlyDuration;
         visual.StartAnimation("Opacity", fade);
         visual.StartAnimation("Translation", move);
+    }
+
+    /// <summary>How far a tab's content comes in from the side when tabs are switched.</summary>
+    public const float TabShift = 32;
+
+    /// <summary>
+    /// Switching tabs (the library's kinds, the authors' platforms, the
+    /// settings' categories): the new tab's content comes in from the side of
+    /// the tab it went to, <paramref name="step"/> tabs along: from the right
+    /// for a tab further right, from the left for one further left. Down and
+    /// up instead for a list of tabs stacked vertically (the settings).
+    /// </summary>
+    public static void SwitchTab(UIElement element, int step, bool vertical = false)
+    {
+        if (step == 0) return;
+        var shift = Math.Sign(step) * TabShift;
+        Slide(element, vertical ? new Vector3(0, shift, 0) : new Vector3(shift, 0, 0));
     }
 
     /// <summary>

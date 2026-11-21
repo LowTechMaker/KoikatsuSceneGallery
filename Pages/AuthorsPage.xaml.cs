@@ -227,8 +227,13 @@ public sealed partial class AuthorsPage : Page
             return;
         }
 
+        // A switch between platforms comes in from the side of the one picked.
+        var step = _currentTab is { } from && tab is not null
+            ? ViewModel.ProviderTabs.IndexOf(tab) - ViewModel.ProviderTabs.IndexOf(from)
+            : 0;
         _currentTab = tab;
         TabHost.Content = tab;
+        Controls.CardMotion.SwitchTab(TabHost, step);
         QuickJumpList.ItemsSource = tab?.QuickJumpItems;
         var local = tab is not null && LocalSourceIdentity.IsLocal(tab.ProviderId);
         AddLocalButton.Visibility = local ? Visibility.Visible : Visibility.Collapsed;

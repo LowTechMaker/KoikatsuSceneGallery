@@ -399,9 +399,13 @@ public sealed partial class SettingsPage : Page
         SettingsCategoryPicker.SelectedIndex = index;
         _syncingCategory = false;
         if (index == _shownTab) return;
+        // The categories are a column, so the next one comes up from below, an
+        // earlier one down from above (CardMotion.SwitchTab).
+        var step = _shownTab >= 0 ? index - _shownTab : 0;
         _shownTab = index;
         for (var i = 0; i < tabs.Count; i++)
             tabs[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
+        KoikatsuSceneGallery.Controls.CardMotion.SwitchTab(tabs[index], step, vertical: true);
     }
 
     private void SettingsCategories_SelectionChanged(object sender, SelectionChangedEventArgs e)
