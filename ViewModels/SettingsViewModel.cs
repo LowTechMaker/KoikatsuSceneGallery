@@ -63,6 +63,27 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowFileNames { get; set; } = true;
 
+    /// <summary>0 = platform ratings, 1 = the user's own; bound to the settings combo box by index.</summary>
+    [ObservableProperty]
+    public partial int RatingSourceIndex { get; set; }
+
+    public bool UseUserRatings => RatingSourceIndex == 1;
+
+    /// <summary>
+    /// The rating filter for the whole app, chosen in the title bar. Like the
+    /// browse origin it is persisted and pushed into every place that shows
+    /// scene cards; read <see cref="EffectiveRatingFilter"/>, not this.
+    /// </summary>
+    [ObservableProperty]
+    public partial RatingSet RatingFilter { get; set; } = RatingSet.All;
+
+    /// <summary>Rating filtering at all (the settings switch). Off: nothing is filtered and the title bar control is hidden.</summary>
+    [ObservableProperty]
+    public partial bool RatingFilterEnabled { get; set; } = true;
+
+    /// <summary>The filter to apply: <see cref="RatingFilter"/>, or All while filtering is switched off.</summary>
+    public RatingSet EffectiveRatingFilter => RatingFilterRule.Effective(RatingFilterEnabled, RatingFilter);
+
     [ObservableProperty]
     public partial bool ScrollToTopOnSort { get; set; } = true;
 
@@ -83,11 +104,26 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool GroupCollapseAnimationEnabled { get; set; } = true;
 
+    /// <summary>Square corners instead of WinUI's rounded ones; applied at the next start.</summary>
     [ObservableProperty]
-    public partial double CacheLength { get; set; } = 4;
+    public partial bool SquareCorners { get; set; }
+
+    /// <summary>Whether the details pane beside a grid of cards is shown (Ctrl+I).</summary>
+    [ObservableProperty]
+    public partial bool InspectorVisible { get; set; } = true;
+
+    [ObservableProperty]
+    public partial double CacheLength { get; set; } = AppLimits.DefaultCacheLength;
 
     [ObservableProperty]
     public partial ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;
+
+    /// <summary>The thumbnail size as the settings page's combo box index (small, medium, large).</summary>
+    public int ThumbnailSizeIndex
+    {
+        get => (int)ThumbnailSize;
+        set { if (value >= 0) ThumbnailSize = (ThumbnailSizePreference)value; }
+    }
 
     [ObservableProperty]
     public partial bool PluginAnalysisEnabled { get; set; }
@@ -136,6 +172,78 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial string LocalFolderName { get; set; } = "Local";
 
+    // ── Mods ───────────────────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KoikatsuGameFolderDisplay), nameof(KoikatsuGameFolderStatus))]
+    public partial string KoikatsuGameFolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KoikatsuSunshineGameFolderDisplay), nameof(KoikatsuSunshineGameFolderStatus))]
+    public partial string KoikatsuSunshineGameFolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ModInstallFolderName { get; set; } = "SceneGallery";
+
+    public string KoikatsuGameFolderDisplay => GameFolderDisplay(KoikatsuGameFolder);
+    public string KoikatsuSunshineGameFolderDisplay => GameFolderDisplay(KoikatsuSunshineGameFolder);
+    public string KoikatsuGameFolderStatus => GameFolderStatus(KoikatsuGameFolder);
+    public string KoikatsuSunshineGameFolderStatus => GameFolderStatus(KoikatsuSunshineGameFolder);
+
+    private static string GameFolderDisplay(string folder)
+        => string.IsNullOrWhiteSpace(folder) ? ResLoader.GetString("Settings_Mods_NotSet") : folder;
+
+    // A folder without mods or BepInEx is most likely one level off; said, not refused.
+    private static string GameFolderStatus(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder)) return string.Empty;
+        if (!Directory.Exists(folder)) return ResLoader.GetString("Settings_Mods_FolderMissing");
+        if (!Directory.Exists(Path.Combine(folder, "mods")) && !Directory.Exists(Path.Combine(folder, "BepInEx")))
+            return ResLoader.GetString("Settings_Mods_NotAGameFolder");
+        return string.Empty;
+    }
+
+    partial void OnKoikatsuGameFolderChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    partial void OnKoikatsuSunshineGameFolderChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    partial void OnModInstallFolderNameChanged(string value)
+    {
+        if (!_isLoading) SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    [RelayCommand]
+    private async Task PickKoikatsuGameFolderAsync()
+    {
+        if (await PickFolderPathAsync() is { } path) KoikatsuGameFolder = path;
+    }
+
+    [RelayCommand]
+    private async Task PickKoikatsuSunshineGameFolderAsync()
+    {
+        if (await PickFolderPathAsync() is { } path) KoikatsuSunshineGameFolder = path;
+    }
+
+    [RelayCommand]
+    private void ClearKoikatsuGameFolder() => KoikatsuGameFolder = string.Empty;
+
+    [RelayCommand]
+    private void ClearKoikatsuSunshineGameFolder() => KoikatsuSunshineGameFolder = string.Empty;
+
+    private async Task<string?> PickFolderPathAsync()
+    {
+        var picker = new FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, GetWindowHandle());
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    }
+
     [ObservableProperty]
     public partial double ArtworkSubfolderThreshold { get; set; } = 1;
 
@@ -180,6 +288,9 @@ public partial class SettingsViewModel : ObservableObject
     public partial bool UseVisualSimilarity { get; set; }
 
     [ObservableProperty]
+    public partial bool AutoImportIdentifiedPosts { get; set; } = true;
+
+    [ObservableProperty]
     public partial string AuthorFolderFormat { get; set; } = "{name} ({id})";
 
     [ObservableProperty]
@@ -214,6 +325,7 @@ public partial class SettingsViewModel : ObservableObject
     public event Action<bool, HashSet<string>>? CharacterResolutionFilterChanged;
     public event Action<bool, HashSet<string>>? CoordinateResolutionFilterChanged;
     public event Action<bool>? ShowFileNamesChanged;
+    public event Action<bool>? UseUserRatingsChanged;
     public event Action<bool>? PluginAnalysisEnabledChanged;
     public event Action<ThumbnailSizePreference>? ThumbnailSizeChanged;
     public event Action? SceneFolderPathsChanged;
@@ -221,6 +333,8 @@ public partial class SettingsViewModel : ObservableObject
     public event Action? CoordinateFolderPathsChanged;
     public event Action<string, bool>? NavItemVisibilityChanged;
     public event Action<CardOriginSelection>? BrowseOriginChanged;
+    /// <summary>Raised on the UI thread when <see cref="EffectiveRatingFilter"/> or the switch changed.</summary>
+    public event Action? RatingFilterChanged;
 
     public SettingsViewModel(
         SettingsService settingsService,
@@ -281,6 +395,26 @@ public partial class SettingsViewModel : ObservableObject
         CoordinateResolutionFilterChanged?.Invoke(CoordinateResolutionFilterEnabled, [.. CoordinateAllowedResolutions]);
     }
 
+    partial void OnRatingFilterChanged(RatingSet value) => OnRatingFilterSettingChanged();
+    partial void OnRatingFilterEnabledChanged(bool value) => OnRatingFilterSettingChanged();
+
+    private void OnRatingFilterSettingChanged()
+    {
+        if (_isLoading) return;
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        OnPropertyChanged(nameof(EffectiveRatingFilter));
+        RatingFilterChanged?.Invoke();
+    }
+
+    partial void OnRatingSourceIndexChanged(int value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+        UseUserRatingsChanged?.Invoke(UseUserRatings);
+    }
+
     partial void OnShowFileNamesChanged(bool value)
     {
         if (_isLoading)
@@ -336,6 +470,23 @@ public partial class SettingsViewModel : ObservableObject
 
     // No event: each browser reads this at the moment a group closes, so a
     // change takes effect on the next collapse without disturbing anything.
+    partial void OnSquareCornersChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    // Every browser listens through PropertyChanged, so the pane follows in all of them.
+    partial void OnInspectorVisibleChanged(bool value)
+    {
+        if (_isLoading)
+            return;
+
+        SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
     partial void OnGroupCollapseAnimationEnabledChanged(bool value)
     {
         if (_isLoading)
@@ -353,6 +504,7 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnThumbnailSizeChanged(ThumbnailSizePreference value)
     {
+        OnPropertyChanged(nameof(ThumbnailSizeIndex));
         if (_isLoading)
             return;
 
@@ -382,6 +534,12 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     partial void OnUseVisualSimilarityChanged(bool value)
+    {
+        if (!_isLoading)
+            SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
+    }
+
+    partial void OnAutoImportIdentifiedPostsChanged(bool value)
     {
         if (!_isLoading)
             SaveConfigAsync().Observe(_logger, "Settings.SaveConfig");
@@ -526,17 +684,26 @@ public partial class SettingsViewModel : ObservableObject
             CharacterResolutionFilterEnabled = config.CharacterResolutionFilterEnabled;
             CoordinateResolutionFilterEnabled = config.CoordinateResolutionFilterEnabled;
             ShowFileNames = config.ShowFileNames;
+            RatingSourceIndex = config.UseUserRatings ? 1 : 0;
+            RatingFilter = RatingFilterRule.Parse(config.RatingFilter);
+            RatingFilterEnabled = config.RatingFilterEnabled;
             ScrollToTopOnSort = config.ScrollToTopOnSort;
             DiscoverySpreadEnabled = config.DiscoverySpreadEnabled;
             PokerHandEnabled = config.PokerHandEnabled;
             RecordModeEnabled = config.RecordModeEnabled;
             GroupCollapseAnimationEnabled = config.GroupCollapseAnimationEnabled;
+            InspectorVisible = config.InspectorVisible;
+            SquareCorners = config.SquareCorners;
             CacheFolderPath = config.CacheFolderPath;
 
             ImportSubfolder = config.ImportSubfolder;
             LocalFolderName = config.LocalFolderName;
+            KoikatsuGameFolder = config.KoikatsuGameFolder ?? string.Empty;
+            KoikatsuSunshineGameFolder = config.KoikatsuSunshineGameFolder ?? string.Empty;
+            ModInstallFolderName = config.ModInstallFolderName ?? "SceneGallery";
             ArtworkSubfolderThreshold = config.ArtworkSubfolderThreshold;
             UseVisualSimilarity = config.UseVisualSimilarity;
+            AutoImportIdentifiedPosts = config.AutoImportIdentifiedPosts;
             AuthorLiveTilesEnabled = config.AuthorLiveTilesEnabled;
 
             AuthorFolderFormat = config.AuthorFolderFormat;
@@ -824,11 +991,16 @@ public partial class SettingsViewModel : ObservableObject
                 CoordinateResolutionFilterEnabled = CoordinateResolutionFilterEnabled,
                 CoordinateAllowedResolutions = [.. CoordinateAllowedResolutions],
                 ShowFileNames = ShowFileNames,
+                UseUserRatings = UseUserRatings,
+                RatingFilter = RatingFilterRule.ToConfigValue(RatingFilter),
+                RatingFilterEnabled = RatingFilterEnabled,
                 ScrollToTopOnSort = ScrollToTopOnSort,
                 DiscoverySpreadEnabled = DiscoverySpreadEnabled,
                 PokerHandEnabled = PokerHandEnabled,
                 RecordModeEnabled = RecordModeEnabled,
                 GroupCollapseAnimationEnabled = GroupCollapseAnimationEnabled,
+                InspectorVisible = InspectorVisible,
+                SquareCorners = SquareCorners,
                 CacheLength = CacheLength,
                 ThumbnailSize = ThumbnailSize,
                 PluginAnalysisEnabled = PluginAnalysisEnabled,
@@ -837,8 +1009,12 @@ public partial class SettingsViewModel : ObservableObject
                 Language = SelectedLanguage,
                 ImportSubfolder = ImportSubfolder,
                 LocalFolderName = LocalFolderName,
+                KoikatsuGameFolder = KoikatsuGameFolder,
+                KoikatsuSunshineGameFolder = KoikatsuSunshineGameFolder,
+                ModInstallFolderName = ModInstallFolderName,
                 ArtworkSubfolderThreshold = (int)ArtworkSubfolderThreshold,
                 UseVisualSimilarity = UseVisualSimilarity,
+                AutoImportIdentifiedPosts = AutoImportIdentifiedPosts,
                 AuthorLiveTilesEnabled = AuthorLiveTilesEnabled,
                 HiddenNavItems = GetHiddenNavItems(),
                 BrowseOrigin = BrowseOrigin.ToConfigValue(),

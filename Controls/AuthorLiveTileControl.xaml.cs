@@ -9,13 +9,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media.Imaging;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Controls;
 
 public sealed partial class AuthorLiveTileControl : UserControl
 {
-    private static readonly TimeSpan CycleInterval = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(600);
+    private static readonly TimeSpan CycleInterval = AppTiming.LiveTileCycle;
+    private static readonly TimeSpan AnimationDuration = Controls.CardMotion.AmbientDuration;
 
     private DispatcherQueueTimer? _cycleTimer;
     private int _currentIndex;
@@ -212,7 +213,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
 
         _cycleTimer = DispatcherQueue.CreateTimer();
         _cycleTimer.IsRepeating = false;
-        _cycleTimer.Interval = CycleInterval + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 4000));
+        _cycleTimer.Interval = CycleInterval + TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)AppTiming.LiveTileJitter.TotalMilliseconds));
         _cycleTimer.Tick += OnCycleTick;
         _cycleTimer.Start();
     }
@@ -248,9 +249,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
         if (_inSlide is not null) return;
 
         var compositor = ElementCompositionPreview.GetElementVisual(this).Compositor;
-        _easing ??= compositor.CreateCubicBezierEasingFunction(
-            new Vector2(0.4f, 0f),
-            new Vector2(0.2f, 1f));
+        _easing ??= Controls.CardMotion.Ease(compositor);
 
         var h = (float)RootGrid.ActualHeight;
 
@@ -316,7 +315,7 @@ public sealed partial class AuthorLiveTileControl : UserControl
             return cached;
         // Tiles flex with the window, so decode for the widest one rather
         // than the old fixed 280.
-        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = 400 };
+        var img = new BitmapImage(new Uri(path)) { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth };
         _imageCache[path] = img;
         return img;
     }

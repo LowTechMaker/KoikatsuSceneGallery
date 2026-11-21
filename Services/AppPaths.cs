@@ -27,7 +27,7 @@ public static class AppPaths
         {
             path = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "KoikatsuSceneGallery");
+                AppFiles.DataFolderName);
         }
 
         Directory.CreateDirectory(path);

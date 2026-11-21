@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SceneGallery.PluginSdk;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -10,7 +11,7 @@ internal sealed class PluginUpdateChecker
     public PluginUpdateChecker(IAppLogger logger) => _logger = logger;
     private static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromSeconds(10),
+        Timeout = AppTiming.PluginUpdateTimeout,
         DefaultRequestHeaders = { { "User-Agent", "SceneGallery-PluginUpdater/1.0" } },
     };
 

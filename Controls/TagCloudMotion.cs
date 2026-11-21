@@ -33,11 +33,12 @@ internal sealed class TagCloudMotion
     /// <summary>How far the rest of the cloud falls back as the camera moves in.</summary>
     private const float RecedeScale = 0.45f;
 
-    private static readonly TimeSpan RevealDuration = TimeSpan.FromMilliseconds(460);
-    private static readonly TimeSpan EnterStagger = TimeSpan.FromMilliseconds(26);
+    // Tempos from CardMotion, the app's one motion schedule.
+    private static readonly TimeSpan RevealDuration = CardMotion.TagRevealDuration;
+    private static readonly TimeSpan EnterStagger = CardMotion.TagEnterStagger;
 
     /// <summary>Quick recede for the cloud being replaced when platforms switch.</summary>
-    private static readonly TimeSpan SwapOutDuration = TimeSpan.FromMilliseconds(160);
+    private static readonly TimeSpan SwapOutDuration = CardMotion.TagSwapOutDuration;
     private const float SwapOutScale = 0.88f;
 
     /// <summary>The scale a tag arrives from, as if far behind the screen.</summary>
@@ -104,10 +105,10 @@ internal sealed class TagCloudMotion
     internal readonly record struct CloudEntryPace(TimeSpan Duration, TimeSpan PerItem, TimeSpan Budget)
     {
         public static readonly CloudEntryPace Arrival =
-            new(TimeSpan.FromMilliseconds(700), EnterStagger, TimeSpan.FromMilliseconds(700));
+            new(CardMotion.CloudArrivalDuration, CardMotion.TagEnterStagger, CardMotion.CloudArrivalBudget);
 
         public static readonly CloudEntryPace Swap =
-            new(TimeSpan.FromMilliseconds(320), TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(220));
+            new(CardMotion.CloudSwapDuration, CardMotion.CloudSwapStagger, CardMotion.CloudSwapBudget);
     }
 
     /// <summary>

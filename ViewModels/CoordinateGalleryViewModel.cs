@@ -72,6 +72,13 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
     protected override bool CardPassesFilter(object card) =>
         card is CoordinateCard cc && BaseFilterPasses(cc);
 
+    protected override async Task<int?> CountCardFilesOnDiskAsync()
+        => await _cardService.CountCardFilesAsync((await _settingsService.LoadConfigAsync()).CoordinateFolderPaths);
+
+    protected override int UnreadableCardFileCount => _cardService.LastScanUnreadableCount;
+
+    protected override Task ReloadCardsAsync() => LoadCardsCommand.ExecuteAsync(null);
+
     [RelayCommand]
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>
@@ -86,8 +93,21 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
             Cards.Clear();
             _cardIndex.Clear();
 
+            // Timed on the run's first load only (startup_timing.log). This library
+            // has no card cache: every file is opened on every start.
+            var timed = StartupTimingRecorder.IsFirstLoad("coordinates");
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             await _cardService.ScanFoldersAsync(paths,
                 batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
+            if (timed)
+            {
+                var scan = _cardService.LastScanCounts;
+                StartupTimingRecorder.Write("coordinates", [
+                    new("coordinates", "scan", clock.ElapsedMilliseconds, [("listed", scan.Listed), ("opened", scan.Opened),
+                        ("unreadable", _cardService.LastScanUnreadableCount)]),
+                    new("coordinates", "load.finished", StartupTimingRecorder.SinceProcessStart, [("cards", Cards.Count)]),
+                ]);
+            }
 
             ApplyFilter();
             _cardService.StartWatching(paths);
@@ -146,7 +166,7 @@ public partial class CoordinateGalleryViewModel : GalleryViewModelBase, IDisposa
         var hasSearch = _searchKeywords.Length > 0;
         var filterRes = HasResolutionFilter;
 
-        if (!hasSearch && !filterRes && !HasOriginFilter && MetadataFilters.ActiveCount == 0)
+        if (!hasSearch && !filterRes && !HasOriginFilter && !HasHiddenFilter && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = null!;
         }

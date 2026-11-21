@@ -298,4 +298,36 @@ public sealed class ImportLibraryIndexerTests
         Assert.Same(error, logged.Error);
         Assert.Equal(f.PathFor("library/Organized/provider/Game/G"), logged.Path);
     }
+
+    [Fact]
+    public async Task ALibraryWithBothLayoutsIndexesEachAuthorFolderOnceUnderItsOwnScope()
+    {
+        // The rating list now holds "" for the three-level layout. The provider
+        // folder itself then gets scanned too; its game folders, rating folders
+        // and sinks must not read as authors, and no author may appear twice.
+        using var f = new Fixture();
+        var root = f.DirectoryFor("library");
+        var old = f.DirectoryFor("library/Organized/Pixiv/KK/R-18/Old name (42)");
+        var current = f.DirectoryFor("library/Organized/Pixiv/New name (43)");
+        f.DirectoryFor("library/Organized/Pixiv/KK/G");
+        f.DirectoryFor("library/Organized/Pixiv/!unrecognized");
+        static string? Parse(string name)
+        {
+            var open = name.LastIndexOf('(');
+            return open >= 0 && name.EndsWith(')') && name[(open + 1)..^1].All(char.IsDigit)
+                ? name[(open + 1)..^1] : null;
+        }
+        var request = new ImportLibraryIndexRequest([], [root], "Organized", ["KK", "KKS", ""],
+            [new("Pixiv", ["G", "R-18", "R-18G", ""], Parse)]);
+
+        var result = await f.Build(request);
+
+        string Key(string game, string rating) => ImportLibraryIndexer.BuildScopeKey(root, "Pixiv", game, rating).ToUpperInvariant();
+        Assert.Equal(current, Assert.Single(result.FolderIndex[Key("", "")]).Value);
+        Assert.Equal(old, Assert.Single(result.FolderIndex[Key("KK", "R-18")]).Value);
+        Assert.Empty(result.FolderIndex[Key("KK", "")]);
+        var everyFolder = result.FolderIndex.Values.SelectMany(authors => authors.Values).ToList();
+        Assert.Equal(everyFolder.Count, everyFolder.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(2, everyFolder.Count);
+    }
 }

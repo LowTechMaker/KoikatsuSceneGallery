@@ -21,7 +21,7 @@ namespace KoikatsuSceneGallery.Services;
 /// </remarks>
 public sealed class UsageRecordService
 {
-    private const string LogFileName = "usage_log.jsonl";
+    private const string LogFileName = AppFiles.UsageLog;
 
     private readonly string _logPath;
     private readonly Func<bool> _isEnabled;

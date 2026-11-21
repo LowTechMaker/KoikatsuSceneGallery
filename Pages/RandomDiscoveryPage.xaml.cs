@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -23,7 +24,7 @@ public sealed partial class RandomDiscoveryPage : Page
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _searchTimer;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _refreshTimer;
     private Dictionary<string, SceneCard> _candidates = new(StringComparer.OrdinalIgnoreCase);
-    private SceneDiscoveryFilter _filter = new([], true, GameFilterOption.All, false, []);
+    private SceneDiscoveryFilter _filter = new([], RatingSet.All, GameFilterOption.All, false, []);
     private string[] _folders = [];
     private bool _initialized, _active, _syncing, _loading, _restorePosition, _reloadRequested;
     private string _appliedQuery = "";
@@ -38,16 +39,21 @@ public sealed partial class RandomDiscoveryPage : Page
         NavigationCacheMode = NavigationCacheMode.Required;
         _items = new(DispatcherQueue, CanDrawMore, Append);
         DiscoveryGrid.ItemsSource = _items;
+        // The rack shows the hand as a whole, so it follows the collection
+        // after each burst of changes rather than item by item.
+        _items.CollectionChanged += (_, _) => QueueHandShow();
+        Holder.CardInvoked += OpenCard;
         AutomationProperties.SetName(DiscoveryGrid, UiText.Get("Discovery_Title.Text"));
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
         // The engine reports columns * 2; the discovery page only needs the column count itself.
-        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings, 62);
+        _layout = new(135.0 / 240, DiscoveryGrid, DispatcherQueue, count => _columns = Math.Max(1, count / 2), _settings,
+            _settings.ShowFileNames ? GalleryEntry.SimpleCaptionHeight : 0);
         _searchTimer = DispatcherQueue.CreateTimer();
-        _searchTimer.Interval = TimeSpan.FromMilliseconds(250);
+        _searchTimer.Interval = AppTiming.SearchDebounce;
         _searchTimer.IsRepeating = false;
         _searchTimer.Tick += (_, _) => ApplyConditions();
         _refreshTimer = DispatcherQueue.CreateTimer();
-        _refreshTimer.Interval = TimeSpan.FromMilliseconds(150);
+        _refreshTimer.Interval = AppTiming.DiscoveryRefresh;
         _refreshTimer.IsRepeating = false;
         _refreshTimer.Tick += (_, _) => RefreshCandidates();
         foreach (var name in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") })
@@ -71,12 +77,13 @@ public sealed partial class RandomDiscoveryPage : Page
         _settings.BrowseOriginChanged += Origin_Changed;
         _settings.PokerHandEnabledChanged += PokerMode_Changed;
         _layout.BaseItemWidth = _settings.ThumbnailSize.ToPixels();
+        // The app-wide "show file names" switch may have changed since.
+        _layout.SetMetadataReserve(_settings.ShowFileNames ? GalleryEntry.SimpleCaptionHeight : 0);
         _gallery.Activate();
         if (!_initialized)
         {
             _syncing = true;
             SearchBox.Text = _gallery.SearchText;
-            RatingFilter.IsOn = _gallery.ShowR18Content;
             GameFilter.SelectedIndex = (int)_gallery.GameFilter;
             ResolutionFilter.IsOn = _settings.ResolutionFilterEnabled;
             _syncing = false;
@@ -90,7 +97,8 @@ public sealed partial class RandomDiscoveryPage : Page
         if (reload || _reloadRequested || _gallery.Cards.Count == 0) Load();
         // The page is cached, so a switch flipped while it was away is only
         // visible in the captured filter.
-        else if (SearchBox.Text != _appliedQuery || _filter.Origin != _settings.EffectiveBrowseOrigin) ApplyConditions();
+        else if (SearchBox.Text != _appliedQuery || _filter.Origin != _settings.EffectiveBrowseOrigin
+                 || _filter.Rating != _gallery.RatingFilter) ApplyConditions();
         else RefreshCandidates();
     }
 
@@ -117,13 +125,14 @@ public sealed partial class RandomDiscoveryPage : Page
 
     private void Origin_Changed(CardOriginSelection origin) => DispatcherQueue.TryEnqueue(ApplyConditions);
 
-    private void PokerMode_Changed() => DispatcherQueue.TryEnqueue(Restart);
+    private void PokerMode_Changed() => DispatcherQueue.TryEnqueue(() => { Restart(); QueueHandShow(); });
 
     private void CaptureFilter()
     {
         _appliedQuery = SearchBox.Text;
         _filter = new(SearchBox.Text.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray(),
-            RatingFilter.IsOn, (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
+            // The rating filter is the app-wide one (title bar), as the gallery has it.
+            _gallery.RatingFilter, (GameFilterOption)Math.Max(0, GameFilter.SelectedIndex),
             ResolutionFilter.IsOn, new(_settings.AllowedResolutions), _settings.EffectiveBrowseOrigin);
     }
 
@@ -237,14 +246,18 @@ public sealed partial class RandomDiscoveryPage : Page
             && (poker
                 ? _items.Count >= PokerHand.HandSize || _shuffle.Remaining == 0
                 : _shuffle.Remaining == 0);
-        RoundFooter.Visibility = complete ? Visibility.Visible : Visibility.Collapsed;
+        RoundFooter.Visibility = complete && !poker ? Visibility.Visible : Visibility.Collapsed;
+        DiscoveryGrid.Visibility = poker ? Visibility.Collapsed : Visibility.Visible;
+        HandArea.Visibility = poker && _items.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        HandFooter.Visibility = complete && poker ? Visibility.Visible : Visibility.Collapsed;
         var endText = poker
             ? UiText.Get("Discovery_PokerHandEnd")
             : UiText.Format("Discovery_RoundEnd", _shuffle.Round);
         if (RoundEndText.Text != endText)
         {
             RoundEndText.Text = endText;
-            if (complete) FrameworkElementAutomationPeer.FromElement(RoundEndText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            HandEndText.Text = endText;
+            if (complete) FrameworkElementAutomationPeer.FromElement(poker ? HandEndText : RoundEndText)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         }
         EmptyPanel.Visibility = !busy && !ErrorBar.IsOpen && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         bool noLibrary = _gallery.Cards.Count == 0;
@@ -295,6 +308,7 @@ public sealed partial class RandomDiscoveryPage : Page
         DispatcherQueue.TryEnqueue(() =>
         {
             if (!_active || firstNew >= _items.Count) return;
+            if (_settings.PokerHandEnabled) { Holder.FocusFirst(); return; }
             DiscoveryGrid.ScrollIntoView(_items[firstNew]);
             if (DiscoveryGrid.ContainerFromIndex(firstNew) is GridViewItem item) item.Focus(FocusState.Programmatic);
         });
@@ -302,9 +316,47 @@ public sealed partial class RandomDiscoveryPage : Page
 
     private void Item_Click(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not DiscoveryItem entry) return;
+        if (e.ClickedItem is DiscoveryItem entry) OpenCard(entry);
+    }
+
+    private void OpenCard(DiscoveryItem entry)
+    {
         _returnIndex = _items.IndexOf(entry);
         new BrowseContext(UiText.Get("Discovery_Title.Text"), _items.Select(item => item.Card)).Open(Frame, entry.Card);
+    }
+
+    // ------------------------------------------------------------ the card rack (poker mode)
+
+    private bool _handShowQueued;
+    private readonly HashSet<SceneCard> _handCards = [];
+
+    private void QueueHandShow()
+    {
+        if (_handShowQueued) return;
+        _handShowQueued = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            _handShowQueued = false;
+            ShowHand();
+        });
+    }
+
+    private void ShowHand()
+    {
+        if (!_active || !_settings.PokerHandEnabled) return;
+        var hand = _items.ToList();
+        // The grid releases thumbnails as its containers recycle; the rack has
+        // no containers, so it lets go of the last hand's itself.
+        foreach (var gone in _handCards.Where(card => hand.All(item => !ReferenceEquals(item.Card, card))).ToList())
+        {
+            _gallery.ReleaseThumbnail(gone);
+            _handCards.Remove(gone);
+        }
+        foreach (var item in hand)
+        {
+            if (_handCards.Add(item.Card)) _gallery.RequestThumbnail(item.Card, ThumbnailWorkPriority.Visible);
+        }
+        Holder.Show(hand);
     }
 
     private void RestorePosition()
@@ -347,7 +399,7 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         if (!_active || _refreshTimer.IsRunning) return;
         // Rebuilding the candidate pool is O(cards); back off while a scan floods the collection.
-        _refreshTimer.Interval = TimeSpan.FromMilliseconds(_loading || _gallery.IsLoading ? 400 : 150);
+        _refreshTimer.Interval = _loading || _gallery.IsLoading ? AppTiming.DiscoveryRefreshWhileLoading : AppTiming.DiscoveryRefresh;
         _refreshTimer.Start();
     }
     private void Cards_Changed(object? sender, NotifyCollectionChangedEventArgs e) => QueueRefresh();
@@ -355,6 +407,8 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         if (e.PropertyName is nameof(GalleryViewModel.IsLoading) or nameof(GalleryViewModel.IsParsingMetadata)
             or nameof(GalleryViewModel.ShowMetadataFilters)) QueueRefresh();
+        // The app-wide rating filter changed (title bar or settings switch).
+        if (e.PropertyName is nameof(GalleryViewModel.RatingFilter)) ApplyConditions();
     }
     private void Folders_Changed() { _folders = _settings.FolderPaths.ToArray(); Load(); }
     private void Search_Changed(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs e)
@@ -371,7 +425,6 @@ public sealed partial class RandomDiscoveryPage : Page
     {
         _syncing = true;
         SearchBox.Text = "";
-        RatingFilter.IsOn = true;
         GameFilter.SelectedIndex = 0;
         ResolutionFilter.IsOn = false;
         _syncing = false;
@@ -384,7 +437,7 @@ public sealed partial class RandomDiscoveryPage : Page
     { VisualTreeSearch.FindDescendant<ScrollViewer>(DiscoveryGrid)?.ChangeView(null, 0, null, true); e.Handled = true; }
     private void Toolbar_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool narrow = e.NewSize.Width < 640;
+        bool narrow = e.NewSize.Width < UiMetrics.DiscoveryNarrowWidth;
         Grid.SetRow(Actions, narrow ? 1 : 0);
         Grid.SetColumn(Actions, narrow ? 0 : 1);
         Grid.SetColumnSpan(SearchBox, narrow ? 2 : 1);

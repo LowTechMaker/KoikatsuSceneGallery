@@ -80,6 +80,17 @@ internal sealed record ImportItemPlan(
     /// local import reads a friend folder the user keeps.
     /// </remarks>
     public bool KeepDuplicateSource { get; init; }
+
+    /// <summary>
+    /// Whether a destination that differs byte for byte but holds the same card
+    /// data still counts as a duplicate rather than a collision.
+    /// </summary>
+    /// <remarks>
+    /// The same card downloaded into two folders often differs only in its
+    /// preview image. Compared byte for byte, the second copy collides with the
+    /// first and rolls the whole batch back over a card the user has twice.
+    /// </remarks>
+    public bool MatchCardData { get; init; }
 }
 
 /// <summary>

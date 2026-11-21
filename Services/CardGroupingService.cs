@@ -1,10 +1,11 @@
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
 public static class CardGroupingService
 {
-    private const int DefaultPHashThreshold = 22;
+    private const int DefaultPHashThreshold = AppLimits.GroupingHashDistance;
     private const float DefaultHistogramCorrelation = 0.45f;
     private const int BorderlinePHashLow = 18;
     private const int BorderlinePHashHigh = 28;

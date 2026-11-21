@@ -2,7 +2,7 @@ namespace KoikatsuSceneGallery.Services;
 
 internal static class LibraryMetadataDirectory
 {
-    public const string Name = ".scenegallery";
+    public const string Name = AppFiles.LibraryMetadataFolder;
 
     // Callers create the directory and retain responsibility for handling errors.
     public static void MarkHiddenOnWindows(string path)

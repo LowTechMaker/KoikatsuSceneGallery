@@ -14,6 +14,7 @@ public partial class App : Application
     public static AppServiceRegistry Services { get; } = new();
 
     private readonly IAppLogger _logger = new CrashLogLogger();
+    private readonly UserCardRatingStore _userCardRatings = new();
     private readonly SettingsService _settingsService = new();
     private readonly SceneCardService _sceneCardService = new();
     private readonly CharacterAnnotationStore _characterAnnotations = new();
@@ -38,7 +39,7 @@ public partial class App : Application
         _coordinateMetadataService = new CoordinateMetadataService(_logger);
         _pluginService = new PluginService(
             _logger,
-            Path.Combine(AppPaths.LocalFolder, "Plugins"));
+            Path.Combine(AppPaths.LocalFolder, AppFiles.PluginsFolder));
         _localSourceRegistry = new LocalSourceRegistry(_logger);
         InitializeComponent();
 
@@ -155,6 +156,7 @@ public partial class App : Application
             settingsViewModel,
             _pluginService,
             _thumbnailScheduler,
+            new SceneRatingResolver(_pluginService, _userCardRatings, _logger),
             _logger);
         var characterGalleryViewModel = new CharacterGalleryViewModel(
             _characterCardService,
@@ -263,6 +265,7 @@ public partial class App : Application
             importViewModel,
             authorPostService);
 
+        ApplyCornerStyle(settingsViewModel.SquareCorners);
         _mainWindow = new MainWindow();
         var metadataShutdown = new ShutdownCoordinator(
         [
@@ -284,7 +287,7 @@ public partial class App : Application
             closing = true;
             try
             {
-                if (!await metadataShutdown.WaitAsync(TimeSpan.FromSeconds(5)))
+                if (!await metadataShutdown.WaitAsync(AppTiming.ShutdownWait))
                     _logger.LogError("App.MetadataShutdownTimeout", new TimeoutException());
             }
             catch (Exception ex) { _logger.LogError("App.MetadataShutdown", ex); }
@@ -308,6 +311,27 @@ public partial class App : Application
             ShowInputDialogAsync(dispatcherQueue, title, message, placeholder, ct);
 
         authorSourceCoordinator.EnsureLoadedAsync().Observe(_logger, "AuthorSource.InitialLoad");
+    }
+
+    /// <summary>
+    /// The "square corners" setting: every corner radius the app and WinUI's own
+    /// control templates read is a resource, so setting them to zero here,
+    /// before the window exists, squares every corner. Resources are read when
+    /// an element is created, hence a restart to switch.
+    /// </summary>
+    private void ApplyCornerStyle(bool square)
+    {
+        if (!square) return;
+        var zero = new CornerRadius(0);
+        foreach (var key in new[]
+        {
+            "ControlCornerRadius", "OverlayCornerRadius",
+            "SurfaceCornerRadius", "LargeCornerRadius",
+            "MediaTileCornerRadius", "MediaOverlayBadgeCornerRadius",
+        })
+        {
+            Resources[key] = zero;
+        }
     }
 
     private void RegisterServices(
@@ -350,6 +374,45 @@ public partial class App : Application
         Services.Add(new TagCloudService(
             Services.GetRequiredService<LibraryRegistry>(), _pluginService, _logger));
         Services.Add(new TagDictionaryService(_pluginService, _logger));
+        Services.Add(_userCardRatings);
+        var cardStates = new CardStateService(new CardStateStore(), settingsViewModel, _logger);
+        Services.Add(cardStates);
+        // The galleries hide "not for me" cards themselves; they only need to
+        // be told which those are and when that changed.
+        foreach (var library in Services.GetRequiredService<LibraryRegistry>().All)
+        {
+            var gallery = library.ViewModel;
+            gallery.IsHiddenCard = path => cardStates.Has(path, CardFlag.Hidden);
+            cardStates.StateChanged += _ => gallery.RefreshHiddenCards();
+        }
+        // A scene's rating falls back to the rating it was filed under when no
+        // rating folder says it (the three-level layout has none). The state
+        // files can load after the cards, and a filed rating can be written
+        // while the gallery is open, so both refresh it.
+        galleryViewModel.FiledRatingOf = cardStates.FiledRatingOf;
+        // A rating that could not be recorded leaves an R-18 card reading as G,
+        // which nothing on screen would otherwise show; the toast stays until dismissed.
+        async Task FileCommittedRatings(IReadOnlyList<string> paths, IEnumerable<Models.ImportItem> items)
+        {
+            var failed = await cardStates.FileImportedRatingsAsync(paths, items);
+            if (failed > 0)
+                AppToast.Show(string.Format(UiText.Get("Import_RatingsNotSaved"), failed),
+                    InfoBarSeverity.Warning, key: "import-ratings", sticky: true);
+        }
+        localImportViewModel.FileCommittedRatings = FileCommittedRatings;
+        if (importViewModel is not null) importViewModel.FileCommittedRatings = FileCommittedRatings;
+        cardStates.StateChanged += galleryViewModel.RefreshFiledRatings;
+        _ = cardStates.EnsureLoadedAsync().ContinueWith(_ =>
+        {
+            foreach (var library in Services.GetRequiredService<LibraryRegistry>().All)
+                library.ViewModel.RefreshHiddenCards();
+            galleryViewModel.RefreshFiledRatings();
+        }, TaskScheduler.Default);
+        // Titles and tags come from the sidecars the scene ratings already read;
+        // author counts from the author index. Neither reads a file per tile.
+        // The gallery also brings the app-wide rating filter and the rule it applies.
+        Services.Add(new HomeViewModel(Services.GetRequiredService<LibraryRegistry>(), cardStates,
+            galleryViewModel.RatingResolver, authorInfoService, galleryViewModel));
         Services.Add(new UsageRecordService(
             settingsViewModel,
             () => Services.GetRequiredService<LibraryRegistry>().All
@@ -360,7 +423,22 @@ public partial class App : Application
         Services.Add(authorsViewModel);
         Services.Add(localImportViewModel);
         Services.Add(authorSourceCoordinator);
-        if (importService is not null) Services.Add(importService);
+        if (importService is not null)
+        {
+            Services.Add(importService);
+            // Giving a library card its source later uses the import rules for
+            // where it goes, so it exists only when import does.
+            Services.Add(new LibraryCardReidentifier(
+                importService, settingsViewModel, _userCardRatings, cardStates, _logger));
+            // Moving the library to the three-level layout uses the import
+            // settings and plugins for its folder names, like the line above.
+            Services.Add(new LibraryLayoutMigrationService(
+                importService, cardStates, _userCardRatings, _characterAnnotations, _localSourceRegistry,
+                Services.GetRequiredService<LibraryRegistry>(),
+                _sceneCardService, _characterCardService, _coordinateCardService,
+                () => importViewModel is { IsImporting: true } or { IsAnalyzing: true } || localImportViewModel.IsImporting,
+                _logger));
+        }
         if (importViewModel is not null) Services.Add(importViewModel);
         if (authorPostService is not null)
         {

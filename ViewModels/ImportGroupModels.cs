@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Models;
 using SceneGallery.PluginSdk;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
@@ -25,9 +26,9 @@ public partial class ImportRatingGroup : ObservableObject
         Rating = rating;
         Label = rating switch
         {
-            ContentRating.R18G => "R-18G",
-            ContentRating.R18  => "R-18",
-            _                  => "G",
+            ContentRating.R18G => RatingLabels.R18G,
+            ContentRating.R18  => RatingLabels.R18,
+            _                  => RatingLabels.General,
         };
     }
 }

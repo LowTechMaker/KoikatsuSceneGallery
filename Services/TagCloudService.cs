@@ -87,19 +87,7 @@ internal sealed class TagCloudService(LibraryRegistry libraries, PluginService p
 
         var cloud = await Task.Run(() =>
         {
-            var documents = new List<PostMetadataDocument>();
-            foreach (var directory in directories)
-            {
-                token.ThrowIfCancellationRequested();
-                try
-                {
-                    documents.AddRange(_store.ReadAll(directory));
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError("TagCloud.ReadSidecars", ex, directory);
-                }
-            }
+            var documents = PostSidecarLocator.ReadAll(_store, directories, logger, "TagCloud.ReadSidecars", token);
             var all = TagCloudAggregator.Aggregate(documents);
             // Sidecars outlive their plugin, so a platform whose plugin is gone
             // would otherwise keep offering its tags.
@@ -136,36 +124,7 @@ internal sealed class TagCloudService(LibraryRegistry libraries, PluginService p
     /// </summary>
     private string KeyOf(CardBase card) => CardGroupKey.For(card, plugins, logger);
 
-    /// <summary>
-    /// Every directory holding sidecars, found from the cards themselves. A
-    /// card sits either directly in its author folder or one artwork subfolder
-    /// down, so exactly two levels are probed.
-    /// </summary>
+    /// <summary>Every directory holding sidecars, found from the cards themselves.</summary>
     private IReadOnlyList<string> AuthorDirectories()
-    {
-        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var card in libraries.All.SelectMany(library => library.Cards))
-        {
-            var folder = Path.GetDirectoryName(card.FilePath);
-            if (string.IsNullOrEmpty(folder)) continue;
-            candidates.Add(folder);
-            if (Path.GetDirectoryName(folder) is { Length: > 0 } parent) candidates.Add(parent);
-        }
-
-        return [.. candidates.Where(HasSidecars)];
-    }
-
-    private bool HasSidecars(string directory)
-    {
-        try
-        {
-            return Directory.Exists(Path.Combine(
-                directory, PostMetadataStore.MetadataDirectoryName, PostMetadataStore.FetchedDataDirectoryName));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("TagCloud.ProbeDirectory", ex, directory);
-            return false;
-        }
-    }
+        => PostSidecarLocator.AuthorDirectories(libraries.All.SelectMany(library => library.Cards), logger);
 }

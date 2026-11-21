@@ -497,7 +497,7 @@
   <data name="Nav_Authors.Content" xml:space="preserve">
     <value>Authors</value>
   </data>
-  <data name="Authors_Title.Text" xml:space="preserve">
+  <data name="Authors_Header.Title" xml:space="preserve">
     <value>Authors</value>
   </data>
   <data name="Authors_Empty.Text" xml:space="preserve">
@@ -720,12 +720,8 @@
   <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
     <value>Add files: drop Koikatsu cards here</value>
   </data>
-  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
-    <value>Drop Koikatsu cards here</value>
-  </data>
-  <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>Drop PNG files downloaded from pixiv or BepisDB</value>
-  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve"><value>Drop Koikatsu cards, mods or archives here</value></data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve"><value>PNG cards, .zipmod files and .zip archives (unpacked automatically)</value></data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>All Ages</value>
   </data>
@@ -980,7 +976,7 @@
     <value>Importing assets: {0} / {1} items processed...</value>
   </data>
   <data name="Import_Phase_RollingBack" xml:space="preserve">
-    <value>Conflict or cancellation detected. Rolling back the batch and safely unbinding metadata...</value>
+    <value>The import failed or was cancelled part-way; putting every moved file back…</value>
   </data>
   <data name="Import_Phase_Completed" xml:space="preserve">
     <value>Import process completed.</value>
@@ -1047,14 +1043,13 @@
   <data name="Import_Review_NoDestination_Title" xml:space="preserve"><value>Import destinations are still needed</value></data>
   <data name="Import_Review_NoDestination_Description" xml:space="preserve"><value>{0} processed cards are waiting for their final destination calculation.</value></data>
   <data name="Import_Review_Summary" xml:space="preserve"><value>{0} cards total · {1} ready to import</value></data>
-  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>Showing {0} · {1} selected</value></data>
+  <data name="Import_Review_SelectionCount" xml:space="preserve"><value>{0} shown · {1} selected</value></data>
   <data name="Import_Review_FilterEmpty.Text" xml:space="preserve"><value>No images in this tab match the selected rating</value></data>
   <data name="Import_Review_ShowAll.Content" xml:space="preserve"><value>Show all ratings in this tab</value></data>
   <data name="Import_UnknownEmpty_Title.Text" xml:space="preserve"><value>No cards need identification</value></data>
   <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>Switch to Matched to review the import list, or drop more PNG cards here.</value></data>
   <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>These cards are already in your library</value></data>
   <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>There is no need to import them again. Clear the list or drop more PNG cards here.</value></data>
-  <data name="Import_Options.Content" xml:space="preserve"><value>Import options</value></data>
   <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>Import options</value></data>
   <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>Select all</value></data>
   <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>Select the current list</value></data>
@@ -1067,7 +1062,6 @@
   <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>Rating and author</value></data>
   <data name="Import_SelectSection.Content" xml:space="preserve"><value>Select / clear section</value></data>
   <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>Select or clear cards in this section</value></data>
-  <data name="Import_More.Content" xml:space="preserve"><value>More</value></data>
   <data name="Import_More_Undo.Text" xml:space="preserve"><value>Undo last edit</value></data>
   <data name="Import_More_Clear.Text" xml:space="preserve"><value>Clear import list</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
@@ -1182,16 +1176,13 @@
     <value>Filter content and environment</value>
   </data>
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
-    <value>Show R-18 content</value>
+    <value>Rating</value>
   </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>Game environment</value>
   </data>
   <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
     <value>Manage resolution filters and plugin analysis in Settings.</value>
-  </data>
-  <data name="Browser_ResolutionFilterActive" xml:space="preserve">
-    <value>Image size filter active · {0} selected in Settings</value>
   </data>
   <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
     <value>Open library settings</value>
@@ -1260,8 +1251,8 @@
   <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>Needs information</value></data>
   <data name="Import_StatusFailed.Content" xml:space="preserve"><value>Could not retrieve</value></data>
   <data name="Import_StatusExisting.Content" xml:space="preserve"><value>Already in library</value></data>
-  <data name="Import_Status_Ready" xml:space="preserve"><value>Ready to review</value></data>
-  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>Needs information</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>Unidentified</value></data>
   <data name="Import_Status_Failed" xml:space="preserve"><value>Could not retrieve</value></data>
   <data name="Import_Status_Existing" xml:space="preserve"><value>Already in library</value></data>
   <data name="Import_Status_Analyzing" xml:space="preserve"><value>Analyzing</value></data>
@@ -1272,7 +1263,6 @@
   <data name="PostDetail_Unsaved" xml:space="preserve"><value>Details not saved</value></data>
   <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} local images</value></data>
   <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>Choose files</value></data>
-  <data name="Import_AddFiles.Content" xml:space="preserve"><value>Add files</value></data>
   <data name="Import_IdentifiedCount" xml:space="preserve"><value>Identified ({0})</value></data>
   <data name="Import_UnidentifiedCount" xml:space="preserve"><value>Unidentified ({0})</value></data>
   <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>Post URL or artwork ID</value></data>
@@ -1299,21 +1289,15 @@
   <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>Batch ratings</value></data>
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>Counts ready and completed images across this batch, regardless of the current tab or filter.</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>Unidentified ({0})</value></data>
-  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>Identified ({0})</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>Select images that need details, then open Edit selected to fetch metadata, reverse search, or assign an author.</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>Review each image, author, and rating. Select cards to edit, then import when ready.</value></data>
-  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>No images need attention under the current filter.</value></data>
-  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>No identified images match the current filter.</value></data>
-  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Import images: unidentified list, unavailable posts list, then identified image grid</value></data>
-  <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>Unavailable posts ({0})</value></data>
-  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>A post URL or ID was detected, but its details could not be retrieved. Retry fetching, reverse search, or assign an author.</value></data>
-  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>No unavailable posts match the current filter.</value></data>
-  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>Unknown · {0}</value></data>
-  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>Unavailable · {0}</value></data>
-  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>Identified · {0}</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>Ready ({0})</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>No author found. Select them and paste a post URL, assign an author, or search by image.</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>Author and post found. Check the ratings, then import.</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Import list</value></data>
+  <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>Post unavailable ({0})</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>The post was recognised but could not be fetched. Retry, or assign an author.</value></data>
   <data name="Nav_Discovery.Content" xml:space="preserve"><value>Random discovery</value></data>
   <data name="Discovery_Title.Text" xml:space="preserve"><value>Random discovery</value></data>
-  <data name="Discovery_Description.Text" xml:space="preserve"><value>Explore your scenes in a new order. Keep scrolling; each scene appears once per round.</value></data>
+  <data name="Discovery_Header.Subtitle" xml:space="preserve"><value>Explore your scenes in a new order. Keep scrolling; each scene appears once per round.</value></data>
   <data name="Discovery_Filters.Content" xml:space="preserve"><value>Filters</value></data>
   <data name="Discovery_Reset.Content" xml:space="preserve"><value>Reshuffle</value></data>
   <data name="Discovery_Reset.ToolTipService.ToolTip" xml:space="preserve"><value>Start a new random order and return to the top.</value></data>
@@ -1544,6 +1528,9 @@
   <data name="Platform_pixiv" xml:space="preserve">
     <value>pixiv</value>
   </data>
+  <data name="Platform_patreon" xml:space="preserve">
+    <value>Patreon</value>
+  </data>
   <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
     <value>Record mode</value>
   </data>
@@ -1567,12 +1554,6 @@
   </data>
   <data name="SC_PokerHand.Header" xml:space="preserve">
     <value>Deal discovery as a hand of cards</value>
-  </data>
-  <data name="SC_RecordMode.Description" xml:space="preserve">
-    <value>Logs the original page of every card dragged or copied out of the app. Locally collected cards are ignored</value>
-  </data>
-  <data name="SC_RecordMode.Header" xml:space="preserve">
-    <value>Record mode</value>
   </data>
   <data name="TagCloud_ArticleLink.Content" xml:space="preserve">
     <value>Read on pixiv encyclopedia</value>
@@ -1649,7 +1630,7 @@
   <data name="Usage_NoOrigin" xml:space="preserve">
     <value>No original page</value>
   </data>
-  <data name="Usage_Title.Text" xml:space="preserve">
+  <data name="Usage_Header.Title" xml:space="preserve">
     <value>Usage log</value>
   </data>
   <data name="Refetch_SectionTitle" xml:space="preserve">
@@ -1715,9 +1696,6 @@
   <data name="Refetch_BannerTitle" xml:space="preserve">
     <value>Re-fetching {0} artwork data</value>
   </data>
-  <data name="Refetch_BannerStop.Content" xml:space="preserve">
-    <value>Stop</value>
-  </data>
   <data name="Refetch_BackingUp" xml:space="preserve">
     <value>Backing up the artwork data files that will be overwritten…</value>
   </data>
@@ -1781,4 +1759,649 @@
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>Update cloud</value>
   </data>
+  <data name="Import_Summary_AutoSuccess" xml:space="preserve">
+    <value>Automatically imported {0} cards with recognized posts.</value>
+  </data>
+  <data name="Import_Action_LookupPending" xml:space="preserve">
+    <value>Post URL not applied: fetch it or clear it</value>
+  </data>
+  <data name="Import_Action_LookupPendingCompact" xml:space="preserve">
+    <value>URL not applied</value>
+  </data>
+  <data name="Import_UnidentifiedWarnTitle" xml:space="preserve">
+    <value>{0} cards are not identified</value>
+  </data>
+  <data name="Import_UnidentifiedWarnBody" xml:space="preserve">
+    <value>No author was found for these cards, so they will go to the unidentified folder. Import them as unidentified?</value>
+  </data>
+  <data name="Import_UnidentifiedWarnImportAll" xml:space="preserve">
+    <value>Import them as unidentified</value>
+  </data>
+  <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
+    <value>Import only the {0} identified</value>
+  </data>
+  <data name="Import_RemoveItemMenu.Text" xml:space="preserve"><value>Remove from this workspace</value></data>
+  <data name="Import_RemoveCheckedQuick.Content" xml:space="preserve"><value>Remove checked</value></data>
+  <data name="Import_LinkMatch_Summary" xml:space="preserve"><value>Post {0}: links list {1} files. {2} dropped cards match, {3} missing, {4} not in the list</value></data>
+  <data name="Import_LinkMatch_Complete" xml:space="preserve"><value>Post {0}: links list {1} files, and all of them were dropped ({2} cards match)</value></data>
+  <data name="Import_LinkMatch_NoMatch" xml:space="preserve"><value>Post {0}: links list {1} files, but none of the dropped cards match</value></data>
+  <data name="Import_LinkMatch_Missing" xml:space="preserve"><value>Missing: {0}</value></data>
+  <data name="Import_LinkMatch_MissingMore" xml:space="preserve"><value> ... and {0} more</value></data>
+  <data name="Import_LinkMatch_NoPost" xml:space="preserve"><value>Post {0}: could not fetch the post, so its links were not checked</value></data>
+  <data name="Import_LinkMatch_NoLinks" xml:space="preserve"><value>Post {0}: the description has no download link whose file names can be read</value></data>
+  <data name="Import_LinkMatch_InLibrary" xml:space="preserve"><value>Missing, but the library already has an identical file: {0}</value></data>
+  <data name="Import_AuthorCheckOpen.Content" xml:space="preserve"><value>Check author posts…</value></data>
+  <data name="Import_AuthorCheck_Title" xml:space="preserve"><value>Check an author's posts</value></data>
+  <data name="Import_AuthorCheck_UrlPlaceholder" xml:space="preserve"><value>Paste an author address, e.g. https://www.pixiv.net/users/12345678</value></data>
+  <data name="Import_AuthorCheck_Start" xml:space="preserve"><value>Start check</value></data>
+  <data name="Import_AuthorCheck_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Import_AuthorCheck_NotAuthor" xml:space="preserve"><value>That is not an author address for any installed platform</value></data>
+  <data name="Import_AuthorCheck_NoCards" xml:space="preserve"><value>There are no cards in the import list to compare with</value></data>
+  <data name="Import_AuthorCheck_Listing" xml:space="preserve"><value>Getting the author's post list…</value></data>
+  <data name="Import_AuthorCheck_Progress" xml:space="preserve"><value>Checked {0} of {1} posts (a few seconds each; close any time)</value></data>
+  <data name="Import_AuthorCheck_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Import_AuthorCheck_Failed" xml:space="preserve"><value>The check failed; details are in the log</value></data>
+  <data name="Import_AuthorCheck_PostHeader" xml:space="preserve"><value>Post {0}{1}: {2} dropped cards match (of {3} files)</value></data>
+  <data name="Import_AuthorCheck_PostComplete" xml:space="preserve"><value>Complete, nothing missing</value></data>
+  <data name="Import_AuthorCheck_ListFailed" xml:space="preserve"><value>Could not get this author's post list (author not found, offline, or refused)</value></data>
+  <data name="Import_AuthorCheck_Summary" xml:space="preserve"><value>Done: checked {0} posts; {1} list dropped cards, {2} are missing files ({3} could not be fetched, {4} have no readable download link)</value></data>
+  <data name="Import_AuthorCheck_Unclaimed" xml:space="preserve"><value>{0} dropped cards belong to none of this author's posts: {1}</value></data>
+  <data name="Import_AuthorCheck_StoppedEarly" xml:space="preserve"><value>Every dropped card has a post, so older posts were not checked.</value></data>
+  <data name="Import_Failure_Title" xml:space="preserve"><value>Import did not finish and was rolled back</value></data>
+  <data name="Import_Failure_SourceFileNotFound" xml:space="preserve"><value>The source file is gone (moved, deleted, or its drive was removed).</value></data>
+  <data name="Import_Failure_TargetVolumeFull" xml:space="preserve"><value>The destination drive is out of space.</value></data>
+  <data name="Import_Failure_FileMoveAccessDenied" xml:space="preserve"><value>No permission to move this file (another program may be using it, or the folder is read-only).</value></data>
+  <data name="Import_Failure_DestinationContentMismatch" xml:space="preserve"><value>Conflict: the destination already has a file with the same name but different content, so it was not overwritten.</value></data>
+  <data name="Import_Failure_AtomicRenameExhausted" xml:space="preserve"><value>No non-conflicting name could be found for this file.</value></data>
+  <data name="Import_Failure_SidecarWriteFault" xml:space="preserve"><value>Writing the post data file failed, or the author folder was not found.</value></data>
+  <data name="Import_Failure_Source" xml:space="preserve"><value>Source: {0}</value></data>
+  <data name="Import_Failure_Target" xml:space="preserve"><value>Destination: {0}</value></data>
+  <data name="Import_Failure_Outcome" xml:space="preserve"><value>{0} rolled back safely, {1} need manual recovery.</value></data>
+  <data name="Import_Failure_More" xml:space="preserve"><value>{0} more files also failed.</value></data>
+  <data name="Import_Failure_Log" xml:space="preserve"><value>The full list is in the log file.</value></data>
+  <data name="Import_AuthorCheck_Apply" xml:space="preserve"><value>Fetch data and apply to the cards</value></data>
+  <data name="Import_AuthorCheck_Applying" xml:space="preserve"><value>Fetching the posts and applying them to the cards…</value></data>
+  <data name="Import_AuthorCheck_Applied" xml:space="preserve"><value>Applied {1} posts to {0} cards.</value></data>
+  <data name="Import_AuthorCheck_ApplyFailed" xml:space="preserve"><value>Applying did not finish; please try again.</value></data>
+  <data name="Import_LinkMatch_Unstarted" xml:space="preserve"><value>Not started (other folders of the shared folder): {0}</value></data>
+  <data name="Import_LinkMatch_UnstartedCount" xml:space="preserve"><value> ({0} files)</value></data>
+  <data name="Import_LinkMatch_RootFolder" xml:space="preserve"><value>root</value></data>
+  <data name="Import_AuthorCheck_Collection" xml:space="preserve"><value>Collection: its {0} dropped cards all belong to posts that list fewer files (more specific ones), so nothing is applied here</value></data>
+  <data name="Import_AuthorCheck_SharedNote" xml:space="preserve"><value>{0} of them belong to more specific posts and are not applied here</value></data>
+  <data name="Nav_Rating.Content" xml:space="preserve">
+    <value>Rate cards</value>
+  </data>
+  <data name="Rating_Header.Title" xml:space="preserve">
+    <value>Rate cards</value>
+  </data>
+  <data name="Rating_Previous.Content" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Rating_KeyHint.Text" xml:space="preserve">
+    <value>Keys 1, 2 and 3 work too</value>
+  </data>
+  <data name="Rating_Loading" xml:space="preserve">
+    <value>Reading the library…</value>
+  </data>
+  <data name="Rating_NoCardsTitle" xml:space="preserve">
+    <value>No scene cards in the library yet</value>
+  </data>
+  <data name="Rating_NoCardsDescription" xml:space="preserve">
+    <value>Add a scene folder in Settings and its cards will show up here.</value>
+  </data>
+  <data name="Rating_DoneTitle" xml:space="preserve">
+    <value>All cards rated</value>
+  </data>
+  <data name="Rating_DoneDescription" xml:space="preserve">
+    <value>{0} cards rated. New cards added to the library will show up here.</value>
+  </data>
+  <data name="Rating_Progress" xml:space="preserve">
+    <value>{0} left to rate · {1} rated</value>
+  </data>
+  <data name="Rating_RatedCount" xml:space="preserve">
+    <value>{0} rated</value>
+  </data>
+  <data name="Rating_SaveFailed" xml:space="preserve">
+    <value>Could not save the rating: the rating file may be locked by another program, or the card is outside every scene folder.</value>
+  </data>
+  <data name="UserRating_ButtonName" xml:space="preserve">
+    <value>Rate as {0}</value>
+  </data>
+  <data name="Detail_UserRating.Text" xml:space="preserve">
+    <value>My rating</value>
+  </data>
+  <data name="Detail_ClearUserRating.Content" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Detail_UserRatingNone" xml:space="preserve">
+    <value>Not rated yet (separate from the platform rating)</value>
+  </data>
+  <data name="Detail_UserRatingUnavailable" xml:space="preserve">
+    <value>This file holds no readable card data, so it cannot be rated.</value>
+  </data>
+  <data name="SC_RatingSource.Header" xml:space="preserve">
+    <value>Rating source</value>
+  </data>
+  <data name="SC_RatingSource.Description" xml:space="preserve">
+    <value>Which rating the gallery filters and labels by. With your ratings, cards you have not rated yet still use the platform rating.</value>
+  </data>
+  <data name="Settings_RatingSourcePlatform.Content" xml:space="preserve">
+    <value>Platform rating</value>
+  </data>
+  <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
+    <value>My rating</value>
+  </data>
+  <data name="Import_Mods_NoGameBody" xml:space="preserve"><value>Go to Settings → Folders → Mods and choose the Koikatsu or Koikatsu Sunshine install folder (the one that holds mods and BepInEx).</value></data>
+  <data name="Import_Mods_Game_Koikatsu" xml:space="preserve"><value>Koikatsu</value></data>
+  <data name="Import_Mods_Game_KoikatsuSunshine" xml:space="preserve"><value>Koikatsu Sunshine</value></data>
+  <data name="Import_Mods_Action_Install" xml:space="preserve"><value>new</value></data>
+  <data name="Import_Mods_Action_Update" xml:space="preserve"><value>update (installed: {0})</value></data>
+  <data name="Import_Mods_Action_AlreadyInstalled" xml:space="preserve"><value>this version is already installed</value></data>
+  <data name="Import_Mods_Action_NewerInstalled" xml:space="preserve"><value>a newer version is installed ({0})</value></data>
+  <data name="Import_Mods_Action_NotForThisGame" xml:space="preserve"><value>not a mod for this game</value></data>
+  <data name="Import_Mods_Action_Superseded" xml:space="preserve"><value>a newer copy is in the same batch</value></data>
+  <data name="Import_Mods_Action_NotAMod" xml:space="preserve"><value>not a readable mod</value></data>
+  <data name="Import_Mods_Detail_BackUp" xml:space="preserve"><value>Old version {0} is moved to a backup: {1}</value></data>
+  <data name="Import_Mods_Detail_KeptOld" xml:space="preserve"><value>Old version {0} stays where it is; Sideloader loads the newer one: {1}</value></data>
+  <data name="Settings_ModsHeader.Text" xml:space="preserve"><value>Mods</value></data>
+  <data name="SC_KoikatsuGameFolder.Header" xml:space="preserve"><value>Koikatsu game folder</value></data>
+  <data name="SC_KoikatsuGameFolder.Description" xml:space="preserve"><value>Where zipmods from imports are installed: the folder that holds mods and BepInEx.</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Header" xml:space="preserve"><value>Koikatsu Sunshine game folder</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Description" xml:space="preserve"><value>Where zipmods from imports are installed: the folder that holds mods and BepInEx.</value></data>
+  <data name="SC_ModInstallFolderName.Header" xml:space="preserve"><value>Mod install folder</value></data>
+  <data name="SC_ModInstallFolderName.Description" xml:space="preserve"><value>The gallery's own folder inside mods. Mods are only ever written here.</value></data>
+  <data name="Settings_Mods_Pick.Content" xml:space="preserve"><value>Choose…</value></data>
+  <data name="Settings_Mods_Clear.Content" xml:space="preserve"><value>Clear</value></data>
+  <data name="Settings_Mods_NotSet" xml:space="preserve"><value>Not set</value></data>
+  <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>This folder no longer exists.</value></data>
+  <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>No mods or BepInEx folder here — is this the game folder?</value></data>
+  <data name="Import_SelectionCount" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="Import_Mixed_ModsCount" xml:space="preserve"><value>Mods ({0})</value></data>
+  <data name="Import_Mixed_ModsHint" xml:space="preserve"><value>Checked mods are installed into the game's mods folder when you import.</value></data>
+  <data name="Import_Mixed_SkippedCount" xml:space="preserve"><value>Left alone ({0})</value></data>
+  <data name="Import_Mixed_SkippedHint" xml:space="preserve"><value>Already in the library, or skipped. Nothing is done with these.</value></data>
+  <data name="Import_Status_Skipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="Import_Status_ExistingElsewhere" xml:space="preserve"><value>In the library, elsewhere</value></data>
+  <data name="Import_Review_InLibraryAt" xml:space="preserve"><value>The library has it at {0}</value></data>
+  <data name="Import_Review_FromArchive" xml:space="preserve"><value>From {0}</value></data>
+  <data name="Import_IncludeUnidentified" xml:space="preserve"><value>Include {0} unidentified</value></data>
+  <data name="Import_IncludeUnidentifiedBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Unidentified cards go to the Unknown folder.</value></data>
+  <data name="Import_Plan_Nothing" xml:space="preserve"><value>Nothing to import</value></data>
+  <data name="Import_Plan_Cards" xml:space="preserve"><value>Imports {0} card(s)</value></data>
+  <data name="Import_Plan_Mods" xml:space="preserve"><value>Installs {0} mod(s)</value></data>
+  <data name="Import_Plan_CardsAndMods" xml:space="preserve"><value>Imports {0} card(s) and installs {1} mod(s)</value></data>
+  <data name="Import_ConfirmButtonText.Text" xml:space="preserve"><value>Import</value></data>
+  <data name="Import_OptionsLabel.Text" xml:space="preserve"><value>Options</value></data>
+  <data name="Import_AddFilesLabel.Text" xml:space="preserve"><value>Add files</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>More</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>More</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Select all</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Select all</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Collapse or expand</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Collapse or expand</value></data>
+  <data name="Import_SelectionAuthorTitle.Text" xml:space="preserve"><value>Assign an author to the selection</value></data>
+  <data name="Import_Mods_InstallBox.Content" xml:space="preserve"><value>Install</value></data>
+  <data name="Import_Mods_Status_NoGame" xml:space="preserve"><value>No game folder set</value></data>
+  <data name="Import_Mods_Status_CheckFailed" xml:space="preserve"><value>Could not check the mods folder</value></data>
+  <data name="Import_Result_Title" xml:space="preserve"><value>Done</value></data>
+  <data name="Import_Result_TitleWithProblems" xml:space="preserve"><value>Done, with problems</value></data>
+  <data name="Import_Result_Imported" xml:space="preserve"><value>{0} card(s) imported.</value></data>
+  <data name="Import_Result_Linked" xml:space="preserve"><value>{0} card(s) linked to the library's copy.</value></data>
+  <data name="Import_Result_ModsInstalled" xml:space="preserve"><value>{0} mod(s) installed.</value></data>
+  <data name="Import_Result_Skipped" xml:space="preserve"><value>{0} skipped.</value></data>
+  <data name="Import_Conflict_Pending" xml:space="preserve"><value>Same name as a different card in the library: you will be asked when importing.</value></data>
+  <data name="Import_Conflict_SkippedNameClash" xml:space="preserve"><value>Skipped: the library has a different card of this name.</value></data>
+  <data name="Import_Conflict_RestoreFailed" xml:space="preserve"><value>Could not put back {0}; it is in the import-overwritten folder.</value></data>
+  <data name="Import_Conflict_Title" xml:space="preserve"><value>Decide on these cards</value></data>
+  <data name="Import_Conflict_Intro" xml:space="preserve"><value>Everything else was imported. These {0} card(s) need a decision.</value></data>
+  <data name="Import_Conflict_ApplyAll" xml:space="preserve"><value>Set all to</value></data>
+  <data name="Import_Conflict_ApplyAllEach" xml:space="preserve"><value>(choose for each)</value></data>
+  <data name="Import_Conflict_LinkHint" xml:space="preserve"><value>A hard link must be on the same drive as the library's copy. A symbolic link needs Developer Mode or administrator rights.</value></data>
+  <data name="Import_Conflict_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Import_Conflict_Later" xml:space="preserve"><value>Decide later</value></data>
+  <data name="Import_Conflict_Kind_NameClash" xml:space="preserve"><value>The library has a different card of the same name:</value></data>
+  <data name="Import_Conflict_Kind_InLibraryElsewhere" xml:space="preserve"><value>The library already has this card, in another folder:</value></data>
+  <data name="Import_Conflict_Choice_Rename" xml:space="preserve"><value>Keep both (rename)</value></data>
+  <data name="Import_Conflict_Choice_Overwrite" xml:space="preserve"><value>Overwrite (old to recycle bin)</value></data>
+  <data name="Import_Conflict_Choice_Skip" xml:space="preserve"><value>Skip</value></data>
+  <data name="Import_Conflict_Choice_HardLink" xml:space="preserve"><value>Hard link</value></data>
+  <data name="Import_Conflict_Choice_SymbolicLink" xml:space="preserve"><value>Symbolic link</value></data>
+  <data name="Import_Conflict_Choice_Copy" xml:space="preserve"><value>Copy anyway</value></data>
+  <data name="Toast_Copied" xml:space="preserve">
+    <value>Copied to the clipboard.</value>
+  </data>
+  <data name="Usage_Copied" xml:space="preserve">
+    <value>Copied {0} records to the clipboard.</value>
+  </data>
+  <data name="Usage_Cleared" xml:space="preserve">
+    <value>Usage history cleared.</value>
+  </data>
+  <data name="Discovery_Header.Title" xml:space="preserve">
+    <value>Random discovery</value>
+  </data>
+  <data name="Nav_Explore.Content" xml:space="preserve">
+    <value>Explore</value>
+  </data>
+  <data name="Record_NavToggleOn" xml:space="preserve">
+    <value>Record mode is on: every card dragged or copied out is logged under Usage history.</value>
+  </data>
+  <data name="Record_NavToggleOff" xml:space="preserve">
+    <value>Record mode is off. Turn it on to log every card dragged or copied out.</value>
+  </data>
+  <data name="FeatureUnavailable_PluginHint.Text" xml:space="preserve">
+    <value>Plugins are DLL files placed in the Plugins folder. The plugins page lists what is installed and shows how to add more.</value>
+  </data>
+  <data name="FeatureUnavailable_OpenPlugins.Content" xml:space="preserve">
+    <value>Open plugin settings</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsTitle" xml:space="preserve">
+    <value>Authors need a platform plugin</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsDescription" xml:space="preserve">
+    <value>With a pixiv, FANBOX or BepisDB plugin installed, this page groups your cards by the author who made them, with each author's avatar, profile link and posts.</value>
+  </data>
+  <data name="FeatureUnavailable_TagsTitle" xml:space="preserve">
+    <value>Tags need a platform plugin</value>
+  </data>
+  <data name="FeatureUnavailable_TagsDescription" xml:space="preserve">
+    <value>Tags come from the post each card was imported from. With a platform plugin installed, this page shows them as a word cloud you can browse cards by.</value>
+  </data>
+  <data name="FeatureUnavailable_ImportTitle" xml:space="preserve">
+    <value>Importing needs a platform plugin</value>
+  </data>
+  <data name="FeatureUnavailable_ImportDescription" xml:space="preserve">
+    <value>Importing looks up where each card came from, files it under its author and keeps the post's title, tags and rating. It needs a plugin for the platform the cards came from.</value>
+  </data>
+  <data name="Palette_Query.PlaceholderText" xml:space="preserve">
+    <value>Search pages, commands, settings, authors and cards</value>
+  </data>
+  <data name="Palette_Query.AutomationProperties.Name" xml:space="preserve">
+    <value>Command palette search</value>
+  </data>
+  <data name="Palette_NoResults.Text" xml:space="preserve">
+    <value>Nothing matches. Try fewer words, or part of a file name.</value>
+  </data>
+  <data name="Palette_KeyHint.Text" xml:space="preserve">
+    <value>↑ ↓ to choose · Enter to open · Esc to close</value>
+  </data>
+  <data name="Palette_OpenButton.AutomationProperties.Name" xml:space="preserve">
+    <value>Search (Ctrl+K)</value>
+  </data>
+  <data name="Palette_OpenButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Search pages, commands, settings, authors and cards (Ctrl+K)</value>
+  </data>
+  <data name="Palette_CategoryPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="Palette_CategoryCommand" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="Palette_CategorySetting" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="Palette_CategoryAuthor" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="Palette_CategoryCard" xml:space="preserve">
+    <value>Card</value>
+  </data>
+  <data name="Palette_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Palette_RecordOn" xml:space="preserve">
+    <value>Turn record mode on</value>
+  </data>
+  <data name="Palette_RecordOff" xml:space="preserve">
+    <value>Turn record mode off</value>
+  </data>
+  <data name="Palette_SwitchPlatform" xml:space="preserve">
+    <value>Switch platform: {0}</value>
+  </data>
+  <data name="Activity_Title.Text" xml:space="preserve">
+    <value>Running in the background</value>
+  </data>
+  <data name="Activity_Cancel.Content" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Activity_ButtonName" xml:space="preserve">
+    <value>{0} background task(s) running</value>
+  </data>
+  <data name="Activity_LibraryScan" xml:space="preserve">
+    <value>Scanning {0}</value>
+  </data>
+  <data name="Activity_AuthorsRefresh" xml:space="preserve">
+    <value>Refreshing author details</value>
+  </data>
+  <data name="Activity_AuthorsDone" xml:space="preserve">
+    <value>Refreshed {0} of {1} authors.</value>
+  </data>
+  <data name="Activity_Import" xml:space="preserve">
+    <value>Importing</value>
+  </data>
+  <data name="Activity_ImportAnalysis" xml:space="preserve">
+    <value>Looking up the files to import</value>
+  </data>
+  <data name="Drop_Caption" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Drop_OverlayTitle.Text" xml:space="preserve">
+    <value>Drop to import</value>
+  </data>
+  <data name="Drop_OverlayDescription.Text" xml:space="preserve">
+    <value>The files open on the import page for review.</value>
+  </data>
+  <data name="CardMenu_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="CardMenu_OpenGroup" xml:space="preserve">
+    <value>Open group</value>
+  </data>
+  <data name="CardMenu_Rate" xml:space="preserve">
+    <value>My rating</value>
+  </data>
+  <data name="CardMenu_RateMany" xml:space="preserve">
+    <value>My rating ({0} cards)</value>
+  </data>
+  <data name="CardMenu_RateClear" xml:space="preserve">
+    <value>Not rated</value>
+  </data>
+  <data name="CardMenu_RatedOne" xml:space="preserve">
+    <value>Rated {0}.</value>
+  </data>
+  <data name="CardMenu_RatedMany" xml:space="preserve">
+    <value>Rated {0} cards {1}.</value>
+  </data>
+  <data name="CardMenu_CopyFile" xml:space="preserve">
+    <value>Copy file</value>
+  </data>
+  <data name="CardMenu_CopyFiles" xml:space="preserve">
+    <value>Copy {0} files</value>
+  </data>
+  <data name="CardMenu_FilesCopied" xml:space="preserve">
+    <value>Copied {0} file(s) to the clipboard.</value>
+  </data>
+  <data name="CardMenu_CopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="CardMenu_GoToAuthor" xml:space="preserve">
+    <value>Go to {0}</value>
+  </data>
+  <data name="CardMenu_RatedPlatformHint" xml:space="preserve">
+    <value>Tiles show the platform's rating; switch the rating source in Settings to show your own.</value>
+  </data>
+  <data name="Chip_Search" xml:space="preserve">
+    <value>Search: {0}</value>
+  </data>
+  <data name="Chip_Resolution" xml:space="preserve">
+    <value>Image size: {0} allowed</value>
+  </data>
+  <data name="Chip_RemoveName" xml:space="preserve">
+    <value>Remove filter: {0}</value>
+  </data>
+  <data name="Chips_ClearAll" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="Browser_ResolutionToggle.Header" xml:space="preserve">
+    <value>Image size filter</value>
+  </data>
+  <data name="Browser_ResolutionListCount" xml:space="preserve">
+    <value>{0} size(s) in the list, edited in settings.</value>
+  </data>
+  <data name="Browser_ResolutionListEmpty" xml:space="preserve">
+    <value>No sizes chosen yet; pick them in settings to use this filter.</value>
+  </data>
+  <data name="CardAction_OpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="CardAction_CopyFile" xml:space="preserve">
+    <value>Copy file</value>
+  </data>
+  <data name="CardAction_More" xml:space="preserve">
+    <value>More actions</value>
+  </data>
+  <data name="CardAction_CopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="CardAction_CopyFolder" xml:space="preserve">
+    <value>Copy folder path</value>
+  </data>
+  <data name="CardAction_CopyPixiv" xml:space="preserve">
+    <value>Copy pixiv link</value>
+  </data>
+  <data name="CardAction_CopyBepisDb" xml:space="preserve">
+    <value>Copy BepisDB link</value>
+  </data>
+  <data name="AuthorDetail_EditLocalLabel.Text" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AuthorDetail_ShuffleLabel.Text" xml:space="preserve">
+    <value>Random card</value>
+  </data>
+  <data name="AuthorDetail_RefreshLabel.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Import_AutoImportShort.Text" xml:space="preserve">
+    <value>Import recognized posts right away</value>
+  </data>
+  <data name="Import_AutoImportToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>Import recognized posts right away</value>
+  </data>
+  <data name="Import_AutoImportHost.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Cards whose file name matches a platform pattern (such as pixiv's 12345678_p0) and whose post is found are imported as soon as analysis finishes, without waiting for you. Other cards stay below for review.</value>
+  </data>
+  <data name="Settings_Search.PlaceholderText" xml:space="preserve">
+    <value>Search settings</value>
+  </data>
+  <data name="Settings_Search.AutomationProperties.Name" xml:space="preserve">
+    <value>Search settings</value>
+  </data>
+  <data name="Filmstrip_Name" xml:space="preserve">
+    <value>Nearby cards</value>
+  </data>
+  <data name="Filmstrip_Current" xml:space="preserve">
+    <value>Current card</value>
+  </data>
+  <data name="Steps_Position" xml:space="preserve">
+    <value>Step {0} of {1}: {2}</value>
+  </data>
+  <data name="Import_StepAdd" xml:space="preserve">
+    <value>Add files</value>
+  </data>
+  <data name="Import_StepReview" xml:space="preserve">
+    <value>Review</value>
+  </data>
+  <data name="Import_StepImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Import_RejectedWarningTitle" xml:space="preserve">
+    <value>Some files were left out</value>
+  </data>
+  <data name="Import_MessagesMore" xml:space="preserve">
+    <value>Close this message to see {0} more.</value>
+  </data>
+  <data name="Import_SelAuthor.Label" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="Import_SelRating.Label" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Import_SelSearch.Label" xml:space="preserve">
+    <value>Search by image</value>
+  </data>
+  <data name="Import_SelAuthorCheck.Label" xml:space="preserve">
+    <value>Check author's posts</value>
+  </data>
+  <data name="Import_SelRemove.Label" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Import_SelClear.Label" xml:space="preserve">
+    <value>Deselect</value>
+  </data>
+  <data name="Settings_Categories.AutomationProperties.Name" xml:space="preserve">
+    <value>Settings categories</value>
+  </data>
+  <data name="Settings_CategoryPicker.AutomationProperties.Name" xml:space="preserve">
+    <value>Settings category</value>
+  </data>
+  <data name="Nav_Home.Content" xml:space="preserve"><value>Home</value></data>
+  <data name="Home_Header.Title" xml:space="preserve"><value>What to play</value></data>
+  <data name="Home_Header.Subtitle" xml:space="preserve"><value>Scenes you queued, a few dealt at random, the ones you used lately and your favourites.</value></data>
+  <data name="Home_Queued" xml:space="preserve"><value>Want to try</value></data>
+  <data name="Home_QueuedEmpty" xml:space="preserve"><value>Nothing queued yet. Press "Want to try" or Q on any card and it shows up here.</value></data>
+  <data name="Home_Deal" xml:space="preserve"><value>Deal a few</value></data>
+  <data name="Home_DealAgain" xml:space="preserve"><value>Deal again</value></data>
+  <data name="Home_Recent" xml:space="preserve"><value>Recently used</value></data>
+  <data name="Home_Liked" xml:space="preserve"><value>Favourites</value></data>
+  <data name="CardState_Queue" xml:space="preserve"><value>Want to try</value></data>
+  <data name="CardState_Unqueue" xml:space="preserve"><value>Remove from want to try</value></data>
+  <data name="CardState_Like" xml:space="preserve"><value>Like</value></data>
+  <data name="CardState_Unlike" xml:space="preserve"><value>Unlike</value></data>
+  <data name="CardState_Hide" xml:space="preserve"><value>Not for me</value></data>
+  <data name="CardState_Unhide" xml:space="preserve"><value>Show again</value></data>
+  <data name="CardState_SaveFailed" xml:space="preserve"><value>Could not save the card's state.</value></data>
+  <data name="CardState_QueuedToast" xml:space="preserve"><value>Added to want to try.</value></data>
+  <data name="CardState_UnqueuedToast" xml:space="preserve"><value>Removed from want to try.</value></data>
+  <data name="CardState_LikedToast" xml:space="preserve"><value>Added to favourites.</value></data>
+  <data name="CardState_UnlikedToast" xml:space="preserve"><value>Removed from favourites.</value></data>
+  <data name="CardState_HiddenToast" xml:space="preserve"><value>Hidden. You can bring it back from the library's filters.</value></data>
+  <data name="CardState_UnhiddenToast" xml:space="preserve"><value>Showing again.</value></data>
+  <data name="Browser_ShowHiddenToggle.Header" xml:space="preserve"><value>Show cards marked &quot;not for me&quot;</value></data>
+  <data name="CardState_Used" xml:space="preserve"><value>Used</value></data>
+  <data name="CardMenu_AddSource" xml:space="preserve"><value>Add a source…</value></data>
+  <data name="Reidentify_Title" xml:space="preserve"><value>Add a source</value></data>
+  <data name="Reidentify_UrlHeader" xml:space="preserve"><value>Post URL or id</value></data>
+  <data name="Reidentify_UrlPlaceholder" xml:space="preserve"><value>Paste the post this card came from</value></data>
+  <data name="Reidentify_Fetch" xml:space="preserve"><value>Fetch</value></data>
+  <data name="Reidentify_AuthorHeader" xml:space="preserve"><value>Or just pick the author</value></data>
+  <data name="Reidentify_SearchByImage" xml:space="preserve"><value>Search by image</value></data>
+  <data name="Reidentify_RatingHeader" xml:space="preserve"><value>Rating</value></data>
+  <data name="Reidentify_Destination" xml:space="preserve"><value>This card will move to: {0}</value></data>
+  <data name="Reidentify_Confirm" xml:space="preserve"><value>Move and save</value></data>
+  <data name="Reidentify_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Reidentify_NotFound" xml:space="preserve"><value>That post could not be found.</value></data>
+  <data name="Reidentify_NeedPostOrAuthor" xml:space="preserve"><value>Give a post or an author.</value></data>
+  <data name="Reidentify_NotInLibrary" xml:space="preserve"><value>This file is not inside a library folder.</value></data>
+  <data name="Reidentify_AlreadyInPlace" xml:space="preserve"><value>This card is already where it belongs.</value></data>
+  <data name="Reidentify_Collision" xml:space="preserve"><value>A different file with the same name is already there. Nothing was moved.</value></data>
+  <data name="Reidentify_Duplicate" xml:space="preserve"><value>The same card is already there. Nothing was moved.</value></data>
+  <data name="Reidentify_SourceMissing" xml:space="preserve"><value>The file is no longer there; it may have been moved.</value></data>
+  <data name="Reidentify_Done" xml:space="preserve"><value>Source added. The card is now in the author's folder.</value></data>
+  <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>The card was moved, but the post data could not be saved.</value></data>
+  <data name="Reidentify_Failed" xml:space="preserve"><value>Could not move the file: {0}</value></data>
+  <data name="Origin_NoSource" xml:space="preserve"><value>No source</value></data>
+  <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>Only cards with no source</value></data>
+  <data name="LayoutMigration_Entry" xml:space="preserve"><value>Tidy the folder layout…</value></data>
+  <data name="LayoutMigration_EntryDescription" xml:space="preserve"><value>Changes the library from provider\game\rating\author\post to provider\author\post. You see the plan first; nothing moves until you confirm.</value></data>
+  <data name="LayoutMigration_Title" xml:space="preserve"><value>Tidy the folder layout</value></data>
+  <data name="LayoutMigration_Scanning" xml:space="preserve"><value>Looking at the folders…</value></data>
+  <data name="LayoutMigration_NothingToDo" xml:space="preserve"><value>The library already uses the new layout. Nothing to move.</value></data>
+  <data name="LayoutMigration_PlanMoves" xml:space="preserve"><value>{0} files will move</value></data>
+  <data name="LayoutMigration_PlanAuthors" xml:space="preserve"><value>{0} authors' folders will be merged into one each</value></data>
+  <data name="LayoutMigration_PlanStays" xml:space="preserve"><value>{0} files will stay where they are</value></data>
+  <data name="LayoutMigration_PlanRatings" xml:space="preserve"><value>The rating of {0} cards will be saved as data first</value></data>
+  <data name="LayoutMigration_ShowDetails" xml:space="preserve"><value>Show every file</value></data>
+  <data name="LayoutMigration_SavePlan" xml:space="preserve"><value>Save the plan as a text file…</value></data>
+  <data name="LayoutMigration_Run" xml:space="preserve"><value>Move the files</value></data>
+  <data name="LayoutMigration_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="LayoutMigration_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="LayoutMigration_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="LayoutMigration_Progress" xml:space="preserve"><value>Moved {0} of {1}</value></data>
+  <data name="LayoutMigration_Stopped" xml:space="preserve"><value>Stopped. The {0} files already moved stay in their new place; you can continue later or move them all back.</value></data>
+  <data name="LayoutMigration_Done" xml:space="preserve"><value>Done: {0} files moved, {1} left where they were.</value></data>
+  <data name="LayoutMigration_Undo" xml:space="preserve"><value>Move everything back</value></data>
+  <data name="LayoutMigration_UndoDone" xml:space="preserve"><value>{0} files moved back.</value></data>
+  <data name="LayoutMigration_UndoPartial" xml:space="preserve"><value>{0} files moved back; {1} could not be.</value></data>
+  <data name="LayoutMigration_Resume" xml:space="preserve"><value>The last tidy-up did not finish. Continue?</value></data>
+  <data name="LayoutMigration_ReasonCollision" xml:space="preserve"><value>A different file with the same name is already there</value></data>
+  <data name="LayoutMigration_ReasonDuplicate" xml:space="preserve"><value>The same file is already there</value></data>
+  <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>Could not tell which provider it belongs to</value></data>
+  <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>Could not move: {0}</value></data>
+  <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>Wait for the import or scan to finish first.</value></data>
+  <data name="SC_LayoutMigration.Header" xml:space="preserve"><value>Tidy the folder layout</value></data>
+  <data name="SC_LayoutMigration.Description" xml:space="preserve"><value>Changes the library from provider\game\rating\author\post to provider\author\post. You see the plan first; nothing moves until you confirm.</value></data>
+  <data name="SC_LayoutMigrationButton.Content" xml:space="preserve"><value>Tidy the folder layout…</value></data>
+  <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>Not inside an author folder</value></data>
+  <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>Its rating could not be saved first, so it was not moved</value></data>
+  <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>The file changed or is no longer there since the plan was made</value></data>
+  <data name="LayoutMigration_LastRun" xml:space="preserve"><value>Last tidy-up: {0}, {1} files moved.</value></data>
+  <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} files are outside the organized folders and are not touched</value></data>
+  <data name="Import_RatingsNotSaved" xml:space="preserve"><value>The rating of {0} imported cards could not be saved, so they now show as G. Set their rating again on the card.</value></data>
+  <data name="LayoutMigration_NothingToMoveButLeft" xml:space="preserve"><value>Nothing can be moved, but {0} files are still in the old folders:</value></data>
+  <data name="Home_DuelTitle" xml:space="preserve"><value>This or that</value></data>
+  <data name="Home_DuelHint" xml:space="preserve"><value>Pick the one you would rather play. It goes to your "want to try" list.</value></data>
+  <data name="Home_DuelSkip" xml:space="preserve"><value>Neither, next pair</value></data>
+  <data name="Home_DuelEmpty" xml:space="preserve"><value>No more scenes to compare.</value></data>
+  <data name="Home_DuelPicked" xml:space="preserve"><value>{0} picked this round</value></data>
+  <data name="Home_TileAuthorMore" xml:space="preserve"><value>{0} more by this author</value></data>
+  <data name="Home_TilePostMore" xml:space="preserve"><value>{0} more from the same post</value></data>
+  <data name="Home_ThemeAuthor" xml:space="preserve"><value>More by {0}</value></data>
+  <data name="Home_ThemeTag" xml:space="preserve"><value>Today's tag: {0}</value></data>
+  <data name="Home_ThemeNeverPlayed" xml:space="preserve"><value>Collected, never played</value></data>
+  <data name="Home_ThemeDusty" xml:space="preserve"><value>Favourites you have not touched in a while</value></data>
+  <data name="Home_ThemeSimilar" xml:space="preserve"><value>Looks like "{0}"</value></data>
+  <data name="Home_ThemesReroll" xml:space="preserve"><value>Other themes</value></data>
+  <data name="Home_ThemeSeeAll" xml:space="preserve"><value>See all</value></data>
+  <data name="Home_ShelfShowAll" xml:space="preserve"><value>Show all ({0})</value></data>
+  <data name="Home_ShelfCollapse" xml:space="preserve"><value>Show less</value></data>
+  <data name="Inspector_Name" xml:space="preserve"><value>Details</value></data>
+  <data name="Inspector_Empty" xml:space="preserve"><value>Select a card to see its details. Ctrl or Shift selects several.</value></data>
+  <data name="Inspector_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Inspector_SelectedMany" xml:space="preserve"><value>{0} cards selected</value></data>
+  <data name="Inspector_Toggle" xml:space="preserve"><value>Details pane (Ctrl+I)</value></data>
+  <data name="SC_SquareCorners.Header" xml:space="preserve"><value>Square corners</value></data>
+  <data name="SC_SquareCorners.Description" xml:space="preserve"><value>Use square corners instead of rounded ones everywhere. Takes effect after restarting the app.</value></data>
+  <data name="SC_ThumbnailSize.Header" xml:space="preserve"><value>Thumbnail size</value></data>
+  <data name="SC_ThumbnailSize.Description" xml:space="preserve"><value>How large the library's thumbnails are.</value></data>
+  <data name="Loupe_Name" xml:space="preserve"><value>Card viewer</value></data>
+  <data name="Loupe_Previous" xml:space="preserve"><value>Previous card (Left)</value></data>
+  <data name="Loupe_Next" xml:space="preserve"><value>Next card (Right)</value></data>
+  <data name="Loupe_Close" xml:space="preserve"><value>Back to the grid (Esc)</value></data>
+  <data name="Loupe_ActualSize" xml:space="preserve"><value>Actual size</value></data>
+  <data name="Loupe_Back" xml:space="preserve"><value>Back (Esc)</value></data>
+  <data name="Loupe_ZoomOut" xml:space="preserve"><value>Zoom out (-)</value></data>
+  <data name="Loupe_ZoomIn" xml:space="preserve"><value>Zoom in (+)</value></data>
+  <data name="Loupe_ZoomLevelTip" xml:space="preserve"><value>Fit / close-up (double-click the picture; 0 fits)</value></data>
+  <data name="Loupe_Fit" xml:space="preserve"><value>Fit</value></data>
+  <data name="Loupe_Hint" xml:space="preserve"><value>← → next card · wheel zooms · drag pans · double-click close-up · Esc back</value></data>
+  <data name="Loupe_BackLabel" xml:space="preserve"><value>Back</value></data>
+  <data name="AuthorInspector_Empty" xml:space="preserve"><value>Select an author to see who it is. Double-click or press Enter to open their page.</value></data>
+  <data name="AuthorInspector_Open" xml:space="preserve"><value>Open author page</value></data>
+  <data name="AuthorInspector_Profile" xml:space="preserve"><value>Open profile online</value></data>
+  <data name="AuthorInspector_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="AuthorInspector_Counts" xml:space="preserve"><value>{0} scenes · {1} characters · {2} outfits</value></data>
+  <data name="AuthorInspector_Updated" xml:space="preserve"><value>Last updated {0}</value></data>
+  <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>Recording</value></data>
+  <data name="Browser_More" xml:space="preserve"><value>More</value></data>
+  <data name="Authors_LocalSources" xml:space="preserve"><value>Local sources</value></data>
+  <data name="Authors_LocalSourcesLabel.Text" xml:space="preserve"><value>Local sources</value></data>
+  <data name="Record_MenuToggle" xml:space="preserve"><value>Record mode</value></data>
+  <data name="Home_TileSelected" xml:space="preserve"><value>Selected</value></data>
+  <data name="TitleBar_RatingFilter" xml:space="preserve"><value>Rating filter</value></data>
+  <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>Use the rating filter</value></data>
+  <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>When on, a rating filter appears in the title bar, and the home page, the library and discovery show or hide cards by it. When off, every rating is shown.</value></data>
+  <data name="TitleBar_RatingOn" xml:space="preserve"><value>Showing {0} cards. Click to hide them.</value></data>
+  <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} cards are hidden. Click to show them.</value></data>
+  <data name="TitleBar_RatingLast" xml:space="preserve"><value>At least one rating has to be shown</value></data>
+  <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>Explore</value></data>
+  <data name="Nav_ImportBusy" xml:space="preserve"><value>Importing</value></data>
+  <data name="Nav_ImportAnalyzing" xml:space="preserve"><value>Analyzing, {0} pending</value></data>
+  <data name="Cookie_WebViewFailed" xml:space="preserve"><value>Could not start WebView2: {0}</value></data>
+  <data name="Import_Error_FileExists" xml:space="preserve"><value>A file with this name already exists</value></data>
+  <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>Another artwork already uses this file name: {0}</value></data>
+  <data name="Format_LabelValue" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Home_SeeAll" xml:space="preserve"><value>See all</value></data>
+  <data name="Home_Featured" xml:space="preserve"><value>Today's pick</value></data>
+  <data name="Home_FeaturedEmpty" xml:space="preserve"><value>No scene to suggest yet.</value></data>
+  <data name="Home_FeaturedQueue" xml:space="preserve"><value>Want to try</value></data>
+  <data name="Home_FeaturedNext" xml:space="preserve"><value>Another one</value></data>
+  <data name="Home_Stats" xml:space="preserve"><value>Library</value></data>
+  <data name="Home_StatsScenes" xml:space="preserve"><value>{0} scenes</value></data>
+  <data name="Home_StatsNew" xml:space="preserve"><value>{0} new this week</value></data>
+  <data name="Home_StatsUnrated" xml:space="preserve"><value>{0} without your rating</value></data>
+  <data name="Home_StatsImportIdle" xml:space="preserve"><value>Import: nothing running</value></data>
+  <data name="Home_StatsImporting" xml:space="preserve"><value>Importing…</value></data>
+  <data name="Home_StatsAnalyzing" xml:space="preserve"><value>Analyzing, {0} pending</value></data>
+  <data name="Home_ShelfCount" xml:space="preserve"><value>{0} cards</value></data>
+  <data name="Home_NewThisWeek" xml:space="preserve"><value>New this week</value></data>
+  <data name="Home_ThemesRerollLabel.Text" xml:space="preserve"><value>New themes</value></data>
 </root>

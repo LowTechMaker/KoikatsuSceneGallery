@@ -4,8 +4,10 @@ param([string] $RepositoryRoot = (Split-Path $PSScriptRoot -Parent))
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath($RepositoryRoot)
-$indexFile = Join-Path $root 'CLAUDE.md'
+$claudeFile = Join-Path $root 'CLAUDE.md'
 $directory = Join-Path $root 'docs/handoffs'
+$indexFile = Join-Path $directory 'INDEX.md'
+$skillDirectory = Join-Path $root '.claude/skills/handoffs'
 $index = Get-Content -LiteralPath $indexFile -Raw -Encoding UTF8
 $handoffs = @(Get-ChildItem -LiteralPath $directory -Filter 'phase-*.md' -File)
 if ($handoffs.Count -eq 0) { throw 'No handoff documents found.' }
@@ -19,8 +21,8 @@ $pending = 0
 $read = 0
 foreach ($file in $handoffs) {
     $relative = 'docs/handoffs/' + $file.Name
-    if (!$indexBody.Contains("]($relative)", [StringComparison]::Ordinal)) {
-        throw "Missing direct CLAUDE.md link: $relative"
+    if (!$indexBody.Contains("]($($file.Name))", [StringComparison]::Ordinal)) {
+        throw "Missing direct INDEX.md link: $relative"
     }
     $body = Without-CodeFences (Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8)
     $version = [regex]::Match($body, '(?m)^- 交接版本：v([1-9]\d*)\s*$')
@@ -44,7 +46,10 @@ foreach ($file in $handoffs) {
 }
 
 $linkCount = 0
-$documents = @((Get-Item -LiteralPath $indexFile)) + @(Get-ChildItem -LiteralPath $directory -Filter '*.md' -File)
+$documents = @((Get-Item -LiteralPath $claudeFile)) + @(Get-ChildItem -LiteralPath $directory -Filter '*.md' -File)
+if (Test-Path -LiteralPath $skillDirectory) {
+    $documents += @(Get-ChildItem -LiteralPath $skillDirectory -Filter '*.md' -File -Recurse)
+}
 foreach ($file in $documents) {
     $body = Without-CodeFences (Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8)
     foreach ($match in [regex]::Matches($body, '\[[^\]]*\]\(([^)]+)\)')) {

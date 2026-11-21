@@ -6,10 +6,26 @@ namespace KoikatsuSceneGallery.Helpers;
 
 internal sealed class GalleryLayoutEngine
 {
-    private const double CardMargin = 4;
-    private const double CardInset = 4 + 1;
-    private const double CellOverheadW = CardMargin * 2;
-    private const double ContentInsetW = (CardMargin + CardInset) * 2;
+    // The tile's margin (half the gap between two pictures) and the inset of the
+    // picture inside it. Pictures sit edge to edge with a thin gap, like Google
+    // Photos (user request); the tiles used to be cards, 4 px apart, framed.
+    // The tile's margin (half the gap between two tiles) and the inset of the
+    // picture inside it. Photo mode (file names off): edge to edge, a thin gap,
+    // like Google Photos. Card mode (file names on): framed cards with their
+    // caption and badges under the picture. Set by the host (SetChrome).
+    private double CardMargin = 1;
+    private double CardInset = 0;
+    private double CellOverheadW => CardMargin * 2;
+    private double ContentInsetW => (CardMargin + CardInset) * 2;
+
+    /// <summary>Photo mode or card mode: the tile margin and the picture's inset in it.</summary>
+    public void SetChrome(double margin, double inset)
+    {
+        if (CardMargin == margin && CardInset == inset) return;
+        CardMargin = margin;
+        CardInset = inset;
+        InvalidateAndRefit();
+    }
     private const double FilenameReserve = 30;
     private double _baseItemWidth = 240;
 
@@ -25,6 +41,8 @@ internal sealed class GalleryLayoutEngine
     private ScrollViewer? _scrollViewer;
     private Action? _onScrollStop;
     private bool _sizeChangedHooked;
+    private ItemsWrapGrid? _hookedPanel;
+    private ItemsWrapGrid? _appliedPanel;
 
     public GalleryLayoutEngine(
         double imageRatio,
@@ -95,27 +113,74 @@ internal sealed class GalleryLayoutEngine
         InvalidateAndRefit();
     }
 
+    /// <remarks>
+    /// The items panel can be asked before it has been measured (a library tab
+    /// opened for the first time, its cards still arriving). That used to give
+    /// up and wait for the grid itself to change size, and meanwhile every tile
+    /// took the size of its loading placeholder: a field of tiny icons for a
+    /// few seconds (user report). Now the grid's width stands in for the
+    /// panel's, a default size is set when neither is known, and the panel's
+    /// own first size change applies the real layout.
+    /// </remarks>
     public void ApplyLayout()
     {
-        if (_grid.ItemsPanelRoot is not ItemsWrapGrid panel || panel.ActualWidth <= 0)
+        if (_grid.ItemsPanelRoot is not ItemsWrapGrid panel)
             return;
+        HookPanel(panel);
 
-        double available = panel.ActualWidth;
+        double available = panel.ActualWidth > 0 ? panel.ActualWidth : _grid.ActualWidth;
+        // A width this small is a transient measure while the page is still
+        // being laid out, not a real grid: laid out from it, every tile was
+        // ~38 px for seconds (user report, three times). Default-sized tiles
+        // until a real width comes (the size-changed hooks call back here).
+        if (available < MinRealWidth)
+        {
+            ApplyProvisional(panel, force: true);
+            _appliedColumns = -1;
+            return;
+        }
         int columns = Math.Max(1, (int)Math.Floor(available / (_baseItemWidth + CellOverheadW)));
 
-        if (columns == _appliedColumns && available == _appliedAvailable)
+        // Skipped only when this very panel already has the size: the grid can
+        // replace its items panel (a reload), and the new one starts without a
+        // size, every tile as small as its placeholder (user report, twice).
+        if (columns == _appliedColumns && available == _appliedAvailable
+            && ReferenceEquals(panel, _appliedPanel) && !double.IsNaN(panel.ItemWidth))
             return;
+        _appliedPanel = panel;
         _appliedColumns = columns;
         _appliedAvailable = available;
         _setShuffleDisplayCount(columns * 2);
 
         double cellW = (available / columns) - 0.5;
+        panel.ItemWidth = cellW;
+        panel.ItemHeight = CellHeight(cellW);
+    }
+
+    private double CellHeight(double cellW)
+    {
         double imageH = Math.Max(0, cellW - ContentInsetW) * _imageRatio;
         double metadata = _metadataReserve ?? (_settingsViewModel.ShowFileNames ? FilenameReserve : 0);
-        double cellH = imageH + metadata + (CardMargin + CardInset) * 2;
+        return imageH + metadata + (CardMargin + CardInset) * 2;
+    }
 
+    /// <summary>Narrower than this the panel has not been laid out for real yet.</summary>
+    private const double MinRealWidth = 200;
+
+    // Before anything has been measured: tiles of the chosen size, not of their placeholders.
+    private void ApplyProvisional(ItemsWrapGrid panel, bool force = false)
+    {
+        if (!force && !double.IsNaN(panel.ItemWidth)) return;
+        double cellW = _baseItemWidth + CellOverheadW;
         panel.ItemWidth = cellW;
-        panel.ItemHeight = cellH;
+        panel.ItemHeight = CellHeight(cellW);
+    }
+
+    private void HookPanel(ItemsWrapGrid panel)
+    {
+        if (ReferenceEquals(_hookedPanel, panel)) return;
+        _hookedPanel = panel;
+        panel.SizeChanged += (_, _) => ApplyLayout();
     }
 
     public void InvalidateAndRefit()
@@ -126,7 +191,10 @@ internal sealed class GalleryLayoutEngine
 
     public void EnsureLayoutOnFirstContent()
     {
-        if (_appliedColumns < 0)
+        // Also when the grid has put in a new items panel since the last layout.
+        var unsized = _grid.ItemsPanelRoot is ItemsWrapGrid panel
+            && (!ReferenceEquals(panel, _appliedPanel) || double.IsNaN(panel.ItemWidth));
+        if (_appliedColumns < 0 || unsized)
         {
             _dispatcherQueue.TryEnqueue(() =>
             {

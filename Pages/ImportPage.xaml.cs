@@ -7,6 +7,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -23,6 +24,9 @@ public sealed partial class ImportPage : Page
 
     public ImportViewModel ViewModel { get; }
 
+    // The auto-import switch is a saved setting, so it lives on the settings view model.
+    public SettingsViewModel Settings { get; } = App.Services.GetRequiredService<SettingsViewModel>();
+
     private readonly IReadOnlyList<ICookieSetupProvider> _cookieSetupProviders;
 
     public ImportPage()
@@ -35,16 +39,100 @@ public sealed partial class ImportPage : Page
 
         if (_cookieSetupProviders.Count > 0)
             CookieSetupButton.Visibility = Visibility.Visible;
+
+        ViewModel.ResolveConflicts = ShowConflictDialogAsync;
+        UpdateSteps();
+        UpdateMessageBar();
     }
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ImportViewModel.ShowRejectedWarning) && ViewModel.ShowRejectedWarning)
+        if (e.PropertyName == nameof(ImportViewModel.LinkMissingText))
+            FillLinkedNames(LinkMissingBlock, "Import_LinkMatch_Missing", ViewModel.LinkMissingFiles, CautionBrush);
+        else if (e.PropertyName == nameof(ImportViewModel.LinkUnstartedText))
+            FillUnstartedFolders(LinkUnstartedBlock, ViewModel.LinkUnstartedFolders,
+                (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]);
+        else if (e.PropertyName == nameof(ImportViewModel.LinkInLibraryText))
+            FillLinkedNames(LinkInLibraryBlock, "Import_LinkMatch_InLibrary", ViewModel.LinkInLibraryFiles, OrangeBrush);
+
+        switch (e.PropertyName)
         {
-            RejectedWarningBar.Message = string.Format(
-                ResLoader.GetString("Import_RejectedWarningMessage"),
-                ViewModel.RejectedCount);
+            case nameof(ImportViewModel.ShowRejectedWarning) or nameof(ImportViewModel.RejectedCount)
+                or nameof(ImportViewModel.ShowImportFailure) or nameof(ImportViewModel.ImportFailureTitle)
+                or nameof(ImportViewModel.ImportFailureMessage) or nameof(ImportViewModel.ShowImportResult)
+                or nameof(ImportViewModel.ImportResultTitle) or nameof(ImportViewModel.ImportResultMessage)
+                or nameof(ImportViewModel.ImportResultSeverity):
+                UpdateMessageBar();
+                break;
+            case nameof(ImportViewModel.HasItems) or nameof(ImportViewModel.IsAnalyzing) or nameof(ImportViewModel.IsImporting):
+                UpdateSteps();
+                break;
         }
+    }
+
+    private StepIndicator? _steps;
+    private ImportMessageKind? _shownMessage;
+
+    private void UpdateSteps()
+    {
+        if (_steps is null)
+        {
+            _steps = new StepIndicator(
+                ResLoader.GetString("Import_StepAdd"),
+                ResLoader.GetString("Import_StepReview"),
+                ResLoader.GetString("Import_StepImport"));
+            StepsHost.Child = _steps;
+        }
+        _steps.SetCurrent((int)ImportPagePolicy.CurrentStep(ViewModel.HasItems, ViewModel.IsAnalyzing, ViewModel.IsImporting));
+    }
+
+    /// <summary>Shows the most urgent open message; the rest wait behind it.</summary>
+    private void UpdateMessageBar()
+    {
+        var open = ImportPagePolicy.OpenMessages(ViewModel.ShowImportFailure, ViewModel.ShowRejectedWarning, ViewModel.ShowImportResult);
+        if (open.Count == 0)
+        {
+            _shownMessage = null;
+            ImportMessageBar.IsOpen = false;
+            return;
+        }
+
+        var kind = open[0];
+        _shownMessage = kind;
+        switch (kind)
+        {
+            case ImportMessageKind.Failure:
+                ImportMessageBar.Severity = InfoBarSeverity.Error;
+                ImportMessageBar.Title = ViewModel.ImportFailureTitle;
+                ImportMessageBar.Message = ViewModel.ImportFailureMessage;
+                break;
+            case ImportMessageKind.Rejected:
+                ImportMessageBar.Severity = InfoBarSeverity.Warning;
+                ImportMessageBar.Title = ResLoader.GetString("Import_RejectedWarningTitle");
+                ImportMessageBar.Message = string.Format(ResLoader.GetString("Import_RejectedWarningMessage"), ViewModel.RejectedCount);
+                break;
+            default:
+                ImportMessageBar.Severity = ViewModel.ImportResultSeverity;
+                ImportMessageBar.Title = ViewModel.ImportResultTitle;
+                ImportMessageBar.Message = ViewModel.ImportResultMessage;
+                break;
+        }
+
+        ImportMessageMore.Text = string.Format(ResLoader.GetString("Import_MessagesMore"), open.Count - 1);
+        ImportMessageMore.Visibility = open.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        ImportMessageBar.IsOpen = true;
+    }
+
+    private void ImportMessageBar_CloseButtonClick(InfoBar sender, object args)
+    {
+        switch (_shownMessage)
+        {
+            case ImportMessageKind.Failure: ViewModel.ShowImportFailure = false; break;
+            case ImportMessageKind.Rejected: ViewModel.ShowRejectedWarning = false; break;
+            case ImportMessageKind.Result: ViewModel.ShowImportResult = false; break;
+        }
+        // The bar closes itself on this click; the next message, if any, reopens it.
+        DispatcherQueue.TryEnqueue(UpdateMessageBar);
     }
 
     // Translate, scale and opacity are all composition-driven, so these storyboards
@@ -62,20 +150,20 @@ public sealed partial class ImportPage : Page
     {
         var storyboard = new Storyboard();
         storyboard.Children.Add(BuildCardAnimation(
-            "TranslateY", from: 24, to: 0, milliseconds: 220,
-            easing: new CubicEase { EasingMode = EasingMode.EaseOut }));
-        storyboard.Children.Add(BuildCardOpacityAnimation(from: 0, to: 1, milliseconds: 140));
+            "TranslateY", from: 24, to: 0, CardMotion.EnterDuration, CardMotion.XamlDecelerate()));
+        storyboard.Children.Add(BuildCardOpacityAnimation(from: 0, to: 1, CardMotion.FadeInDuration));
         return storyboard;
     }
 
+    // Tempos from CardMotion, the app's one motion schedule.
     private DoubleAnimation BuildCardAnimation(
-        string property, double from, double to, int milliseconds, EasingFunctionBase? easing = null)
+        string property, double from, double to, TimeSpan duration, EasingFunctionBase? easing = null)
     {
         var animation = new DoubleAnimation
         {
             From = from,
             To = to,
-            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+            Duration = CardMotion.Xaml(duration),
             EasingFunction = easing,
         };
         Storyboard.SetTarget(animation, _addFilesCardTransform);
@@ -83,13 +171,13 @@ public sealed partial class ImportPage : Page
         return animation;
     }
 
-    private DoubleAnimation BuildCardOpacityAnimation(double from, double to, int milliseconds)
+    private DoubleAnimation BuildCardOpacityAnimation(double from, double to, TimeSpan duration)
     {
         var animation = new DoubleAnimation
         {
             From = from,
             To = to,
-            Duration = new Duration(TimeSpan.FromMilliseconds(milliseconds)),
+            Duration = CardMotion.Xaml(duration),
         };
         Storyboard.SetTarget(animation, AddFilesOverlayCard);
         Storyboard.SetTargetProperty(animation, "Opacity");
@@ -177,13 +265,14 @@ public sealed partial class ImportPage : Page
         _addFilesCardTransform.CenterX = AddFilesOverlayCard.ActualWidth / 2;
         _addFilesCardTransform.CenterY = AddFilesOverlayCard.ActualHeight / 2;
 
-        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var easing = CardMotion.XamlAccelerate();
+        var duration = CardMotion.CollapseIntoDuration;
         var storyboard = new Storyboard();
-        storyboard.Children.Add(BuildCardAnimation("TranslateX", 0, buttonCentre.X - cardCentre.X, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("TranslateY", 0, buttonCentre.Y - cardCentre.Y, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("ScaleX", 1, 0.12, 300, easing));
-        storyboard.Children.Add(BuildCardAnimation("ScaleY", 1, 0.12, 300, easing));
-        storyboard.Children.Add(BuildCardOpacityAnimation(1, 0, 300));
+        storyboard.Children.Add(BuildCardAnimation("TranslateX", 0, buttonCentre.X - cardCentre.X, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("TranslateY", 0, buttonCentre.Y - cardCentre.Y, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleX", 1, 0.12, duration, easing));
+        storyboard.Children.Add(BuildCardAnimation("ScaleY", 1, 0.12, duration, easing));
+        storyboard.Children.Add(BuildCardOpacityAnimation(1, 0, duration));
 
         var completion = new TaskCompletionSource();
         storyboard.Completed += (_, _) => completion.TrySetResult();
@@ -235,12 +324,14 @@ public sealed partial class ImportPage : Page
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.PickFiles", async () =>
         {
             if (ViewModel.IsImporting) return;
-            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            // The Windows App SDK picker: the old Windows.Storage one failed (E_FAIL) when
+            // several files with long paths were picked at once.
+            var picker = new Microsoft.Windows.Storage.Pickers.FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
             picker.FileTypeFilter.Add(".png");
-            WinRT.Interop.InitializeWithWindow.Initialize(picker,
-                Microsoft.UI.Win32Interop.GetWindowFromWindowId(XamlRoot.ContentIslandEnvironment.AppWindowId));
+            picker.FileTypeFilter.Add(".zipmod");
+            picker.FileTypeFilter.Add(".zip");
             var files = await picker.PickMultipleFilesAsync();
-            var paths = files.Select(f => f.Path).ToArray();
+            var paths = (files ?? []).Select(f => f.Path).Where(path => !string.IsNullOrEmpty(path)).ToArray();
             if (paths.Length == 0) return; // Cancelled picker leaves the overlay open.
             await PlayAddFilesAcceptedAsync();
             if (await EnsureRequiredCookieSetupAsync(paths))
@@ -260,9 +351,38 @@ public sealed partial class ImportPage : Page
     private void Page_Drop(object sender, DragEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Drop", async () =>
         {
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+            if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+            await AddDroppedItemsAsync(await e.DataView.GetStorageItemsAsync());
+        });
 
-        var storageItems = await e.DataView.GetStorageItemsAsync();
+    /// <summary>
+    /// Files dropped anywhere in the window arrive here: the window opens this
+    /// page with them as the parameter (see MainWindow.Drop.cs).
+    /// </summary>
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is not ImportDropRequest request) return;
+
+        void Add() => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.WindowDrop",
+            () => AddDroppedItemsAsync(request.Items));
+
+        // The accepted-files animation needs the page on screen.
+        if (IsLoaded) Add();
+        else
+        {
+            void OnLoaded(object sender, RoutedEventArgs args)
+            {
+                Loaded -= OnLoaded;
+                Add();
+            }
+
+            Loaded += OnLoaded;
+        }
+    }
+
+    private async Task AddDroppedItemsAsync(IReadOnlyList<Windows.Storage.IStorageItem> storageItems)
+    {
         var paths = new List<string>();
 
         foreach (var item in storageItems)
@@ -282,11 +402,13 @@ public sealed partial class ImportPage : Page
                 {
                     try
                     {
-                        return Directory.EnumerateFiles(folderPath, "*.png", new EnumerationOptions
+                        // Cards, and the zipmods authors ship beside them.
+                        return Directory.EnumerateFiles(folderPath, "*", new EnumerationOptions
                         {
                             RecurseSubdirectories = true,
                             IgnoreInaccessible = true,
-                        }).ToArray();
+                        }).Where(path => Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)
+                                         || ZipmodManifestReader.HasModExtension(path)).ToArray();
                     }
                     catch (Exception ex)
                     {
@@ -302,53 +424,230 @@ public sealed partial class ImportPage : Page
         await PlayAddFilesAcceptedAsync();
         if (await EnsureRequiredCookieSetupAsync(paths))
             await ViewModel.AddFilesCommand.ExecuteAsync(paths);
-        });
-
-    private void ReviewListHost_SizeChanged(object sender, SizeChangedEventArgs e)
-        => ViewModel.SetReviewViewportWidth(e.NewSize.Width);
+    }
 
     private void ImportPage_Loaded(object sender, RoutedEventArgs e)
-        => UpdateCompactLayout(ActualWidth, ActualHeight);
+    {
+        UpdateCompactLayout(ActualWidth, ActualHeight);
+        Clipboard.ContentChanged += Clipboard_ContentChanged;
+        // Not an author check: a link copied before this page was opened is not a request.
+        FillArtworkFromClipboard(allowAuthorCheck: false);
+    }
+
+    private void ImportPage_Unloaded(object sender, RoutedEventArgs e)
+        => Clipboard.ContentChanged -= Clipboard_ContentChanged;
+
+    // Regaining focus covers a copy made in the browser, which cannot be read while
+    // this window is in the background.
+    private void ImportPage_GotFocus(object sender, RoutedEventArgs e)
+    {
+        // GotFocus fires for every control the user clicks in the list. Reading the clipboard
+        // is a call into another process that can stall the UI, so only do it when the
+        // clipboard has changed since it was last read.
+        if (_clipboardUnread) FillArtworkFromClipboard(allowAuthorCheck: true);
+    }
+
+    // Set by a clipboard change (and on first load); cleared once a read succeeded.
+    private bool _clipboardUnread = true;
+
+    private void Clipboard_ContentChanged(object? sender, object e)
+    {
+        _clipboardUnread = true;
+        DispatcherQueue.TryEnqueue(() => FillArtworkFromClipboard(allowAuthorCheck: true));
+    }
+
+    private void FillArtworkFromClipboard(bool allowAuthorCheck)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.ClipboardFill", async () =>
+        {
+            try
+            {
+                var content = Clipboard.GetContent();
+                if (!content.Contains(StandardDataFormats.Text)) { _clipboardUnread = false; return; }
+                var text = await content.GetTextAsync();
+                _clipboardUnread = false;
+                if (allowAuthorCheck && TryOfferAuthorCheck(text)) return;
+                ViewModel.TryFillArtworkFromClipboard(text);
+            }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+            {
+                // The clipboard is locked or this window is not allowed to read it yet.
+            }
+        });
 
     private void ImportPage_SizeChanged(object sender, SizeChangedEventArgs e)
         => UpdateCompactLayout(e.NewSize.Width, e.NewSize.Height);
 
     private void UpdateCompactLayout(double width, double height)
     {
-        var compact = width < 760;
-        if (ReviewJumpPanel is not null)
-            ReviewJumpPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        if (ImportFullActionText is not null && ImportCompactActionText is not null)
+        // Below this the plan sentence would crowd the buttons; the button's name still says it.
+        if (ImportPlanBlock is not null)
+            ImportPlanBlock.Visibility = width < UiMetrics.NarrowLayoutWidth ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // ── Review list ─────────────────────────────────────────────────
+
+    private void ReviewHeaderBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewHeader(row);
+        // The box shows the selection, not its own click: put it back to what the rows say.
+        if (sender is CheckBox { Tag: ImportReviewRow shown } box) box.IsChecked = shown.SelectionState;
+    }
+
+    private void ReviewCollapse_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewCollapsed(row);
+    }
+
+    private void SelectAllBox_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SelectAllReview(ViewModel.IsAllReviewSelected != true);
+        SelectAllBox.IsChecked = ViewModel.IsAllReviewSelected;
+    }
+
+    private void ClearSelection_Click(object sender, RoutedEventArgs e) => ViewModel.SelectAllReview(false);
+
+    private void RemoveMod_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ModReviewItem mod }) ViewModel.RemoveMod(mod);
+    }
+
+    private void ApplySelectionRating_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.SelectionRating", async () =>
         {
-            ImportFullActionText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-            ImportCompactActionText.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+            if (sender is not FrameworkElement { Tag: string tag } || !int.TryParse(tag, out var index)) return;
+            ViewModel.ReviewRatingOverrideIndex = index;
+            await ViewModel.ApplyReviewRatingCommand.ExecuteAsync(null);
+        });
+
+    // Status chips: attention in the caution colour, ready in the success colour, the rest neutral.
+    public static Brush ToneBackground(string tone) => (Brush)Application.Current.Resources[tone switch
+    {
+        "Attention" => "SystemFillColorCautionBackgroundBrush",
+        "Ready" => "SystemFillColorSuccessBackgroundBrush",
+        "Busy" => "SystemFillColorAttentionBackgroundBrush",
+        _ => "ControlFillColorSecondaryBrush",
+    }];
+
+    public static Brush ToneForeground(string tone) => (Brush)Application.Current.Resources[tone switch
+    {
+        "Attention" => "SystemFillColorCautionBrush",
+        "Ready" => "SystemFillColorSuccessBrush",
+        "Busy" => "SystemFillColorAttentionBrush",
+        _ => "TextFillColorSecondaryBrush",
+    }];
+
+    // ── Conflicts ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// One row per held-back card: the card coming in beside the one the library has, and
+    /// a choice. A box at the top sets every row at once.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<ImportConflict, ImportConflictChoice>?> ShowConflictDialogAsync(
+        IReadOnlyList<ImportConflict> conflicts)
+    {
+        var secondary = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        var caption = (Style)Application.Current.Resources["CaptionTextBlockStyle"];
+        var pickers = new List<(ImportConflict Conflict, ComboBox Box)>();
+        var list = new StackPanel { Spacing = 14 };
+
+        static string ChoiceText(ImportConflictChoice choice) => ResLoader.GetString("Import_Conflict_Choice_" + choice);
+
+        foreach (var conflict in conflicts)
+        {
+            var choices = ImportConflictRules.ChoicesFor(conflict.Kind);
+            var box = new ComboBox { MinWidth = 170, VerticalAlignment = VerticalAlignment.Center };
+            foreach (var choice in choices) box.Items.Add(new ComboBoxItem { Content = ChoiceText(choice), Tag = choice });
+            box.SelectedIndex = 0;
+            AutomationProperties.SetName(box, conflict.Item.FileName);
+            pickers.Add((conflict, box));
+
+            Image Thumb(string path) => new()
+            {
+                Width = 96, Height = 72, Stretch = Stretch.Uniform,
+                Source = new BitmapImage { DecodePixelWidth = 192, UriSource = new Uri(path) },
+            };
+
+            var pictures = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            pictures.Children.Add(Thumb(conflict.Item.SourceFilePath));
+            pictures.Children.Add(new FontIcon { Glyph = Glyphs.ArrowRight, FontSize = 12, Foreground = secondary });
+            pictures.Children.Add(Thumb(conflict.ExistingPath));
+
+            var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(new TextBlock { Text = conflict.Item.FileName, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+            text.Children.Add(new TextBlock
+            {
+                Text = ResLoader.GetString("Import_Conflict_Kind_" + conflict.Kind),
+                Style = caption, Foreground = secondary, TextWrapping = TextWrapping.Wrap,
+            });
+            text.Children.Add(new TextBlock
+            {
+                Text = conflict.ExistingPath, Style = caption, Foreground = secondary,
+                TextTrimming = TextTrimming.CharacterEllipsis, IsTextSelectionEnabled = true,
+            });
+            ToolTipService.SetToolTip(text, conflict.ExistingPath);
+
+            var row = new Grid { ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(text, 1);
+            Grid.SetColumn(box, 2);
+            row.Children.Add(pictures);
+            row.Children.Add(text);
+            row.Children.Add(box);
+            list.Children.Add(row);
         }
-        if (ReviewEditScrollViewer is not null)
-            ReviewEditScrollViewer.MaxHeight = Math.Max(180, Math.Min(440, height - 140));
-        if (ReviewEditPanel is not null)
-            ReviewEditPanel.Width = Math.Max(180, Math.Min(320, width - 80));
-    }
 
-    private void JumpToReviewSection_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { Tag: string section }) return;
-        var row = ViewModel.ReviewRows.FirstOrDefault(r => r.Key == section + ":");
-        if (row is not null) ReviewListHost.ScrollIntoView(row, ScrollIntoViewAlignment.Leading);
-    }
+        // "Apply to all": the choices every row offers.
+        var common = Enum.GetValues<ImportConflictChoice>()
+            .Where(choice => conflicts.All(c => ImportConflictRules.ChoicesFor(c.Kind).Contains(choice))).ToList();
+        var header = new StackPanel { Spacing = 10 };
+        header.Children.Add(new TextBlock
+        {
+            Text = string.Format(ResLoader.GetString("Import_Conflict_Intro"), conflicts.Count),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        if (conflicts.Count > 1)
+        {
+            var all = new ComboBox { Header = ResLoader.GetString("Import_Conflict_ApplyAll"), MinWidth = 200 };
+            all.Items.Add(new ComboBoxItem { Content = ResLoader.GetString("Import_Conflict_ApplyAllEach") });
+            foreach (var choice in common) all.Items.Add(new ComboBoxItem { Content = ChoiceText(choice), Tag = choice });
+            all.SelectedIndex = 0;
+            all.SelectionChanged += (_, _) =>
+            {
+                if (all.SelectedItem is not ComboBoxItem { Tag: ImportConflictChoice chosen }) return;
+                foreach (var (_, box) in pickers)
+                    box.SelectedItem = box.Items.OfType<ComboBoxItem>().First(item => (ImportConflictChoice)item.Tag == chosen);
+            };
+            if (common.Count > 0) header.Children.Add(all);
+        }
+        if (conflicts.Any(c => c.Kind == ImportConflictKind.InLibraryElsewhere))
+            header.Children.Add(new TextBlock
+            {
+                Text = ResLoader.GetString("Import_Conflict_LinkHint"),
+                Style = caption, Foreground = secondary, TextWrapping = TextWrapping.Wrap,
+            });
 
-    private void SelectMixedReviewGroup_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewRow(row);
-    }
+        var content = new StackPanel { Spacing = 14, MinWidth = 560 };
+        content.Children.Add(header);
+        content.Children.Add(new ScrollViewer { Content = list, MaxHeight = 380, Padding = new Thickness(0, 0, 12, 0) });
 
-    private void SelectReviewSection_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: ImportReviewRow row }) ViewModel.ToggleReviewSection(row);
-    }
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = ResLoader.GetString("Import_Conflict_Title"),
+            Content = content,
+            PrimaryButtonText = ResLoader.GetString("Import_Conflict_Apply"),
+            CloseButtonText = ResLoader.GetString("Import_Conflict_Later"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        dialog.Resources["ContentDialogMaxWidth"] = 900.0;
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
 
-    private void SelectReviewGroup_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: ImportReviewGroup group }) ViewModel.ToggleReviewGroup(group);
+        return pickers.ToDictionary(
+            pair => pair.Conflict,
+            pair => pair.Box.SelectedItem is ComboBoxItem { Tag: ImportConflictChoice choice }
+                ? choice : ImportConflictRules.DefaultFor(pair.Conflict.Kind));
     }
 
     private void ReviewArtworkInput_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
@@ -358,6 +657,10 @@ public sealed partial class ImportPage : Page
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Lookup",
             () => ViewModel.FetchReviewArtworkCommand.ExecuteAsync(null));
     }
+
+    private void ConfirmImport_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Import.Confirm",
+            () => ViewModel.ImportAllAsync());
 
     private bool _pickReviewAuthor;
     private void PickReviewAuthor_Click(object sender, RoutedEventArgs e)
@@ -694,9 +997,9 @@ public sealed partial class ImportPage : Page
             MinWidth = 180,
             SelectedIndex = 0,
         };
-        ratingBox.Items.Add(new ComboBoxItem { Content = "G", Tag = ContentRating.AllAges });
-        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18", Tag = ContentRating.R18 });
-        ratingBox.Items.Add(new ComboBoxItem { Content = "R-18G", Tag = ContentRating.R18G });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.General, Tag = ContentRating.AllAges });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.R18, Tag = ContentRating.R18 });
+        ratingBox.Items.Add(new ComboBoxItem { Content = RatingLabels.R18G, Tag = ContentRating.R18G });
 
         var panel = new StackPanel { Spacing = 10 };
         if (selectionContext is not null)
@@ -714,7 +1017,7 @@ public sealed partial class ImportPage : Page
             {
                 Width = 260,
                 Height = 180,
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = (CornerRadius)Application.Current.Resources["SurfaceCornerRadius"],
                 Child = new Image
                 {
                     Source = new BitmapImage(thumbnailUri),
@@ -805,6 +1108,12 @@ public sealed partial class ImportPage : Page
             ViewModel.RemoveUnknownGroupCommand.Execute(group);
     }
 
+    private void RemoveReviewItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ImportItemReviewState state })
+            ViewModel.RemoveReviewItemCommand.Execute(state);
+    }
+
     private void RemoveUnknownItem_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { CommandParameter: ImportItem item })
@@ -868,3 +1177,6 @@ public sealed partial class ImportPage : Page
             ResLoader.GetString("Import_SauceNaoCloseButton"),
             App.Services.GetRequiredService<IAppLogger>());
 }
+
+/// <summary>Files dropped on the window outside this page, to be added on arrival.</summary>
+public sealed record ImportDropRequest(IReadOnlyList<Windows.Storage.IStorageItem> Items);

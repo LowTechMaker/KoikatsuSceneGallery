@@ -79,8 +79,8 @@ function Assert-CompileContentFiles {
     }
 }
 
-if ($null -eq $target.Value.PSObject.Properties['SceneGallery.PluginSdk/1.3.0']) {
-    throw 'SceneGallery.PluginSdk/1.3.0 is missing from the validation target graph.'
+if ($null -eq $target.Value.PSObject.Properties['SceneGallery.PluginSdk/1.7.0']) {
+    throw 'SceneGallery.PluginSdk/1.7.0 is missing from the validation target graph.'
 }
 
 Assert-CompileContentFiles -PackageKey "SceneGallery.PluginCommon/0.2.0" -ExpectedCount 5

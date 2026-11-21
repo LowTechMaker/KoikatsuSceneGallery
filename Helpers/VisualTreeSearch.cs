@@ -18,6 +18,32 @@ internal static class VisualTreeSearch
         return null;
     }
 
+    /// <summary>The first descendant of type <typeparamref name="T"/> that <paramref name="match"/> accepts.</summary>
+    public static T? FindDescendant<T>(DependencyObject parent, Func<T, bool> match) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T candidate && match(candidate)) return candidate;
+            var result = FindDescendant(child, match);
+            if (result is not null) return result;
+        }
+        return null;
+    }
+
+    /// <summary>Every descendant of type <typeparamref name="T"/>, depth first.</summary>
+    public static IEnumerable<T> FindDescendants<T>(DependencyObject parent) where T : DependencyObject
+    {
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match) yield return match;
+            foreach (var deeper in FindDescendants<T>(child)) yield return deeper;
+        }
+    }
+
     public static T? FindDescendantByName<T>(DependencyObject parent, string name) where T : FrameworkElement
     {
         int count = VisualTreeHelper.GetChildrenCount(parent);

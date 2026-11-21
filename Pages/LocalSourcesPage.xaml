@@ -20,7 +20,7 @@
                 Height="64"
                 Margin="0,0,6,0"
                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                CornerRadius="6"
+                CornerRadius="{StaticResource SurfaceCornerRadius}"
                 ToolTipService.ToolTip="{x:Bind FileName}">
                 <Image
                     Source="{x:Bind ThumbnailPath, Mode=OneWay}"
@@ -42,7 +42,7 @@
                     <MenuFlyout>
                         <MenuFlyoutItem x:Uid="LocalSources_EditSource" Click="EditSource_Click" Tag="{x:Bind}">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="&#xE70F;" />
+                                <FontIcon Glyph="{StaticResource GlyphEdit}" />
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                     </MenuFlyout>
@@ -52,7 +52,7 @@
                     x:Name="DropHighlight"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                     BorderThickness="3"
-                    CornerRadius="6"
+                    CornerRadius="{StaticResource SurfaceCornerRadius}"
                     IsHitTestVisible="False"
                     Opacity="0" />
             </Grid>
@@ -67,7 +67,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="2"
-                CornerRadius="6"
+                CornerRadius="{StaticResource SurfaceCornerRadius}"
                 DragEnter="SourceTile_DragEnter"
                 DragLeave="SourceTile_DragLeave"
                 DragOver="SourceTile_DragOver"
@@ -76,12 +76,12 @@
                 <StackPanel
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Spacing="8">
+                    Spacing="{StaticResource Space8}">
                     <FontIcon
                         HorizontalAlignment="Center"
                         FontSize="28"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Glyph="&#xE710;" />
+                        Glyph="{StaticResource GlyphAdd}" />
                     <TextBlock
                         x:Uid="LocalSources_AddSource"
                         HorizontalAlignment="Center"
@@ -91,7 +91,7 @@
                     x:Name="DropHighlight"
                     BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
                     BorderThickness="3"
-                    CornerRadius="6"
+                    CornerRadius="{StaticResource SurfaceCornerRadius}"
                     IsHitTestVisible="False"
                     Opacity="0" />
             </Grid>
@@ -103,14 +103,14 @@
             SourceTemplate="{StaticResource LocalSourceTileTemplate}" />
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock x:Uid="LocalSources_Title" Style="{StaticResource TitleTextBlockStyle}" />
+        <TextBlock x:Uid="LocalSources_Title" Style="{StaticResource PageTitleTextBlockStyle}" />
 
         <!--  Staging. Files arrive here before a source is chosen, so nothing is analyzed yet.  -->
         <Border
@@ -121,12 +121,12 @@
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
             BorderThickness="2"
-            CornerRadius="12"
+            CornerRadius="{StaticResource LargeCornerRadius}"
             DragEnter="DropZone_DragEnter"
             DragLeave="DropZone_DragLeave"
             DragOver="DropZone_DragOver"
             Drop="DropZone_Drop">
-            <StackPanel Spacing="12">
+            <StackPanel Spacing="{StaticResource Space12}">
                 <StackPanel
                     HorizontalAlignment="Center"
                     Spacing="6"
@@ -148,7 +148,7 @@
                 </StackPanel>
 
                 <StackPanel
-                    Spacing="12"
+                    Spacing="{StaticResource Space12}"
                     Visibility="{x:Bind ViewModel.HasStagedCards, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel
                         x:Name="StagedStrip"
@@ -168,7 +168,7 @@
                             Width="64"
                             Height="64"
                             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                            CornerRadius="6"
+                            CornerRadius="{StaticResource SurfaceCornerRadius}"
                             Visibility="{x:Bind ViewModel.HasHiddenThumbnails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock
                                 HorizontalAlignment="Center"
@@ -181,7 +181,7 @@
                     <StackPanel
                         HorizontalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="12">
+                        Spacing="{StaticResource Space12}">
                         <TextBlock
                             VerticalAlignment="Center"
                             Text="{x:Bind ViewModel.PendingCountText, Mode=OneWay}" />
@@ -202,7 +202,7 @@
                         AllowDrop="False"
                         Background="{ThemeResource AccentFillColorDefaultBrush}"
                         CanDrag="True"
-                        CornerRadius="12"
+                        CornerRadius="{StaticResource LargeCornerRadius}"
                         DragStarting="DragFolder_DragStarting"
                         DropCompleted="DragFolder_DropCompleted"
                         IsTabStop="True"
@@ -213,7 +213,7 @@
                         <FontIcon
                             FontSize="44"
                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
-                            Glyph="&#xE8B7;" />
+                            Glyph="{StaticResource GlyphFolder}" />
                     </Border>
 
                     <TextBlock

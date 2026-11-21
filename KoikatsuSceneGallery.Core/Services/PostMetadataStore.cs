@@ -28,7 +28,7 @@ internal enum SidecarUnbindResult
 internal sealed class PostMetadataStore
 {
     public const string MetadataDirectoryName = LibraryMetadataDirectory.Name;
-    public const string FetchedDataDirectoryName = "fetched_data";
+    public const string FetchedDataDirectoryName = AppFiles.PostSidecarFolder;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -196,10 +196,14 @@ internal sealed class PostMetadataStore
                 var mergedFileNames = MergeLocalFileNames(
                     existing.LocalFileNames,
                     document.LocalFileNames);
+                // A fetch carries no opinion of the user's (null), so it must
+                // never clear a rating they chose; a newer choice replaces it.
+                var userRating = document.UserRating ?? existing.UserRating;
 
                 if (existing.FetchedAt >= document.FetchedAt)
                 {
-                    if (mergedFileNames.Count == existing.LocalFileNames.Count)
+                    if (mergedFileNames.Count == existing.LocalFileNames.Count
+                        && userRating == existing.UserRating)
                     {
                         return new SidecarWriteReceipt(
                             path,
@@ -214,11 +218,16 @@ internal sealed class PostMetadataStore
                     {
                         SchemaVersion = PostMetadataDocument.CurrentSchemaVersion,
                         LocalFileNames = mergedFileNames,
+                        UserRating = userRating,
                     };
                 }
                 else
                 {
-                    document = document with { LocalFileNames = mergedFileNames };
+                    document = document with
+                    {
+                        LocalFileNames = mergedFileNames,
+                        UserRating = userRating,
+                    };
                 }
             }
 
@@ -320,6 +329,7 @@ internal sealed class PostMetadataStore
             && !string.IsNullOrWhiteSpace(document.AuthorName)
             && !string.IsNullOrWhiteSpace(document.AuthorId)
             && document.Rating is >= 0 and <= 2
+            && document.UserRating is null or (>= 0 and <= 2)
             && document.Tags is not null
             && document.LocalFileNames is not null
             && document.Tags.All(static tag =>

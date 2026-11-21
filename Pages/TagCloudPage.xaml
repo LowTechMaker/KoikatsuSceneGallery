@@ -7,14 +7,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Spacing="8">
-            <StackPanel Orientation="Horizontal" Spacing="12">
+        <StackPanel Spacing="{StaticResource Space8}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
                 <Button
                     x:Name="BackButton"
                     x:Uid="TagCloud_Back"
@@ -25,7 +25,7 @@
                 <TextBlock
                     x:Name="Heading"
                     x:Uid="TagCloud_Title"
-                    Style="{StaticResource TitleTextBlockStyle}"
+                    Style="{StaticResource PageTitleTextBlockStyle}"
                     TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <SelectorBar
@@ -58,7 +58,7 @@
         <Grid
             x:Name="ResultsHost"
             Grid.Row="1"
-            RowSpacing="12"
+            RowSpacing="{StaticResource Space12}"
             Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -74,7 +74,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="{StaticResource OverlayCornerRadius}"
                 Visibility="Collapsed">
                 <StackPanel Spacing="6">
                     <TextBlock
@@ -88,7 +88,7 @@
                 <StackPanel
                     x:Name="ArticleParentRow"
                     Orientation="Horizontal"
-                    Spacing="4"
+                    Spacing="{StaticResource Space4}"
                     Visibility="Collapsed">
                     <TextBlock
                         x:Name="ArticleParents"
@@ -122,7 +122,7 @@
             Grid.Row="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Spacing="12"
+            Spacing="{StaticResource Space12}"
             Visibility="Collapsed">
             <ProgressRing x:Name="BusyRing" IsActive="False" />
             <TextBlock x:Uid="TagCloud_Loading" HorizontalAlignment="Center" />
@@ -131,10 +131,10 @@
         <StackPanel
             x:Name="EmptyPanel"
             Grid.Row="1"
-            MaxWidth="440"
+            MaxWidth="{StaticResource EmptyStateMaxWidth}"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Spacing="12"
+            Spacing="{StaticResource Space12}"
             Visibility="Collapsed">
             <TextBlock
                 x:Name="EmptyTitle"

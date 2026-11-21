@@ -5,6 +5,7 @@ using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.ViewModels;
 
@@ -93,7 +94,7 @@ public partial class AuthorProviderTabViewModel : ObservableObject
 /// </summary>
 public partial class AuthorsViewModel : ObservableObject
 {
-    private static readonly TimeSpan RebuildDebounce = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan RebuildDebounce = AppTiming.RebuildDebounce;
     private static readonly ResourceLoader ResLoader = new();
 
     private readonly AuthorInfoService _authorInfoService;
@@ -156,6 +157,21 @@ public partial class AuthorsViewModel : ObservableObject
     [ObservableProperty]
     public partial string RefreshProgress { get; set; } = string.Empty;
 
+    /// <summary>Authors refreshed so far in the running refresh-all.</summary>
+    public int RefreshDone { get; private set; }
+
+    /// <summary>Authors the running refresh-all will visit.</summary>
+    public int RefreshTotal { get; private set; }
+
+    private bool _refreshCancelRequested;
+
+    /// <summary>
+    /// Stops a refresh-all after the author it is on. Each author is one paced
+    /// request to the platform, so a library with hundreds of authors runs for
+    /// minutes, and until now the only way out was to close the app.
+    /// </summary>
+    public void CancelRefreshAll() => _refreshCancelRequested = true;
+
     public AuthorsViewModel(
         AuthorInfoService authorInfoService,
         DispatcherQueue dispatcher,
@@ -171,10 +187,11 @@ public partial class AuthorsViewModel : ObservableObject
         _galleryViewModel = galleryViewModel;
         _characterGalleryViewModel = characterGalleryViewModel;
         _coordinateGalleryViewModel = coordinateGalleryViewModel;
-        // Local sources have their own page, which is also where they can be
-        // imported into; a tab here would be a second, weaker entry point.
+        // Local sources are authors too, so they are a platform here, the last
+        // one (user request: "put the local authors in the platforms, not a
+        // button of their own"). Their own page stays for importing into them.
         foreach (var provider in _authorInfoService.ProviderInfos
-                     .Where(provider => !LocalSourceIdentity.IsLocal(provider.ProviderId)))
+                     .OrderBy(provider => LocalSourceIdentity.IsLocal(provider.ProviderId)))
         {
             ProviderTabs.Add(new AuthorProviderTabViewModel(provider));
         }
@@ -256,6 +273,8 @@ public partial class AuthorsViewModel : ObservableObject
     private async Task RefreshAllAsync()
     {
         if (IsRefreshing) return;
+        _refreshCancelRequested = false;
+        RefreshDone = 0;
         IsRefreshing = true;
         try
         {
@@ -265,10 +284,12 @@ public partial class AuthorsViewModel : ObservableObject
                 .SelectMany(t => t.Authors)
                 .Select(s => s.Display.Key)
                 .ToList();
-            for (var i = 0; i < keys.Count; i++)
+            RefreshTotal = keys.Count;
+            for (var i = 0; i < keys.Count && !_refreshCancelRequested; i++)
             {
                 RefreshProgress = $"{i + 1} / {keys.Count}";
                 await _authorInfoService.RefreshAuthorAsync(keys[i]);
+                RefreshDone = i + 1;
             }
         }
         finally

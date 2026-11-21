@@ -6,20 +6,29 @@
   <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
   <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="First_Invoked" />
   <KeyboardAccelerator Key="End" Modifiers="Control" Invoked="Last_Invoked" />
+  <KeyboardAccelerator Key="I" Modifiers="Control" Invoked="Inspector_Invoked" />
  </UserControl.KeyboardAccelerators>
- <Grid x:Name="RootLayout" Padding="24,16,24,0" RowSpacing="12" SizeChanged="Browser_SizeChanged">
+ <Grid x:Name="RootLayout" Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}" SizeChanged="Browser_SizeChanged">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-  <Grid x:Name="Header" ColumnSpacing="12" RowSpacing="8">
+  <!-- The second column is the details pane (CardInspector, added in code), beside the grid only. -->
+  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+  <Grid x:Name="Header" Grid.ColumnSpan="2" ColumnSpacing="{StaticResource Space12}" RowSpacing="{StaticResource Space8}">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <StackPanel Spacing="4">
+   <StackPanel Spacing="{StaticResource Space4}">
     <Button x:Name="BackButton" Visibility="Collapsed" x:Uid="SceneGallery_GroupBack" Click="Back_Click" Style="{StaticResource SubtleButtonStyle}" HorizontalAlignment="Left" />
-    <TextBlock x:Name="Heading" Style="{StaticResource TitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+    <TextBlock x:Name="Heading" Style="{StaticResource PageTitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
    </StackPanel>
    <!-- The count sits with the controls that change it rather than under the
         title: on its own line below a heading it was the loudest thing on a
         page whose subject is the cards. -->
-   <StackPanel x:Name="SortControls" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+   <StackPanel x:Name="SortControls" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}" VerticalAlignment="Center">
+    <!-- Loading, analysing or making thumbnails: a small ring and a word beside the count, in the
+         toolbar line. It used to be a row of its own under the search box, which pushed the grid
+         down and back up every time it came and went (user report). -->
+    <StackPanel x:Name="BusyStatus" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,4,0" Visibility="Collapsed">
+     <ProgressRing x:Name="BusyRing" Width="14" Height="14"/><TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+    </StackPanel>
     <TextBlock x:Name="ResultCount" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,4,0" />
     <!-- Tag, not index: SortOption gains values over time and a silent
          off-by-one here would sort by the wrong column with no compile error. -->
@@ -29,8 +38,8 @@
          and HIG reserve for a view's single primary action - which sort
          direction is not. -->
     <DropDownButton x:Name="SortButton" x:Uid="SceneGallery_Sort" AutomationProperties.AutomationId="GallerySortButton">
-     <StackPanel Orientation="Horizontal" Spacing="8">
-      <FontIcon x:Name="DirectionIcon" Glyph="&#xE74B;" FontSize="14"/>
+     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+      <FontIcon x:Name="DirectionIcon" Glyph="{StaticResource GlyphSortDescending}" FontSize="{StaticResource IconSize}"/>
       <TextBlock x:Name="SortLabel"/>
      </StackPanel>
      <DropDownButton.Flyout>
@@ -46,83 +55,166 @@
       </MenuFlyout>
      </DropDownButton.Flyout>
     </DropDownButton>
-    <!-- Three exclusive values: a segmented control shows all of them and takes
-         one click, where a ComboBox hides two thirds of the choice behind a
-         menu. Both design systems draw the line at about five. -->
-    <toolkit:Segmented x:Name="SizeSegmented" x:Uid="Gallery_ThumbnailSizeComboBox" AutomationProperties.AutomationId="GallerySizeSegmented" SelectedIndex="1" SelectionChanged="Size_Changed">
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeSmall"/>
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeMedium"/>
-     <toolkit:SegmentedItem x:Uid="Gallery_ThumbnailSizeLarge"/>
-    </toolkit:Segmented>
+    <!-- The thumbnail size switch moved to Settings > OCD: in use it was hardly ever touched
+         (user), and the toolbar is the busiest line of the library. -->
+    <ToggleButton x:Name="InspectorToggle" AutomationProperties.AutomationId="GalleryInspectorToggle" Click="InspectorToggle_Click" Padding="8,6"><FontIcon Glyph="{StaticResource GlyphDetailsPane}" FontSize="{StaticResource IconSize}"/></ToggleButton>
    </StackPanel>
   </Grid>
-  <StackPanel Grid.Row="1" Spacing="8">
-   <Grid x:Name="SearchRow" ColumnSpacing="8" RowSpacing="8">
+  <StackPanel x:Name="SearchArea" Grid.Row="1" Grid.ColumnSpan="2" Spacing="{StaticResource Space8}">
+   <Grid x:Name="SearchRow" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <AutoSuggestBox x:Name="SearchBox" x:Uid="SceneGallery_Search" QueryIcon="Find" TextChanged="Search_Changed" QuerySubmitted="Search_Submitted" AutomationProperties.AutomationId="GallerySearchBox"/>
-    <StackPanel x:Name="SearchActions" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+    <StackPanel x:Name="SearchActions" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
      <!-- The active count is a badge rather than part of the label: it is a
           state of the control, not a different control, and it stops the label
           changing width as filters come and go. -->
-     <Button x:Name="FilterButton" AutomationProperties.AutomationId="GalleryFilterButton"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE71C;" FontSize="14"/><TextBlock x:Name="FilterLabel"/><InfoBadge x:Name="FilterBadge" Visibility="Collapsed" VerticalAlignment="Center"/></StackPanel>
-      <Button.Flyout><Flyout><StackPanel Width="280" Spacing="16">
+     <Button x:Name="FilterButton" AutomationProperties.AutomationId="GalleryFilterButton"><StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}"><FontIcon Glyph="{StaticResource GlyphFilter}" FontSize="{StaticResource IconSize}"/><TextBlock x:Name="FilterLabel"/><InfoBadge x:Name="FilterBadge" Visibility="Collapsed" VerticalAlignment="Center"/></StackPanel>
+      <Button.Flyout><Flyout><StackPanel Width="280" Spacing="{StaticResource Space16}">
        <TextBlock x:Uid="SceneGallery_FilterHeading" Style="{StaticResource BodyStrongTextBlockStyle}"/>
-       <StackPanel x:Name="SpecificFilters" Spacing="12"/>
-       <TextBlock x:Name="ResolutionFilterStatus" Visibility="Collapsed" TextWrapping="Wrap"
+       <StackPanel x:Name="SpecificFilters" Spacing="{StaticResource Space12}"/>
+       <!-- The switch lives here, beside the other filters; only the list of sizes is edited in settings. -->
+       <ToggleSwitch x:Name="ResolutionToggle" x:Uid="Browser_ResolutionToggle" AutomationProperties.AutomationId="GalleryResolutionToggle" Visibility="Collapsed" Toggled="ResolutionToggle_Toggled"/>
+       <TextBlock x:Name="ResolutionFilterStatus" Visibility="Collapsed" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+       <!-- Cards with no author yet: the list to work through when adding sources afterwards. -->
+       <ToggleSwitch x:Name="NoSourceToggle" x:Uid="Browser_NoSourceToggle" AutomationProperties.AutomationId="GalleryNoSourceToggle" Toggled="NoSourceToggle_Toggled"/>
+       <!-- The only way back for a card marked "not for me": it is hidden everywhere else. -->
+       <ToggleSwitch x:Name="ShowHiddenToggle" x:Uid="Browser_ShowHiddenToggle" AutomationProperties.AutomationId="GalleryShowHiddenToggle" Toggled="ShowHiddenToggle_Toggled"/>
        <TextBlock x:Uid="SceneGallery_FilterHint" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
        <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" Padding="0"/>
       </StackPanel></Flyout></Button.Flyout>
      </Button>
-     <Button x:Name="RandomButton" Click="Random_Click" IsEnabled="False"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE8B1;" FontSize="14"/><TextBlock x:Uid="SceneGallery_RandomLabel"/></StackPanel></Button>
+     <Button x:Name="RandomButton" Click="Random_Click" IsEnabled="False"><StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}"><FontIcon Glyph="{StaticResource GlyphShuffle}" FontSize="{StaticResource IconSize}"/><TextBlock x:Uid="SceneGallery_RandomLabel"/></StackPanel></Button>
     </StackPanel>
    </Grid>
-   <StackPanel x:Name="BusyStatus" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
-    <ProgressRing x:Name="BusyRing" Width="14" Height="14"/><TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}"/>
-   </StackPanel>
+   <!-- Active filters, each removable (LibraryBrowser.FilterChips.cs). -->
+   <local:WrapPanel x:Name="FilterChips" Spacing="6" Visibility="Collapsed" AutomationProperties.AutomationId="GalleryFilterChips"/>
   </StackPanel>
-  <GridView x:Name="GalleryGrid" Grid.Row="2" SelectionMode="None" IsItemClickEnabled="True" ItemClick="Item_Click"
+  <!-- A click selects (the details pane shows it); a double click or Enter opens.
+       Extended: Ctrl and Shift select several, Ctrl+A all. -->
+  <!-- Padding on the right: the overlay scroll bar runs in that gutter, between the
+       pictures and the details pane, instead of over the last column (user report). -->
+  <GridView x:Name="GalleryGrid" Grid.Row="2" Padding="{x:Bind local:UiMetrics.GridPadding}" SelectionMode="Extended" IsItemClickEnabled="False"
+   SelectionChanged="Grid_SelectionChanged" DoubleTapped="Grid_DoubleTapped" PreviewKeyDown="Grid_PreviewKeyDown"
    ContainerContentChanging="Container_Changing" CanDragItems="True" DragItemsStarting="Drag_Starting" AutomationProperties.AutomationId="GalleryGrid">
    <GridView.ItemContainerTransitions><TransitionCollection/></GridView.ItemContainerTransitions>
-   <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4"/></ItemsPanelTemplate></GridView.ItemsPanel>
+   <!-- The tile draws its own selection mark (GalleryEntry.IsSelected). The grid's own
+        selected background filled the whole cell, a grey block wider than the tile. -->
+   <GridView.Resources>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelected" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelectedPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundSelectedPressed" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundPointerOver" Color="Transparent"/>
+    <SolidColorBrush x:Key="GridViewItemBackgroundPressed" Color="Transparent"/>
+    <x:Boolean x:Key="GridViewItemSelectionCheckMarkVisualEnabled">False</x:Boolean>
+    <Thickness x:Key="GridViewItemSelectedBorderThickness">0</Thickness>
+   </GridView.Resources>
+   <!-- A size from the start (GalleryLayoutEngine fits it to the width at once): without one,
+        a tab opened for the first time laid out its ~1,800 cards at the size of their loading
+        placeholders, a field of tiny icons for seconds (user report, four times). -->
+   <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" CacheLength="4" ItemWidth="248" ItemHeight="248"/></ItemsPanelTemplate></GridView.ItemsPanel>
    <GridView.ItemContainerStyle><Style TargetType="GridViewItem">
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/>
     <Setter Property="Margin" Value="0"/><Setter Property="Padding" Value="0"/><Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="0"/>
    </Style></GridView.ItemContainerStyle>
    <GridView.ItemTemplate><DataTemplate x:DataType="models:GalleryEntry">
-    <Grid Margin="4" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
-     <Grid.ContextFlyout><MenuFlyout><MenuFlyoutItem x:Uid="Gallery_OpenFileLocation" Click="OpenFolder_Click" CommandParameter="{x:Bind}"/></MenuFlyout></Grid.ContextFlyout>
-     <Border Margin="14,0,14,8" CornerRadius="8" BorderThickness="1" Background="{ThemeResource ControlFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
-     <Border Margin="7,3,7,4" CornerRadius="8" BorderThickness="1" Background="{ThemeResource ControlFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Visibility="{x:Bind IsGroup}"/>
-     <Grid Padding="4" Margin="0,6,0,0" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <Grid>
-       <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image x:Phase="1" Stretch="Uniform" Source="{x:Bind local:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}"/></Border>
-       <local:RatingBadge HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Text="{x:Bind RatingText, Mode=OneWay}" />
-       <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6" Padding="8,5" CornerRadius="5" Background="#E6202020" Visibility="{x:Bind IsGroup}"><StackPanel Orientation="Horizontal" Spacing="6"><FontIcon Glyph="&#xE8B9;" FontSize="14" Foreground="White"/><TextBlock Text="{x:Bind CountText}" Foreground="White" FontSize="12" FontWeight="SemiBold"/></StackPanel></Border>
-       <!-- One badge for both facts: a second Border would crowd the corner. -->
-       <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6" Padding="6,3" CornerRadius="4" Background="#E6202020" Visibility="{x:Bind HasVersionBadge, Mode=OneWay}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/><TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="White" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/></StackPanel></Border>
-      </Grid>
-      <StackPanel Grid.Row="1" Height="{x:Bind MetadataHeight}" Padding="8,4" VerticalAlignment="Center" Spacing="2">
-       <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" Visibility="{x:Bind ShowTitle}"/>
-       <Grid ColumnSpacing="4"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Ellipse Width="16" Height="16" Visibility="{x:Bind Author.HasAvatar, Mode=OneWay}"><Ellipse.Fill><ImageBrush ImageSource="{x:Bind Author.AvatarSource, Mode=OneWay}" Stretch="UniformToFill"/></Ellipse.Fill></Ellipse>
-        <TextBlock Grid.Column="1" Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+    <!-- Two looks, by the "show file names" setting (GalleryEntry, GalleryLayoutEngine.SetChrome).
+         Photo mode (off), like Google Photos: pictures edge to edge with a thin gap, the badges
+         on the picture, a group's next cards fanned out behind its cover.
+         Card mode (on): a framed card with a rounded, inset picture and everything else under
+         it, so nothing covers the picture: the title, then the author with the version, the
+         group's count and the rating as small chips; a group's sheets stack under the card. -->
+    <Grid Margin="{x:Bind TileMargin}" ToolTipService.ToolTip="{x:Bind Title, Mode=OneWay}">
+     <!-- Filled when it opens (LibraryBrowser.CardMenu.cs): what it offers depends on the tile. -->
+     <Grid.ContextFlyout><MenuFlyout Opening="CardMenu_Opening"/></Grid.ContextFlyout>
+     <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+     <!-- Card mode: the card, opaque and a step lighter than the page (MediaCardBackgroundBrush). -->
+     <Border Grid.RowSpan="2" Visibility="{x:Bind ShowTitle}" CornerRadius="{StaticResource MediaTileCornerRadius}"
+             Background="{ThemeResource MediaCardBackgroundBrush}" BorderBrush="{ThemeResource MediaCardStrokeBrush}" BorderThickness="1"/>
+
+     <Grid Margin="{x:Bind PictureInset}">
+      <!-- A group: its next two cards fanned out behind the cover, the details pane's stack
+           of selected cards (CardInspector.ShowStack): each turned and shifted a little more,
+           a little fainter. The same in both modes (user request). -->
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind HasThirdLayer}" RenderTransformOrigin="0.5,0.5" Opacity="{x:Bind local:UiMetrics.StackFarOpacity}"
+              CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+       <Border.RenderTransform><CompositeTransform Rotation="{x:Bind local:UiMetrics.StackFarTurn}" TranslateX="{x:Bind local:UiMetrics.StackFarShiftX}" TranslateY="{x:Bind local:UiMetrics.StackFarShiftY}"/></Border.RenderTransform>
+       <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(ThirdCard.ThumbnailUri), Mode=OneWay}"/>
+      </Border>
+      <Border Margin="{x:Bind FaceMargin}" Visibility="{x:Bind IsGroup}" RenderTransformOrigin="0.5,0.5" Opacity="{x:Bind local:UiMetrics.StackNearOpacity}"
+              CornerRadius="{x:Bind PictureCorners}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}">
+       <Border.RenderTransform><CompositeTransform Rotation="{x:Bind local:UiMetrics.StackNearTurn}" TranslateX="{x:Bind local:UiMetrics.StackNearShiftX}" TranslateY="{x:Bind local:UiMetrics.StackNearShiftY}"/></Border.RenderTransform>
+       <Image Stretch="UniformToFill" Source="{x:Bind local:LibraryBrowser.StackThumbnail(SecondCard.ThumbnailUri), Mode=OneWay}"/>
+      </Border>
+      <!-- The cover. Its picture is a brush so its corners follow PictureCorners. -->
+      <Grid Margin="{x:Bind FaceMargin}">
+       <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+       <Border CornerRadius="{x:Bind PictureCorners}">
+        <Border.Background><ImageBrush Stretch="UniformToFill" ImageSource="{x:Bind local:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}"/></Border.Background>
+       </Border>
+       <!-- Until the thumbnail exists: a pulse that says "loading" rather than a flat
+            block that looks stuck. Shown off the path only; the image pipeline is untouched. -->
+       <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource SubtleFillColorTertiaryBrush}" Visibility="{x:Bind local:LibraryBrowser.PlaceholderVisibility(Card.ThumbnailUri), Mode=OneWay}" Loaded="Placeholder_Loaded">
+        <FontIcon Glyph="{StaticResource GlyphThumbnail}" FontSize="20" Foreground="{ThemeResource TextFillColorDisabledBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+       </Border>
+       <!-- Photo mode: the badges on the picture. -->
+       <local:RatingBadge HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Text="{x:Bind RatingText, Mode=OneWay}" Visibility="{x:Bind BadgesOnPicture}" />
+       <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Visibility="{x:Bind VersionBadgeOnPicture, Mode=OneWay}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+         <TextBlock Text="{x:Bind AlternateText, Mode=OneWay}" Foreground="{ThemeResource AccentTextFillColorTertiaryBrush}" FontSize="11" FontWeight="SemiBold" Visibility="{x:Bind HasAlternateVersions, Mode=OneWay}"/>
+         <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" FontSize="11" Visibility="{x:Bind HasVersions, Mode=OneWay}"/>
+        </StackPanel>
+       </Border>
+       <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6" MinWidth="26" Height="26" Padding="8,0" CornerRadius="13"
+               Background="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind IsGroup}"
+               AutomationProperties.Name="{x:Bind CountText}">
+        <TextBlock Text="{x:Bind MemberCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+       </Border>
+       <!-- The selection mark (GalleryEntry.IsSelected): an accent frame inside the picture,
+            a light accent wash and a check in the corner. -->
+       <Grid IsHitTestVisible="False" Visibility="{x:Bind IsSelected, Mode=OneWay}">
+        <Border CornerRadius="{x:Bind PictureCorners}" Background="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0.2"/>
+        <Border CornerRadius="{x:Bind PictureCorners}" BorderThickness="3" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"/>
+        <Border Width="24" Height="24" Margin="8" CornerRadius="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="{ThemeResource AccentFillColorDefaultBrush}">
+         <FontIcon Glyph="{StaticResource GlyphSelected}" FontSize="{StaticResource IconSize}" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+        </Border>
        </Grid>
-      </StackPanel>
+      </Grid>
+     </Grid>
+
+     <!-- Card mode: the caption. Title on the first line; the author (or a quiet "no author")
+          on the second, with the version, the group's count and the rating as chips beside it. -->
+     <Grid Grid.Row="1" Height="{x:Bind MetadataHeight}" Margin="{x:Bind CardFrameMargin}" Padding="10,8,10,8" RowSpacing="{StaticResource Space4}" Visibility="{x:Bind ShowTitle}">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" FontWeight="SemiBold"/>
+      <Grid Grid.Row="1" ColumnSpacing="6">
+       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+        <FontIcon Glyph="{StaticResource GlyphAuthor}" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+        <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind HasAuthor, Mode=OneWay}"/>
+        <TextBlock Text="{x:Bind AuthorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center"
+                   Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Visibility="{x:Bind NoAuthor, Mode=OneWay}"/>
+       </StackPanel>
+       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+        <Border Height="20" Padding="7,0" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind VersionInCaption, Mode=OneWay}">
+         <TextBlock Text="{x:Bind VersionText, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Border>
+        <local:RatingBadge Text="{x:Bind RatingText, Mode=OneWay}" VerticalAlignment="Center"/>
+       </StackPanel>
+      </Grid>
      </Grid>
     </Grid>
    </DataTemplate></GridView.ItemTemplate>
   </GridView>
-  <StackPanel x:Name="EmptyPanel" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="440" Visibility="Collapsed">
+  <StackPanel x:Name="EmptyPanel" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Space12}" MaxWidth="{StaticResource EmptyStateMaxWidth}" Visibility="Collapsed">
    <TextBlock x:Name="EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextAlignment="Center" TextWrapping="Wrap"/>
    <TextBlock x:Name="EmptyDescription" TextAlignment="Center" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
    <Button x:Name="ClearButton" Click="Clear_Click" HorizontalAlignment="Center"/>
    <HyperlinkButton x:Uid="SceneGallery_FilterSettings" Click="Settings_Click" HorizontalAlignment="Center"/>
   </StackPanel>
-  <!-- Last child, so the collapse snapshots draw over the grid. Shares the
-       grid's coordinate space, which a Popup would not. -->
-  <Canvas x:Name="CollapseOverlay" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"/>
  </Grid>
 </UserControl>

@@ -8,30 +8,25 @@
         <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="Search_Invoked" />
         <KeyboardAccelerator Key="Home" Modifiers="Control" Invoked="Top_Invoked" />
     </Page.KeyboardAccelerators>
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource PageRowSpacing}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <StackPanel Spacing="4">
-            <TextBlock x:Uid="Discovery_Title" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1" />
-            <TextBlock x:Uid="Discovery_Description" TextWrapping="Wrap"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
-        <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="8" RowSpacing="8" SizeChanged="Toolbar_SizeChanged">
+        <controls:PageHeader x:Uid="Discovery_Header" />
+        <Grid x:Name="Toolbar" Grid.Row="1" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space8}" SizeChanged="Toolbar_SizeChanged">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
             <AutoSuggestBox x:Name="SearchBox" x:Uid="SceneGallery_Search" QueryIcon="Find"
                             TextChanged="Search_Changed" QuerySubmitted="Search_Submitted"
                             AutomationProperties.AutomationId="DiscoverySearchBox" />
-            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <StackPanel x:Name="Actions" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
                 <Button x:Name="FilterButton" x:Uid="Discovery_Filters" MinHeight="36">
                     <Button.Flyout>
                         <Flyout>
-                            <StackPanel Width="260" Spacing="16">
-                                <ToggleSwitch x:Name="RatingFilter" x:Uid="SceneGallery_Rating" Toggled="Filter_Changed" />
+                            <StackPanel Width="260" Spacing="{StaticResource Space16}">
                                 <ComboBox x:Name="GameFilter" x:Uid="SceneGallery_Environment"
                                           HorizontalAlignment="Stretch" SelectionChanged="Game_Changed" />
                                 <ToggleSwitch x:Name="ResolutionFilter" x:Uid="Discovery_Resolution" Toggled="Filter_Changed" />
@@ -45,11 +40,11 @@
                 <Button x:Name="ResetButton" x:Uid="Discovery_Reset" Click="Reset_Click" MinHeight="36" />
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="2" Spacing="8">
+        <StackPanel Grid.Row="2" Spacing="{StaticResource Space8}">
             <TextBlock x:Name="ProgressText" Style="{StaticResource CaptionTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-            <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
-                <ProgressRing x:Name="BusyRing" Width="16" Height="16" IsActive="False" />
+            <StackPanel x:Name="BusyPanel" Orientation="Horizontal" Spacing="{StaticResource Space8}" Visibility="Collapsed">
+                <ProgressRing x:Name="BusyRing" Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="False" />
                 <TextBlock x:Name="BusyText" Style="{StaticResource CaptionTextBlockStyle}" />
             </StackPanel>
             <InfoBar x:Name="ErrorBar" x:Uid="Discovery_Error" Severity="Error" IsOpen="False" IsClosable="False">
@@ -78,27 +73,23 @@
             </GridView.ItemContainerStyle>
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="models:DiscoveryItem">
-                    <Grid Margin="4" Padding="5" CornerRadius="8" BorderThickness="1"
-                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                          ToolTipService.ToolTip="{x:Bind Card.FileName}">
+                    <!--  The library's tile (Google Photos-like): edge to edge, a thin gap, no frame.  -->
+                    <Grid Margin="1" ToolTipService.ToolTip="{x:Bind Card.FileName}">
                         <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid>
-                            <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                                <Image x:Phase="1" Stretch="Uniform"
-                                       Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
-                            </Border>
+                        <Grid Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <Image x:Phase="1" Stretch="UniformToFill"
+                                   Source="{x:Bind controls:LibraryBrowser.Thumbnail(Card.ThumbnailUri), Mode=OneWay}" />
                             <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                    Margin="6" Padding="6,3" CornerRadius="4" Background="#E6202020"
+                                    Style="{StaticResource MediaOverlayBadgeStyle}"
                                     Visibility="{x:Bind IsJoker}">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <FontIcon Glyph="&#xE8EF;" FontSize="12" Foreground="White" />
-                                    <TextBlock Text="{x:Bind JokerText}" Foreground="White"
+                                    <FontIcon Glyph="{StaticResource GlyphJoker}" FontSize="12" Foreground="{ThemeResource MediaOverlayForegroundBrush}" />
+                                    <TextBlock Text="{x:Bind JokerText}" Foreground="{ThemeResource MediaOverlayForegroundBrush}"
                                                FontSize="11" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <StackPanel Grid.Row="1" Padding="8,6" Spacing="2">
+                        <StackPanel Grid.Row="1" Height="44" Padding="2,4,2,0" Spacing="0" Visibility="{x:Bind CaptionVisibility}">
                             <TextBlock Text="{x:Bind Card.FileName}" TextTrimming="CharacterEllipsis" MaxLines="1" />
                             <TextBlock Text="{x:Bind Card.Author.Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
                                        Style="{StaticResource CaptionTextBlockStyle}"
@@ -108,8 +99,8 @@
                 </DataTemplate>
             </GridView.ItemTemplate>
             <GridView.Footer>
-                <StackPanel x:Name="RoundFooter" Padding="16,24" Spacing="12" Visibility="Collapsed"
-                            HorizontalAlignment="Center" MaxWidth="480">
+                <StackPanel x:Name="RoundFooter" Padding="16,24" Spacing="{StaticResource Space12}" Visibility="Collapsed"
+                            HorizontalAlignment="Center" MaxWidth="{StaticResource EmptyStateMaxWidth}">
                     <TextBlock x:Name="RoundEndText" TextWrapping="Wrap" TextAlignment="Center"
                                AutomationProperties.LiveSetting="Polite" />
                     <Button x:Name="ContinueButton" x:Uid="Discovery_Continue" Click="Continue_Click"
@@ -117,8 +108,21 @@
                 </StackPanel>
             </GridView.Footer>
         </GridView>
+        <!--  Poker mode: the hand stands in a card rack (user request, after a photo
+              of a poker card holder); the grid above is the classic endless round.  -->
+        <Grid x:Name="HandArea" Grid.Row="3" Visibility="Collapsed" RowSpacing="{StaticResource Space12}">
+            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <controls:CardHolder x:Name="Holder" />
+            <StackPanel x:Name="HandFooter" Grid.Row="1" Spacing="{StaticResource Space8}" HorizontalAlignment="Center"
+                        Visibility="Collapsed" Padding="0,0,0,8">
+                <TextBlock x:Name="HandEndText" TextAlignment="Center" AutomationProperties.LiveSetting="Polite"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Button x:Name="HandContinueButton" x:Uid="Discovery_Continue" Click="Continue_Click"
+                        Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Center" MinHeight="36" />
+            </StackPanel>
+        </Grid>
         <StackPanel x:Name="EmptyPanel" Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    MaxWidth="420" Padding="16" Spacing="12" Visibility="Collapsed">
+                    MaxWidth="420" Padding="16" Spacing="{StaticResource Space12}" Visibility="Collapsed">
             <TextBlock x:Name="EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" />
             <TextBlock x:Name="EmptyDescription" TextWrapping="Wrap" TextAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

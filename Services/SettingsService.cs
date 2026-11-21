@@ -6,7 +6,7 @@ namespace KoikatsuSceneGallery.Services;
 
 public class SettingsService
 {
-    private const string ConfigFileName = "config.json";
+    private const string ConfigFileName = AppFiles.Settings;
     private readonly string _configPath;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -71,6 +71,8 @@ public class SettingsService
         public bool ResolutionFilterEnabled { get; set; } = true;
         public List<string> AllowedResolutions { get; set; } = ["320x180", "1600x900"];
         public bool ShowFileNames { get; set; } = true;
+        /// <summary>Rate scene cards by the user's own ratings instead of the platform's.</summary>
+        public bool UseUserRatings { get; set; }
         public bool ScrollToTopOnSort { get; set; } = true;
         public bool DiscoverySpreadEnabled { get; set; } = true;
 
@@ -95,6 +97,12 @@ public class SettingsService
         /// </summary>
         public bool GroupCollapseAnimationEnabled { get; set; } = true;
 
+        /// <summary>The details pane beside a grid of cards (wave 12). On by default.</summary>
+        public bool InspectorVisible { get; set; } = true;
+
+        /// <summary>Square corners instead of WinUI's rounded ones. Off by default.</summary>
+        public bool SquareCorners { get; set; }
+
         /// <summary>
         /// Off-screen render buffer for the gallery, as a multiple of the
         /// viewport (ItemsWrapGrid.CacheLength). Higher = more thumbnails kept
@@ -102,7 +110,7 @@ public class SettingsService
         /// thumbnail generation and memory/CPU. Advanced setting; 4 is the WinUI
         /// default.
         /// </summary>
-        public double CacheLength { get; set; } = 4;
+        public double CacheLength { get; set; } = AppLimits.DefaultCacheLength;
 
         /// <summary>Preferred base width for all gallery thumbnail grids.</summary>
         public ThumbnailSizePreference ThumbnailSize { get; set; } = ThumbnailSizePreference.Medium;
@@ -157,6 +165,12 @@ public class SettingsService
 
         public bool UseVisualSimilarity { get; set; }
 
+        /// <summary>
+        /// Imports a card without review when its file name names a post and
+        /// that post was found: nothing about it is left for the user to decide.
+        /// </summary>
+        public bool AutoImportIdentifiedPosts { get; set; } = true;
+
         public bool AuthorLiveTilesEnabled { get; set; } = true;
 
         public List<string> HiddenNavItems { get; set; } = [];
@@ -169,6 +183,12 @@ public class SettingsService
         /// </summary>
         public string BrowseOrigin { get; set; } = "";
 
+        /// <summary>The app-wide rating filter choice (<see cref="Helpers.RatingFilterRule.Parse"/>); empty is All.</summary>
+        public string RatingFilter { get; set; } = "";
+
+        /// <summary>Rating filtering at all. Off shows every card as with All, and keeps the choice for later.</summary>
+        public bool RatingFilterEnabled { get; set; } = true;
+
         // ── Folder naming (OCD) ─────────────────────────────────────
         public string AuthorFolderFormat { get; set; } = "{name} ({id})";
         public string ArtworkFolderFormat { get; set; } = "{title} ({id})";
@@ -178,5 +198,13 @@ public class SettingsService
         public string GFolderName { get; set; } = "G";
         public string R18FolderName { get; set; } = "R-18";
         public string R18GFolderName { get; set; } = "R-18G";
+
+        // ── Mods ────────────────────────────────────────────────────
+        /// <summary>Koikatsu install folder (the one holding <c>mods</c> and <c>BepInEx</c>). Empty = not set.</summary>
+        public string KoikatsuGameFolder { get; set; } = "";
+        /// <summary>Koikatsu Sunshine install folder. Empty = not set.</summary>
+        public string KoikatsuSunshineGameFolder { get; set; } = "";
+        /// <summary>The gallery's own folder inside each game's <c>mods</c> folder; mods it installs go only there.</summary>
+        public string ModInstallFolderName { get; set; } = "SceneGallery";
     }
 }

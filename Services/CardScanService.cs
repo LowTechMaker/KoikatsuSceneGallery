@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using KoikatsuSceneGallery.Models;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -15,7 +16,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
 
     protected CardScanService()
     {
-        _debounceTimer = new System.Timers.Timer(300);
+        _debounceTimer = new System.Timers.Timer(AppTiming.FileWatchSettle.TotalMilliseconds);
         _debounceTimer.AutoReset = false;
         _debounceTimer.Elapsed += (_, _) => FlushPendingChanges();
     }
@@ -37,11 +38,19 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
+    /// <param name="skip">
+    /// True for a listed file the caller already has as a card, unchanged (its
+    /// card cache matches size and write time): the file is neither opened nor
+    /// sent to <paramref name="onBatch"/>, which would only find it equal to the
+    /// card already there. The caller records that it was seen. Called on the
+    /// scan's worker threads.
+    /// </param>
     public Task ScanFoldersAsync(
         IEnumerable<string> folderPaths,
         Action<List<TCard>> onBatch,
         CancellationToken cancellationToken = default,
-        int batchSize = 200)
+        int batchSize = AppLimits.ScanBatchSize,
+        Func<FileInfo, bool>? skip = null)
     {
         return Task.Run(() =>
         {
@@ -65,7 +74,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
                     onBatch(ready);
             }
 
-            ScanFolders(folderPaths, options, Accumulate);
+            ScanFolders(folderPaths, options, Accumulate, skip);
 
             if (batch.Count > 0)
             {
@@ -75,10 +84,57 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// How many files the last scan found but could not turn into a card. A
+    /// gallery holds one card per readable file, so these are the files its
+    /// count is expected to fall short by.
+    /// </summary>
+    public int LastScanUnreadableCount => Volatile.Read(ref _lastScanUnreadableCount);
+    private int _lastScanUnreadableCount;
+
+    /// <summary>Files listed, opened, and skipped as unchanged (taken from the caller's cache) by the last scan (for the startup timing log).</summary>
+    public (int Listed, int Opened, int Reused) LastScanCounts { get; private set; }
+
+    /// <summary>
+    /// Counts the card files under <paramref name="folderPaths"/> without
+    /// opening any of them, or returns null when a folder cannot be listed.
+    /// </summary>
+    /// <remarks>
+    /// Paths are de-duplicated because overlapping roots list the same file
+    /// twice, while a gallery holds it once.
+    /// </remarks>
+    public Task<int?> CountCardFilesAsync(
+        IEnumerable<string> folderPaths,
+        CancellationToken cancellationToken = default)
+        => Task.Run<int?>(() =>
+        {
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var folder in folderPaths)
+                {
+                    if (!Directory.Exists(folder)) continue;
+                    foreach (var file in EnumerateCardFiles(folder))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        files.Add(file.FullName);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+
+            return files.Count;
+        }, cancellationToken);
+
     // Synchronous worker core: callers retain their own result collection/publication.
-    private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept)
+    private void ScanFolders(IEnumerable<string> folderPaths, ParallelOptions options, Action<TCard> accept,
+        Func<FileInfo, bool>? skip = null)
     {
         var cancellationToken = options.CancellationToken;
+        int unreadable = 0, listed = 0, opened = 0, reused = 0;
         foreach (var folder in folderPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -86,11 +142,25 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             Parallel.ForEach(EnumerateCardFiles(folder), options, file =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                Interlocked.Increment(ref listed);
+                // A file the caller already has, unchanged, is neither opened nor
+                // published: its size and write time came with the listing.
+                if (skip?.Invoke(file) == true)
+                {
+                    Interlocked.Increment(ref reused);
+                    return;
+                }
+                Interlocked.Increment(ref opened);
                 var card = TryCreateCard(file);
                 if (card != null)
                     accept(card);
+                else
+                    Interlocked.Increment(ref unreadable);
             });
         }
+
+        Volatile.Write(ref _lastScanUnreadableCount, unreadable);
+        LastScanCounts = (listed, opened, reused);
     }
 
     private static ParallelOptions CreateScanOptions(CancellationToken cancellationToken)
@@ -100,7 +170,7 @@ public abstract class CardScanService<TCard> : IDisposable where TCard : CardBas
             // Scanning opens every card and parses its header.  Unbounded use of a
             // high-core CPU competes directly with the UI thread and thumbnail work;
             // four workers retain disk parallelism without causing scroll hitching.
-            MaxDegreeOfParallelism = Math.Min(4, Math.Max(1, Environment.ProcessorCount - 1)),
+            MaxDegreeOfParallelism = AppLimits.IoWorkers,
         };
 
     private TCard? TryCreateCard(string filePath) =>

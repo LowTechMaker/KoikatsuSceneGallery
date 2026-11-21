@@ -3,7 +3,9 @@
     x:Class="KoikatsuSceneGallery.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls" xmlns:helpers="using:KoikatsuSceneGallery.Helpers"
+    xmlns:app="using:KoikatsuSceneGallery.Controls"
+    xmlns:models="using:KoikatsuSceneGallery.Models"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:KoikatsuSceneGallery"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -21,14 +23,129 @@
 
         <TitleBar
             x:Name="AppTitleBar"
-            Title="Koikatsu Scene Gallery"
             BackRequested="TitleBar_BackRequested"
             IsBackButtonVisible="{x:Bind NavFrame.CanGoBack, Mode=OneWay}"
             IsPaneToggleButtonVisible="True"
             PaneToggleRequested="TitleBar_PaneToggleRequested">
-            <TitleBar.IconSource>
-                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
-            </TitleBar.IconSource>
+            <!--  The app's name and the rating filter right after it (user request:
+                  "to the right of Gallery"). TitleBar.Content is always centred, so
+                  the control cannot sit there; the left header comes before the
+                  built-in title, so the title is ours, drawn here, and the built-in
+                  one is left empty. The window keeps its Title for the taskbar.  -->
+            <TitleBar.LeftHeader>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center" Margin="4,0,0,0">
+                    <TextBlock
+                        x:Name="AppTitleText"
+                        Text="Koikatsu Scene Gallery"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource CaptionTextBlockStyle}" />
+                        <!--  One control in three joined segments (user request, redesigned):
+                              a rounded frame, a rating's own colour filling its segment when
+                              it is shown, grey letters on nothing when it is not. Plain
+                              ToggleButtons (Toggle pattern); arrow keys move between them.
+                              The segments' outer corners follow the frame in code
+                              (MainWindow.ShapeRatingSegments), so square corners apply.  -->
+                        <Border
+                            x:Name="RatingFilterFrame"
+                            VerticalAlignment="Center"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                            CornerRadius="{StaticResource ControlCornerRadius}">
+                        <StackPanel
+                            x:Name="RatingFilterGroup"
+                            AutomationProperties.AutomationId="TitleBarRatingFilter"
+                            Orientation="Horizontal"
+                            XYFocusKeyboardNavigation="Enabled">
+                            <StackPanel.Resources>
+                                <Thickness x:Key="RatingSegmentPadding">10,3</Thickness>
+                                <Style x:Key="RatingSegmentStyle" TargetType="ToggleButton">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="UseSystemFocusVisuals" Value="True" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Grid x:Name="Root" Background="Transparent">
+                                                    <VisualStateManager.VisualStateGroups>
+                                                        <VisualStateGroup x:Name="CommonStates">
+                                                            <VisualState x:Name="Normal" />
+                                                            <VisualState x:Name="PointerOver"><VisualState.Setters><Setter Target="Hover.Opacity" Value="1" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="Pressed"><VisualState.Setters><Setter Target="Hover.Opacity" Value="1" /><Setter Target="Root.Opacity" Value="0.8" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="Checked" />
+                                                            <VisualState x:Name="CheckedPointerOver"><VisualState.Setters><Setter Target="Hover.Opacity" Value="1" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="CheckedPressed"><VisualState.Setters><Setter Target="Hover.Opacity" Value="1" /><Setter Target="Root.Opacity" Value="0.8" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="Root.Opacity" Value="0.5" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="CheckedDisabled"><VisualState.Setters><Setter Target="Root.Opacity" Value="0.5" /></VisualState.Setters></VisualState>
+                                                            <VisualState x:Name="Indeterminate" />
+                                                            <VisualState x:Name="IndeterminatePointerOver" />
+                                                            <VisualState x:Name="IndeterminatePressed" />
+                                                            <VisualState x:Name="IndeterminateDisabled" />
+                                                        </VisualStateGroup>
+                                                    </VisualStateManager.VisualStateGroups>
+                                                    <ContentPresenter Content="{TemplateBinding Content}" />
+                                                    <!--  A light wash over the segment under the pointer, on or off.  -->
+                                                    <Border x:Name="Hover" Opacity="0" IsHitTestVisible="False"
+                                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </StackPanel.Resources>
+                            <ToggleButton
+                                x:Name="RatingToggleG"
+                                AutomationProperties.AutomationId="TitleBarRatingFilter_G"
+                                Style="{StaticResource RatingSegmentStyle}"
+                                Tag="General"
+                                Checked="RatingToggle_Changed"
+                                Unchecked="RatingToggle_Changed">
+                                <Grid>
+                                    <Border x:Name="RatingToggleGOn" Padding="{StaticResource RatingSegmentPadding}" Background="{ThemeResource RatingAllAgesBadgeBrush}">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.General}" Foreground="{ThemeResource RatingBadgeForegroundBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <Border x:Name="RatingToggleGOff" Padding="{StaticResource RatingSegmentPadding}" Background="Transparent" Visibility="Collapsed">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.General}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </ToggleButton>
+                            <Border Width="1" Background="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                            <ToggleButton
+                                x:Name="RatingToggleR18"
+                                AutomationProperties.AutomationId="TitleBarRatingFilter_R18"
+                                Style="{StaticResource RatingSegmentStyle}"
+                                Tag="R18"
+                                Checked="RatingToggle_Changed"
+                                Unchecked="RatingToggle_Changed">
+                                <Grid>
+                                    <Border x:Name="RatingToggleR18On" Padding="{StaticResource RatingSegmentPadding}" Background="{ThemeResource RatingR18BadgeBrush}">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.R18}" Foreground="{ThemeResource RatingBadgeForegroundBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <Border x:Name="RatingToggleR18Off" Padding="{StaticResource RatingSegmentPadding}" Background="Transparent" Visibility="Collapsed">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.R18}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </ToggleButton>
+                            <Border Width="1" Background="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                            <ToggleButton
+                                x:Name="RatingToggleR18G"
+                                AutomationProperties.AutomationId="TitleBarRatingFilter_R18G"
+                                Style="{StaticResource RatingSegmentStyle}"
+                                Tag="R18G"
+                                Checked="RatingToggle_Changed"
+                                Unchecked="RatingToggle_Changed">
+                                <Grid>
+                                    <Border x:Name="RatingToggleR18GOn" Padding="{StaticResource RatingSegmentPadding}" Background="{ThemeResource RatingR18GBadgeBrush}">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.R18G}" Foreground="{ThemeResource RatingBadgeForegroundBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                    <Border x:Name="RatingToggleR18GOff" Padding="{StaticResource RatingSegmentPadding}" Background="Transparent" Visibility="Collapsed">
+                                        <TextBlock Style="{StaticResource BadgeTextStyle}" Text="{x:Bind helpers:RatingLabels.R18G}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                                    </Border>
+                                </Grid>
+                            </ToggleButton>
+                        </StackPanel>
+                        </Border>
+                </StackPanel>
+            </TitleBar.LeftHeader>
             <!--  Inside TitleBar.Content, not beside AppTitleBar: the control
                   carves its own input passthrough, while anything sitting in
                   row 0 next to it would be swallowed by SetTitleBar.  -->
@@ -38,12 +155,32 @@
                       still matters — Segmented derives from ListViewBase and
                       claims the full width at measure, which once left the
                       window with no room for its own title.  -->
+                <!--  The rating filter sits in its own column beside the origin
+                      switch: it does not depend on a platform plugin, so it
+                      stays when the origin switch is hidden. Three toggle
+                      badges, one per rating, about 130 px together: small
+                      enough that no narrow-window fallback is needed.  -->
+                <!--  The rating filter first, so it sits right after the app's name
+                      (user request); the origin switch keeps the middle of the bar.  -->
                 <Grid
-                    MaxWidth="520"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    ColumnSpacing="{StaticResource Space12}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <!--  Plain ToggleButtons (their own automation peer gives the
+                          Toggle pattern; the template below only draws, nothing
+                          in it is hit-test blind or wraps the button). Each holds
+                          two looks of the app's rating badge: coloured when on,
+                          a grey outline with grey letters when off. The letters
+                          are in both, so the meaning never rests on colour.
+                          XYFocusKeyboardNavigation lets the arrow keys move
+                          between the three; Tab reaches each, Space toggles.  -->
                     <controls:Segmented
                         x:Name="OriginSelectorBar"
+                        Grid.Column="1"
                         x:Uid="Origin_SelectorBar"
                         AutomationProperties.AutomationId="OriginSelectorBar"
                         HorizontalAlignment="Center"
@@ -51,6 +188,7 @@
                         SelectionChanged="OriginSelectorBar_SelectionChanged" />
                     <DropDownButton
                         x:Name="OriginSelectorPicker"
+                        Grid.Column="1"
                         x:Uid="Origin_SelectorBar"
                         AutomationProperties.AutomationId="OriginSelectorPicker"
                         Width="150"
@@ -63,6 +201,114 @@
                     </DropDownButton>
                 </Grid>
             </TitleBar.Content>
+            <!--  The palette's visible way in, for anyone who does not know
+                  Ctrl+K. It names the shortcut so the button teaches it.  -->
+            <TitleBar.RightHeader>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+                <!--  Present only while something runs in the background; its
+                      list replaces the refetch banner and the per-page
+                      progress captions as the one place to look.  -->
+                <Button
+                    x:Name="ActivityButton"
+                    AutomationProperties.AutomationId="ActivityButton"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <ProgressRing x:Name="ActivityRing" Width="{StaticResource RingSize}" Height="{StaticResource RingSize}" IsActive="False" />
+                        <TextBlock
+                            x:Name="ActivityCount"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout x:Name="ActivityFlyout" Placement="BottomEdgeAlignedRight">
+                            <StackPanel Width="360" Spacing="{StaticResource Space12}">
+                                <TextBlock x:Uid="Activity_Title" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <ItemsControl x:Name="ActivityList" AutomationProperties.AutomationId="ActivityList">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="{StaticResource Space16}" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ActivityItem">
+                                            <Grid ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space4}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="{x:Bind Title, Mode=OneWay}" TextWrapping="Wrap" />
+                                                <TextBlock
+                                                    Grid.Row="1"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                                    Text="{x:Bind Detail, Mode=OneWay}"
+                                                    TextWrapping="Wrap"
+                                                    Visibility="{x:Bind DetailVisibility, Mode=OneWay}" />
+                                                <ProgressBar
+                                                    Grid.Row="2"
+                                                    IsIndeterminate="{x:Bind IsIndeterminate, Mode=OneWay}"
+                                                    Maximum="100"
+                                                    Value="{x:Bind ProgressValue, Mode=OneWay}" />
+                                                <Button
+                                                    x:Uid="Activity_Cancel"
+                                                    Grid.RowSpan="3"
+                                                    Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Click="ActivityCancel_Click"
+                                                    Tag="{x:Bind}"
+                                                    Visibility="{x:Bind CancelVisibility, Mode=OneWay}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <!--  Record mode is on: says so where it is always in sight (it used
+                      to be a badge on the usage entry, which left the pane), and
+                      opens the log.  -->
+                <Button
+                    x:Name="RecordingButton"
+                    AutomationProperties.AutomationId="RecordingButton"
+                    VerticalAlignment="Center"
+                    Click="RecordingButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
+                        <TextBlock
+                            x:Uid="Record_TitleBarLabel"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="PaletteButton"
+                    x:Uid="Palette_OpenButton"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="PaletteButton"
+                    Click="PaletteButton_Click"
+                    Style="{StaticResource SubtleButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphSearch}" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Ctrl+K"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                </StackPanel>
+            </TitleBar.RightHeader>
         </TitleBar>
 
         <NavigationView
@@ -75,35 +321,54 @@
             ItemInvoked="NavView_ItemInvoked"
             SelectionChanged="NavView_SelectionChanged">
             <NavigationView.MenuItems>
+                <!--  The start page. First because it is where "what do I
+                      play now" gets answered; the library below is where you
+                      go when you already know what you are looking for.  -->
+                <NavigationViewItem
+                    x:Name="HomeNavItem"
+                    x:Uid="Nav_Home"
+                    AutomationProperties.AutomationId="HomeNavItem"
+                    IsSelected="True"
+                    Tag="home"
+                    ToolTipService.ToolTip="{x:Null}">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="{StaticResource GlyphHome}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem
                     x:Name="LibraryNavItem"
                     x:Uid="Nav_Library"
                     AutomationProperties.AutomationId="LibraryNavItem"
-                    IsSelected="True"
                     Tag="library"
                     ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8B9;" />
+                        <FontIcon Glyph="{StaticResource GlyphLibrary}" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="DiscoveryNavItem" x:Uid="Nav_Discovery"
-                                    Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B1;" /></NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <!--  Shown only when an author plugin is installed (see ctor).  -->
+                <!--  Hidden only when the selected platform has no authors; with
+                      no author plugin at all it opens a page naming the plugin
+                      (see ApplyNavVisibility).  -->
                 <NavigationViewItem
                     x:Name="AuthorsNavItem"
                     x:Uid="Nav_Authors"
                     AutomationProperties.AutomationId="AuthorsNavItem"
                     Tag="authors"
-                    ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE716;" />
+                        <FontIcon Glyph="{StaticResource GlyphAuthors}" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <!--  Shown only when an import provider is installed: without one no
-                      sidecar can exist, so there can never be any tags.  -->
+                <!--  The pages that look at the library another way. They hid in the
+                      library's "More" menu (wave 16) and nobody found them (user:
+                      "hidden better than a corruption case"); a labelled section in
+                      the pane puts them in sight without crowding the main three.  -->
+                <NavigationViewItemHeader x:Name="ExploreNavHeader" x:Uid="Nav_ExploreHeader" />
+                <NavigationViewItem x:Name="DiscoveryNavItem" x:Uid="Nav_Discovery"
+                                    Tag="discovery" AutomationProperties.AutomationId="DiscoveryNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="{StaticResource GlyphShuffle}" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <!--  Same rule as authors: hidden for a platform without tags,
+                      explained when no platform plugin is installed.  -->
                 <NavigationViewItem
                     x:Name="TagsNavItem"
                     x:Uid="Nav_Tags"
@@ -112,21 +377,13 @@
                     ToolTipService.ToolTip="{x:Null}"
                     Visibility="Collapsed">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8EC;" />
+                        <FontIcon Glyph="{StaticResource GlyphTags}" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem
-                    x:Name="LocalSourcesNavItem"
-                    x:Uid="Nav_LocalSources"
-                    AutomationProperties.AutomationId="LocalSourcesNavItem"
-                    Tag="localsources"
-                    ToolTipService.ToolTip="{x:Null}">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8F4;" />
-                    </NavigationViewItem.Icon>
+                <NavigationViewItem x:Name="RatingNavItem" x:Uid="Nav_Rating"
+                                    Tag="rating" AutomationProperties.AutomationId="RatingNavItem">
+                    <NavigationViewItem.Icon><FontIcon Glyph="{StaticResource GlyphRating}" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-            </NavigationView.MenuItems>
-            <NavigationView.FooterMenuItems>
                 <!--  The row navigates to the log; the switch on the right turns
                       recording on and off without leaving the page you are on.  -->
                 <NavigationViewItem
@@ -136,9 +393,9 @@
                     Tag="usage"
                     ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE81C;" />
+                        <FontIcon Glyph="{StaticResource GlyphUsage}" />
                     </NavigationViewItem.Icon>
-                    <Grid ColumnSpacing="8">
+                    <Grid ColumnSpacing="{StaticResource Space8}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -159,16 +416,32 @@
                             Toggled="RecordModeNavToggle_Toggled" />
                     </Grid>
                 </NavigationViewItem>
-                <!--  Shown only when an import provider plugin is installed (see ctor).  -->
+                <NavigationViewItem
+                    x:Name="LocalSourcesNavItem"
+                    x:Uid="Nav_LocalSources"
+                    AutomationProperties.AutomationId="LocalSourcesNavItem"
+                    Tag="localsources"
+                    ToolTipService.ToolTip="{x:Null}"
+                    Visibility="Collapsed">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="{StaticResource GlyphLocalSources}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <!--  First in the footer: the one entry that brings cards in
+                      rather than looking at what is already there. Always
+                      present in practice - the built-in local source is an
+                      import provider of its own, so mods and local cards import
+                      with no platform plugin at all.  -->
                 <NavigationViewItem
                     x:Name="ImportNavItem"
                     x:Uid="Nav_Import"
                     AutomationProperties.AutomationId="ImportNavItem"
                     Tag="import"
-                    ToolTipService.ToolTip="{x:Null}"
-                    Visibility="Collapsed">
+                    ToolTipService.ToolTip="{x:Null}">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE896;" />
+                        <FontIcon Glyph="{StaticResource GlyphImport}" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
@@ -202,52 +475,72 @@
                         AutomationProperties.AutomationId="LibraryCoordinatesSelectorItem" />
                 </SelectorBar>
 
+                <!--  No content transitions: the Frame's default NavigationThemeTransition
+                      slid every page up on top of CardMotion's entrance, and only the
+                      library (navigated with SuppressNavigationTransitionInfo) went
+                      without it, so it looked unlike every other page (user report).
+                      CardMotion is the one place page motion comes from.  -->
                 <Frame
                     x:Name="NavFrame"
                     AutomationProperties.AutomationId="NavFrame"
-                    Navigated="NavFrame_Navigated" />
+                    Navigating="NavFrame_Navigating"
+                    Navigated="NavFrame_Navigated">
+                    <Frame.ContentTransitions>
+                        <TransitionCollection />
+                    </Frame.ContentTransitions>
+                </Frame>
             </Grid>
         </NavigationView>
 
-        <!--  The artwork re-fetch runs for hours after its dialog is closed.
-              Floating over the content rather than a row of its own: it is
-              there only while that run is, and the pages below keep their
-              layout whether it shows or not.  -->
-        <!--  The host gives it a floor. InfoBar's severity fills are
-              translucent — right inside a page, where the page is behind them,
-              but floating over arbitrary content the text read against
-              whatever list happened to be underneath. Opaque tertiary, the
-              same fill the import page's floating card settled on.  -->
-        <Border
-            x:Name="RefetchBannerHost"
+        <!--  Shown while files from outside are dragged over any page that
+              has no drop target of its own (MainWindow.Drop.cs).  -->
+        <Grid
+            x:Name="DropOverlay"
+            Grid.Row="1"
+            Canvas.ZIndex="15"
+            IsHitTestVisible="False"
+            Visibility="Collapsed">
+            <Border Background="{ThemeResource SmokeFillColorDefaultBrush}" />
+            <Border
+                Padding="32,24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource FloatingSurfaceStyle}">
+                <StackPanel Spacing="{StaticResource Space8}">
+                    <FontIcon HorizontalAlignment="Center" FontSize="40" Glyph="{StaticResource GlyphImport}" />
+                    <TextBlock x:Uid="Drop_OverlayTitle" HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock x:Uid="Drop_OverlayDescription" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!--  Below the title bar, not over it: the title bar row is the
+              window's drag region and would swallow clicks on a scrim there.  -->
+        <app:CommandPalette
+            x:Name="Palette"
+            Grid.Row="1"
+            Canvas.ZIndex="20" />
+
+        <!--  Toasts float at the bottom right. Not hit-testable itself: only
+              the cards inside take input, and the page under the empty part of
+              the column stays clickable. The artwork re-fetch banner that used
+              to sit here is now a row in the title bar's activity list, with
+              its ending reported as a toast.  -->
+        <StackPanel
+            x:Name="ToastHost"
             Grid.Row="1"
             Canvas.ZIndex="10"
             MaxWidth="460"
             Margin="0,0,24,24"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
-            Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
-            BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
-            BorderThickness="1"
-            CornerRadius="{ThemeResource OverlayCornerRadius}"
-            Translation="0,0,32"
-            Visibility="Collapsed">
-            <Border.Shadow>
-                <ThemeShadow />
-            </Border.Shadow>
-            <InfoBar
-                x:Name="RefetchBanner"
-                AutomationProperties.AutomationId="RefetchBanner"
-                BorderThickness="0"
-                IsOpen="False"
-                IsClosable="True">
-                <InfoBar.ActionButton>
-                    <Button x:Name="RefetchBannerStop" x:Uid="Refetch_BannerStop" Click="RefetchBannerStop_Click" />
-                </InfoBar.ActionButton>
-                <InfoBar.Content>
-                    <ProgressBar x:Name="RefetchBannerProgress" Margin="0,0,0,12" Minimum="0" />
-                </InfoBar.Content>
-            </InfoBar>
-        </Border>
+            AutomationProperties.AutomationId="ToastHost"
+            Spacing="{StaticResource Space8}">
+            <StackPanel.ChildrenTransitions>
+                <TransitionCollection>
+                    <AddDeleteThemeTransition />
+                </TransitionCollection>
+            </StackPanel.ChildrenTransitions>
+        </StackPanel>
     </Grid>
 </Window>

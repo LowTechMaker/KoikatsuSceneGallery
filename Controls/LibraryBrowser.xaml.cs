@@ -53,7 +53,10 @@ public sealed partial class LibraryBrowser : UserControl
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _search;
     private readonly Dictionary<(CardBase, string?, string?), string> _keys = [];
     private GalleryLayoutEngine? _layout;
-    private readonly GroupCollapseAnimator _collapse;
+    // Where the open group's tile was, in the grid's coordinates: opening grows
+    // the group's cards out of it, closing shrinks them back into it (CardMotion).
+    private System.Numerics.Vector2 _drillOrigin;
+    private bool _leavingGroup;
     private Frame? _frame;
     private bool _active, _reload, _syncing, _entriesDetached;
     private string? _groupKey, _groupTitle, _returnPath;
@@ -67,22 +70,24 @@ public sealed partial class LibraryBrowser : UserControl
         InitializeComponent();
         _view = new AdvancedCollectionView(_items, false);
         GalleryGrid.ItemsSource = _view;
-        _refresh = DispatcherQueue.CreateTimer(); _refresh.Interval = TimeSpan.FromMilliseconds(80); _refresh.IsRepeating = false;
+        _refresh = DispatcherQueue.CreateTimer(); _refresh.Interval = AppTiming.ViewRefreshDebounce; _refresh.IsRepeating = false;
         _refresh.Tick += (_, _) => Refresh();
-        _search = DispatcherQueue.CreateTimer(); _search.Interval = TimeSpan.FromMilliseconds(200); _search.IsRepeating = false;
+        _search = DispatcherQueue.CreateTimer(); _search.Interval = AppTiming.SearchDebounce; _search.IsRepeating = false;
         _search.Tick += (_, _) => ApplySearch();
-        _collapse = new(CollapseOverlay);
+        InitInspector();
         Loaded += (_, _) => _layout?.OnLoaded(RequestVisible);
     }
     /// <summary>The card grid, for hosts that animate its containers on entry.</summary>
     internal GridView CardGrid => GalleryGrid;
 
-    public static BitmapImage? Thumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 400, UriSource = uri };
+    public static BitmapImage? Thumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = UiMetrics.ThumbnailDecodeWidth, UriSource = uri };
+    // Only a few pixels of a stack layer show, so a small decode is plenty.
+    public static BitmapImage? StackThumbnail(Uri? uri) => uri is null ? null : new() { DecodePixelWidth = 96, UriSource = uri };
     public void Initialize(LibraryKind kind, IReadOnlyList<CardBase>? scope = null, string? title = null)
     {
         _scope = scope; _scopeTitle = title;
         _adapter = App.Services.GetRequiredService<LibraryRegistry>().Get(kind);
-        _layout = new(_adapter.ImageRatio, GalleryGrid, DispatcherQueue, count => { if (_scope is null) VM.SetShuffleDisplayCount(count); }, _settings, 58);
+        _layout = new(_adapter.ImageRatio, GalleryGrid, DispatcherQueue, count => { if (_scope is null) VM.SetShuffleDisplayCount(count); }, _settings, _settings.ShowFileNames ? GalleryEntry.CaptionHeight + GalleryEntry.StackRoom : 0);
         if (_scope is not null)
         {
             RootLayout.Padding = new Thickness(0,12,0,0);
@@ -101,10 +106,12 @@ public sealed partial class LibraryBrowser : UserControl
         _settings.ThumbnailSizeChanged += preference => { if (_active) UpdateSize(preference); };
         BuildFilters();
     }
+
     public void Activate(Frame frame)
     {
         _frame = frame; _active = true;
         SetScopedMetadataSubscriptions(true);
+        SetScopedRatingSubscriptions(true);
         if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.Activate();
         _syncing = true; SelectSortItem(_scope is null ? VM.SelectedSort : _localSort); _syncing = false;
         UpdateSize(_settings.ThumbnailSize);
@@ -112,13 +119,31 @@ public sealed partial class LibraryBrowser : UserControl
         Refresh();
         if (_scope is null && (_adapter!.Cards.Count == 0 || _reload)) Load();
         else if (_detailContext?.ReturnPath is { } path) RestoreItem(path);
+        if (_scope is null) ReloadIfFileCountChanged();
+        // Switching between the library's tabs, only the grid comes in (CardMotion),
+        // under a heading that stays put. Arriving from another page, the whole
+        // page comes in instead (MainWindow.NavFrame_Navigated), and a browser
+        // inside another page (author, shelf) arrives with that page.
+        // From the side of the tab it went to (user request: a left/right switch should move).
+        if (_scope is null && MainWindow.Instance is { ArrivingFromLibraryTab: true } window)
+        {
+            CardMotion.SwitchTab(SearchArea, window.LibraryTabStep);
+            CardMotion.SwitchTab(GalleryGrid, window.LibraryTabStep);
+        }
     }
+    // A load cancelled by leaving the page leaves the gallery holding part of the folder.
+    private void ReloadIfFileCountChanged() =>
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Browser.FileCountCheck", async () =>
+        { if (await VM.ReloadIfFileCountChangedAsync()) QueueRefresh(); });
     public void Deactivate()
     {
         ApplySearch(); _active = false; _refresh.Stop(); _search.Stop(); _metadataOptionsTimer?.Stop();
         // The control is reused across navigations, so half-finished state must not survive.
-        _collapse.Finish();
+        _leavingGroup = false;
+        CardMotion.Reset(GalleryGrid);
+        _loupe.Close();
         SetScopedMetadataSubscriptions(false);
+        SetScopedRatingSubscriptions(false);
         if (_scope is null || VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) VM.CancelPendingWork();
         foreach (var item in _items) { _adapter?.Thumbnail(item.Card, true); item.Dispose(); }
         _entriesDetached = true;
@@ -130,6 +155,21 @@ public sealed partial class LibraryBrowser : UserControl
         { await _adapter!.LoadAsync(); QueueRefresh(); });
     }
     private void QueueRefresh() { if (_active && !_refresh.IsRunning) _refresh.Start(); }
+
+    // A scoped scene browse (author, tag, post page) asks the gallery whether a
+    // card passes the rating filter, but does not listen to the gallery the way
+    // the library browser does; it follows the filter and the ratings only while
+    // shown, so a page left behind is not kept alive by the gallery.
+    private bool _ratingSubscribed;
+    private void SetScopedRatingSubscriptions(bool on)
+    {
+        if (_scope is null || VM is not GalleryViewModel scene || on == _ratingSubscribed) return;
+        _ratingSubscribed = on;
+        if (on) { scene.PropertyChanged += Scene_RatingFilterChanged; scene.RatingsChanged += QueueRefresh; }
+        else { scene.PropertyChanged -= Scene_RatingFilterChanged; scene.RatingsChanged -= QueueRefresh; }
+    }
+    private void Scene_RatingFilterChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    { if (e.PropertyName == nameof(GalleryViewModel.RatingFilter)) QueueRefresh(); }
     private string Key(CardBase card)
     {
         var author = (card as IAuthorOwner)?.Author;
@@ -158,6 +198,9 @@ public sealed partial class LibraryBrowser : UserControl
             g.Key != _items[i].Key || !_items[i].Members.SequenceEqual(g.Members) || _items[i].ShowTitle != VM.ShowFileNames).Any();
         if (changed)
         {
+            // The tiles are rebuilt, which drops the selection; the cards that
+            // are still shown are selected again (LibraryBrowser.Selection.cs).
+            var selected = RememberSelection();
             _entriesDetached = false;
             using (_view.DeferRefresh())
             {
@@ -165,6 +208,8 @@ public sealed partial class LibraryBrowser : UserControl
                 _items.Clear();
                 foreach (var group in groups) _items.Add(new(group.Key, group.Members, VM.ShowFileNames));
             }
+            RestoreSelection(selected);
+            _loupe.UpdateCards(VisibleCards());
         }
         Heading.Text = _groupKey is null ? _adapter.Title : _groupTitle;
         // Three cases, and only the middle one is the host's business:
@@ -178,12 +223,19 @@ public sealed partial class LibraryBrowser : UserControl
 
         UpdateHeaderLayout(RootLayout.ActualWidth);
         BackButton.Visibility = _groupKey is null ? Visibility.Collapsed : Visibility.Visible;
-        ResultCount.Text = UiText.Format(visible.Length == (_groupKey is null ? (_scope?.Count ?? _adapter.Cards.Count) : groupTotal)
-            ? "SceneGallery_TotalCount" : "SceneGallery_FilteredCount", visible.Length, _groupKey is null ? _adapter.Cards.Count : groupTotal);
+        // Out of what this view holds: a scoped browse (author, tag, post page)
+        // counts against its own cards, not the whole library ("4 / 10", not "4 / 22").
+        var total = _groupKey is null ? (_scope?.Count ?? _adapter.Cards.Count) : groupTotal;
+        ResultCount.Text = UiText.Format(visible.Length == total
+            ? "SceneGallery_TotalCount" : "SceneGallery_FilteredCount", visible.Length, total);
         SearchBox.PlaceholderText = UiText.Get(_groupKey is null ? "SceneGallery_Search.PlaceholderText" : "Browser_GroupSearch");
         if (VM is CharacterGalleryViewModel or CoordinateGalleryViewModel) SearchBox.PlaceholderText = UiText.Get("Metadata_SearchHint");
         AutomationProperties.SetName(SearchBox, SearchBox.PlaceholderText);
-        int filterCount = VM switch { GalleryViewModel vm => (vm.ShowR18Content ? 0 : 1) + (vm.GameFilter == GameFilterOption.All ? 0 : 1), CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
+        _syncing = true;
+        NoSourceToggle.IsOn = VM.OriginFilter.IsNoSource;
+        ShowHiddenToggle.IsOn = VM.ShowHiddenCards;
+        _syncing = false;
+        int filterCount = VM switch { GalleryViewModel vm => vm.GameFilter == GameFilterOption.All ? 0 : 1, CharacterGalleryViewModel vm => vm.SourceFilter == CardSourceFilterOption.All ? 0 : 1, _ => 0 }
             + (VM.OriginFilter.IsAll ? 0 : 1);
         var (resolutionEnabled, resolutionCount) = VM switch
         {
@@ -194,15 +246,13 @@ public sealed partial class LibraryBrowser : UserControl
         };
         var hasResolutionFilter = resolutionEnabled && resolutionCount > 0;
         if (hasResolutionFilter) filterCount++;
-        ResolutionFilterStatus.Visibility = hasResolutionFilter ? Visibility.Visible : Visibility.Collapsed;
-        if (hasResolutionFilter)
-            ResolutionFilterStatus.Text = UiText.Format("Browser_ResolutionFilterActive", resolutionCount);
         if (_sourceFilterCombo is not null && VM is CharacterGalleryViewModel characterFilters)
             _sourceFilterCombo.SelectedIndex = (int)characterFilters.SourceFilter;
         var metadataFilters = GetMetadataFilters();
         if (metadataFilters is not null)
             filterCount += metadataFilters.ActiveCount;
         SetFilterCount(filterCount);
+        UpdateFilterChips();
         RandomButton.IsEnabled = visible.Length > 0;
         UpdateSortButton();
         bool busy = VM.IsLoading || VM.IsGeneratingThumbnails || _adapter.IsParsing;
@@ -213,7 +263,12 @@ public sealed partial class LibraryBrowser : UserControl
         EmptyDescription.Text = UiText.Get(_groupKey is not null ? "SceneGallery_GroupEmpty.Text" : _adapter.Cards.Count == 0 ? "SceneGallery_NoLibraryDescription" : "SceneGallery_NoResultsDescription");
         ClearButton.Content = UiText.Get(_groupKey is null ? "SceneGallery_ResetSearch.Content" : "Browser_ClearGroupSearch");
         ClearButton.Visibility = _adapter.Cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        _layout?.SetMetadataReserve(VM.ShowFileNames ? 58 : 38);
+        // With file names off the tile is the picture and its badge only (GalleryEntry.MetadataHeight).
+        _layout?.SetMetadataReserve(VM.ShowFileNames ? GalleryEntry.CaptionHeight + GalleryEntry.StackRoom : 0);
+        // Card mode with file names on, photo mode without (GalleryEntry.TileMargin).
+        _layout?.SetChrome(
+            VM.ShowFileNames ? GalleryEntry.CardModeMargin : GalleryEntry.PhotoMargin,
+            VM.ShowFileNames ? GalleryEntry.CardModeInset : 0);
         DispatcherQueue.TryEnqueue(RequestVisible);
     }
     private CardBase[] ScopedCards()
@@ -243,10 +298,7 @@ public sealed partial class LibraryBrowser : UserControl
     {
         if (VM is GalleryViewModel scene)
         {
-            var rating = new ToggleSwitch { Header = UiText.Get("SceneGallery_Rating.Header"), IsOn = scene.ShowR18Content, Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed };
-            rating.Toggled += (_, _) => scene.ShowR18Content = rating.IsOn;
-            scene.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(scene.ShowR18Content)) rating.IsOn = scene.ShowR18Content; if (e.PropertyName == nameof(scene.ShowR18FilterButton)) rating.Visibility = scene.ShowR18FilterButton ? Visibility.Visible : Visibility.Collapsed; };
-            SpecificFilters.Children.Add(rating);
+            // No rating box: the rating filter is app-wide, in the title bar.
             var game = new ComboBox { Header = UiText.Get("SceneGallery_Environment.Header"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (var s in new[] { UiText.Get("Gallery_FilterAll.Content"), "Koikatsu", "Koikatsu Sunshine", UiText.Get("Gallery_EnvUnknown.Content") }) game.Items.Add(s);
             game.SelectedIndex = (int)scene.GameFilter; game.Visibility = scene.ShowMetadataFilters ? Visibility.Visible : Visibility.Collapsed;
@@ -289,56 +341,83 @@ public sealed partial class LibraryBrowser : UserControl
         if (_scope is null && _groupKey is null) { if (VM is GalleryViewModel s) s.GameFilter = GameFilterOption.All; if (VM is CharacterGalleryViewModel c) c.SourceFilter = CardSourceFilterOption.All; }
         ApplySearch(); SearchBox.Focus(FocusState.Keyboard);
     }
-    private void Item_Click(object sender, ItemClickEventArgs e)
+    /// <summary>Opens a tile: a group drills down, a single card opens its details.</summary>
+    private void OpenEntry(GalleryEntry entry)
     {
-        if (e.ClickedItem is not GalleryEntry entry) return;
-        _collapse.Finish();
         if (entry.IsGroup)
         {
+            // Where the group's tile is, for the cards to grow out of it.
+            var origin = GalleryGrid.ContainerFromItem(entry) is FrameworkElement tile
+                ? tile.TransformToVisual(GalleryGrid).TransformPoint(new Windows.Foundation.Point(tile.ActualWidth / 2, tile.ActualHeight / 2))
+                : new Windows.Foundation.Point(GalleryGrid.ActualWidth / 2, 0);
+            // Inside the group nothing is selected yet: carried over, the
+            // group's selection would select every card in it.
+            GalleryGrid.SelectedItems.Clear();
             ApplySearch(); _returnPath = entry.Card.FilePath; _returnIndex = _items.IndexOf(entry);
             _returnOffset = VisualTreeSearch.FindDescendant<ScrollViewer>(GalleryGrid)?.VerticalOffset ?? 0;
             _groupKey = entry.Key; _groupTitle = entry.Title; _groupSearch = ""; SetSearchText(""); Refresh(); ScrollFirst();
+            _drillOrigin = new System.Numerics.Vector2((float)origin.X, (float)origin.Y);
+            if (_settings.GroupCollapseAnimationEnabled) CardMotion.DrillIn(GalleryGrid, _drillOrigin);
             BackButton.Focus(FocusState.Keyboard);
         }
-        else OpenDetail(entry.Card);
+        else OpenInLoupe(entry.Card);
     }
     private void OpenDetail(CardBase card)
     {
-        _detailContext = new(_scopeTitle is null ? Heading.Text : $"{_scopeTitle} › {Heading.Text}", _items.SelectMany(i => i.Members), _groupKey is not null);
+        _detailContext = new(_scopeTitle is null ? Heading.Text : $"{_scopeTitle} › {Heading.Text}", _items.SelectMany(i => i.Members), _groupKey is not null)
+        {
+            Outer = _groupKey is not null && _adapter!.GroupingEnabled ? OuterContext() : null,
+        };
         OpeningDetail?.Invoke();
         _detailContext.Open(_frame!, card);
     }
+    /// <summary>
+    /// The list the gallery shows outside the open folder, in the same order as
+    /// its tiles, each group's cards together. Built the way Refresh builds the
+    /// top level.
+    /// </summary>
+    private BrowseContext OuterContext()
+    {
+        var cards = _scope is null ? VM.CardsView.OfType<CardBase>().ToArray() : ScopedCards();
+        return new(_scopeTitle ?? _adapter!.Title, GalleryGrouping.Create(cards, Key).SelectMany(g => g.Members));
+    }
+    /// <summary>
+    /// Closes the open group, the way opening it in reverse (CardMotion): its
+    /// cards shrink back into where the group's tile was and fade, then the
+    /// library comes back around that tile as if the camera pulled back. It
+    /// replaces the flight of each card's snapshot into the stacked tile.
+    /// </summary>
     private void Back_Click(object sender, RoutedEventArgs e)
     {
-        var collapsingKey = _groupKey;
-        // Measured before the rebuild destroys the containers; the flight itself
-        // has to wait until the stacked tile exists to fly towards.
-        var captured = _settings.GroupCollapseAnimationEnabled
-            ? _collapse.Capture(GalleryGrid)
-            : [];
-        _groupKey = null; _groupSearch = ""; SetSearchText(MainQuery); Refresh();
-        RestoreItem(_returnPath, _returnIndex, _returnOffset);
-        if (captured.Count == 0 || collapsingKey is null) return;
-        // Queued behind RestoreItem's own callback, so layout and the scroll
-        // restore have both settled before the destination is measured.
-        DispatcherQueue.TryEnqueue(() => StartCollapseFlight(captured, collapsingKey));
+        if (_leavingGroup) return;
+        if (!_settings.GroupCollapseAnimationEnabled)
+        {
+            LeaveGroup();
+            return;
+        }
+        _leavingGroup = true;
+        CardMotion.DrillOut(GalleryGrid, _drillOrigin, () =>
+        {
+            if (!_leavingGroup) return; // left the page meanwhile
+            _leavingGroup = false;
+            LeaveGroup();
+            // After RestoreItem's own callback, so the scroll is back where the tile was.
+            DispatcherQueue.TryEnqueue(() => CardMotion.PullBack(GalleryGrid, _drillOrigin));
+        });
     }
 
-    private void StartCollapseFlight(IReadOnlyList<CapturedTile> captured, string key)
+    private void LeaveGroup()
     {
-        if (!_active) return;
-        GalleryGrid.UpdateLayout();
-        // The collapsed entry's Key is the group key by construction, which is a
-        // more direct handle than RestoreItem's path match.
-        var target = _items.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.Ordinal));
-        if (target is null || GalleryGrid.ContainerFromItem(target) is not FrameworkElement tile) return;
-        _collapse.Play(captured, tile);
+        _groupKey = null; _groupSearch = ""; SetSearchText(MainQuery); Refresh();
+        RestoreItem(_returnPath, _returnIndex, _returnOffset);
     }
     private void RestoreItem(string? path, int fallback = 0, double? offset = null)
     {
         var item = _items.FirstOrDefault(i => i.Members.Any(c => c.FilePath.Equals(path, StringComparison.OrdinalIgnoreCase)))
             ?? (_items.Count > 0 ? _items[Math.Clamp(fallback, 0, _items.Count - 1)] : null);
         if (item is null) return;
+        // Back from a card or a group: that tile is selected, so the pane shows it.
+        SelectOnly(item);
         GalleryGrid.ScrollIntoView(item);
         DispatcherQueue.TryEnqueue(() =>
         {
@@ -347,7 +426,16 @@ public sealed partial class LibraryBrowser : UserControl
             (GalleryGrid.ContainerFromItem(item) as Control)?.Focus(FocusState.Keyboard);
         });
     }
-    private void Random_Click(object sender, RoutedEventArgs e) { var cards = _items.SelectMany(i => i.Members).ToArray(); if (cards.Length > 0) OpenDetail(cards[Random.Shared.Next(cards.Length)]); }
+    // A random tile is selected and scrolled to, not opened: the pane shows it,
+    // and a double click opens it as any other.
+    private void Random_Click(object sender, RoutedEventArgs e)
+    {
+        if (_items.Count == 0) return;
+        var entry = _items[Random.Shared.Next(_items.Count)];
+        SelectOnly(entry);
+        GalleryGrid.ScrollIntoView(entry);
+        DispatcherQueue.TryEnqueue(() => (GalleryGrid.ContainerFromItem(entry) as Control)?.Focus(FocusState.Keyboard));
+    }
     /// <summary>
     /// The label stays put; the badge carries how many filters are on.
     /// </summary>
@@ -406,15 +494,14 @@ public sealed partial class LibraryBrowser : UserControl
         // Shuffle has no direction, so an arrow there would claim an order the
         // cards do not have.
         DirectionIcon.Visibility = ordered ? Visibility.Visible : Visibility.Collapsed;
-        DirectionIcon.Glyph = ascending ? "" : "";
+        DirectionIcon.Glyph = ascending ? Glyphs.SortAscending : Glyphs.SortDescending;
         SortAscendingItem.IsEnabled = ordered;
         SortDescendingItem.IsEnabled = ordered;
         SortAscendingItem.IsChecked = ordered && ascending;
         SortDescendingItem.IsChecked = ordered && !ascending;
     }
 
-    private void Size_Changed(object sender, SelectionChangedEventArgs e) { if (_adapter is not null && SizeSegmented.SelectedIndex >= 0) _settings.ThumbnailSize = (ThumbnailSizePreference)SizeSegmented.SelectedIndex; }
-    private void UpdateSize(ThumbnailSizePreference preference) { SizeSegmented.SelectedIndex = (int)preference; if (_layout is not null) _layout.BaseItemWidth = preference.ToPixels(); }
+    private void UpdateSize(ThumbnailSizePreference preference) { if (_layout is not null) _layout.BaseItemWidth = preference.ToPixels(); }
     private void ScrollFirst() { if (_items.Count > 0) GalleryGrid.ScrollIntoView(_items[0]); }
     private void Search_Invoked(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs e) { SearchBox.Focus(FocusState.Keyboard); e.Handled = true; }
     private void First_Invoked(KeyboardAccelerator s, KeyboardAcceleratorInvokedEventArgs e) { ScrollFirst(); e.Handled = true; }
@@ -425,7 +512,7 @@ public sealed partial class LibraryBrowser : UserControl
     }
     private void UpdateHeaderLayout(double width)
     {
-        bool narrow = width < 900;
+        bool narrow = width < UiMetrics.WideLayoutWidth;
         Grid.SetRow(SortControls, narrow ? 1 : 0); Grid.SetColumn(SortControls, narrow ? 0 : 1); Grid.SetColumnSpan(SortControls, narrow ? 2 : 1);
         Grid.SetRow(SearchActions, narrow ? 1 : 0); Grid.SetColumn(SearchActions, narrow ? 0 : 1); Grid.SetColumnSpan(SearchActions, narrow ? 2 : 1);
         // The window draws the library selector over this control. Once the
@@ -435,7 +522,7 @@ public sealed partial class LibraryBrowser : UserControl
         var needsLeftColumn = Heading.Visibility == Visibility.Visible;
         var sharesTheSelectorLine = underSelector && !needsLeftColumn && !narrow;
         RootLayout.Padding = new Thickness(
-            24, underSelector && !sharesTheSelectorLine ? SelectorLineHeight : 16, 24, 0);
+            24, underSelector && !sharesTheSelectorLine && !_loupeLayout ? SelectorLineHeight : 16, 24, 0);
         // The short sort controls need a title-height row only when they share
         // the selector's line. The search row then starts below both controls.
         Header.MinHeight = sharesTheSelectorLine ? SelectorLineHeight - 24 : 0;
@@ -443,8 +530,19 @@ public sealed partial class LibraryBrowser : UserControl
     private void Container_Changing(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
         if (args.Item is not GalleryEntry entry) return;
-        if (args.InRecycleQueue) { _adapter?.Thumbnail(entry.Card, true); return; }
-        args.RegisterUpdateCallback((_, phase) => { if (phase.Item is GalleryEntry item) _adapter?.Thumbnail(item.Card); });
+        if (args.InRecycleQueue)
+        {
+            _adapter?.Thumbnail(entry.Card, true);
+            if (entry.IsGroup) { _adapter?.Thumbnail(entry.SecondCard, true); _adapter?.Thumbnail(entry.ThirdCard, true); }
+            return;
+        }
+        args.RegisterUpdateCallback((_, phase) =>
+        {
+            if (phase.Item is not GalleryEntry item) return;
+            _adapter?.Thumbnail(item.Card);
+            // The cards fanned out behind a group's cover show their own pictures.
+            if (item.IsGroup) { _adapter?.Thumbnail(item.SecondCard); _adapter?.Thumbnail(item.ThirdCard); }
+        });
         _layout?.EnsureLayoutOnFirstContent();
     }
     private void RequestVisible()
@@ -453,11 +551,6 @@ public sealed partial class LibraryBrowser : UserControl
         for (var i = Math.Max(0, panel.FirstVisibleIndex); i <= panel.LastVisibleIndex && i < _items.Count; i++) _adapter?.Thumbnail(_items[i].Card);
     }
     private void Settings_Click(object sender, RoutedEventArgs e) => _frame?.Navigate(typeof(SettingsPage), "filters");
-    private void OpenFolder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuFlyoutItem { CommandParameter: GalleryEntry entry }) UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Browser.OpenFolder", async () =>
-        { var folder = Path.GetDirectoryName(entry.Card.FilePath); if (folder is not null) await Launcher.LaunchFolderPathAsync(folder); });
-    }
     private void Drag_Starting(object sender, DragItemsStartingEventArgs e)
         => DragFilePayload.Attach(e, "Browser.Drag",
             e.Items.OfType<GalleryEntry>().SelectMany(entry => entry.Members).Select(c => c.FilePath));

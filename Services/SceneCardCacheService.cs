@@ -5,17 +5,9 @@ using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
-public record CachedCardEntry(
-    string FilePath,
-    long FileSize,
-    long DateModifiedTicks,
-    int Width,
-    int Height,
-    string? ThumbnailPath);
-
 public sealed class SceneCardCacheService : IDisposable
 {
-    private const string CacheFileName = "scene_cards.json";
+    private const string CacheFileName = AppFiles.SceneCardCache;
     private readonly string _cachePath;
     private readonly IAppLogger _logger;
     private readonly ConcurrentDictionary<string, CachedCardEntry> _cache = new(StringComparer.OrdinalIgnoreCase);

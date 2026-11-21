@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using ToggleButton = Microsoft.UI.Xaml.Controls.Primitives.ToggleButton;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Automation;
@@ -24,43 +25,46 @@ public sealed partial class MainWindow : Window
     private bool _originSelectorAvailable;
 
     // The title and window buttons also need room beside the platform choices.
-    private const double CompactOriginSelectorWidth = 900;
+    private const double CompactOriginSelectorWidth = UiMetrics.WideLayoutWidth;
+
+    /// <summary>The app's one window, for controls that open a section (the library's "More" menu).</summary>
+    internal static MainWindow? Instance { get; private set; }
 
     public MainWindow()
     {
         InitializeComponent();
+        Instance = this;
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon("Assets/AppIcon.ico");
-
+        AppToast.Attach(ToastHost);
+        BackNavigation.Attach(RootLayout, NavFrame);
+        InitializePalette();
+        InitializeWindowDrop();
 
         if (App.Services.GetService<ImportViewModel>() is { } importViewModel)
         {
-            ImportNavItem.Visibility = Visibility.Visible;
             importViewModel.PropertyChanged += ImportViewModel_PropertyChanged;
             UpdateImportNavBadge();
         }
 
-        if (App.Services.GetService<ArtworkRefetchService>() is { } refetch)
-        {
-            refetch.PropertyChanged += (_, _) => UpdateRefetchBanner(refetch);
-            UpdateRefetchBanner(refetch);
-        }
+        InitializeActivity();
 
         var settings = App.Services.GetRequiredService<SettingsViewModel>();
 
-        // Online versus local only means something while an online platform is
-        // installed. With none, every card is "not local" and the switch is a
-        // control that cannot change anything. The stored choice is left as it
-        // is — only its application is suppressed — so it returns intact when a
-        // plugin comes back.
+        // Play-first: the title bar no longer offers an origin switch. The user
+        // browses everything and found a platform switch beside the rating
+        // filter redundant (2026-11-18); the Authors and Tags pages keep their
+        // own platform tabs, which appear under "all". This reuses the path
+        // that already existed for "no platform plugin": browsing is pinned to
+        // all, the switch is hidden, and the stored choice is left untouched
+        // so it is not lost if the switch comes back.
         var installed = App.Services.GetRequiredService<TagCloudService>().InstalledProviderIds();
         var platforms = PlatformAvailability.Online(installed);
-        var hasPlatform = platforms.Count > 0;
-        settings.PlatformFilteringAvailable = hasPlatform;
-        _originSelectorAvailable = hasPlatform;
+        settings.PlatformFilteringAvailable = false;
+        _originSelectorAvailable = false;
         BuildOriginSelector(platforms);
         UpdateOriginSelectorLayout();
 
@@ -84,10 +88,14 @@ public sealed partial class MainWindow : Window
         App.Services.GetRequiredService<AuthorsViewModel>().ProviderTabs.CollectionChanged +=
             (_, _) => DispatcherQueue.TryEnqueue(ApplyNavVisibility);
         settings.BrowseOriginChanged += OnBrowseOriginChanged;
+        BuildRatingFilterMenu();
+        ApplyRatingFilter();
+        settings.RatingFilterChanged += () => DispatcherQueue.TryEnqueue(ApplyRatingFilter);
         RecordModeNavToggle.IsOn = settings.RecordModeEnabled;
+        ShowRecordModeState(settings.RecordModeEnabled);
         settings.RecordModeEnabledChanged += OnRecordModeEnabledChanged;
 
-        NavigateToSelectedLibraryPage();
+        NavFrame.Navigate(typeof(HomePage));
     }
 
     private void ImportViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -101,69 +109,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    // The phase the user closed the banner in. Closing hides it for the rest
-    // of that phase only: a run that then stops or finishes still says so.
-    private ArtworkRefetchPhase? _refetchBannerDismissedIn;
-    private bool _refetchBannerWired;
-
-    private void UpdateRefetchBanner(ArtworkRefetchService refetch)
-    {
-        if (!DispatcherQueue.HasThreadAccess)
-        {
-            DispatcherQueue.TryEnqueue(() => UpdateRefetchBanner(refetch));
-            return;
-        }
-
-        if (!_refetchBannerWired)
-        {
-            _refetchBannerWired = true;
-            RefetchBanner.CloseButtonClick += (_, _) => _refetchBannerDismissedIn = refetch.Phase;
-            // The close button closes the InfoBar itself; its host would stay
-            // behind as an empty card.
-            RefetchBanner.Closed += (_, _) => RefetchBannerHost.Visibility = Visibility.Collapsed;
-        }
-
-        var platform = refetch.ProviderId is { } id ? PlatformDisplayName.For(id) : "";
-        RefetchBanner.Title = UiText.Format("Refetch_BannerTitle", platform);
-        var (show, severity, message) = refetch.Phase switch
-        {
-            ArtworkRefetchPhase.Scanning => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_Scanning")),
-            ArtworkRefetchPhase.BackingUp => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_BackingUp")),
-            ArtworkRefetchPhase.Restoring => (true, InfoBarSeverity.Informational, UiText.Get("Refetch_Restoring")),
-            ArtworkRefetchPhase.Running => (true, InfoBarSeverity.Informational,
-                UiText.Format("Refetch_Progress", refetch.RunDone, refetch.RunTotal, refetch.Updated, refetch.Gone, refetch.Failed)),
-            ArtworkRefetchPhase.Completed => (true, InfoBarSeverity.Success,
-                UiText.Format("Refetch_Completed", refetch.Updated, refetch.Gone, refetch.Failed)),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.TooManyFailures =>
-                (true, InfoBarSeverity.Warning,
-                    UiText.Format("Refetch_TooManyFailures", ArtworkRefetchPolicy.MaxConsecutiveFailures)),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.BackupFailed =>
-                (true, InfoBarSeverity.Error, UiText.Get("Refetch_BackupFailed")),
-            ArtworkRefetchPhase.Stopped when refetch.StopReason == ArtworkRefetchStopReason.Error =>
-                (true, InfoBarSeverity.Error, UiText.Get("Refetch_Error")),
-            _ => (false, InfoBarSeverity.Informational, ""),
-        };
-
-        if (_refetchBannerDismissedIn is { } dismissed && dismissed != refetch.Phase)
-            _refetchBannerDismissedIn = null;
-
-        RefetchBanner.Severity = severity;
-        RefetchBanner.Message = message;
-        RefetchBannerStop.Visibility = refetch.IsBusy && refetch.Phase != ArtworkRefetchPhase.Restoring
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        RefetchBannerProgress.Visibility = refetch.IsBusy ? Visibility.Visible : Visibility.Collapsed;
-        RefetchBannerProgress.IsIndeterminate = refetch.Phase != ArtworkRefetchPhase.Running;
-        RefetchBannerProgress.Maximum = Math.Max(1, refetch.RunTotal);
-        RefetchBannerProgress.Value = refetch.RunDone;
-        var open = show && _refetchBannerDismissedIn is null;
-        RefetchBanner.IsOpen = open;
-        RefetchBannerHost.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void RefetchBannerStop_Click(object sender, RoutedEventArgs e)
-        => App.Services.GetService<ArtworkRefetchService>()?.Stop();
-
     private void UpdateImportNavBadge()
     {
         if (App.Services.GetService<ImportViewModel>() is not { } viewModel)
@@ -172,7 +117,7 @@ public sealed partial class MainWindow : Window
         if (viewModel.IsImporting)
         {
             ImportNavItem.InfoBadge = CreateImportStatusBadge();
-            ToolTipService.SetToolTip(ImportNavItem, "Importing");
+            ToolTipService.SetToolTip(ImportNavItem, UiText.Get("Nav_ImportBusy"));
             return;
         }
 
@@ -182,7 +127,7 @@ public sealed partial class MainWindow : Window
             ImportNavItem.InfoBadge = pendingCount > 0
                 ? CreateImportStatusBadge(pendingCount)
                 : CreateImportStatusBadge();
-            ToolTipService.SetToolTip(ImportNavItem, $"Analyzing {pendingCount} pending");
+            ToolTipService.SetToolTip(ImportNavItem, UiText.Format("Nav_ImportAnalyzing", pendingCount));
             return;
         }
 
@@ -231,12 +176,41 @@ public sealed partial class MainWindow : Window
         // — a plugin that resolves authors, whether or not any were found yet —
         // while tags exist only as sidecars on disk, so they go by what is
         // actually there.
+        // Without the plugin at all, the entry stays and explains itself
+        // instead (CardOriginNavPolicy.Authors).
+        var plugins = App.Services.GetRequiredService<PluginService>();
+        var tagCloud = App.Services.GetRequiredService<TagCloudService>();
         var authors = App.Services.GetRequiredService<AuthorsViewModel>().ProvidersWithAuthors;
-        SetNavItemVisibility("authors", CardOriginNavPolicy.ShowAuthors(vm.EffectiveBrowseOrigin, authors));
-        SetNavItemVisibility("localsources", CardOriginNavPolicy.ShowLocalSources(vm.EffectiveBrowseOrigin));
-        var tags = App.Services.GetRequiredService<TagCloudService>().PlatformsOfferingTags;
-        SetNavItemVisibility("tags", CardOriginNavPolicy.ShowTags(vm.EffectiveBrowseOrigin, tags));
+        _authorsEntry = CardOriginNavPolicy.Authors(
+            vm.EffectiveBrowseOrigin,
+            PlatformAvailability.HasAny(plugins.AuthorProviders.Select(provider => provider.ProviderId)),
+            authors);
+        _tagsEntry = CardOriginNavPolicy.Tags(
+            vm.EffectiveBrowseOrigin, tagCloud.HasAnyPlatform, tagCloud.PlatformsOfferingTags);
+        _importEntry = CardOriginNavPolicy.Import(App.Services.GetService<ImportViewModel>() is not null);
+        // Authors is always in the pane (local sources are authors too: without
+        // a platform plugin the entry opens them). Tags sit in the explore
+        // section when the platform has any (or a plugin would bring them).
+        SetNavItemVisibility("authors", true);
+        SetNavItemVisibility("tags", _tagsEntry != NavEntryState.Hidden);
     }
+
+    /// <summary>
+    /// Hides the library's tab heading while a card is open large over the
+    /// library (the loupe takes the whole content area); shown again after.
+    /// </summary>
+    internal void SetLibraryHeadingHidden(bool hidden)
+    {
+        if (!IsLibraryPage(NavFrame.CurrentSourcePageType)) return;
+        LibrarySelectorBar.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>Whether the tag page has something to show (the "More" menu and the palette offer it then).</summary>
+    internal bool TagsOffered => _tagsEntry != NavEntryState.Hidden;
+
+    private NavEntryState _authorsEntry = NavEntryState.Hidden;
+    private NavEntryState _tagsEntry = NavEntryState.Hidden;
+    private NavEntryState _importEntry = NavEntryState.Hidden;
 
     private void OnNavItemVisibilityChanged(string tag, bool visible)
     {
@@ -277,7 +251,23 @@ public sealed partial class MainWindow : Window
         => DispatcherQueue.TryEnqueue(() =>
         {
             RecordModeNavToggle.IsOn = enabled;
+            ShowRecordModeState(enabled);
         });
+
+    /// <summary>
+    /// The switch is the only place recording is turned on, so it also has to
+    /// say that it is on - including with the pane collapsed to icons, where
+    /// the switch itself is not drawn.
+    /// </summary>
+    private void ShowRecordModeState(bool enabled)
+    {
+        var tip = UiText.Get(enabled ? "Record_NavToggleOn" : "Record_NavToggleOff");
+        ToolTipService.SetToolTip(RecordModeNavToggle, tip);
+        ToolTipService.SetToolTip(RecordingButton, tip);
+        RecordingButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void RecordingButton_Click(object sender, RoutedEventArgs e) => NavigateToSection("usage");
 
     /// <summary>
     /// Keeps a tap on the switch from also selecting the row. Without this the
@@ -356,6 +346,7 @@ public sealed partial class MainWindow : Window
             ? Visibility.Visible : Visibility.Collapsed;
         OriginSelectorPicker.Visibility = _originSelectorAvailable && compact
             ? Visibility.Visible : Visibility.Collapsed;
+        UpdateRatingFilterLayout();
     }
 
     /// <summary>
@@ -407,6 +398,133 @@ public sealed partial class MainWindow : Window
         });
     }
 
+    // ------------------------------------------------------------ rating filter
+
+    // Set while ApplyRatingFilter marks the stored set, so the Checked/Unchecked
+    // events it causes are not read as the user's.
+    private bool _syncingRatingToggles;
+
+    private (ToggleButton Button, RatingSet Rating, string Label, FrameworkElement On, FrameworkElement Off)[] RatingToggles =>
+    [
+        (RatingToggleG, RatingSet.General, RatingLabels.General, RatingToggleGOn, RatingToggleGOff),
+        (RatingToggleR18, RatingSet.R18, RatingLabels.R18, RatingToggleR18On, RatingToggleR18Off),
+        (RatingToggleR18G, RatingSet.R18G, RatingLabels.R18G, RatingToggleR18GOn, RatingToggleR18GOff),
+    ];
+
+    /// <summary>
+    /// The three rating toggles in the title bar: one badge per rating, on
+    /// (coloured) or off (grey outline). Any non-empty combination is a choice.
+    /// </summary>
+    private void BuildRatingFilterMenu()
+    {
+        AutomationProperties.SetName(RatingFilterGroup, UiText.Get("TitleBar_RatingFilter"));
+        foreach (var (button, _, _, _, _) in RatingToggles)
+            // Its own tooltip object, so a refused click can open it.
+            ToolTipService.SetToolTip(button, new ToolTip());
+        ShapeRatingSegments();
+    }
+
+    /// <summary>
+    /// Rounds the outer corners of the first and last segments' fill to the
+    /// frame's inside, so a coloured end segment does not poke out of it. Read
+    /// from the resource, so the square-corners setting squares them too.
+    /// </summary>
+    private void ShapeRatingSegments()
+    {
+        var frame = (CornerRadius)Application.Current.Resources["ControlCornerRadius"];
+        var inner = Math.Max(0, frame.TopLeft - RatingFilterFrame.BorderThickness.Left);
+        var toggles = RatingToggles;
+        for (var i = 0; i < toggles.Length; i++)
+        {
+            var left = i == 0 ? inner : 0;
+            var right = i == toggles.Length - 1 ? inner : 0;
+            if (toggles[i].On is Border on) on.CornerRadius = new CornerRadius(left, right, right, left);
+            if (toggles[i].Off is Border off) off.CornerRadius = new CornerRadius(left, right, right, left);
+        }
+    }
+
+    /// <summary>
+    /// A toggle changed by click, keyboard (Space/Enter) or UI Automation's
+    /// Toggle pattern; all three raise Checked/Unchecked. The last rating that
+    /// is on cannot be turned off: the button is put back on at once and its
+    /// tooltip ("\u81F3\u5C11\u8981\u986F\u793A\u4E00\u7A2E\u5206\u7D1A") is shown, which reads better than a button
+    /// that looks disabled while it is the only one on and would no longer
+    /// explain itself on hover.
+    /// </summary>
+    private void RatingToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingRatingToggles || sender is not ToggleButton { Tag: string tag } button) return;
+        if (!Enum.TryParse<RatingSet>(tag, out var rating)) return;
+        var settings = App.Services.GetRequiredService<SettingsViewModel>();
+        if (button.IsChecked != true && RatingFilterRule.IsLast(settings.RatingFilter, rating))
+        {
+            _syncingRatingToggles = true;
+            button.IsChecked = true;
+            _syncingRatingToggles = false;
+            if (ToolTipService.GetToolTip(button) is ToolTip tip)
+            {
+                tip.Content = UiText.Get("TitleBar_RatingLast");
+                tip.IsOpen = true;
+            }
+            return;
+        }
+        settings.RatingFilter = RatingFilterRule.Toggle(settings.RatingFilter, rating);
+        // Shown at once; ApplyRatingFilter follows through the settings event.
+        PaintRatingToggle(button);
+    }
+
+    private void PaintRatingToggle(ToggleButton button)
+    {
+        foreach (var (b, _, _, on, off) in RatingToggles)
+        {
+            if (!ReferenceEquals(b, button)) continue;
+            on.Visibility = b.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            off.Visibility = b.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+        }
+    }
+
+    /// <summary>
+    /// Shows the stored set on the three toggles (hidden while filtering is
+    /// switched off in the settings) and pushes the filter that applies into
+    /// the scene gallery, which every scene view reads.
+    /// </summary>
+    private void ApplyRatingFilter()
+    {
+        var settings = App.Services.GetRequiredService<SettingsViewModel>();
+        UpdateRatingFilterLayout();
+        var set = RatingFilterRule.Effective(enabled: true, settings.RatingFilter);
+        _syncingRatingToggles = true;
+        foreach (var (button, rating, label, _, _) in RatingToggles)
+        {
+            var on = (set & rating) != 0;
+            button.IsChecked = on;
+            PaintRatingToggle(button);
+            var name = UiText.Format(on ? "TitleBar_RatingOn" : "TitleBar_RatingOff", label);
+            AutomationProperties.SetName(button, name);
+            var last = RatingFilterRule.IsLast(set, rating);
+            // The only one on says why it will not turn off, to the eye and to a screen reader.
+            AutomationProperties.SetHelpText(button, last ? UiText.Get("TitleBar_RatingLast") : "");
+            if (ToolTipService.GetToolTip(button) is ToolTip tip)
+            {
+                tip.IsOpen = false;
+                tip.Content = last ? $"{name}\n{UiText.Get("TitleBar_RatingLast")}" : name;
+            }
+        }
+        _syncingRatingToggles = false;
+        App.Services.GetRequiredService<GalleryViewModel>().RatingFilter = settings.EffectiveRatingFilter;
+    }
+
+    /// <summary>
+    /// The segments, unless rating filtering is switched off in the settings. At
+    /// about 150 px they need no narrow-window fallback.
+    /// </summary>
+    private void UpdateRatingFilterLayout()
+    {
+        if (RatingFilterFrame is null) return;
+        var enabled = App.Services.GetRequiredService<SettingsViewModel>().RatingFilterEnabled;
+        RatingFilterFrame.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     /// <summary>
     /// Pushes the mode into every gallery. Each view model already rebuilds its
     /// shuffle queue and re-filters when the value lands.
@@ -427,7 +545,9 @@ public sealed partial class MainWindow : Window
         var stranded =
             (current == typeof(AuthorsPage) && AuthorsNavItem.Visibility != Visibility.Visible)
             || (current == typeof(LocalSourcesPage) && LocalSourcesNavItem.Visibility != Visibility.Visible)
-            || (current == typeof(TagCloudPage) && TagsNavItem.Visibility != Visibility.Visible);
+            || (current == typeof(TagCloudPage) && TagsNavItem.Visibility != Visibility.Visible)
+            || (NavFrame?.Content is FeatureUnavailablePage { Feature: "authors" } && AuthorsNavItem.Visibility != Visibility.Visible)
+            || (NavFrame?.Content is FeatureUnavailablePage { Feature: "tags" } && TagsNavItem.Visibility != Visibility.Visible);
         if (stranded) NavigateToSelectedLibraryPage();
     }
 
@@ -547,20 +667,71 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// True while the page being navigated to replaces another of the
+    /// library's tabs (scenes, characters, coordinates): then only the grid
+    /// moves, under a heading that stays put. Coming from anywhere else, the
+    /// whole library arrives like any page. Read by LibraryBrowser.Activate.
+    /// </summary>
+    internal bool ArrivingFromLibraryTab { get; private set; }
+
+    /// <summary>How many tabs along the library moved (negative to the left): which side the new tab comes in from.</summary>
+    internal int LibraryTabStep { get; private set; }
+
+    private void NavFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+    {
+        ArrivingFromLibraryTab = IsLibraryPage(NavFrame.CurrentSourcePageType) && IsLibraryPage(e.SourcePageType);
+        LibraryTabStep = ArrivingFromLibraryTab ? LibraryTabIndex(e.SourcePageType) - LibraryTabIndex(NavFrame.CurrentSourcePageType) : 0;
+    }
+
+    private static int LibraryTabIndex(Type? pageType)
+        => pageType == typeof(CharacterGalleryPage) ? 1 : pageType == typeof(CoordinateGalleryPage) ? 2 : 0;
+
     private void NavFrame_Navigated(object sender, NavigationEventArgs e)
     {
-        if (e.SourcePageType == typeof(RandomDiscoveryPage))
+        // Every page arrives the same way (CardMotion.Entrance). The home page
+        // arrives panel by panel itself (CardMotion.EnterStaggered); a library
+        // tab replacing another moves only its grid (LibraryBrowser.Activate).
+        if (e.SourcePageType != typeof(HomePage) && !(IsLibraryPage(e.SourcePageType) && ArrivingFromLibraryTab)
+            && e.Content is UIElement page)
+        {
+            CardMotion.Entrance(page);
+            // The library's tab heading lives here, over the frame: it arrives with its page.
+            if (IsLibraryPage(e.SourcePageType)) CardMotion.Entrance(LibrarySelectorBar);
+        }
+
+        if (e.SourcePageType == typeof(SettingsPage))
+            NavView.SelectedItem = NavView.SettingsItem;
+        // A home page panel's "see all" belongs to the home page.
+        else if (e.SourcePageType == typeof(HomePage) || e.SourcePageType == typeof(ShelfPage))
+            NavView.SelectedItem = HomeNavItem;
+        else if (e.SourcePageType == typeof(FeatureUnavailablePage))
+            NavView.SelectedItem = e.Parameter switch
+            {
+                "authors" => AuthorsNavItem,
+                "tags" => TagsNavItem,
+                _ => ImportNavItem,
+            };
+        else if (e.SourcePageType == typeof(AuthorsPage))
+            NavView.SelectedItem = AuthorsNavItem;
+        else if (e.SourcePageType == typeof(ImportPage))
+            NavView.SelectedItem = ImportNavItem;
+        // The explore section's pages select their own entry; the local sources
+        // the authors entry (they are authors too).
+        else if (e.SourcePageType == typeof(RandomDiscoveryPage))
             NavView.SelectedItem = DiscoveryNavItem;
         // Both pages navigate to AuthorDetailPage, so returning from one has to
         // restore the item the user actually came from.
         else if (e.SourcePageType == typeof(LocalSourcesPage))
-            NavView.SelectedItem = LocalSourcesNavItem;
+            NavView.SelectedItem = AuthorsNavItem;
         // The tag cloud hosts a scoped browser that navigates on to a detail
         // page, so coming back has to reselect this entry.
         else if (e.SourcePageType == typeof(TagCloudPage))
             NavView.SelectedItem = TagsNavItem;
         else if (e.SourcePageType == typeof(UsageHistoryPage))
             NavView.SelectedItem = UsageNavItem;
+        else if (e.SourcePageType == typeof(CardRatingPage))
+            NavView.SelectedItem = RatingNavItem;
         var isLibraryPage = IsLibraryPage(e.SourcePageType);
         LibrarySelectorBar.Visibility = isLibraryPage
             ? Visibility.Visible
@@ -597,8 +768,10 @@ public sealed partial class MainWindow : Window
     /// so the size difference is not decoration, it is what tells the reader
     /// which of these three words is the title of what they are looking at.
     /// </remarks>
-    private const double SelectedLibraryFontSize = 28;
-    private const double UnselectedLibraryFontSize = 16;
+    // The page title size (PageTitleTextBlockStyle, wave 11): at 28 the
+    // heading was a phone screen's big title.
+    private const double SelectedLibraryFontSize = UiMetrics.SelectorTitleFontSize;
+    private const double UnselectedLibraryFontSize = UiMetrics.SelectorOtherFontSize;
 
     private void UpdateLibrarySelectorEmphasis()
     {
@@ -614,7 +787,7 @@ public sealed partial class MainWindow : Window
             // heading only when they share a baseline. Centred, the small
             // words float half a line above the big one.
             item.VerticalAlignment = VerticalAlignment.Bottom;
-            SetSelectorEmphasis(item, selected ? SelectedLibraryFontSize : UnselectedLibraryFontSize, selected ? 1 : 0.6);
+            SetSelectorEmphasis(item, selected ? SelectedLibraryFontSize : UnselectedLibraryFontSize, selected ? 1 : UiMetrics.SelectorOtherOpacity);
         }
     }
 
@@ -669,8 +842,14 @@ public sealed partial class MainWindow : Window
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
+        // Not unconditional: a page that navigates to settings itself (the
+        // filter link, the plugin page's button) selects this entry afterwards,
+        // and navigating again here would drop the parameter it was opened with.
         if (args.IsSettingsSelected)
-            NavFrame.Navigate(typeof(SettingsPage));
+        {
+            if (NavFrame.CurrentSourcePageType != typeof(SettingsPage))
+                NavFrame.Navigate(typeof(SettingsPage));
+        }
         else if (args.SelectedItem is NavigationViewItem item)
             NavigateToNavItem(item);
     }
@@ -704,13 +883,33 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void NavigateToNavItem(NavigationViewItem item)
+    private void ShowFeatureUnavailable(string feature)
     {
-        switch (item.Tag)
+        if (NavFrame.Content is FeatureUnavailablePage { Feature: var shown } && shown == feature) return;
+        NavFrame.Navigate(typeof(FeatureUnavailablePage), feature);
+    }
+
+    private void NavigateToNavItem(NavigationViewItem item) => NavigateToSection(item.Tag as string ?? "");
+
+    /// <summary>
+    /// Opens a section by its pane tag, whether or not it has a pane entry (the
+    /// pages wave 16 took out of the pane are opened from menus and the palette).
+    /// </summary>
+    internal void NavigateToSection(string tag)
+    {
+        switch (tag)
         {
+            case "home":
+                if (NavFrame.CurrentSourcePageType != typeof(HomePage))
+                    NavFrame.Navigate(typeof(HomePage));
+                break;
             case "discovery":
                 if (NavFrame.CurrentSourcePageType != typeof(RandomDiscoveryPage))
                     NavFrame.Navigate(typeof(RandomDiscoveryPage));
+                break;
+            case "rating":
+                if (NavFrame.CurrentSourcePageType != typeof(CardRatingPage))
+                    NavFrame.Navigate(typeof(CardRatingPage));
                 break;
             case "library":
                 NavigateToSelectedLibraryPage();
@@ -718,6 +917,15 @@ public sealed partial class MainWindow : Window
             case "authors" when App.Services.GetRequiredService<AuthorsViewModel>().HasProviderTabs:
                 if (NavFrame.CurrentSourcePageType != typeof(AuthorsPage))
                     NavFrame.Navigate(typeof(AuthorsPage));
+                break;
+            // No platform authors to list: the local sources are the authors there are.
+            case "authors":
+                if (NavFrame.CurrentSourcePageType != typeof(LocalSourcesPage))
+                    NavFrame.Navigate(typeof(LocalSourcesPage));
+                break;
+            case "tags" when _tagsEntry == NavEntryState.NeedsPlugin:
+            case "import" when _importEntry == NavEntryState.NeedsPlugin:
+                ShowFeatureUnavailable(tag);
                 break;
             case "localsources":
                 if (NavFrame.CurrentSourcePageType != typeof(LocalSourcesPage))

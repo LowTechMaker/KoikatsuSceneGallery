@@ -1,4 +1,5 @@
 using Microsoft.UI.Dispatching;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
@@ -12,7 +13,7 @@ internal sealed class GalleryMetadataRefresh(DispatcherQueue dispatcher, Action 
     {
         if (_disposed) return;
         _timer ??= dispatcher.CreateTimer();
-        _timer.Interval = TimeSpan.FromMilliseconds(750);
+        _timer.Interval = AppTiming.MetadataFilterRefresh;
         _timer.IsRepeating = true;
         _timer.Tick -= OnTick;
         _timer.Tick += OnTick;

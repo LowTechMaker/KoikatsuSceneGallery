@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using KoikatsuSceneGallery.Services;
 using SceneGallery.PluginSdk;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Models;
 
@@ -54,6 +55,36 @@ public partial class ImportItem : ObservableObject
     [ObservableProperty]
     public partial string? DestinationPath { get; set; }
 
+    /// <summary>For a card the library already holds: where it holds it.</summary>
+    public string? ExistingLibraryPath { get; set; }
+
+    /// <summary>The archive this card was unpacked from; null for a loose file.</summary>
+    [ObservableProperty]
+    public partial string? ArchivePath { get; set; }
+
+    /// <summary>The user already chose to leave this in-library-elsewhere card alone; not asked again.</summary>
+    public bool ElsewhereDecided { get; set; }
+
+    /// <summary>The user chose to skip this card in a conflict: it waits in the Left alone section, not importable.</summary>
+    [ObservableProperty]
+    public partial bool UserSkipped { get; set; }
+
+    /// <summary>
+    /// The same card is in the library, but not where this import would put it. A copy in a
+    /// folder below the destination's (a post subfolder) counts as the same place.
+    /// </summary>
+    public bool IsInLibraryElsewhere => IsAlreadyInLibrary
+        && ExistingLibraryPath is not null && DestinationPath is not null
+        && !IsSameOrBelow(Path.GetDirectoryName(ExistingLibraryPath), Path.GetDirectoryName(DestinationPath));
+
+    private static bool IsSameOrBelow(string? directory, string? root)
+    {
+        if (directory is null || root is null) return false;
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar;
+        var top = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
+        return full.StartsWith(top, StringComparison.OrdinalIgnoreCase);
+    }
+
     // Display helpers for XAML binding
     public string CardTypeText
     {
@@ -78,9 +109,9 @@ public partial class ImportItem : ObservableObject
 
     public string RatingText => Rating switch
     {
-        ContentRating.R18  => "R-18",
-        ContentRating.R18G => "R-18G",
-        ContentRating.AllAges => "G",
+        ContentRating.R18  => RatingLabels.R18,
+        ContentRating.R18G => RatingLabels.R18G,
+        ContentRating.AllAges => RatingLabels.General,
         _ => "",
     };
 
@@ -136,10 +167,10 @@ public partial class ImportItem : ObservableObject
 
     public string StatusGlyph => Status switch
     {
-        ImportItemStatus.Completed        => "",  // Accept checkmark
-        ImportItemStatus.Failed           => "",  // Error badge
-        ImportItemStatus.Skipped          => "",  // Cancel
-        ImportItemStatus.AlreadyInLibrary => "",  // Library
+        ImportItemStatus.Completed        => Glyphs.Done,  // Accept checkmark
+        ImportItemStatus.Failed           => Glyphs.Error,  // Error badge
+        ImportItemStatus.Skipped          => Glyphs.Remove,  // Cancel
+        ImportItemStatus.AlreadyInLibrary => Glyphs.InLibrary,  // Library
         _ => "",
     };
 
@@ -174,6 +205,8 @@ public partial class ImportItem : ObservableObject
     }
     partial void OnStatusChanged(ImportItemStatus value)
     {
+        // A skipped card the user then fixes (a post, an author) is back in play.
+        if (value == ImportItemStatus.ReadyToImport) UserSkipped = false;
         OnPropertyChanged(nameof(StatusGlyph));
         OnPropertyChanged(nameof(ShowStatusGlyph));
         OnPropertyChanged(nameof(ShowStatusRing));

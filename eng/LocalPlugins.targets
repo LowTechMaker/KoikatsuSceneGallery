@@ -76,6 +76,24 @@
           Condition="'@(LocalPluginProject)' != ''" />
 
     <!--
+      The plugin repos deploy to bin\<Config>\<TFM>\<AppRid>\Plugins, without the
+      platform folder a Platform=x64 build puts the app in (bin\x64\...). Their
+      plugins then sat one level off and the app started with none (SGPLUG001
+      on every build). When the two differ, carry them over to the app's own
+      output; the plugin repos are left as they are.
+    -->
+    <PropertyGroup>
+      <_LocalPluginRepoDeployDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\Plugins</_LocalPluginRepoDeployDir>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_LocalPluginRepoDeployDir)' != '$(_LocalPluginTargetDir)' and Exists('$(_LocalPluginRepoDeployDir)')">
+      <_LocalPluginOffsetFile Include="$(_LocalPluginRepoDeployDir)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LocalPluginOffsetFile)"
+          DestinationFiles="@(_LocalPluginOffsetFile->'$(_LocalPluginTargetDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Condition="'@(_LocalPluginOffsetFile)' != ''" />
+
+    <!--
       PluginService skips an unreadable or missing plugin folder without a word
       — the app just starts with no plugins and no explanation. Say it here,
       where there is still someone watching.

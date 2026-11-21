@@ -36,8 +36,15 @@ public sealed class ImportService
         return (PathSanitizer.SanitizeRelativePath(name), true);
     }
 
+    /// <summary>
+    /// The rating folders an author folder can sit under, for finding existing
+    /// folders. "" is the three-level layout, where authors sit directly under
+    /// the provider (or game) folder. Distinct, so a rating folder name left
+    /// blank in the settings does not scan the same folder twice.
+    /// </summary>
     private static string[] GetRatingFolderNames(SettingsService.ConfigData config) =>
-        [config.GFolderName, config.R18FolderName, config.R18GFolderName];
+        [.. new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName, "" }
+            .Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
 
     private static string[] GetGameVersionFolderNames(SettingsService.ConfigData config) =>
         [config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, ""];
@@ -61,6 +68,7 @@ public sealed class ImportService
     private readonly LibraryFileCache _libraryFileCache;
     private readonly ImportLibraryIndexer _libraryIndexer;
     private readonly ImportResolutionCoordinator<ResolveDiagnosticResult> _resolution = new();
+    private readonly FeedHandoffManifest _feedHandoff = new();
 
     public ImportService(
         IReadOnlyList<ICardImportProvider> importProviders,
@@ -101,6 +109,28 @@ public sealed class ImportService
         return null;
     }
 
+    /// <summary>
+    /// Applies the post and creator provenance KoikatsuSceneFeed recorded for this card. The manifest remains useful
+    /// without a Gallery plugin: the card can still be organized under its provider, post, and creator. When a plugin
+    /// is installed, its URL parser may canonicalize the post id and phase 2 can enrich the remaining metadata.
+    /// </summary>
+    private bool TryApplyFeedHandoff(ImportItem item)
+    {
+        if (_feedHandoff.Find(item.SourceFilePath) is not { } source)
+            return false;
+
+        var provider = FindProvider(source.ProviderId);
+        var parsed = source.PostUrl is { } url && provider is not null ? provider.TryParseUrl(url) : null;
+        item.ArtworkId = parsed is not null
+                         && string.Equals(parsed.ProviderId, source.ProviderId, StringComparison.OrdinalIgnoreCase)
+            ? parsed
+            : new ArtworkId(source.ProviderId, source.PostId);
+        item.AuthorProviderId = source.ProviderId;
+        item.AuthorId = source.CreatorId;
+        item.AuthorName = source.CreatorName ?? source.CreatorId;
+        return true;
+    }
+
     private ICardImportProvider? FindProvider(string providerId)
         => _importProviders.FirstOrDefault(p => p.ProviderId.Equals(providerId, StringComparison.OrdinalIgnoreCase));
 
@@ -112,7 +142,7 @@ public sealed class ImportService
     {
         await Parallel.ForEachAsync(items, new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            MaxDegreeOfParallelism = AppLimits.IoWorkers,
             CancellationToken = ct,
         }, async (item, token) =>
         {
@@ -275,7 +305,10 @@ public sealed class ImportService
                 }
                 else
                 {
-                    item.ArtworkId = TryParseFilenameAll(item.FileName);
+                    // Feed's byte-hash provenance is stronger than a filename heuristic. This matters for archive
+                    // entries whose arbitrary names can look like another provider's artwork id.
+                    if (!TryApplyFeedHandoff(item))
+                        item.ArtworkId = TryParseFilenameAll(item.FileName);
                 }
 
                 valid.Add(item);
@@ -490,7 +523,7 @@ public sealed class ImportService
                 // Never apply an old snapshot's index to newly added or removed items.
                 var current = new ObservableCollection<ImportItem>(snapshot.Items.Where(items.Contains));
                 ResolveDestinations(current, config, libraryIndex.IdenticalSourcePaths,
-                    libraryIndex.FolderIndex, threshold, visual, diagnostics);
+                    libraryIndex.FolderIndex, threshold, visual, diagnostics, libraryIndex.ExistingLibraryPaths);
                 var result = diagnostics.ToResult(backgroundStopwatch.ElapsedMilliseconds,
                     queueStopwatch.ElapsedMilliseconds, libraryIndex);
                 RecordSlowResolution(result, snapshot.Sources.Length);
@@ -499,7 +532,7 @@ public sealed class ImportService
         }, enqueue, debounce, ct);
 
     /// <summary>How long a resolution pass may take before it is worth recording.</summary>
-    private const long SlowResolutionMs = 750;
+    private static readonly int SlowResolutionMs = (int)AppTiming.SlowResolution.TotalMilliseconds;
 
     /// <summary>
     /// Records the timing of a resolution pass that was slow, or that had to
@@ -573,13 +606,100 @@ public sealed class ImportService
     /// Registers files committed by the transaction executor, avoiding a full
     /// library scan the next time an import workspace is re-resolved.
     /// </summary>
+    /// <summary>
+    /// Puts a link at <paramref name="destination"/> to the library's own copy of the card,
+    /// binds the name to the post as an import would, and deletes the source as a consumed
+    /// duplicate. Returns why it failed, or null.
+    /// </summary>
+    internal async Task<string?> LinkToExistingAsync(ImportItem item, string destination, string existing, bool symbolic)
+    {
+        var document = PostMetadataMapper.ToImportDocument(item, []);
+        var authorDirectory = item.AuthorDirectoryPath;
+        var source = item.SourceFilePath;
+        try
+        {
+            await Task.Run(() =>
+            {
+                if (symbolic) FileLinks.CreateSymbolicLink(destination, existing);
+                else FileLinks.CreateHardLink(destination, existing);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ex.Message;
+        }
+
+        try
+        {
+            if (document is not null && authorDirectory is not null)
+                await _postMetadataStore.WriteAsync(authorDirectory,
+                    document with { LocalFileNames = [Path.GetFileName(destination)] }).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError("Import.LinkSidecar", ex, destination);
+        }
+
+        RegisterCommittedLibraryFiles([destination]);
+        try { await Task.Run(() => File.Delete(source)).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError("Import.LinkDeleteSource", ex, source);
+        }
+        return null;
+    }
+
     public void RegisterCommittedLibraryFiles(IEnumerable<string> destinationPaths)
-        => _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+    {
+        _libraryFileCache.RegisterCommittedFiles(destinationPaths);
+        ForgetLibraryNames();
+    }
 
     /// <summary>
     /// Causes the following resolution to rebuild its filename index from disk.
     /// </summary>
-    public void InvalidateLibraryFileCache() => _libraryFileCache.Invalidate();
+    public void InvalidateLibraryFileCache()
+    {
+        _libraryFileCache.Invalidate();
+        ForgetLibraryNames();
+    }
+
+    // The library's files by name across every configured root, for "does the library
+    // already hold this file?". Rebuilt when the roots change or an import commits.
+    private readonly object _libraryNamesGate = new();
+    private (string Key, LibraryNameIndex Index)? _libraryNames;
+
+    private void ForgetLibraryNames()
+    {
+        lock (_libraryNamesGate) _libraryNames = null;
+    }
+
+    /// <summary>
+    /// A question the import page can ask of the library: is there a file of this name,
+    /// and of this size when one is given? The first call scans the library.
+    /// </summary>
+    public async Task<Func<string, long?, bool>> GetLibraryLookupAsync(CancellationToken ct)
+    {
+        var config = await _loadConfig().ConfigureAwait(false);
+        var roots = (config.FolderPaths ?? [])
+            .Concat(config.CharacterFolderPaths ?? [])
+            .Concat(config.CoordinateFolderPaths ?? [])
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var key = string.Join("\n", roots);
+
+        lock (_libraryNamesGate)
+        {
+            if (_libraryNames is { } cached && cached.Key == key) return cached.Index.Has;
+        }
+
+        var index = await Task.Run(
+            () => LibraryNameIndex.Build(roots, _logger.LogError, ct), ct).ConfigureAwait(false);
+        lock (_libraryNamesGate) _libraryNames = (key, index);
+        return index.Has;
+    }
 
     private void ResolveDestinations(
         ObservableCollection<ImportItem> items,
@@ -588,13 +708,12 @@ public sealed class ImportService
         Dictionary<string, Dictionary<string, string>> folderIndex,
         int artworkThreshold = 1,
         bool useVisualSimilarity = false,
-        ResolveDiagnosticCollector? diagnostics = null)
+        ResolveDiagnosticCollector? diagnostics = null,
+        IReadOnlyDictionary<string, string>? existingLibraryPaths = null)
     {
-        var subfolder = config.ImportSubfolder.Trim();
         // Invariant across the whole pass: materialized once instead of being
         // re-evaluated per root inside the fallback lookup, for every item.
         var providerScopes = _importProviders.Select(p => GetProviderScope(p.ProviderId)).ToArray();
-        var gameVersionFolderNames = GetGameVersionFolderNames(config);
 
         foreach (var item in items)
         {
@@ -604,74 +723,77 @@ public sealed class ImportService
             SetAuthorDirectoryPath(item, null, diagnostics);
             if (identicalSourcePaths.Contains(item.SourceFilePath))
             {
+                // Still given the destination it would have had: when that is not where the
+                // library keeps it, the user can link the card there or copy it (see ImportConflict).
                 SetStatus(item, ImportItemStatus.AlreadyInLibrary, diagnostics);
-                continue;
+                item.ExistingLibraryPath = existingLibraryPaths?.GetValueOrDefault(item.SourceFilePath);
             }
 
-            var roots = GetRootsForCardType(item.CardType, config);
-            if (roots.Count == 0) continue;
-
-            var providerId = item.ArtworkId?.ProviderId ?? item.AuthorProviderId;
-            var scope = providerId is not null ? GetProviderScope(providerId) : (Folder: "", UsesRatingFolders: true);
-            var ratingFolder = scope.UsesRatingFolders ? GetRatingFolder(item.Rating, config) : "";
-            var gameVersionFolder = GetGameVersionFolder(item.GameVersion, config);
-            string? targetFolder = null;
-            var useUnrecognizedSubfolder = ImportDestinationPolicy.UsesUnrecognizedSink(
-                hasArtwork: item.ArtworkId is not null,
-                hasAuthor: item.AuthorId is not null,
-                item.AuthorProviderId);
-
-            if (item.AuthorId is not null)
-            {
-                targetFolder = ImportAuthorDirectoryLookup.FindExact(
-                    roots, scope.Folder, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
-
-                if (targetFolder is null && item.ArtworkId is null)
-                {
-                    var match = ImportAuthorDirectoryLookup.FindFallback(
-                        roots, providerScopes,
-                        gameVersionFolderNames, gameVersionFolder, ratingFolder, item.AuthorId, folderIndex);
-                    targetFolder = match.Directory;
-                    var matchedProvider = match.ProviderFolder;
-
-                    if (targetFolder is null && matchedProvider is not null && item.AuthorName is not null)
-                    {
-                        var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
-                        targetFolder = BuildTargetBase(roots[0], subfolder, matchedProvider, gameVersionFolder, ratingFolder, safeName);
-                    }
-                }
-
-                if (targetFolder is null && item.AuthorName is not null)
-                {
-                    if (providerId is not null)
-                    {
-                        var safeName = FormatAuthorFolder(config, item.AuthorName, item.AuthorId);
-                        targetFolder = BuildTargetBase(roots[0], subfolder, scope.Folder, gameVersionFolder, ratingFolder, safeName);
-                    }
-                    else
-                    {
-                        targetFolder = BuildTargetBase(
-                            roots[0],
-                            subfolder,
-                            config.UnknownFolderName,
-                            gameVersionFolder,
-                            "",
-                            PathSanitizer.SanitizeFolderName(item.AuthorId));
-                        useUnrecognizedSubfolder = false;
-                    }
-                }
-            }
-
-            targetFolder ??= BuildTargetBase(roots[0], subfolder, config.UnknownFolderName, gameVersionFolder, "", null);
-            SetAuthorDirectoryPath(item, item.ArtworkId is not null ? targetFolder : null, diagnostics);
-
-            if (useUnrecognizedSubfolder)
-                targetFolder = Path.Combine(targetFolder, GalleryGrouping.UnrecognizedFolderName);
-
-            SetDestinationPath(item, Path.Combine(targetFolder, item.FileName), diagnostics);
+            ResolveItemDestination(item, config, folderIndex, providerScopes, diagnostics);
         }
 
         ResolveArtworkDestinations(items, config, artworkThreshold, useVisualSimilarity, diagnostics);
+    }
+
+    /// <summary>
+    /// Sets one card's <see cref="ImportItem.DestinationPath"/> and
+    /// <see cref="ImportItem.AuthorDirectoryPath"/> from its provider, author,
+    /// rating and game, before any artwork subfolder. Everything that decides
+    /// the folder is <see cref="ImportDestinationPolicy.ResolveTarget"/>; this
+    /// only reads the settings and providers it needs.
+    /// </summary>
+    private void ResolveItemDestination(
+        ImportItem item,
+        SettingsService.ConfigData config,
+        Dictionary<string, Dictionary<string, string>> folderIndex,
+        IReadOnlyList<(string Folder, bool UsesRatingFolders)> providerScopes,
+        ResolveDiagnosticCollector? diagnostics)
+    {
+        var providerId = item.ArtworkId?.ProviderId ?? item.AuthorProviderId;
+        var target = ImportDestinationPolicy.ResolveTarget(new ImportTargetInput(
+            Roots: GetRootsForCardType(item.CardType, config),
+            ImportSubfolder: config.ImportSubfolder,
+            UnknownFolderName: config.UnknownFolderName,
+            GameVersionFolder: GetGameVersionFolder(item.GameVersion, config),
+            GameVersionFolderNames: GetGameVersionFolderNames(config),
+            Scope: providerId is not null ? GetProviderScope(providerId) : (Folder: "", UsesRatingFolders: true),
+            RatingFolder: GetRatingFolder(item.Rating, config),
+            ProviderScopes: providerScopes,
+            HasArtwork: item.ArtworkId is not null,
+            ProviderId: providerId,
+            AuthorId: item.AuthorId,
+            AuthorName: item.AuthorName,
+            AuthorProviderId: item.AuthorProviderId,
+            FormatAuthorFolder: (name, id) => FormatAuthorFolder(config, name, id)), folderIndex);
+        if (target is null) return;
+
+        SetAuthorDirectoryPath(item, target.AuthorDirectory, diagnostics);
+        SetDestinationPath(item, Path.Combine(target.Folder, item.FileName), diagnostics);
+    }
+
+    /// <summary>
+    /// Where the import rules put <paramref name="item"/>, artwork subfolder
+    /// included, for a card that is already in the library: the same path an
+    /// import would choose, without the "already in library" and duplicate
+    /// classification, which would otherwise mark the card as its own copy.
+    /// Sets the item's destination and author directory; returns the
+    /// destination, or null when no library root takes the card's type.
+    /// </summary>
+    internal async Task<string?> ResolveLibraryCardDestinationAsync(ImportItem item, CancellationToken ct)
+    {
+        var config = await _loadConfig().ConfigureAwait(false);
+        var libraryIndex = await _libraryIndexer.BuildAsync(CreateLibraryIndexRequest(config, []), ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        item.Status = ImportItemStatus.ReadyToImport;
+        item.DestinationPath = null;
+        item.AuthorDirectoryPath = null;
+        var providerScopes = _importProviders.Select(p => GetProviderScope(p.ProviderId)).ToArray();
+        ResolveItemDestination(item, config, libraryIndex.FolderIndex, providerScopes, null);
+        if (item.DestinationPath is null) return null;
+        // A batch of one: the artwork folder is used when it already exists
+        // or when the post's other files in the author folder pass the threshold.
+        ResolveArtworkDestinations([item], config, config.ArtworkSubfolderThreshold, useVisualSimilarity: false);
+        return item.DestinationPath;
     }
 
     private Task<List<ImportItem>> PrepareArtworkPromotionsAsync(
@@ -717,7 +839,7 @@ public sealed class ImportService
                         foreach (var item in artworkItems)
                         {
                             item.Status = ImportItemStatus.Skipped;
-                            item.ErrorMessage = $"Conflicting artwork file: {result.CollisionFileName}";
+                            item.ErrorMessage = UiText.Format("Import_Error_ArtworkConflict", result.CollisionFileName);
                         }
                     });
                 }
@@ -744,6 +866,34 @@ public sealed class ImportService
             return items.Where(item => !blockedItems.Contains(item)).ToList();
         }, cancellationToken);
 
+    /// <summary>
+    /// Writes the post sidecar for a library card given its source later, the
+    /// way an import writes it, but reporting a failure instead of logging it
+    /// away: the caller has already moved the card and must say the sidecar
+    /// is missing. Throws when it could not be written.
+    /// </summary>
+    internal async Task WriteLibraryCardSidecarAsync(ImportItem item, CancellationToken cancellationToken)
+    {
+        var info = item.FetchedArtworkInfo
+            ?? throw new InvalidOperationException("The card has no fetched post.");
+        var authorDirectory = item.AuthorDirectoryPath;
+        if (string.IsNullOrWhiteSpace(authorDirectory) || string.IsNullOrWhiteSpace(item.DestinationPath))
+            throw new InvalidOperationException("The card has no author folder.");
+        var document = PostMetadataMapper.ToImportDocument(item, [Path.GetFileName(item.DestinationPath)])
+            ?? throw new InvalidOperationException("The post could not be turned into a sidecar.");
+        try
+        {
+            // False only means the sidecar already said all this; not a failure.
+            await _postMetadataStore.WriteAsync(authorDirectory, document, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError("Reidentify.WritePostMetadata", ex,
+                _postMetadataStore.GetSidecarPath(authorDirectory, info.ArtworkId.ProviderId, info.ArtworkId.Id));
+            throw;
+        }
+    }
+
     private async Task SaveFetchedMetadataAsync(
         ImportItem item,
         CancellationToken cancellationToken)
@@ -760,7 +910,7 @@ public sealed class ImportService
                 : new[] { Path.GetFileName(item.DestinationPath) };
             await _postMetadataStore.WriteAsync(
                 authorDirectory,
-                PostMetadataMapper.ToDocument(info, localFileNames),
+                PostMetadataMapper.ToImportDocument(item, localFileNames)!,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -1005,6 +1155,47 @@ public sealed class ImportService
             gameVersionFolder,
             ratingFolder,
             authorName);
+    }
+
+    /// <summary>
+    /// What the library layout migration needs, from the same sources the
+    /// folder index uses: the roots, the import folder, every plugin's folder
+    /// (plus Unknown), the game and rating folder names, and each plugin's own
+    /// rule for reading an author id from a folder name.
+    /// </summary>
+    internal async Task<LayoutMigrationOptions> BuildLayoutMigrationOptionsAsync()
+    {
+        var config = await _loadConfig().ConfigureAwait(false);
+        var roots = config.FolderPaths.Concat(config.CharacterFolderPaths).Concat(config.CoordinateFolderPaths)
+            .Where(root => !string.IsNullOrWhiteSpace(root))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var scopes = _importProviders
+            .Select(provider => (GetProviderScope(provider.ProviderId).Folder, Author: FindAuthorProvider(provider.ProviderId)))
+            .Where(scope => scope.Folder.Length > 0)
+            .ToList();
+        string[] providerFolders = [.. scopes.Select(scope => scope.Folder)
+            .Append(config.UnknownFolderName.Trim())
+            .Where(folder => folder.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        (string, int)[] ratings = [.. new[]
+            {
+                (config.GFolderName, SceneRating.General),
+                (config.R18FolderName, SceneRating.R18),
+                (config.R18GFolderName, SceneRating.R18G),
+            }
+            .Select(r => (r.Item1.Trim(), r.Item2))
+            .Where(r => r.Item1.Length > 0)];
+        return new LayoutMigrationOptions(
+            roots,
+            config.ImportSubfolder.Trim(),
+            providerFolders,
+            config.UnknownFolderName.Trim(),
+            [.. GetGameVersionFolderNames(config).Where(name => !string.IsNullOrWhiteSpace(name))],
+            ratings,
+            (folder, name) => scopes
+                .Where(scope => string.Equals(scope.Folder, folder, StringComparison.OrdinalIgnoreCase))
+                .Select(scope => scope.Author?.TryParseFolderName(name)?.Key.Id)
+                .FirstOrDefault(id => id is not null));
     }
 
     private ImportLibraryIndexRequest CreateLibraryIndexRequest(

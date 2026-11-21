@@ -23,7 +23,7 @@
                 </Grid.ColumnDefinitions>
                 <Border
                     Height="64"
-                    CornerRadius="4"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
                     Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                     <Image
                         Stretch="UniformToFill"
@@ -39,69 +39,59 @@
         </DataTemplate>
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="16">
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space16}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- Author Header -->
-        <Grid ColumnSpacing="16">
+        <Grid ColumnSpacing="{StaticResource Space16}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button
-                x:Uid="Detail_GoBack"
-                VerticalAlignment="Center"
-                Click="GoBack_Click"
-                Style="{StaticResource SubtleButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE72B;" />
-            </Button>
-
             <PersonPicture
-                Grid.Column="1"
                 Width="64"
                 Height="64"
                 DisplayName="{x:Bind ViewModel.Author.Name, Mode=OneWay}"
                 ProfilePicture="{x:Bind ViewModel.Author.AvatarSource, Mode=OneWay}" />
 
             <StackPanel
-                Grid.Column="2"
+                Grid.Column="1"
                 VerticalAlignment="Center"
-                Spacing="4">
+                Spacing="{StaticResource Space4}">
                 <TextBlock
-                    Style="{StaticResource TitleTextBlockStyle}"
+                    Style="{StaticResource PageTitleTextBlockStyle}"
                     Text="{x:Bind ViewModel.Author.Name, Mode=OneWay}" />
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Glyph="&#xE8B9;" />
+                            Glyph="{StaticResource GlyphScene}" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"
                             Text="{x:Bind ViewModel.SceneCount, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Glyph="&#xE77B;" />
+                            Glyph="{StaticResource GlyphCharacter}" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"
                             Text="{x:Bind ViewModel.CharacterCount, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
                         <FontIcon
                             FontSize="12"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Glyph="&#xE78A;" />
+                            Glyph="{StaticResource GlyphCoordinate}" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Style="{StaticResource CaptionTextBlockStyle}"
@@ -111,17 +101,17 @@
             </StackPanel>
 
             <StackPanel
-                Grid.Column="3"
+                Grid.Column="2"
                 VerticalAlignment="Center"
                 Orientation="Horizontal"
-                Spacing="8">
+                Spacing="{StaticResource Space8}">
                 <Button
                     x:Uid="AuthorDetail_OpenProfile"
                     AutomationProperties.AutomationId="AuthorOpenProfileButton"
                     Click="OpenProfile_Click"
                     Visibility="{x:Bind ViewModel.HasProfileUrl, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE774;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphWeb}" />
                         <TextBlock x:Uid="AuthorDetail_OpenProfileLabel" />
                     </StackPanel>
                 </Button>
@@ -131,21 +121,30 @@
                     Click="EditLocal_Click"
                     Style="{StaticResource SubtleButtonStyle}"
                     Visibility="{x:Bind ViewModel.IsLocalSource, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <FontIcon FontSize="14" Glyph="&#xE70F;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphEdit}" />
+                        <TextBlock x:Uid="AuthorDetail_EditLocalLabel" />
+                    </StackPanel>
                 </Button>
                 <Button
                     x:Uid="AuthorDetail_Shuffle"
                     AutomationProperties.AutomationId="AuthorShuffleButton"
                     Click="Shuffle_Click"
                     Style="{StaticResource SubtleButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE8B1;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphShuffle}" />
+                        <TextBlock x:Uid="AuthorDetail_ShuffleLabel" />
+                    </StackPanel>
                 </Button>
                 <Button
                     x:Uid="AuthorDetail_Refresh"
                     AutomationProperties.AutomationId="AuthorRefreshButton"
                     Click="Refresh_Click"
                     Style="{StaticResource SubtleButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
+                        <TextBlock x:Uid="AuthorDetail_RefreshLabel" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Grid>
@@ -157,43 +156,45 @@
             <PivotItem x:Name="OverviewPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontSize="14" Glyph="&#xE80F;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphHome}" />
                         <TextBlock x:Uid="AuthorDetail_OverviewTab" />
                     </StackPanel>
                 </PivotItem.Header>
+                <!--  Wave 17: each section wraps onto at most two lines (the view
+                      model fills what fits) instead of one row scrolling sideways.  -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="OverviewContent" Margin="0,8,0,16" Spacing="20" SizeChanged="OverviewContent_SizeChanged">
-                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
+                        <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.HasScenes, Mode=OneWay}">
                             <Grid>
-                                <TextBlock x:Uid="AuthorDetail_ScenesTab" Style="{StaticResource SubtitleTextBlockStyle}" />
+                                <TextBlock x:Uid="AuthorDetail_ScenesTab" Style="{StaticResource SectionTitleTextBlockStyle}" />
                                 <HyperlinkButton Grid.Column="1" HorizontalAlignment="Right" Tag="1" Click="OverviewSection_Click" Padding="0">
                                     <TextBlock x:Uid="AuthorDetail_ViewAll" />
                                 </HyperlinkButton>
                             </Grid>
-                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.ScenePreviews}" IsItemClickEnabled="True" ItemClick="ScenesGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewScenes_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
-                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
-                                <GridView.ItemTemplate><DataTemplate x:DataType="models:SceneCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                            <GridView ItemsSource="{x:Bind ViewModel.ScenePreviews}" IsItemClickEnabled="True" ItemClick="ScenesGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewScenes_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel Spacing="{StaticResource Space8}" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:SceneCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
                             </GridView>
                         </StackPanel>
-                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
-                            <Grid><TextBlock x:Uid="AuthorDetail_CharactersTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="2" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
-                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.CharacterPreviews}" IsItemClickEnabled="True" ItemClick="CharactersGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewCharacters_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
-                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
-                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CharacterCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                        <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_CharactersTab" Style="{StaticResource SectionTitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="2" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView ItemsSource="{x:Bind ViewModel.CharacterPreviews}" IsItemClickEnabled="True" ItemClick="CharactersGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewCharacters_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel Spacing="{StaticResource Space8}" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CharacterCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
                             </GridView>
                         </StackPanel>
-                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
-                            <Grid><TextBlock x:Uid="AuthorDetail_CoordinatesTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="3" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
-                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.CoordinatePreviews}" IsItemClickEnabled="True" ItemClick="CoordinatesGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewCoordinates_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
-                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
-                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CoordinateCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                        <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.HasCoordinates, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_CoordinatesTab" Style="{StaticResource SectionTitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="3" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView ItemsSource="{x:Bind ViewModel.CoordinatePreviews}" IsItemClickEnabled="True" ItemClick="CoordinatesGrid_ItemClick" CanDragItems="True" DragItemsStarting="OverviewCoordinates_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel Spacing="{StaticResource Space8}" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="models:CoordinateCard"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(Width, Height, 132)}" Height="132"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreateThumbnail(ThumbnailUri), Mode=OneWay}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
                             </GridView>
                         </StackPanel>
-                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasPosts, Mode=OneWay}">
-                            <Grid><TextBlock x:Uid="AuthorDetail_PostsTab" Style="{StaticResource SubtitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="4" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
-                            <GridView Height="144" ItemsSource="{x:Bind ViewModel.PostPreviews}" IsItemClickEnabled="True" ItemClick="OverviewPost_ItemClick" CanDragItems="True" DragItemsStarting="OverviewPosts_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Enabled" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollMode="Disabled">
-                                <GridView.ItemsPanel><ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></GridView.ItemsPanel>
-                                <GridView.ItemTemplate><DataTemplate x:DataType="viewModels:PostImageGroupViewModel"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(CoverAspectRatio, 132)}" Height="132" Margin="0,0,8,0"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(CoverImageUri), Mode=OneTime}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
+                        <StackPanel Spacing="{StaticResource Space8}" Visibility="{x:Bind ViewModel.HasPosts, Mode=OneWay}">
+                            <Grid><TextBlock x:Uid="AuthorDetail_PostsTab" Style="{StaticResource SectionTitleTextBlockStyle}" /><HyperlinkButton HorizontalAlignment="Right" Tag="4" Click="OverviewSection_Click" Padding="0"><TextBlock x:Uid="AuthorDetail_ViewAll" /></HyperlinkButton></Grid>
+                            <GridView ItemsSource="{x:Bind ViewModel.PostPreviews}" IsItemClickEnabled="True" ItemClick="OverviewPost_ItemClick" CanDragItems="True" DragItemsStarting="OverviewPosts_DragItemsStarting" SelectionMode="None" ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <GridView.ItemsPanel><ItemsPanelTemplate><controls:WrapPanel Spacing="{StaticResource Space8}" /></ItemsPanelTemplate></GridView.ItemsPanel>
+                                <GridView.ItemTemplate><DataTemplate x:DataType="viewModels:PostImageGroupViewModel"><Grid Width="{x:Bind local:AuthorDetailPage.GetPreviewWidth(CoverAspectRatio, 132)}" Height="132"><Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}"><Image Stretch="Uniform" Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(CoverImageUri), Mode=OneTime}" /></Border></Grid></DataTemplate></GridView.ItemTemplate>
                             </GridView>
                         </StackPanel>
                     </StackPanel>
@@ -204,7 +205,7 @@
             <PivotItem x:Name="ScenesPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontSize="14" Glyph="&#xE8B9;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphScene}" />
                         <TextBlock x:Uid="AuthorDetail_ScenesTab" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -218,7 +219,7 @@
             <PivotItem x:Name="CharactersPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontSize="14" Glyph="&#xE77B;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphCharacter}" />
                         <TextBlock x:Uid="AuthorDetail_CharactersTab" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -232,7 +233,7 @@
             <PivotItem x:Name="CoordinatesPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontSize="14" Glyph="&#xE78A;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphCoordinate}" />
                         <TextBlock x:Uid="AuthorDetail_CoordinatesTab" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -246,7 +247,7 @@
             <PivotItem x:Name="PostsPivotItem">
                 <PivotItem.Header>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontSize="14" Glyph="&#xE8F1;" />
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphInLibrary}" />
                         <TextBlock x:Uid="AuthorDetail_PostsTab" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -261,7 +262,7 @@
                     <StackPanel
                         Margin="0,8,0,4"
                         Orientation="Horizontal"
-                        Spacing="12"
+                        Spacing="{StaticResource Space12}"
                         Visibility="{x:Bind ViewModel.HasUnassignedImages, Mode=OneWay}">
                         <TextBlock
                             x:Uid="AuthorDetail_UnassignedFiles"
@@ -312,8 +313,8 @@
                                     <Border CornerRadius="{StaticResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                         <Image Stretch="UniformToFill" Source="{x:Bind local:AuthorDetailPage.CreatePostThumbnail(CoverImageUri), Mode=OneTime}" />
                                     </Border>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8" Padding="6,3" CornerRadius="{StaticResource ControlCornerRadius}" Background="#AA000000" Visibility="{x:Bind HasAdditionalImages, Mode=OneTime}">
-                                        <StackPanel Orientation="Horizontal" Spacing="4"><FontIcon Glyph="&#xE722;" FontSize="12" Foreground="White" /><TextBlock Text="{x:Bind AdditionalImageCountText, Mode=OneTime}" Foreground="White" Style="{StaticResource CaptionTextBlockStyle}" /></StackPanel>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource MediaOverlayBadgeStyle}" Margin="8" Visibility="{x:Bind HasAdditionalImages, Mode=OneTime}">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}"><FontIcon Glyph="&#xE722;" FontSize="12" Foreground="{ThemeResource MediaOverlayForegroundBrush}" /><TextBlock Text="{x:Bind AdditionalImageCountText, Mode=OneTime}" Foreground="{ThemeResource MediaOverlayForegroundBrush}" Style="{StaticResource CaptionTextBlockStyle}" /></StackPanel>
                                     </Border>
                                     <TextBlock Grid.Row="1" Margin="8,6" Text="{x:Bind Post.DisplayTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" MaxLines="1" />
                                 </Grid>

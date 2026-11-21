@@ -62,6 +62,35 @@ public sealed class CardScanServiceTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task ScannedCardsPlusUnreadableFilesMatchTheFileCount(bool batched)
+    {
+        using var files = new Files();
+        using var scanner = new Scanner();
+        var cards = await Scan(scanner, [files.Root], batched);
+
+        // Listed twice, as overlapping roots would, yet counted once.
+        var onDisk = await scanner.CountCardFilesAsync([files.Root, files.Root, Path.Combine(files.Root, "missing")]);
+
+        Assert.Equal(1, scanner.LastScanUnreadableCount);
+        Assert.Equal(onDisk, cards.Count + scanner.LastScanUnreadableCount);
+    }
+
+    [Fact]
+    public async Task FileCountNoticesAFileTheGalleryNeverSaw()
+    {
+        using var files = new Files();
+        using var scanner = new Scanner();
+        var cards = await Scan(scanner, [files.Root], batched: false);
+        File.WriteAllText(Path.Combine(files.Root, "added.card"), "fixture");
+
+        var onDisk = await scanner.CountCardFilesAsync([files.Root]);
+
+        Assert.NotEqual(onDisk, cards.Count + scanner.LastScanUnreadableCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task PreCancellationDoesNotEnumerate(bool batched)
     {
         using var files = new Files();

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory,
-    [string]$SdkVersion = "1.3.0",
+    [string]$SdkVersion = "1.7.0",
     [string]$CommonVersion = "0.2.0"
 )
 

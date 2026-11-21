@@ -1,3 +1,5 @@
+using KoikatsuSceneGallery.Helpers;
+
 namespace KoikatsuSceneGallery.Services;
 
 /// <summary>
@@ -70,7 +72,7 @@ internal sealed class ImportResolutionCoordinator<T>(
             }
             try
             {
-                if (!immediate) await _delay(TimeSpan.FromMilliseconds(150), owner.Token).ConfigureAwait(false);
+                if (!immediate) await _delay(AppTiming.ImportReResolveDelay, owner.Token).ConfigureAwait(false);
                 owner.Token.ThrowIfCancellationRequested();
                 var publish = await request.Prepare(owner.Token).ConfigureAwait(false);
                 owner.Token.ThrowIfCancellationRequested();

@@ -24,13 +24,25 @@ public readonly record struct CardOriginSelection
     private const string LegacyExcludeLocal = "ExcludeLocal";
     private const string LegacyLocalOnly = "LocalOnly";
 
-    /// <summary>The chosen platform, or null for all of them.</summary>
+    /// <summary>What config.json holds for <see cref="NoSource"/>. Not a provider id: providers are plain words.</summary>
+    private const string NoSourceValue = "!nosource";
+
+    /// <summary>The chosen platform, or null for all of them (and for <see cref="NoSource"/>).</summary>
     public string? ProviderId { get; private init; }
+
+    /// <summary>Only cards with no resolved author, which have no platform.</summary>
+    public bool IsNoSource { get; private init; }
 
     /// <summary>Every card, whatever platform it came from.</summary>
     public static CardOriginSelection All => default;
 
-    public bool IsAll => string.IsNullOrEmpty(ProviderId);
+    /// <summary>
+    /// Only cards still waiting for their source: no author resolved, so no
+    /// platform. A filter rather than a platform, so it has no provider id.
+    /// </summary>
+    public static CardOriginSelection NoSource => new() { IsNoSource = true };
+
+    public bool IsAll => string.IsNullOrEmpty(ProviderId) && !IsNoSource;
 
     public bool IsLocal => LocalSourceIdentity.IsLocal(ProviderId);
 
@@ -44,7 +56,7 @@ public readonly record struct CardOriginSelection
     /// <summary>
     /// What goes in config.json. A provider id, or empty for all.
     /// </summary>
-    public string ToConfigValue() => ProviderId ?? string.Empty;
+    public string ToConfigValue() => IsNoSource ? NoSourceValue : ProviderId ?? string.Empty;
 
     /// <summary>
     /// Reads a stored value, including one written by the old three-way switch.
@@ -67,6 +79,7 @@ public readonly record struct CardOriginSelection
         if (string.Equals(value, LegacyAll, StringComparison.OrdinalIgnoreCase)) return All;
         if (string.Equals(value, LegacyExcludeLocal, StringComparison.OrdinalIgnoreCase)) return All;
         if (string.Equals(value, LegacyLocalOnly, StringComparison.OrdinalIgnoreCase)) return Local;
+        if (string.Equals(value, NoSourceValue, StringComparison.Ordinal)) return NoSource;
 
         return For(value);
     }
@@ -86,9 +99,13 @@ public static class CardOriginQuery
     /// under All. The old switch let such a card through as "not local"; under
     /// a platform switch there is no platform it could honestly belong to, and
     /// showing it under an arbitrary one would be worse than leaving it to All.
+    /// Under <see cref="CardOriginSelection.NoSource"/> it is the other way
+    /// round: only those cards pass.
     /// </remarks>
     public static bool Passes(string? providerId, CardOriginSelection selection)
-        => selection.IsAll
+        => selection.IsNoSource
+            ? string.IsNullOrEmpty(providerId)
+            : selection.IsAll
            || (!string.IsNullOrEmpty(providerId)
                && string.Equals(providerId, selection.ProviderId, StringComparison.OrdinalIgnoreCase));
 }

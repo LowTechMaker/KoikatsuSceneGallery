@@ -25,6 +25,21 @@ public class ImportReviewPolicyTests
     }
 
     [Fact]
+    public void CardNamedByItsFileWithAFoundPostSkipsReview()
+        => Assert.True(ImportReviewPolicy.CanAutoImport(
+            ImportItemStatus.ReadyToImport, @"C:\lib\a.png", idFromFileName: true, postFound: true, hasAuthor: true));
+
+    [Theory]
+    [InlineData(false, true, true, ImportItemStatus.ReadyToImport, @"C:\lib\a.png")] // id not from the file name
+    [InlineData(true, false, true, ImportItemStatus.ReadyToImport, @"C:\lib\a.png")] // post not found
+    [InlineData(true, true, false, ImportItemStatus.ReadyToImport, @"C:\lib\a.png")] // no author
+    [InlineData(true, true, true, ImportItemStatus.AlreadyInLibrary, @"C:\lib\a.png")]
+    [InlineData(true, true, true, ImportItemStatus.ReadyToImport, null)] // no destination
+    public void AnyMissingPieceLeavesTheCardForReview(
+        bool idFromFileName, bool postFound, bool hasAuthor, ImportItemStatus status, string? destination)
+        => Assert.False(ImportReviewPolicy.CanAutoImport(status, destination, idFromFileName, postFound, hasAuthor));
+
+    [Fact]
     public void FailedMetadataLookupWithoutAuthorStaysUnidentified()
         => Assert.False(ImportReviewPolicy.IsIdentified(ImportItemStatus.Failed, false));
 

@@ -160,7 +160,11 @@ public sealed class AuthorPostService
             .DistinctBy(s => s.Folder, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var gameVersionFolders = new[] { config.KoikatsuFolderName, config.KoikatsuSunshineFolderName, "" };
-        var ratingFolders = new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName };
+        // "" finds authors of the three-level layout, directly under the
+        // provider folder. visitedAuthorDirectories below keeps a folder from
+        // being scanned twice should two of these names be the same.
+        var ratingFolders = new[] { config.GFolderName, config.R18FolderName, config.R18GFolderName, "" }
+            .Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
         foreach (var root in allRoots)
         {

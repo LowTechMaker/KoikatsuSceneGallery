@@ -94,7 +94,7 @@ public sealed partial class ImportDropZoneContent : UserControl
         {
             From = from,
             To = 0,
-            Duration = new Duration(TimeSpan.FromMilliseconds(260)),
+            Duration = CardMotion.Xaml(CardMotion.FlyDuration),
             EasingFunction = new BackEase { EasingMode = EasingMode.EaseIn, Amplitude = 0.4 },
         };
         Storyboard.SetTarget(animation, flap);

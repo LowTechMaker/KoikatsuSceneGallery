@@ -97,6 +97,13 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         ApplyFilter();
     }
 
+    protected override async Task<int?> CountCardFilesOnDiskAsync()
+        => await _cardService.CountCardFilesAsync((await _settingsService.LoadConfigAsync()).CharacterFolderPaths);
+
+    protected override int UnreadableCardFileCount => _cardService.LastScanUnreadableCount;
+
+    protected override Task ReloadCardsAsync() => LoadCardsCommand.ExecuteAsync(null);
+
     [RelayCommand]
     private Task LoadCardsAsync()
         => RunLoadAsync(async cancellationToken =>
@@ -114,8 +121,21 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
             _cardIndex.Clear();
             _versionIndex.Clear();
 
+            // Timed on the run's first load only (startup_timing.log). This library
+            // has no card cache: every file is opened on every start.
+            var timed = StartupTimingRecorder.IsFirstLoad("characters");
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             await _cardService.ScanFoldersAsync(paths,
                 batch => PublishScannedCards(batch, _cardIndex, cancellationToken), cancellationToken);
+            if (timed)
+            {
+                var scan = _cardService.LastScanCounts;
+                StartupTimingRecorder.Write("characters", [
+                    new("characters", "scan", clock.ElapsedMilliseconds, [("listed", scan.Listed), ("opened", scan.Opened),
+                        ("unreadable", _cardService.LastScanUnreadableCount)]),
+                    new("characters", "load.finished", StartupTimingRecorder.SinceProcessStart, [("cards", Cards.Count)]),
+                ]);
+            }
 
             ApplyFilter();
             _cardService.StartWatching(paths);
@@ -352,7 +372,7 @@ public partial class CharacterGalleryViewModel : GalleryViewModelBase, IDisposab
         var filterRes = HasResolutionFilter;
         var hasSourceFilter = SourceFilter != CardSourceFilterOption.All;
 
-        if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter
+        if (!hasSearch && !filterRes && !hasSourceFilter && !HasOriginFilter && !HasHiddenFilter
             && MetadataFilters.ActiveCount == 0)
         {
             CardsView.Filter = item =>

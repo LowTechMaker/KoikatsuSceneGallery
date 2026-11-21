@@ -31,6 +31,79 @@ public sealed class ImportReviewWorkspaceTests
     }
 
     [Fact]
+    public void SetSelectionSelectsExactlyTheChosenCardsWithOneNotification()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 200).Select(i => Item($"card{i}")).ToArray();
+        h.Workspace.Reconcile(items);
+        h.Flush();
+        h.Workspace.States[0].IsSelected = true; // a stale selection that must be replaced
+        var changes = 0;
+        h.Workspace.Changed += () => changes++;
+        var wanted = new HashSet<ImportItem>(items.Skip(10).Take(50));
+
+        h.Workspace.SetSelection(state => wanted.Contains(state.Item));
+
+        Assert.Equal(1, changes);
+        Assert.Equal(50, h.Workspace.SelectedCount);
+        Assert.Equal(wanted, h.Workspace.SelectedItems.ToHashSet());
+        Assert.False(h.Workspace.States[0].IsSelected);
+    }
+
+    [Fact]
+    public void SetSelectionLeavesCardsAlreadyInTheLibraryUnselected()
+    {
+        using var h = new Harness();
+        var inLibrary = Item("owned");
+        inLibrary.Status = ImportItemStatus.AlreadyInLibrary;
+        var fresh = Item("fresh");
+        h.Workspace.Reconcile([inLibrary, fresh]);
+        h.Flush();
+
+        h.Workspace.SetSelection(_ => true);
+
+        Assert.Same(fresh, Assert.Single(h.Workspace.SelectedItems));
+    }
+
+    [Fact]
+    public void SettingAPropertyOnEveryCardOfALargeListIsNotQuadratic()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 2000).Select(i =>
+        {
+            var item = Item("big" + i);
+            item.DestinationPath = "C:/lib/a/" + i + ".png";
+            return item;
+        }).ToArray();
+        h.Workspace.Reconcile(items);
+        h.Flush();
+
+        // This took about six seconds before the visible list stopped being re-sorted for
+        // every property change; the bound is generous so a slow machine does not fail it.
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var item in items) item.DestinationPath = "C:/lib/b/" + item.FileName;
+        watch.Stop();
+
+        Assert.True(watch.ElapsedMilliseconds < 1500, $"took {watch.ElapsedMilliseconds} ms");
+        Assert.Equal(2000, h.Workspace.VisibleItems.Count);
+    }
+
+    [Fact]
+    public void ACardWhoseRatingNoLongerMatchesTheFilterLeavesTheVisibleListAtOnce()
+    {
+        using var h = new Harness();
+        var stays = Item("stays");
+        var leaves = Item("leaves");
+        h.Workspace.Reconcile([stays, leaves]);
+        h.Workspace.SetFilter("AllAges");
+        h.Flush();
+
+        leaves.Rating = ContentRating.R18;
+
+        Assert.Same(stays, Assert.Single(h.Workspace.VisibleItems).Item);
+    }
+
+    [Fact]
     public void ReconcilePreservesIdentityAndUnsubscribesRemovedStates()
     {
         using var h = new Harness();
@@ -159,9 +232,9 @@ public sealed class ImportReviewWorkspaceTests
         foreach (var item in items) item.AuthorId = "author";
         h.Workspace.Reconcile(items);
         h.Flush();
-        var row = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow);
+        var row = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.ListItem);
         h.Workspace.Toggle(row.Items);
-        Assert.Equal(4, h.Workspace.SelectedCount);
+        Assert.Equal(1, h.Workspace.SelectedCount);
         var group = h.Workspace.Rows.Single(row => row.Kind == ImportReviewRowKind.Group);
         h.Workspace.Toggle(group.Items);
         Assert.Equal(5, h.Workspace.SelectedCount);
@@ -178,7 +251,6 @@ public sealed class ImportReviewWorkspaceTests
         b.AuthorId = "author";
         h.Workspace.Reconcile([a, b]);
         h.Workspace.Reconcile([a, b]);
-        h.Workspace.SetReviewViewportWidth(1000);
         Assert.Single(h.Queue);
         h.Flush();
         var section = h.Workspace.Rows.Single(row => row.Key == "Identified:");
@@ -194,24 +266,44 @@ public sealed class ImportReviewWorkspaceTests
     }
 
     [Fact]
-    public void WidthChangesRechunkAndReuseMatchingRows()
+    public void ModsGetTheirOwnSectionBeforeTheSkippedCards()
     {
         using var h = new Harness();
-        var items = Enumerable.Range(0, 5).Select(i => Item(i.ToString())).ToArray();
-        foreach (var item in items) item.AuthorId = "author";
+        var skipped = Item("owned");
+        skipped.Status = ImportItemStatus.AlreadyInLibrary;
+        var ready = Item("ready");
+        ready.AuthorId = "author";
+        h.Workspace.Reconcile([skipped, ready]);
+        var mod = new ModReviewItem(new Services.ModInstallCandidate("m.zipmod", new Services.ZipmodManifest("g", "Mod", "1", null, [])), null);
+        h.Workspace.SetMods([mod]);
+        h.Flush();
+
+        Assert.Equal(
+            [ImportReviewSection.Identified, ImportReviewSection.Mods, ImportReviewSection.Skipped],
+            h.Workspace.Rows.Where(r => r.Kind == ImportReviewRowKind.Section).Select(r => r.Section));
+        Assert.Same(mod, h.Workspace.Rows.Single(r => r.Kind == ImportReviewRowKind.ModItem).Mod);
+        // The skipped section starts collapsed: header only.
+        Assert.DoesNotContain(h.Workspace.Rows, r => r.Section == ImportReviewSection.Skipped && r.Kind == ImportReviewRowKind.ListItem);
+
+        h.Workspace.ToggleCollapsed(ImportReviewSection.Skipped);
+        h.Flush();
+        Assert.Contains(h.Workspace.Rows, r => r.Section == ImportReviewSection.Skipped && r.Kind == ImportReviewRowKind.ListItem);
+    }
+
+    [Fact]
+    public void ASectionHeaderReportsAllSomeOrNoneSelected()
+    {
+        using var h = new Harness();
+        var items = Enumerable.Range(0, 3).Select(i => Item(i.ToString())).ToArray();
         h.Workspace.Reconcile(items);
         h.Flush();
-        var first = h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow);
-        h.Workspace.SetReviewViewportWidth(double.NaN);
-        h.Workspace.SetReviewViewportWidth(32);
-        Assert.Empty(h.Queue);
-        h.Workspace.SetReviewViewportWidth(472);
-        h.Flush();
-        Assert.Same(first, h.Workspace.Rows.First(row => row.Kind == ImportReviewRowKind.GridRow));
-        Assert.Equal(3, h.Workspace.Rows.Count(row => row.Kind == ImportReviewRowKind.GridRow));
-        Assert.All(h.Workspace.States, state => Assert.Equal(214, state.TileWidth));
-        h.Workspace.SetReviewViewportWidth(472);
-        Assert.Empty(h.Queue);
+        var header = h.Workspace.Rows.Single(r => r.Kind == ImportReviewRowKind.Section);
+
+        Assert.False(header.SelectionState);
+        h.Workspace.States[0].IsSelected = true;
+        Assert.Null(header.SelectionState);
+        h.Workspace.SelectAll(true);
+        Assert.True(header.SelectionState);
     }
 
     [Fact]

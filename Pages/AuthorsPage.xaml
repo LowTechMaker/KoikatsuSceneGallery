@@ -22,8 +22,13 @@
               picker below appears only when there is something to pick.  -->
         <DataTemplate x:Key="AuthorTabTemplate" x:DataType="viewModels:AuthorProviderTabViewModel">
             <Grid>
+                <!--  Wave 17: a click selects (the details pane beside the grid says
+                      who it is); a double click or Enter opens the author's page.  -->
                 <GridView x:Name="AuthorsGrid" ItemsSource="{x:Bind GroupedAuthors.View}"
-                          IsItemClickEnabled="True" ItemClick="AuthorsGrid_ItemClick" SelectionMode="None"
+                          IsItemClickEnabled="False" SelectionMode="Single"
+                          SelectionChanged="AuthorsGrid_SelectionChanged" DoubleTapped="AuthorsGrid_DoubleTapped"
+                          PreviewKeyDown="AuthorsGrid_PreviewKeyDown"
+                          Padding="{x:Bind controls:UiMetrics.GridPadding}"
                           Loaded="AuthorsGrid_Loaded" SizeChanged="AuthorsGrid_SizeChanged">
                     <GridView.ItemsPanel><ItemsPanelTemplate><ItemsWrapGrid Orientation="Horizontal" GroupHeaderPlacement="Top" /></ItemsPanelTemplate></GridView.ItemsPanel>
                     <GridView.ItemContainerTransitions><TransitionCollection /></GridView.ItemContainerTransitions>
@@ -51,8 +56,8 @@
                             </Setter.Value></Setter>
                         </Style></GroupStyle.HeaderContainerStyle>
                         <GroupStyle.HeaderTemplate><DataTemplate x:DataType="viewModels:AuthorGroupViewModel">
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,12,0,8" Visibility="{x:Bind ShowHeader}">
-                                <TextBlock Text="{x:Bind Header}" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" Margin="4,12,0,8" Visibility="{x:Bind ShowHeader}">
+                                <TextBlock Text="{x:Bind Header}" Style="{StaticResource SectionTitleTextBlockStyle}" />
                                 <TextBlock Text="{x:Bind CountText, Mode=OneWay}" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </DataTemplate></GroupStyle.HeaderTemplate>
@@ -70,7 +75,7 @@
                                             Tag="{x:Bind}"
                                             Visibility="{x:Bind Display.HasProfileUrl, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE774;" />
+                                                <FontIcon Glyph="{StaticResource GlyphWeb}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                         <MenuFlyoutItem
@@ -78,7 +83,7 @@
                                             Click="RefreshOne_Click"
                                             Tag="{x:Bind}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE72C;" />
+                                                <FontIcon Glyph="{StaticResource GlyphRefresh}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                         <MenuFlyoutItem
@@ -87,7 +92,7 @@
                                             Tag="{x:Bind}"
                                             Visibility="{x:Bind Display.IsLocalSource, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE70F;" />
+                                                <FontIcon Glyph="{StaticResource GlyphEdit}" />
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                     </MenuFlyout>
@@ -96,8 +101,8 @@
                         </DataTemplate>
                     </GridView.ItemTemplate>
                 </GridView>
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Visibility="{x:Bind IsEmpty, Mode=OneWay}">
-                    <FontIcon Glyph="&#xE721;" FontSize="32" />
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Space12}" Visibility="{x:Bind IsEmpty, Mode=OneWay}">
+                    <FontIcon Glyph="{StaticResource GlyphSearch}" FontSize="32" />
                     <TextBlock x:Uid="Authors_NoResults" />
                     <Button x:Uid="SceneGallery_ResetSearch" Click="ClearSearch_Click" HorizontalAlignment="Center" />
                 </StackPanel>
@@ -105,99 +110,70 @@
         </DataTemplate>
     </Page.Resources>
 
-    <Grid Padding="24,16,24,0" RowSpacing="12">
+    <!--  The same layout as the library (user request: the two pages should look
+          like one app): the platforms are the title, as the library's card kinds
+          are, with the count and sort on their right; the search box below with
+          the page's actions beside it, where the library has filter and random.  -->
+    <Grid Padding="{StaticResource PageContentPadding}" RowSpacing="{StaticResource Space12}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid ColumnSpacing="12">
+        <Grid ColumnSpacing="{StaticResource Space12}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
+            <!--  The title when there is no platform to pick (one platform, or the title bar names it).  -->
             <TextBlock
-                x:Uid="Authors_Title"
-                Style="{StaticResource TitleTextBlockStyle}" />
-
+                x:Name="TitleText"
+                AutomationProperties.HeadingLevel="Level1"
+                VerticalAlignment="Bottom"
+                Style="{StaticResource PageTitleTextBlockStyle}"
+                TextTrimming="CharacterEllipsis" />
+            <!--  The platforms, when there is a choice: the selected one is the
+                  title (large), the others small and quiet - the library's selector.  -->
+            <SelectorBar
+                x:Name="PlatformBar"
+                x:Uid="Authors_PlatformBar"
+                AutomationProperties.AutomationId="AuthorsPlatformBar"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed"
+                SelectionChanged="PlatformBar_SelectionChanged" />
             <StackPanel
                 Grid.Column="1"
                 Orientation="Horizontal"
-                VerticalAlignment="Center"
-                Spacing="8"
-                Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}">
-                <ProgressRing
-                    Width="16"
-                    Height="16"
-                    IsActive="True" />
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    Text="{x:Bind ViewModel.RefreshProgress, Mode=OneWay}" />
-            </StackPanel>
-
-            <StackPanel
-                Grid.Column="2"
-                Orientation="Horizontal"
-                Spacing="8">
-                <Button
-                    x:Uid="Authors_RefreshAll"
-                    AutomationProperties.AutomationId="AuthorsRefreshAllButton"
-                    IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
-                    Command="{x:Bind ViewModel.RefreshAllCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                        <TextBlock x:Uid="Authors_RefreshAllLabel" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="1" ColumnSpacing="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <AutoSuggestBox
-                x:Name="AuthorSearchBox"
-                x:Uid="Authors_SearchBox"
-                AutomationProperties.AutomationId="AuthorSearchBox"
-                Height="32"
-                QueryIcon="Find"
-                TextChanged="AuthorSearchBox_TextChanged" />
-
-            <!--  The count belongs with the controls that change it, not inside
-                  the platform's name. It read as "Fanbox (26)" — a heading
-                  carrying a statistic — which is how the galleries used to do
-                  it before the same move was made there.  -->
-            <StackPanel
-                Grid.Column="1"
-                Orientation="Horizontal"
-                Spacing="8"
+                Spacing="{StaticResource Space8}"
                 VerticalAlignment="Center">
+                <!--  Refreshing: a ring and a word beside the count, as the library's busy status.  -->
+                <StackPanel
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Spacing="6"
+                    Margin="0,0,4,0"
+                    Visibility="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}">
+                    <ProgressRing Width="14" Height="14" IsActive="True" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ViewModel.RefreshProgress, Mode=OneWay}" />
+                </StackPanel>
                 <TextBlock
                     x:Name="AuthorCount"
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     VerticalAlignment="Center"
                     Margin="0,0,4,0" />
-                <!--  Same control as the galleries' sort: three exclusive
-                      values behind one button, with the current one on its
-                      face. A ComboBox here spelt the same thing differently
-                      two pages apart.  -->
                 <DropDownButton
                     x:Name="SortButton"
                     x:Uid="Authors_Sort"
-                    AutomationProperties.AutomationId="AuthorSortButton"
-                    Height="32">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE8CB;" />
+                    AutomationProperties.AutomationId="AuthorSortButton">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphSort}" />
                         <TextBlock x:Name="SortLabel" />
                     </StackPanel>
                     <DropDownButton.Flyout>
@@ -211,28 +187,50 @@
             </StackPanel>
         </Grid>
 
-        <!--  Only present while the choice is real: the title bar names the
-              platform whenever one is selected, and repeating that here as a
-              selected tab said the same thing twice, louder than the control
-              that actually decides it.
-
-              SelectorBar rather than Segmented: this is the same underlined
-              text strip the library selector uses, and it is what this page
-              looked like when the platforms were pivot headers. Segmented's
-              filled pills read as a filter chip row — a different promise from
-              "these are the sections of this page".  -->
-        <SelectorBar
-            x:Name="PlatformBar"
-            x:Uid="Authors_PlatformBar"
-            Grid.Row="2"
-            AutomationProperties.AutomationId="AuthorsPlatformBar"
-            HorizontalAlignment="Left"
-            Visibility="Collapsed"
-            SelectionChanged="PlatformBar_SelectionChanged" />
-
-        <Grid Grid.Row="3" ColumnSpacing="8">
+        <Grid Grid.Row="1" ColumnSpacing="{StaticResource Space8}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <AutoSuggestBox
+                x:Name="AuthorSearchBox"
+                x:Uid="Authors_SearchBox"
+                AutomationProperties.AutomationId="AuthorSearchBox"
+                QueryIcon="Find"
+                TextChanged="AuthorSearchBox_TextChanged" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                <!--  On the local tab: a new source is made by bringing cards in, which
+                      the local sources page does (its drop zone). Online refresh has
+                      nothing to do there, so the two swap.  -->
+                <Button
+                    x:Name="AddLocalButton"
+                    AutomationProperties.AutomationId="AuthorsAddLocalButton"
+                    Visibility="Collapsed"
+                    Click="LocalSources_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphAdd}" />
+                        <TextBlock x:Uid="LocalSources_AddSource" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    x:Name="RefreshAllButton"
+                    x:Uid="Authors_RefreshAll"
+                    AutomationProperties.AutomationId="AuthorsRefreshAllButton"
+                    IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
+                    Command="{x:Bind ViewModel.RefreshAllCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                        <FontIcon FontSize="{StaticResource IconSize}" Glyph="{StaticResource GlyphRefresh}" />
+                        <TextBlock x:Uid="Authors_RefreshAllLabel" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid x:Name="AuthorsContent" Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <!--  The details pane (AuthorInspector, added in code).  -->
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 

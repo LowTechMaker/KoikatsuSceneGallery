@@ -26,7 +26,11 @@ internal sealed record ImportLibraryIndexResult(
     long FolderIndexElapsedMs,
     int TotalCandidatesCompared,
     int ActualIdenticalDuplicates,
-    int ActualContentMismatches);
+    int ActualContentMismatches)
+{
+    /// <summary>For each source in <see cref="IdenticalSourcePaths"/>, the library file it matched.</summary>
+    public Dictionary<string, string> ExistingLibraryPaths { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+}
 
 // Builds detached indexes only; it never changes workspace items or performs imports.
 internal sealed class ImportLibraryIndexer(
@@ -74,7 +78,10 @@ internal sealed class ImportLibraryIndexer(
                 folderIndexStopwatch.ElapsedMilliseconds,
                 duplicateDetection.TotalCandidatesCompared,
                 duplicateDetection.ActualIdenticalDuplicates,
-                duplicateDetection.ActualContentMismatches);
+                duplicateDetection.ActualContentMismatches)
+            {
+                ExistingLibraryPaths = duplicateDetection.ExistingLibraryPaths,
+            };
         }, cancellationToken);
 
     private Dictionary<string, List<string>> BuildExistingFileIndex(
@@ -114,6 +121,7 @@ internal sealed class ImportLibraryIndexer(
         CancellationToken cancellationToken)
     {
         var identicalSourcePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var existingLibraryPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var totalCandidatesCompared = 0;
         var actualIdenticalDuplicates = 0;
         var actualContentMismatches = 0;
@@ -144,6 +152,7 @@ internal sealed class ImportLibraryIndexer(
                         {
                             actualIdenticalDuplicates++;
                             identicalSourcePaths.Add(item.SourceFilePath);
+                            existingLibraryPaths[item.SourceFilePath] = candidate;
                             matched = true;
                             break;
                         }
@@ -219,6 +228,7 @@ internal sealed class ImportLibraryIndexer(
                     {
                         actualIdenticalDuplicates++;
                         identicalSourcePaths.Add(item.SourceFilePath);
+                        existingLibraryPaths[item.SourceFilePath] = candidate;
                         break;
                     }
 
@@ -242,7 +252,8 @@ internal sealed class ImportLibraryIndexer(
             identicalSourcePaths,
             totalCandidatesCompared,
             actualIdenticalDuplicates,
-            actualContentMismatches);
+            actualContentMismatches,
+            existingLibraryPaths);
     }
 
     /// <summary>
@@ -325,7 +336,8 @@ internal sealed class ImportLibraryIndexer(
         HashSet<string> IdenticalSourcePaths,
         int TotalCandidatesCompared,
         int ActualIdenticalDuplicates,
-        int ActualContentMismatches);
+        int ActualContentMismatches,
+        Dictionary<string, string> ExistingLibraryPaths);
 
     internal static string BuildScopeKey(
         string root,

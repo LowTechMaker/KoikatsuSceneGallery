@@ -80,12 +80,12 @@ public sealed partial class ArtworkRefetchService : ObservableObject
         string? backupRoot = null)
     {
         _posts = posts;
-        _backups = new SidecarBackupStore(backupRoot ?? Path.Combine(AppPaths.LocalFolder, "refetch-backups"));
+        _backups = new SidecarBackupStore(backupRoot ?? Path.Combine(AppPaths.LocalFolder, AppFiles.RefetchBackupsFolder));
         _dispatcher = dispatcher;
         _logger = logger;
         _onCompleted = onCompleted;
-        _statePath = statePath ?? Path.Combine(AppPaths.LocalFolder, "artwork-refetch.json");
-        _gonePath = Path.Combine(Path.GetDirectoryName(_statePath)!, "artwork-refetch-gone.json");
+        _statePath = statePath ?? Path.Combine(AppPaths.LocalFolder, AppFiles.ArtworkRefetchState);
+        _gonePath = Path.Combine(Path.GetDirectoryName(_statePath)!, AppFiles.ArtworkRefetchGone);
         _runs = LoadRuns();
         _gone = LoadGone();
     }

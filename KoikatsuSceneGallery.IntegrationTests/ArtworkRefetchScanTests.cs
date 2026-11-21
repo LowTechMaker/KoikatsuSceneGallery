@@ -90,6 +90,24 @@ public sealed partial class ArtworkRefetchScanTests : IDisposable
     }
 
     [Fact]
+    public async Task AnAuthorInTheThreeLevelLayoutIsScannedBesideOldOnesAndOnlyOnce()
+    {
+        // New imports put authors straight under the provider folder. The
+        // scan must find them, and the empty rating folder name that makes it
+        // do so must not make it walk an author twice.
+        Card("2002_p0.png");
+        var current = Path.Combine(_root, "Organized", "Pixiv", "Other (456)");
+        Directory.CreateDirectory(Path.Combine(current, "Title (4004)"));
+        File.WriteAllBytes(Path.Combine(current, "Title (4004)", "a.png"), [0x89, 0x50, 0x4E, 0x47]);
+
+        var scan = await _service.ScanProviderPostDataAsync("pixiv", default);
+
+        Assert.Equal(["2002", "4004"], scan.Posts.Select(p => p.ArtworkId.Id).Order());
+        Assert.Equal(1, scan.Posts.Single(p => p.ArtworkId.Id == "4004").LocalFileCount);
+        Assert.Equal(1, scan.Posts.Single(p => p.ArtworkId.Id == "2002").LocalFileCount);
+    }
+
+    [Fact]
     public async Task TheAuthorFolderIsNeverTakenForAnArtwork()
     {
         // "Artist (123)" parses as an artwork folder too. The outermost match

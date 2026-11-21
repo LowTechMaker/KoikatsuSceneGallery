@@ -19,13 +19,88 @@ public sealed class GalleryEntry : ObservableObject, IDisposable
     public IReadOnlyList<CardBase> Members { get; }
     public CardBase Card => Members[0];
     public bool IsGroup => Members.Count > 1;
+    /// <summary>A third card peeks out of the stack only when there is a third card.</summary>
+    public bool HasThirdLayer => Members.Count > 2;
+
+    /// <summary>The cards fanned out behind a group's cover (the cover itself when there is no such card).</summary>
+    public CardBase SecondCard => Members.Count > 1 ? Members[1] : Card;
+    public CardBase ThirdCard => Members.Count > 2 ? Members[2] : SecondCard;
+
+    /// <summary>
+    /// Room around a group's cover for the cards fanned behind it, drawn like
+    /// the details pane's stack of selected cards (user request); none for a
+    /// single card, whose picture fills its cell.
+    /// </summary>
+    public Microsoft.UI.Xaml.Thickness FaceMargin => IsGroup
+        ? Controls.UiMetrics.GroupCoverInset
+        : new Microsoft.UI.Xaml.Thickness(0);
+
+    /// <summary>The number on a group's count badge.</summary>
+    public string MemberCountText => Members.Count.ToString();
     public bool ShowTitle { get; }
-    public double MetadataHeight => ShowTitle ? 52 : 32;
+    /// <summary>
+    /// The caption under the picture: title and author, or nothing at all when
+    /// file names are switched off. That switch used to leave the author line
+    /// behind; the user asked for the picture and the rating badge only.
+    /// </summary>
+    public double MetadataHeight => ShowTitle ? CaptionHeight : 0;
+
+    /// <summary>The caption under the picture in card mode: title, then author and badges (LibraryBrowser, the layout reserve).</summary>
+    public const double CaptionHeight = Controls.UiMetrics.CardCaptionHeight;
+
+    /// <summary>The plainer two-line caption random discovery puts under its pictures.</summary>
+    public const double SimpleCaptionHeight = Controls.UiMetrics.SimpleCaptionHeight;
+
+    // Two looks, by the "show file names" setting (GalleryLayoutEngine.SetChrome):
+    // photo mode, pictures edge to edge with their badges on them; card mode, a
+    // framed card with everything (title, author, rating, count, versions) under
+    // the picture so nothing covers it (user request).
+    public const double PhotoMargin = Controls.UiMetrics.PhotoTileMargin,
+        CardModeMargin = Controls.UiMetrics.CardTileMargin,
+        CardModeInset = Controls.UiMetrics.CardTileInset;
+    /// <summary>Room under every card in card mode, where a group's stacked sheets show.</summary>
+    public const double StackRoom = 0;
+    public Microsoft.UI.Xaml.Thickness TileMargin => new(ShowTitle ? CardModeMargin : PhotoMargin);
+    public Microsoft.UI.Xaml.Thickness PictureInset => ShowTitle
+        ? new Microsoft.UI.Xaml.Thickness(CardModeInset, CardModeInset, CardModeInset, 0)
+        : new Microsoft.UI.Xaml.Thickness(0);
+    /// <summary>The card itself leaves <see cref="StackRoom"/> under it for the sheets of a group.</summary>
+    public Microsoft.UI.Xaml.Thickness CardFrameMargin => new(0);
+    /// <summary>The picture's corners: rounded inside a card, square edge to edge.</summary>
+    public Microsoft.UI.Xaml.CornerRadius PictureCorners => new(ShowTitle ? Controls.UiMetrics.CardPictureCorner : 0);
+    public bool BadgesOnPicture => !ShowTitle;
+    public bool GroupBadgeOnPicture => IsGroup && !ShowTitle;
+    public bool VersionBadgeOnPicture => HasVersionBadge && !ShowTitle;
+    public bool VersionInCaption => HasVersionBadge && ShowTitle;
+    public bool GroupInCaption => IsGroup && ShowTitle;
+    /// <summary>Photo mode: a group's next cards fanned out behind its cover.</summary>
+    public bool FanBehind => IsGroup && !ShowTitle;
+    public bool FanThird => HasThirdLayer && !ShowTitle;
+    /// <summary>Card mode: a group's sheets stacked under the card, like paper.</summary>
+    public bool SheetBehind => IsGroup && ShowTitle;
+    public bool SheetThird => HasThirdLayer && ShowTitle;
+    /// <summary>"No author" says itself quietly; a known author is ordinary secondary text.</summary>
+    public bool HasAuthor => Author is not null;
+    public bool NoAuthor => Author is null;
+
+    private bool _isSelected;
+    /// <summary>
+    /// Whether the tile is selected in the grid. Kept here so the tile can draw
+    /// its own strong selection mark; the grid's default one, a thin accent
+    /// line, was hard to see on a picture.
+    /// </summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
     public string CountText => UiText.Format("SceneGallery_GroupCount", Members.Count);
     public AuthorDisplay? Author => (Card as IAuthorOwner)?.Author;
     public string AuthorText => Author?.Name ?? UiText.Get("SceneGallery_UnknownAuthor");
     public bool IsR18 => Card is SceneCard { IsR18Content: true };
-    public string RatingText => Card is SceneCard ? (IsR18 ? "R-18" : "G") : string.Empty;
+    public string RatingText => Card is SceneCard scene
+        ? scene.Rating switch { SceneRating.R18G => RatingLabels.R18G, SceneRating.R18 => RatingLabels.R18, _ => RatingLabels.General }
+        : string.Empty;
     public bool HasVersions => Card is CharacterCard { HasVersions: true };
     public string VersionText => Card is CharacterCard c ? UiText.Format("Browser_Versions", c.VersionCount) : "";
     // The tile only ever shows the character's representative, so the marker

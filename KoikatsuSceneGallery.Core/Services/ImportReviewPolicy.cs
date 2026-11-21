@@ -5,7 +5,8 @@ namespace KoikatsuSceneGallery.Services;
 public static class ImportReviewPolicy
 {
     public static Helpers.ImportReviewSection Section(ImportItemStatus status, bool hasAuthor, bool hasArtwork)
-        => IsIdentified(status, hasAuthor) ? Helpers.ImportReviewSection.Identified
+        => status is ImportItemStatus.AlreadyInLibrary ? Helpers.ImportReviewSection.Skipped
+            : IsIdentified(status, hasAuthor) ? Helpers.ImportReviewSection.Identified
             : hasArtwork && status is not (ImportItemStatus.Pending or ImportItemStatus.Analyzing)
                 ? Helpers.ImportReviewSection.Unavailable : Helpers.ImportReviewSection.Unidentified;
 
@@ -16,6 +17,15 @@ public static class ImportReviewPolicy
 
     public static bool CanExecute(ImportItemStatus status, string? destination)
         => status == ImportItemStatus.ReadyToImport && !string.IsNullOrWhiteSpace(destination);
+
+    /// <summary>
+    /// Whether a card can skip review: its file name named a post, that post
+    /// was found, and it named the author. Anything less leaves a decision to
+    /// the user, so the card waits for review instead.
+    /// </summary>
+    public static bool CanAutoImport(
+        ImportItemStatus status, string? destination, bool idFromFileName, bool postFound, bool hasAuthor)
+        => idFromFileName && postFound && hasAuthor && CanExecute(status, destination);
 
     public static string Category(ImportItemStatus status, string? destination, bool hasAuthor, bool hasArtwork) => status switch
     {

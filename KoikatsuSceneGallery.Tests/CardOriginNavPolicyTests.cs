@@ -63,4 +63,33 @@ public class CardOriginNavPolicyTests
         Assert.True(CardOriginNavPolicy.ShowLocalSources(CardOriginSelection.Local));
         Assert.False(CardOriginNavPolicy.ShowLocalSources(CardOriginSelection.For("pixiv")));
     }
+
+    [Fact]
+    public void WithoutAPluginTheEntriesStayAndExplain()
+    {
+        // Hidden entries left people without a plugin no way to learn the
+        // features existed; they now open a page naming the plugin instead.
+        Assert.Equal(NavEntryState.NeedsPlugin, CardOriginNavPolicy.Authors(CardOriginSelection.All, false, []));
+        Assert.Equal(NavEntryState.NeedsPlugin, CardOriginNavPolicy.Tags(CardOriginSelection.All, false, []));
+        Assert.Equal(NavEntryState.NeedsPlugin, CardOriginNavPolicy.Import(false));
+    }
+
+    [Fact]
+    public void WithAPluginAPlatformWithoutTheDataStillHidesTheEntry()
+    {
+        // An absence is not something to install: FANBOX has no tags, local
+        // has no authors, and neither should offer a page about plugins.
+        Assert.Equal(NavEntryState.Hidden, CardOriginNavPolicy.Tags(CardOriginSelection.For("fanbox"), true, WithTags));
+        Assert.Equal(NavEntryState.Hidden, CardOriginNavPolicy.Authors(CardOriginSelection.Local, true, WithAuthors));
+        Assert.Equal(NavEntryState.Shown, CardOriginNavPolicy.Authors(CardOriginSelection.All, true, WithAuthors));
+        Assert.Equal(NavEntryState.Shown, CardOriginNavPolicy.Import(true));
+    }
+
+    [Fact]
+    public void AnInstalledPluginWhoseScanHasNotFinishedIsNotReportedMissing()
+    {
+        // The author tabs are filled by a scan; until then the list is empty,
+        // which must not read as "install a plugin".
+        Assert.Equal(NavEntryState.Hidden, CardOriginNavPolicy.Authors(CardOriginSelection.All, true, []));
+    }
 }

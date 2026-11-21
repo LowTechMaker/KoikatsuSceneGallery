@@ -99,7 +99,7 @@ internal static class CookieSetupDialogService
                 {
                     while (!token.IsCancellationRequested && !completed)
                     {
-                        await Task.Delay(500, token).ConfigureAwait(false);
+                        await Task.Delay(AppTiming.CookiePoll, token).ConfigureAwait(false);
                         _ = dispatcherQueue.TryEnqueue(
                             () => TryCompleteAsync().Observe(logger, "CookieSetup.CompleteFromPolling"));
                     }
@@ -131,7 +131,7 @@ internal static class CookieSetupDialogService
                 webView.Visibility = Visibility.Collapsed;
                 dialog.Content = new TextBlock
                 {
-                    Text = $"Failed to initialize WebView2: {ex.Message}",
+                    Text = UiText.Format("Cookie_WebViewFailed", ex.Message),
                     TextWrapping = TextWrapping.Wrap,
                 };
             }

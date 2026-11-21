@@ -46,7 +46,7 @@ public sealed partial class UsageHistoryPage : Page
     private void UpdateChrome()
     {
         EmptyPanel.Visibility = _viewModel.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
-        Subtitle.Text = UiText.Format("Usage_Count", _viewModel.Rows.Count);
+        Header.Subtitle = UiText.Format("Usage_Count", _viewModel.Rows.Count);
     }
 
     /// <summary>Opens the page the card came from. Local cards never have one.</summary>
@@ -65,7 +65,8 @@ public sealed partial class UsageHistoryPage : Page
     private void Export_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.Rows.Count == 0) return;
-        DetailNavigationHelper.CopyText(_viewModel.ToPlainText());
+        DetailNavigationHelper.CopyText(
+            _viewModel.ToPlainText(), UiText.Format("Usage_Copied", _viewModel.Rows.Count));
     }
 
     private void Clear_Click(object sender, RoutedEventArgs e) => UiEventGuard.Run(
@@ -83,5 +84,6 @@ public sealed partial class UsageHistoryPage : Page
             if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
             await _viewModel.ClearAsync();
             UpdateChrome();
+            AppToast.Show(UiText.Get("Usage_Cleared"), InfoBarSeverity.Success);
         });
 }

@@ -61,7 +61,7 @@ public sealed class PluginService
         _pluginStorageDirectory = pluginStorageDirectory;
         _pluginLogPath = Path.Combine(
             Path.GetDirectoryName(pluginStorageDirectory) ?? pluginStorageDirectory,
-            "plugins.log");
+            AppFiles.PluginsLog);
     }
 
     /// <summary>Folder scanned for plugins: Plugins\&lt;name&gt;\&lt;name&gt;.dll next to the exe.</summary>
@@ -70,7 +70,7 @@ public sealed class PluginService
     private string ResolvePluginsDirectory()
     {
         var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var primary = Path.Combine(baseDir, "Plugins");
+        var primary = Path.Combine(baseDir, AppFiles.PluginsFolder);
         if (HasPluginAssemblies(primary)) return primary;
 
         // Packaged dev launches (VS F5 / dotnet run) execute from the AppX
@@ -80,7 +80,7 @@ public sealed class PluginService
         if (string.Equals(Path.GetFileName(baseDir), "AppX", StringComparison.OrdinalIgnoreCase)
             && Path.GetDirectoryName(baseDir) is { } parent)
         {
-            var sibling = Path.Combine(parent, "Plugins");
+            var sibling = Path.Combine(parent, AppFiles.PluginsFolder);
             if (HasPluginAssemblies(sibling)) return sibling;
         }
         return primary;
@@ -128,6 +128,14 @@ public sealed class PluginService
     /// <summary>All loaded plugin update providers, tried in load order.</summary>
     public IReadOnlyList<IPluginUpdateProvider> UpdateProviders => _updateProviders;
     private readonly List<IPluginUpdateProvider> _updateProviders = [];
+
+    /// <summary>All loaded post-link inspectors, which read the file names behind a post's download links.</summary>
+    public IReadOnlyList<IPostLinkInspector> PostLinkInspectors => _postLinkInspectors;
+    private readonly List<IPostLinkInspector> _postLinkInspectors = [];
+
+    /// <summary>All loaded author-post listers, which find every post an author has published.</summary>
+    public IReadOnlyList<IAuthorPostLister> AuthorPostListers => _authorPostListers;
+    private readonly List<IAuthorPostLister> _authorPostListers = [];
 
     private readonly Dictionary<string, ITagDictionaryProvider> _tagDictionaryProviders =
         new(StringComparer.OrdinalIgnoreCase);
@@ -305,6 +313,12 @@ public sealed class PluginService
 
             if (plugin is IPluginUpdateProvider updateProvider)
                 _updateProviders.Add(updateProvider);
+
+            if (plugin is IAuthorPostLister authorPostLister)
+                _authorPostListers.Add(authorPostLister);
+
+            if (plugin is IPostLinkInspector postLinkInspector)
+                _postLinkInspectors.Add(postLinkInspector);
 
             if (plugin is ITagDictionaryProvider tagDictionaryProvider)
                 _tagDictionaryProviders[tagDictionaryProvider.ProviderId] = tagDictionaryProvider;

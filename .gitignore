@@ -58,7 +58,8 @@ Generated\ Files/
 
 # Local sample/comparison cards (personal data, not for version control)
 compare/
-.claude/
+.claude/*
+!.claude/skills/
 .codex-remote-attachments/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).

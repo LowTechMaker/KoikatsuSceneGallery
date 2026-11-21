@@ -497,7 +497,7 @@
   <data name="Nav_Authors.Content" xml:space="preserve">
     <value>作者</value>
   </data>
-  <data name="Authors_Title.Text" xml:space="preserve">
+  <data name="Authors_Header.Title" xml:space="preserve">
     <value>作者</value>
   </data>
   <data name="Authors_Empty.Text" xml:space="preserve">
@@ -720,12 +720,8 @@
   <data name="Import_AddFilesOverlayCard.AutomationProperties.Name" xml:space="preserve">
     <value>加入文件：将 Koikatsu 卡片拖放到此处</value>
   </data>
-  <data name="Import_DropZoneTitle.Text" xml:space="preserve">
-    <value>将 Koikatsu 卡片拖放到此处</value>
-  </data>
-  <data name="Import_DropZoneHint.Text" xml:space="preserve">
-    <value>拖放从 pixiv 或 BepisDB 下载的 PNG 文件</value>
-  </data>
+  <data name="Import_DropZoneTitle.Text" xml:space="preserve"><value>将恋活卡片、mod 或压缩包拖放到此处</value></data>
+  <data name="Import_DropZoneHint.Text" xml:space="preserve"><value>PNG 卡片、.zipmod 与 .zip 压缩包（会自动解开）</value></data>
   <data name="Import_AllAges.Text" xml:space="preserve">
     <value>全年龄</value>
   </data>
@@ -980,7 +976,7 @@
     <value>正在执行批量导入：已处理 {0} / {1} 张卡片...</value>
   </data>
   <data name="Import_Phase_RollingBack" xml:space="preserve">
-    <value>侦测到冲突或用户取消。正在执行全批次回滚与 Sidecar 安全解绑...</value>
+    <value>导入中途失败或被取消，正在把已移动的文件全部放回原处…</value>
   </data>
   <data name="Import_Phase_Completed" xml:space="preserve">
     <value>导入交易流程结算完成。</value>
@@ -1054,7 +1050,6 @@
   <data name="Import_UnknownEmpty_Description.Text" xml:space="preserve"><value>可切换至“已识别”查看导入列表，也可以继续拖入其他 PNG 卡片。</value></data>
   <data name="Import_Review_AlreadyInLibrary_Title" xml:space="preserve"><value>这些卡片已在收藏库中</value></data>
   <data name="Import_Review_AlreadyInLibrary_Description" xml:space="preserve"><value>不需要重复导入。可以清空列表，或继续拖入其他 PNG 卡片。</value></data>
-  <data name="Import_Options.Content" xml:space="preserve"><value>导入选项</value></data>
   <data name="Import_OptionsTitle.Text" xml:space="preserve"><value>导入选项</value></data>
   <data name="Import_SelectVisibleCompact.Content" xml:space="preserve"><value>全选</value></data>
   <data name="Import_SelectVisibleCompact.AutomationProperties.Name" xml:space="preserve"><value>选择当前列表</value></data>
@@ -1067,7 +1062,6 @@
   <data name="Import_EditSelectedDetails.Text" xml:space="preserve"><value>调整分级与作者</value></data>
   <data name="Import_SelectSection.Content" xml:space="preserve"><value>选择／取消本区</value></data>
   <data name="Import_SelectSection.AutomationProperties.Name" xml:space="preserve"><value>选择或取消本区卡片</value></data>
-  <data name="Import_More.Content" xml:space="preserve"><value>更多</value></data>
   <data name="Import_More_Undo.Text" xml:space="preserve"><value>撤销上次编辑</value></data>
   <data name="Import_More_Clear.Text" xml:space="preserve"><value>清空待导入列表</value></data>
   <data name="Settings_Subtitle.Text" xml:space="preserve">
@@ -1182,16 +1176,13 @@
     <value>筛选内容与环境</value>
   </data>
   <data name="SceneGallery_Rating.Header" xml:space="preserve">
-    <value>显示 R-18 内容</value>
+    <value>分级</value>
   </data>
   <data name="SceneGallery_Environment.Header" xml:space="preserve">
     <value>游戏环境</value>
   </data>
   <data name="SceneGallery_FilterHint.Text" xml:space="preserve">
     <value>分辨率与插件分析可在设置中调整。</value>
-  </data>
-  <data name="Browser_ResolutionFilterActive" xml:space="preserve">
-    <value>图片尺寸筛选已启用 · 已在设置中选择 {0} 种尺寸</value>
   </data>
   <data name="SceneGallery_FilterSettings.Content" xml:space="preserve">
     <value>打开图库设置</value>
@@ -1260,8 +1251,8 @@
   <data name="Import_StatusNeedsInfo.Content" xml:space="preserve"><value>缺少资料</value></data>
   <data name="Import_StatusFailed.Content" xml:space="preserve"><value>获取失败</value></data>
   <data name="Import_StatusExisting.Content" xml:space="preserve"><value>已在收藏库</value></data>
-  <data name="Import_Status_Ready" xml:space="preserve"><value>待确认</value></data>
-  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>缺少资料</value></data>
+  <data name="Import_Status_Ready" xml:space="preserve"><value>准备好</value></data>
+  <data name="Import_Status_NeedsInfo" xml:space="preserve"><value>未识别</value></data>
   <data name="Import_Status_Failed" xml:space="preserve"><value>获取失败</value></data>
   <data name="Import_Status_Existing" xml:space="preserve"><value>已在收藏库</value></data>
   <data name="Import_Status_Analyzing" xml:space="preserve"><value>分析中</value></data>
@@ -1272,7 +1263,6 @@
   <data name="PostDetail_Unsaved" xml:space="preserve"><value>详细资料尚未保存</value></data>
   <data name="PostDetail_LocalFiles" xml:space="preserve"><value>{0:N0} 张本机图片</value></data>
   <data name="Import_ChooseFiles.Content" xml:space="preserve"><value>选择文件</value></data>
-  <data name="Import_AddFiles.Content" xml:space="preserve"><value>添加文件</value></data>
   <data name="Import_IdentifiedCount" xml:space="preserve"><value>已识别（{0}）</value></data>
   <data name="Import_UnidentifiedCount" xml:space="preserve"><value>未识别（{0}）</value></data>
   <data name="Import_LookupInput.PlaceholderText" xml:space="preserve"><value>帖子网址或作品 ID</value></data>
@@ -1299,21 +1289,15 @@
   <data name="Import_RatingSummaryLabel.Text" xml:space="preserve"><value>本次分级统计</value></data>
   <data name="Import_RatingSummary.ToolTipService.ToolTip" xml:space="preserve"><value>统计待导入与已完成的图片，不受当前分页或筛选影响。</value></data>
   <data name="Import_Mixed_AttentionCount" xml:space="preserve"><value>未识别（{0}）</value></data>
-  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>已识别（{0}）</value></data>
-  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>选取需要补齐资料的图片，再打开「编辑所选」获取资料、反向搜索或指定作者。</value></data>
-  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>逐张确认图片、作者与分级；选择卡片后可编辑，准备好再导入。</value></data>
-  <data name="Import_Mixed_AttentionEmpty" xml:space="preserve"><value>目前没有符合筛选的待处理图片。</value></data>
-  <data name="Import_Mixed_IdentifiedEmpty" xml:space="preserve"><value>目前没有符合筛选的已识别图片。</value></data>
-  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>导入图片：未识别列表、帖子无法获取列表、已识别图片网格</value></data>
+  <data name="Import_Mixed_IdentifiedCount" xml:space="preserve"><value>准备好了（{0}）</value></data>
+  <data name="Import_Mixed_AttentionHint" xml:space="preserve"><value>找不到作者。选取后贴上帖子网址、指定作者或以图搜图。</value></data>
+  <data name="Import_Mixed_IdentifiedHint" xml:space="preserve"><value>已找到作者与帖子。确认分级后即可导入。</value></data>
+  <data name="Import_Mixed_Workspace.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>导入列表</value></data>
   <data name="Import_Mixed_UnavailableCount" xml:space="preserve"><value>帖子无法获取（{0}）</value></data>
-  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>已识别网址或作品 ID，但未能获取帖子资料。可重试获取资料、反向搜索或指定作者。</value></data>
-  <data name="Import_Mixed_UnavailableEmpty" xml:space="preserve"><value>目前没有符合筛选的无法获取帖子。</value></data>
-  <data name="Import_Mixed_JumpUnidentified" xml:space="preserve"><value>未识别 · {0}</value></data>
-  <data name="Import_Mixed_JumpUnavailable" xml:space="preserve"><value>无法获取 · {0}</value></data>
-  <data name="Import_Mixed_JumpIdentified" xml:space="preserve"><value>已识别 · {0}</value></data>
+  <data name="Import_Mixed_UnavailableHint" xml:space="preserve"><value>认得帖子但取不到资料。可重试或指定作者。</value></data>
   <data name="Nav_Discovery.Content" xml:space="preserve"><value>随机探索</value></data>
   <data name="Discovery_Title.Text" xml:space="preserve"><value>随机探索</value></data>
-  <data name="Discovery_Description.Text" xml:space="preserve"><value>换个顺序探索场景。持续向下滚动，每轮不重复。</value></data>
+  <data name="Discovery_Header.Subtitle" xml:space="preserve"><value>换个顺序探索场景。持续向下滚动，每轮不重复。</value></data>
   <data name="Discovery_Filters.Content" xml:space="preserve"><value>筛选</value></data>
   <data name="Discovery_Reset.Content" xml:space="preserve"><value>重新洗牌</value></data>
   <data name="Discovery_Reset.ToolTipService.ToolTip" xml:space="preserve"><value>重新生成随机顺序，并回到顶部。</value></data>
@@ -1544,6 +1528,9 @@
   <data name="Platform_pixiv" xml:space="preserve">
     <value>pixiv</value>
   </data>
+  <data name="Platform_patreon" xml:space="preserve">
+    <value>Patreon</value>
+  </data>
   <data name="Record_NavToggle.AutomationProperties.Name" xml:space="preserve">
     <value>记录模式</value>
   </data>
@@ -1567,12 +1554,6 @@
   </data>
   <data name="SC_PokerHand.Header" xml:space="preserve">
     <value>随机探索改为发一手牌</value>
-  </data>
-  <data name="SC_RecordMode.Description" xml:space="preserve">
-    <value>记录每张从 app 拖出或复制出去的卡片的原始页面。本地收藏的卡片会被忽略</value>
-  </data>
-  <data name="SC_RecordMode.Header" xml:space="preserve">
-    <value>记录模式</value>
   </data>
   <data name="TagCloud_ArticleLink.Content" xml:space="preserve">
     <value>在 pixiv 百科查看</value>
@@ -1649,7 +1630,7 @@
   <data name="Usage_NoOrigin" xml:space="preserve">
     <value>没有原始页面</value>
   </data>
-  <data name="Usage_Title.Text" xml:space="preserve">
+  <data name="Usage_Header.Title" xml:space="preserve">
     <value>使用记录</value>
   </data>
   <data name="Refetch_SectionTitle" xml:space="preserve">
@@ -1715,9 +1696,6 @@
   <data name="Refetch_BannerTitle" xml:space="preserve">
     <value>重新抓取 {0} 作品资料</value>
   </data>
-  <data name="Refetch_BannerStop.Content" xml:space="preserve">
-    <value>停止</value>
-  </data>
   <data name="Refetch_BackingUp" xml:space="preserve">
     <value>正在备份会被覆盖的作品资料文件…</value>
   </data>
@@ -1781,4 +1759,649 @@
   <data name="TagCloud_StaleRefresh.Content" xml:space="preserve">
     <value>更新文字云</value>
   </data>
+  <data name="Import_Summary_AutoSuccess" xml:space="preserve">
+    <value>已自动导入 {0} 张认得帖子的卡片。</value>
+  </data>
+  <data name="Import_Action_LookupPending" xml:space="preserve">
+    <value>帖子网址尚未应用：请获取信息或清空网址</value>
+  </data>
+  <data name="Import_Action_LookupPendingCompact" xml:space="preserve">
+    <value>网址未应用</value>
+  </data>
+  <data name="Import_UnidentifiedWarnTitle" xml:space="preserve">
+    <value>有 {0} 张卡片尚未识别</value>
+  </data>
+  <data name="Import_UnidentifiedWarnBody" xml:space="preserve">
+    <value>这些卡片找不到作者，会导入到未识别文件夹。要把它们导入为未识别吗？</value>
+  </data>
+  <data name="Import_UnidentifiedWarnImportAll" xml:space="preserve">
+    <value>一并导入为未识别</value>
+  </data>
+  <data name="Import_UnidentifiedWarnIdentifiedOnly" xml:space="preserve">
+    <value>只导入已识别的 {0} 张</value>
+  </data>
+  <data name="Import_RemoveItemMenu.Text" xml:space="preserve"><value>从本次工作区移除</value></data>
+  <data name="Import_RemoveCheckedQuick.Content" xml:space="preserve"><value>移除勾选</value></data>
+  <data name="Import_LinkMatch_Summary" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件．已拖入吻合 {2} 张、缺少 {3} 个、不在清单内 {4} 张</value></data>
+  <data name="Import_LinkMatch_Complete" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件，已全部拖入（吻合 {2} 张）</value></data>
+  <data name="Import_LinkMatch_NoMatch" xml:space="preserve"><value>帖子 {0}：链接列出 {1} 个文件，但没有任何已拖入的卡片吻合</value></data>
+  <data name="Import_LinkMatch_Missing" xml:space="preserve"><value>缺少：{0}</value></data>
+  <data name="Import_LinkMatch_MissingMore" xml:space="preserve"><value>…另外 {0} 个</value></data>
+  <data name="Import_LinkMatch_NoPost" xml:space="preserve"><value>帖子 {0}：无法取得帖子资料，没有比对链接</value></data>
+  <data name="Import_LinkMatch_NoLinks" xml:space="preserve"><value>帖子 {0}：说明栏没有可读取文件名的下载链接</value></data>
+  <data name="Import_LinkMatch_InLibrary" xml:space="preserve"><value>缺失，但收藏库已有一模一样的文件：{0}</value></data>
+  <data name="Import_AuthorCheckOpen.Content" xml:space="preserve"><value>检查作者帖子…</value></data>
+  <data name="Import_AuthorCheck_Title" xml:space="preserve"><value>检查作者帖子</value></data>
+  <data name="Import_AuthorCheck_UrlPlaceholder" xml:space="preserve"><value>粘贴作者网址，例如 https://www.pixiv.net/users/12345678</value></data>
+  <data name="Import_AuthorCheck_Start" xml:space="preserve"><value>开始检查</value></data>
+  <data name="Import_AuthorCheck_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Import_AuthorCheck_NotAuthor" xml:space="preserve"><value>这不是已安装平台的作者网址</value></data>
+  <data name="Import_AuthorCheck_NoCards" xml:space="preserve"><value>导入列表里没有卡片可以对照</value></data>
+  <data name="Import_AuthorCheck_Listing" xml:space="preserve"><value>正在取得作者的帖子清单…</value></data>
+  <data name="Import_AuthorCheck_Progress" xml:space="preserve"><value>已检查 {0} / {1} 篇帖子（每篇约需数秒，可随时关闭）</value></data>
+  <data name="Import_AuthorCheck_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Import_AuthorCheck_Failed" xml:space="preserve"><value>检查失败，详情已写入记录</value></data>
+  <data name="Import_AuthorCheck_PostHeader" xml:space="preserve"><value>帖子 {0}{1}：已拖入吻合 {2} 张（共 {3} 个文件）</value></data>
+  <data name="Import_AuthorCheck_PostComplete" xml:space="preserve"><value>完整，没有缺少</value></data>
+  <data name="Import_AuthorCheck_ListFailed" xml:space="preserve"><value>无法取得这位作者的帖子清单（找不到作者、离线，或被平台拒绝）</value></data>
+  <data name="Import_AuthorCheck_Summary" xml:space="preserve"><value>完成：检查 {0} 篇帖子，其中 {1} 篇有已拖入的卡片，{2} 篇缺少文件（{3} 篇无法取得、{4} 篇没有可读的下载链接）</value></data>
+  <data name="Import_AuthorCheck_Unclaimed" xml:space="preserve"><value>{0} 张已拖入的卡片不属于这位作者的任何帖子：{1}</value></data>
+  <data name="Import_AuthorCheck_StoppedEarly" xml:space="preserve"><value>已为所有已拖入的卡片找到帖子，更旧的帖子不会再检查。</value></data>
+  <data name="Import_Failure_Title" xml:space="preserve"><value>导入未完成，已回滚</value></data>
+  <data name="Import_Failure_SourceFileNotFound" xml:space="preserve"><value>源文件不见了（已被移动、删除或所在的磁盘已移除）。</value></data>
+  <data name="Import_Failure_TargetVolumeFull" xml:space="preserve"><value>目的地的磁盘空间不足。</value></data>
+  <data name="Import_Failure_FileMoveAccessDenied" xml:space="preserve"><value>没有权限移动这个文件（可能被其他程序使用，或文件夹是只读）。</value></data>
+  <data name="Import_Failure_DestinationContentMismatch" xml:space="preserve"><value>冲突：目的地已经有一个同名、但内容不同的文件，所以不敢覆盖。</value></data>
+  <data name="Import_Failure_AtomicRenameExhausted" xml:space="preserve"><value>无法为这个文件找到不冲突的名称。</value></data>
+  <data name="Import_Failure_SidecarWriteFault" xml:space="preserve"><value>写入帖子资料文件失败，或找不到作者文件夹。</value></data>
+  <data name="Import_Failure_Source" xml:space="preserve"><value>来源：{0}</value></data>
+  <data name="Import_Failure_Target" xml:space="preserve"><value>目的地：{0}</value></data>
+  <data name="Import_Failure_Outcome" xml:space="preserve"><value>已安全回滚 {0} 个，需人工恢复 {1} 个。</value></data>
+  <data name="Import_Failure_More" xml:space="preserve"><value>另有 {0} 个文件也失败。</value></data>
+  <data name="Import_Failure_Log" xml:space="preserve"><value>完整清单已写入日志文件。</value></data>
+  <data name="Import_AuthorCheck_Apply" xml:space="preserve"><value>取得资料并套用到卡片</value></data>
+  <data name="Import_AuthorCheck_Applying" xml:space="preserve"><value>正在取得帖子资料并套用到卡片…</value></data>
+  <data name="Import_AuthorCheck_Applied" xml:space="preserve"><value>已将 {0} 张卡片套用到 {1} 个帖子。</value></data>
+  <data name="Import_AuthorCheck_ApplyFailed" xml:space="preserve"><value>套用未完成，请重试。</value></data>
+  <data name="Import_LinkMatch_Unstarted" xml:space="preserve"><value>还没拖入的集数（共享文件夹里的其他子文件夹）：{0}</value></data>
+  <data name="Import_LinkMatch_UnstartedCount" xml:space="preserve"><value>（{0} 个文件）</value></data>
+  <data name="Import_LinkMatch_RootFolder" xml:space="preserve"><value>根目录</value></data>
+  <data name="Import_AuthorCheck_Collection" xml:space="preserve"><value>合集：它列出的 {0} 张已拖入卡片，都属于列出文件更少（更具体）的帖子，不会套用到这里</value></data>
+  <data name="Import_AuthorCheck_SharedNote" xml:space="preserve"><value>其中 {0} 张属于更具体的帖子，不会套用到这里</value></data>
+  <data name="Nav_Rating.Content" xml:space="preserve">
+    <value>分级评价</value>
+  </data>
+  <data name="Rating_Header.Title" xml:space="preserve">
+    <value>分级评价</value>
+  </data>
+  <data name="Rating_Previous.Content" xml:space="preserve">
+    <value>上一张</value>
+  </data>
+  <data name="Rating_KeyHint.Text" xml:space="preserve">
+    <value>也可以按 1、2、3 键</value>
+  </data>
+  <data name="Rating_Loading" xml:space="preserve">
+    <value>正在读取图库…</value>
+  </data>
+  <data name="Rating_NoCardsTitle" xml:space="preserve">
+    <value>图库里还没有场景卡片</value>
+  </data>
+  <data name="Rating_NoCardsDescription" xml:space="preserve">
+    <value>在设置中加入场景文件夹后，卡片就会出现在这里。</value>
+  </data>
+  <data name="Rating_DoneTitle" xml:space="preserve">
+    <value>全部评完了</value>
+  </data>
+  <data name="Rating_DoneDescription" xml:space="preserve">
+    <value>已评 {0} 张。之后加入图库的新卡片会出现在这里。</value>
+  </data>
+  <data name="Rating_Progress" xml:space="preserve">
+    <value>还有 {0} 张未评 · 已评 {1} 张</value>
+  </data>
+  <data name="Rating_RatedCount" xml:space="preserve">
+    <value>已评 {0} 张</value>
+  </data>
+  <data name="Rating_SaveFailed" xml:space="preserve">
+    <value>无法保存分级：评级文件可能被其他程序锁住，或卡片不在任何场景文件夹内。</value>
+  </data>
+  <data name="UserRating_ButtonName" xml:space="preserve">
+    <value>评为 {0}</value>
+  </data>
+  <data name="Detail_UserRating.Text" xml:space="preserve">
+    <value>我的分级</value>
+  </data>
+  <data name="Detail_ClearUserRating.Content" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Detail_UserRatingNone" xml:space="preserve">
+    <value>尚未评价（与平台分级分开）</value>
+  </data>
+  <data name="Detail_UserRatingUnavailable" xml:space="preserve">
+    <value>这个文件读不到卡片数据，无法评价。</value>
+  </data>
+  <data name="SC_RatingSource.Header" xml:space="preserve">
+    <value>分级来源</value>
+  </data>
+  <data name="SC_RatingSource.Description" xml:space="preserve">
+    <value>图库筛选与缩略图标签要依哪一种分级。选“我的分级”时，还没评过的卡片仍按平台分级。</value>
+  </data>
+  <data name="Settings_RatingSourcePlatform.Content" xml:space="preserve">
+    <value>平台分级</value>
+  </data>
+  <data name="Settings_RatingSourceUser.Content" xml:space="preserve">
+    <value>我的分级</value>
+  </data>
+  <data name="Import_Mods_NoGameBody" xml:space="preserve"><value>请到「设置」→「文件夹」→「Mod」指定恋活或恋活 Sunshine 的安装文件夹（包含 mods 与 BepInEx 的那一层）。</value></data>
+  <data name="Import_Mods_Game_Koikatsu" xml:space="preserve"><value>恋活</value></data>
+  <data name="Import_Mods_Game_KoikatsuSunshine" xml:space="preserve"><value>恋活 Sunshine</value></data>
+  <data name="Import_Mods_Action_Install" xml:space="preserve"><value>新安装</value></data>
+  <data name="Import_Mods_Action_Update" xml:space="preserve"><value>更新（已安装 {0}）</value></data>
+  <data name="Import_Mods_Action_AlreadyInstalled" xml:space="preserve"><value>已安装相同版本</value></data>
+  <data name="Import_Mods_Action_NewerInstalled" xml:space="preserve"><value>已安装较新的版本（{0}）</value></data>
+  <data name="Import_Mods_Action_NotForThisGame" xml:space="preserve"><value>不是这个游戏的 mod</value></data>
+  <data name="Import_Mods_Action_Superseded" xml:space="preserve"><value>同一批里有较新的版本</value></data>
+  <data name="Import_Mods_Action_NotAMod" xml:space="preserve"><value>不是可读取的 mod</value></data>
+  <data name="Import_Mods_Detail_BackUp" xml:space="preserve"><value>旧版 {0} 会移到备份：{1}</value></data>
+  <data name="Import_Mods_Detail_KeptOld" xml:space="preserve"><value>旧版 {0} 保留在原处，Sideloader 会加载较新的版本：{1}</value></data>
+  <data name="Settings_ModsHeader.Text" xml:space="preserve"><value>Mod</value></data>
+  <data name="SC_KoikatsuGameFolder.Header" xml:space="preserve"><value>恋活游戏文件夹</value></data>
+  <data name="SC_KoikatsuGameFolder.Description" xml:space="preserve"><value>导入时附带的 zipmod 安装到这里：包含 mods 与 BepInEx 的文件夹。</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Header" xml:space="preserve"><value>恋活 Sunshine 游戏文件夹</value></data>
+  <data name="SC_KoikatsuSunshineGameFolder.Description" xml:space="preserve"><value>导入时附带的 zipmod 安装到这里：包含 mods 与 BepInEx 的文件夹。</value></data>
+  <data name="SC_ModInstallFolderName.Header" xml:space="preserve"><value>mod 安装文件夹</value></data>
+  <data name="SC_ModInstallFolderName.Description" xml:space="preserve"><value>收藏库在 mods 里的专属文件夹，mod 只会写到这里。</value></data>
+  <data name="Settings_Mods_Pick.Content" xml:space="preserve"><value>选择…</value></data>
+  <data name="Settings_Mods_Clear.Content" xml:space="preserve"><value>清除</value></data>
+  <data name="Settings_Mods_NotSet" xml:space="preserve"><value>未设置</value></data>
+  <data name="Settings_Mods_FolderMissing" xml:space="preserve"><value>这个文件夹已不存在。</value></data>
+  <data name="Settings_Mods_NotAGameFolder" xml:space="preserve"><value>这里没有 mods 或 BepInEx 文件夹，确定是游戏文件夹吗？</value></data>
+  <data name="Import_SelectionCount" xml:space="preserve"><value>已选 {0} 张</value></data>
+  <data name="Import_Mixed_ModsCount" xml:space="preserve"><value>Mod（{0}）</value></data>
+  <data name="Import_Mixed_ModsHint" xml:space="preserve"><value>勾选的 mod 会在导入时安装到游戏的 mods 文件夹。</value></data>
+  <data name="Import_Mixed_SkippedCount" xml:space="preserve"><value>略过（{0}）</value></data>
+  <data name="Import_Mixed_SkippedHint" xml:space="preserve"><value>收藏库已有或已略过，不会处理。</value></data>
+  <data name="Import_Status_Skipped" xml:space="preserve"><value>已略过</value></data>
+  <data name="Import_Status_ExistingElsewhere" xml:space="preserve"><value>收藏库已有（在别的文件夹）</value></data>
+  <data name="Import_Review_InLibraryAt" xml:space="preserve"><value>收藏库的位置：{0}</value></data>
+  <data name="Import_Review_FromArchive" xml:space="preserve"><value>来自 {0}</value></data>
+  <data name="Import_IncludeUnidentified" xml:space="preserve"><value>包含 {0} 张未识别</value></data>
+  <data name="Import_IncludeUnidentifiedBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>未识别的卡片会放到 Unknown 文件夹。</value></data>
+  <data name="Import_Plan_Nothing" xml:space="preserve"><value>没有可导入的项目</value></data>
+  <data name="Import_Plan_Cards" xml:space="preserve"><value>将导入 {0} 张卡片</value></data>
+  <data name="Import_Plan_Mods" xml:space="preserve"><value>将安装 {0} 个 mod</value></data>
+  <data name="Import_Plan_CardsAndMods" xml:space="preserve"><value>将导入 {0} 张卡片、安装 {1} 个 mod</value></data>
+  <data name="Import_ConfirmButtonText.Text" xml:space="preserve"><value>导入</value></data>
+  <data name="Import_OptionsLabel.Text" xml:space="preserve"><value>选项</value></data>
+  <data name="Import_AddFilesLabel.Text" xml:space="preserve"><value>加入文件</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_MoreButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>更多</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>全选</value></data>
+  <data name="Import_SelectAll.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>全选</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>收合或展开</value></data>
+  <data name="Import_ToggleSection.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>收合或展开</value></data>
+  <data name="Import_SelectionAuthorTitle.Text" xml:space="preserve"><value>为所选指定作者</value></data>
+  <data name="Import_Mods_InstallBox.Content" xml:space="preserve"><value>安装</value></data>
+  <data name="Import_Mods_Status_NoGame" xml:space="preserve"><value>尚未设置游戏文件夹</value></data>
+  <data name="Import_Mods_Status_CheckFailed" xml:space="preserve"><value>无法检查 mods 文件夹</value></data>
+  <data name="Import_Result_Title" xml:space="preserve"><value>完成</value></data>
+  <data name="Import_Result_TitleWithProblems" xml:space="preserve"><value>完成，但有问题</value></data>
+  <data name="Import_Result_Imported" xml:space="preserve"><value>已导入 {0} 张卡片。</value></data>
+  <data name="Import_Result_Linked" xml:space="preserve"><value>{0} 张卡片已链接到收藏库的副本。</value></data>
+  <data name="Import_Result_ModsInstalled" xml:space="preserve"><value>已安装 {0} 个 mod。</value></data>
+  <data name="Import_Result_Skipped" xml:space="preserve"><value>略过 {0} 个。</value></data>
+  <data name="Import_Conflict_Pending" xml:space="preserve"><value>收藏库有同名的不同卡片：导入时会询问。</value></data>
+  <data name="Import_Conflict_SkippedNameClash" xml:space="preserve"><value>已略过：收藏库有同名的不同卡片。</value></data>
+  <data name="Import_Conflict_RestoreFailed" xml:space="preserve"><value>无法放回 {0}，它在 import-overwritten 文件夹里。</value></data>
+  <data name="Import_Conflict_Title" xml:space="preserve"><value>这些卡片要怎么处理？</value></data>
+  <data name="Import_Conflict_Intro" xml:space="preserve"><value>其他都已导入。这 {0} 张卡片需要你决定。</value></data>
+  <data name="Import_Conflict_ApplyAll" xml:space="preserve"><value>全部设为</value></data>
+  <data name="Import_Conflict_ApplyAllEach" xml:space="preserve"><value>（逐张选择）</value></data>
+  <data name="Import_Conflict_LinkHint" xml:space="preserve"><value>硬链接必须与收藏库的副本在同一个磁盘。符号链接需要开启开发人员模式或系统管理员权限。</value></data>
+  <data name="Import_Conflict_Apply" xml:space="preserve"><value>套用</value></data>
+  <data name="Import_Conflict_Later" xml:space="preserve"><value>稍后再说</value></data>
+  <data name="Import_Conflict_Kind_NameClash" xml:space="preserve"><value>收藏库有同名、但内容不同的卡片：</value></data>
+  <data name="Import_Conflict_Kind_InLibraryElsewhere" xml:space="preserve"><value>收藏库已有这张卡，在别的文件夹：</value></data>
+  <data name="Import_Conflict_Choice_Rename" xml:space="preserve"><value>两张都保留（改名）</value></data>
+  <data name="Import_Conflict_Choice_Overwrite" xml:space="preserve"><value>覆盖（旧的进回收站）</value></data>
+  <data name="Import_Conflict_Choice_Skip" xml:space="preserve"><value>略过</value></data>
+  <data name="Import_Conflict_Choice_HardLink" xml:space="preserve"><value>硬链接</value></data>
+  <data name="Import_Conflict_Choice_SymbolicLink" xml:space="preserve"><value>符号链接</value></data>
+  <data name="Import_Conflict_Choice_Copy" xml:space="preserve"><value>照样复制一份</value></data>
+  <data name="Toast_Copied" xml:space="preserve">
+    <value>已复制到剪贴板。</value>
+  </data>
+  <data name="Usage_Copied" xml:space="preserve">
+    <value>已将 {0} 条记录复制到剪贴板。</value>
+  </data>
+  <data name="Usage_Cleared" xml:space="preserve">
+    <value>已清空使用记录。</value>
+  </data>
+  <data name="Discovery_Header.Title" xml:space="preserve">
+    <value>随机探索</value>
+  </data>
+  <data name="Nav_Explore.Content" xml:space="preserve">
+    <value>探索</value>
+  </data>
+  <data name="Record_NavToggleOn" xml:space="preserve">
+    <value>记录模式已开启：每张拖出或复制出去的卡片都会记到“使用记录”。</value>
+  </data>
+  <data name="Record_NavToggleOff" xml:space="preserve">
+    <value>记录模式已关闭。开启后会记录每张拖出或复制出去的卡片。</value>
+  </data>
+  <data name="FeatureUnavailable_PluginHint.Text" xml:space="preserve">
+    <value>插件是放在 Plugins 文件夹里的 DLL 文件。插件页会列出已安装的插件，并说明如何加入新的插件。</value>
+  </data>
+  <data name="FeatureUnavailable_OpenPlugins.Content" xml:space="preserve">
+    <value>前往插件设置</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsTitle" xml:space="preserve">
+    <value>作者功能需要平台插件</value>
+  </data>
+  <data name="FeatureUnavailable_AuthorsDescription" xml:space="preserve">
+    <value>安装 pixiv、FANBOX 或 BepisDB 插件后，这一页会按作者整理你的卡片，并显示每位作者的头像、个人页链接与帖子。</value>
+  </data>
+  <data name="FeatureUnavailable_TagsTitle" xml:space="preserve">
+    <value>标签功能需要平台插件</value>
+  </data>
+  <data name="FeatureUnavailable_TagsDescription" xml:space="preserve">
+    <value>标签来自每张卡片导入时的原帖子。安装平台插件后，这一页会把标签排成文字云，点标签就能浏览对应的卡片。</value>
+  </data>
+  <data name="FeatureUnavailable_ImportTitle" xml:space="preserve">
+    <value>导入功能需要平台插件</value>
+  </data>
+  <data name="FeatureUnavailable_ImportDescription" xml:space="preserve">
+    <value>导入会查出每张卡片的来源，按作者归档，并保留帖子的标题、标签与分级。需要先安装卡片来源平台的插件。</value>
+  </data>
+  <data name="Palette_Query.PlaceholderText" xml:space="preserve">
+    <value>搜索页面、命令、设置、作者与卡片</value>
+  </data>
+  <data name="Palette_Query.AutomationProperties.Name" xml:space="preserve">
+    <value>命令面板搜索</value>
+  </data>
+  <data name="Palette_NoResults.Text" xml:space="preserve">
+    <value>找不到匹配的项目。试着少输入几个字，或只输入文件名的一部分。</value>
+  </data>
+  <data name="Palette_KeyHint.Text" xml:space="preserve">
+    <value>↑ ↓ 选择 · Enter 打开 · Esc 关闭</value>
+  </data>
+  <data name="Palette_OpenButton.AutomationProperties.Name" xml:space="preserve">
+    <value>搜索（Ctrl+K）</value>
+  </data>
+  <data name="Palette_OpenButton.ToolTipService.ToolTip" xml:space="preserve">
+    <value>搜索页面、命令、设置、作者与卡片（Ctrl+K）</value>
+  </data>
+  <data name="Palette_CategoryPage" xml:space="preserve">
+    <value>页面</value>
+  </data>
+  <data name="Palette_CategoryCommand" xml:space="preserve">
+    <value>命令</value>
+  </data>
+  <data name="Palette_CategorySetting" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Palette_CategoryAuthor" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Palette_CategoryCard" xml:space="preserve">
+    <value>卡片</value>
+  </data>
+  <data name="Palette_Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Palette_RecordOn" xml:space="preserve">
+    <value>开启记录模式</value>
+  </data>
+  <data name="Palette_RecordOff" xml:space="preserve">
+    <value>关闭记录模式</value>
+  </data>
+  <data name="Palette_SwitchPlatform" xml:space="preserve">
+    <value>切换平台：{0}</value>
+  </data>
+  <data name="Activity_Title.Text" xml:space="preserve">
+    <value>后台任务</value>
+  </data>
+  <data name="Activity_Cancel.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Activity_ButtonName" xml:space="preserve">
+    <value>{0} 项后台任务进行中</value>
+  </data>
+  <data name="Activity_LibraryScan" xml:space="preserve">
+    <value>正在扫描{0}</value>
+  </data>
+  <data name="Activity_AuthorsRefresh" xml:space="preserve">
+    <value>正在刷新作者资料</value>
+  </data>
+  <data name="Activity_AuthorsDone" xml:space="preserve">
+    <value>已刷新 {0}／{1} 位作者。</value>
+  </data>
+  <data name="Activity_Import" xml:space="preserve">
+    <value>导入中</value>
+  </data>
+  <data name="Activity_ImportAnalysis" xml:space="preserve">
+    <value>正在查询待导入文件的来源</value>
+  </data>
+  <data name="Drop_Caption" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="Drop_OverlayTitle.Text" xml:space="preserve">
+    <value>松开以导入</value>
+  </data>
+  <data name="Drop_OverlayDescription.Text" xml:space="preserve">
+    <value>文件会加入导入页，确认后再导入。</value>
+  </data>
+  <data name="CardMenu_Open" xml:space="preserve">
+    <value>打开</value>
+  </data>
+  <data name="CardMenu_OpenGroup" xml:space="preserve">
+    <value>打开分组</value>
+  </data>
+  <data name="CardMenu_Rate" xml:space="preserve">
+    <value>我的分级</value>
+  </data>
+  <data name="CardMenu_RateMany" xml:space="preserve">
+    <value>我的分级（{0} 张）</value>
+  </data>
+  <data name="CardMenu_RateClear" xml:space="preserve">
+    <value>未评价</value>
+  </data>
+  <data name="CardMenu_RatedOne" xml:space="preserve">
+    <value>已设为 {0}。</value>
+  </data>
+  <data name="CardMenu_RatedMany" xml:space="preserve">
+    <value>已将 {0} 张卡片设为 {1}。</value>
+  </data>
+  <data name="CardMenu_CopyFile" xml:space="preserve">
+    <value>复制文件</value>
+  </data>
+  <data name="CardMenu_CopyFiles" xml:space="preserve">
+    <value>复制 {0} 个文件</value>
+  </data>
+  <data name="CardMenu_FilesCopied" xml:space="preserve">
+    <value>已复制 {0} 个文件到剪贴板。</value>
+  </data>
+  <data name="CardMenu_CopyPath" xml:space="preserve">
+    <value>复制路径</value>
+  </data>
+  <data name="CardMenu_GoToAuthor" xml:space="preserve">
+    <value>前往 {0}</value>
+  </data>
+  <data name="CardMenu_RatedPlatformHint" xml:space="preserve">
+    <value>卡片上目前显示平台分级；在设置把分级来源改为“我的分级”即可显示你的评价。</value>
+  </data>
+  <data name="Chip_Search" xml:space="preserve">
+    <value>搜索：{0}</value>
+  </data>
+  <data name="Chip_Resolution" xml:space="preserve">
+    <value>图片尺寸：{0} 种</value>
+  </data>
+  <data name="Chip_RemoveName" xml:space="preserve">
+    <value>移除筛选：{0}</value>
+  </data>
+  <data name="Chips_ClearAll" xml:space="preserve">
+    <value>清除全部</value>
+  </data>
+  <data name="Browser_ResolutionToggle.Header" xml:space="preserve">
+    <value>图片尺寸筛选</value>
+  </data>
+  <data name="Browser_ResolutionListCount" xml:space="preserve">
+    <value>列表中有 {0} 种尺寸，可在设置中编辑。</value>
+  </data>
+  <data name="Browser_ResolutionListEmpty" xml:space="preserve">
+    <value>尚未选择任何尺寸；先到设置选好尺寸才能使用。</value>
+  </data>
+  <data name="CardAction_OpenFolder" xml:space="preserve">
+    <value>打开位置</value>
+  </data>
+  <data name="CardAction_CopyFile" xml:space="preserve">
+    <value>复制文件</value>
+  </data>
+  <data name="CardAction_More" xml:space="preserve">
+    <value>更多操作</value>
+  </data>
+  <data name="CardAction_CopyPath" xml:space="preserve">
+    <value>复制路径</value>
+  </data>
+  <data name="CardAction_CopyFolder" xml:space="preserve">
+    <value>复制文件夹路径</value>
+  </data>
+  <data name="CardAction_CopyPixiv" xml:space="preserve">
+    <value>复制 pixiv 链接</value>
+  </data>
+  <data name="CardAction_CopyBepisDb" xml:space="preserve">
+    <value>复制 BepisDB 链接</value>
+  </data>
+  <data name="AuthorDetail_EditLocalLabel.Text" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="AuthorDetail_ShuffleLabel.Text" xml:space="preserve">
+    <value>随机一张</value>
+  </data>
+  <data name="AuthorDetail_RefreshLabel.Text" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="Import_AutoImportShort.Text" xml:space="preserve">
+    <value>认得帖子就直接导入</value>
+  </data>
+  <data name="Import_AutoImportToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>认得帖子就直接导入</value>
+  </data>
+  <data name="Import_AutoImportHost.ToolTipService.ToolTip" xml:space="preserve">
+    <value>文件名符合平台格式（例如 pixiv 的 12345678_p0），而且找得到对应帖子的卡片，分析完就直接导入，不用等你确认。其他卡片照常留在下方审核。</value>
+  </data>
+  <data name="Settings_Search.PlaceholderText" xml:space="preserve">
+    <value>搜索设置</value>
+  </data>
+  <data name="Settings_Search.AutomationProperties.Name" xml:space="preserve">
+    <value>搜索设置</value>
+  </data>
+  <data name="Filmstrip_Name" xml:space="preserve">
+    <value>前后的卡片</value>
+  </data>
+  <data name="Filmstrip_Current" xml:space="preserve">
+    <value>当前的卡片</value>
+  </data>
+  <data name="Steps_Position" xml:space="preserve">
+    <value>第 {0} 步，共 {1} 步：{2}</value>
+  </data>
+  <data name="Import_StepAdd" xml:space="preserve">
+    <value>添加文件</value>
+  </data>
+  <data name="Import_StepReview" xml:space="preserve">
+    <value>检查</value>
+  </data>
+  <data name="Import_StepImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="Import_RejectedWarningTitle" xml:space="preserve">
+    <value>有文件没有加入</value>
+  </data>
+  <data name="Import_MessagesMore" xml:space="preserve">
+    <value>关闭这条消息后，还有 {0} 条。</value>
+  </data>
+  <data name="Import_SelAuthor.Label" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Import_SelRating.Label" xml:space="preserve">
+    <value>分级</value>
+  </data>
+  <data name="Import_SelSearch.Label" xml:space="preserve">
+    <value>以图搜图</value>
+  </data>
+  <data name="Import_SelAuthorCheck.Label" xml:space="preserve">
+    <value>检查作者帖子</value>
+  </data>
+  <data name="Import_SelRemove.Label" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Import_SelClear.Label" xml:space="preserve">
+    <value>取消选取</value>
+  </data>
+  <data name="Settings_Categories.AutomationProperties.Name" xml:space="preserve">
+    <value>设置分类</value>
+  </data>
+  <data name="Settings_CategoryPicker.AutomationProperties.Name" xml:space="preserve">
+    <value>设置分类</value>
+  </data>
+  <data name="Nav_Home.Content" xml:space="preserve"><value>首页</value></data>
+  <data name="Home_Header.Title" xml:space="preserve"><value>今天玩什么</value></data>
+  <data name="Home_Header.Subtitle" xml:space="preserve"><value>想试的、随手翻到的、最近玩过的和喜欢的场景。</value></data>
+  <data name="Home_Queued" xml:space="preserve"><value>想试</value></data>
+  <data name="Home_QueuedEmpty" xml:space="preserve"><value>还没有想试的场景。在任何一张卡上按“想试”或 Q 键，它就会出现在这里。</value></data>
+  <data name="Home_Deal" xml:space="preserve"><value>翻几张看看</value></data>
+  <data name="Home_DealAgain" xml:space="preserve"><value>再发一手</value></data>
+  <data name="Home_Recent" xml:space="preserve"><value>最近玩过</value></data>
+  <data name="Home_Liked" xml:space="preserve"><value>最爱</value></data>
+  <data name="CardState_Queue" xml:space="preserve"><value>想试</value></data>
+  <data name="CardState_Unqueue" xml:space="preserve"><value>移出想试</value></data>
+  <data name="CardState_Like" xml:space="preserve"><value>喜欢</value></data>
+  <data name="CardState_Unlike" xml:space="preserve"><value>取消喜欢</value></data>
+  <data name="CardState_Hide" xml:space="preserve"><value>不要了</value></data>
+  <data name="CardState_Unhide" xml:space="preserve"><value>恢复显示</value></data>
+  <data name="CardState_SaveFailed" xml:space="preserve"><value>无法保存卡片状态。</value></data>
+  <data name="CardState_QueuedToast" xml:space="preserve"><value>已加入想试。</value></data>
+  <data name="CardState_UnqueuedToast" xml:space="preserve"><value>已移出想试。</value></data>
+  <data name="CardState_LikedToast" xml:space="preserve"><value>已加入最爱。</value></data>
+  <data name="CardState_UnlikedToast" xml:space="preserve"><value>已移出最爱。</value></data>
+  <data name="CardState_HiddenToast" xml:space="preserve"><value>已隐藏。可以在收藏库的筛选中找回。</value></data>
+  <data name="CardState_UnhiddenToast" xml:space="preserve"><value>已恢复显示。</value></data>
+  <data name="Browser_ShowHiddenToggle.Header" xml:space="preserve"><value>显示“不要了”的卡片</value></data>
+  <data name="CardState_Used" xml:space="preserve"><value>玩过</value></data>
+  <data name="CardMenu_AddSource" xml:space="preserve"><value>补上来源…</value></data>
+  <data name="Reidentify_Title" xml:space="preserve"><value>补上来源</value></data>
+  <data name="Reidentify_UrlHeader" xml:space="preserve"><value>帖子网址或编号</value></data>
+  <data name="Reidentify_UrlPlaceholder" xml:space="preserve"><value>粘贴这张卡的帖子网址</value></data>
+  <data name="Reidentify_Fetch" xml:space="preserve"><value>获取资料</value></data>
+  <data name="Reidentify_AuthorHeader" xml:space="preserve"><value>或只指定作者</value></data>
+  <data name="Reidentify_SearchByImage" xml:space="preserve"><value>以图搜图</value></data>
+  <data name="Reidentify_RatingHeader" xml:space="preserve"><value>分级</value></data>
+  <data name="Reidentify_Destination" xml:space="preserve"><value>这张卡会移到：{0}</value></data>
+  <data name="Reidentify_Confirm" xml:space="preserve"><value>移动并保存</value></data>
+  <data name="Reidentify_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Reidentify_NotFound" xml:space="preserve"><value>找不到这篇帖子。</value></data>
+  <data name="Reidentify_NeedPostOrAuthor" xml:space="preserve"><value>请提供帖子或作者。</value></data>
+  <data name="Reidentify_NotInLibrary" xml:space="preserve"><value>这个文件不在收藏库文件夹内。</value></data>
+  <data name="Reidentify_AlreadyInPlace" xml:space="preserve"><value>这张卡已经在正确的位置。</value></data>
+  <data name="Reidentify_Collision" xml:space="preserve"><value>目的地已有同名但内容不同的文件，没有移动。</value></data>
+  <data name="Reidentify_Duplicate" xml:space="preserve"><value>目的地已有同一张卡，没有移动。</value></data>
+  <data name="Reidentify_SourceMissing" xml:space="preserve"><value>找不到原本的文件，可能已被移走。</value></data>
+  <data name="Reidentify_Done" xml:space="preserve"><value>已补上来源，卡片已移到作者文件夹。</value></data>
+  <data name="Reidentify_DoneNoSidecar" xml:space="preserve"><value>卡片已移动，但帖子资料没有保存。</value></data>
+  <data name="Reidentify_Failed" xml:space="preserve"><value>无法移动文件：{0}</value></data>
+  <data name="Origin_NoSource" xml:space="preserve"><value>来源不明</value></data>
+  <data name="Browser_NoSourceToggle.Header" xml:space="preserve"><value>只显示来源不明的卡片</value></data>
+  <data name="LayoutMigration_Entry" xml:space="preserve"><value>整理文件夹结构…</value></data>
+  <data name="LayoutMigration_EntryDescription" xml:space="preserve"><value>把收藏库从“平台＼游戏＼分级＼作者＼帖子”改成“平台＼作者＼帖子”。会先列出计划，确认后才移动文件。</value></data>
+  <data name="LayoutMigration_Title" xml:space="preserve"><value>整理文件夹结构</value></data>
+  <data name="LayoutMigration_Scanning" xml:space="preserve"><value>正在检查文件夹…</value></data>
+  <data name="LayoutMigration_NothingToDo" xml:space="preserve"><value>收藏库已经是新的结构，没有需要移动的文件。</value></data>
+  <data name="LayoutMigration_PlanMoves" xml:space="preserve"><value>会移动 {0} 个文件</value></data>
+  <data name="LayoutMigration_PlanAuthors" xml:space="preserve"><value>{0} 位作者的文件夹会合并成一个</value></data>
+  <data name="LayoutMigration_PlanStays" xml:space="preserve"><value>{0} 个文件会留在原地</value></data>
+  <data name="LayoutMigration_PlanRatings" xml:space="preserve"><value>{0} 张卡的分级会先保存成资料</value></data>
+  <data name="LayoutMigration_ShowDetails" xml:space="preserve"><value>逐条查看</value></data>
+  <data name="LayoutMigration_SavePlan" xml:space="preserve"><value>把计划保存成文本文件…</value></data>
+  <data name="LayoutMigration_Run" xml:space="preserve"><value>开始移动</value></data>
+  <data name="LayoutMigration_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="LayoutMigration_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="LayoutMigration_Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="LayoutMigration_Progress" xml:space="preserve"><value>已移动 {0} / {1}</value></data>
+  <data name="LayoutMigration_Stopped" xml:space="preserve"><value>已停止。已移动的 {0} 个文件留在新位置，可以稍后继续或全部移回。</value></data>
+  <data name="LayoutMigration_Done" xml:space="preserve"><value>完成：移动 {0} 个文件，{1} 个留在原地。</value></data>
+  <data name="LayoutMigration_Undo" xml:space="preserve"><value>全部移回去</value></data>
+  <data name="LayoutMigration_UndoDone" xml:space="preserve"><value>已移回 {0} 个文件。</value></data>
+  <data name="LayoutMigration_UndoPartial" xml:space="preserve"><value>已移回 {0} 个文件，{1} 个无法移回。</value></data>
+  <data name="LayoutMigration_Resume" xml:space="preserve"><value>上次的整理没有完成，要继续吗？</value></data>
+  <data name="LayoutMigration_ReasonCollision" xml:space="preserve"><value>目的地已有同名但内容不同的文件</value></data>
+  <data name="LayoutMigration_ReasonDuplicate" xml:space="preserve"><value>目的地已有相同的文件</value></data>
+  <data name="LayoutMigration_ReasonUnknownProvider" xml:space="preserve"><value>无法判断属于哪个平台</value></data>
+  <data name="LayoutMigration_ReasonFailed" xml:space="preserve"><value>移动失败：{0}</value></data>
+  <data name="LayoutMigration_AppBusy" xml:space="preserve"><value>请先等导入或扫描结束。</value></data>
+  <data name="SC_LayoutMigration.Header" xml:space="preserve"><value>整理文件夹结构</value></data>
+  <data name="SC_LayoutMigration.Description" xml:space="preserve"><value>把收藏库从“平台＼游戏＼分级＼作者＼帖子”改成“平台＼作者＼帖子”。会先列出计划，确认后才移动文件。</value></data>
+  <data name="SC_LayoutMigrationButton.Content" xml:space="preserve"><value>整理文件夹结构…</value></data>
+  <data name="LayoutMigration_ReasonLoose" xml:space="preserve"><value>不在作者文件夹内</value></data>
+  <data name="LayoutMigration_ReasonRatingNotSaved" xml:space="preserve"><value>分级无法先保存，所以没有移动</value></data>
+  <data name="LayoutMigration_ReasonChanged" xml:space="preserve"><value>文件在列出计划后有变动或已不在原处</value></data>
+  <data name="LayoutMigration_LastRun" xml:space="preserve"><value>上次整理：{0}，移动了 {1} 个文件。</value></data>
+  <data name="LayoutMigration_OutOfScope" xml:space="preserve"><value>{0} 个文件不在整理范围内，不会动到</value></data>
+  <data name="Import_RatingsNotSaved" xml:space="preserve"><value>有 {0} 张卡的分级没有保存，它们现在会显示为 G。请在卡片上重新设置分级。</value></data>
+  <data name="LayoutMigration_NothingToMoveButLeft" xml:space="preserve"><value>没有可以移动的文件，但还有 {0} 个文件留在旧的文件夹里：</value></data>
+  <data name="Home_DuelTitle" xml:space="preserve"><value>二选一</value></data>
+  <data name="Home_DuelHint" xml:space="preserve"><value>点你比较想玩的那张，它会进“想试”。</value></data>
+  <data name="Home_DuelSkip" xml:space="preserve"><value>都不要，换一组</value></data>
+  <data name="Home_DuelEmpty" xml:space="preserve"><value>没有可以比的场景了。</value></data>
+  <data name="Home_DuelPicked" xml:space="preserve"><value>这一轮已选 {0} 张</value></data>
+  <data name="Home_TileAuthorMore" xml:space="preserve"><value>这位作者还有 {0} 张</value></data>
+  <data name="Home_TilePostMore" xml:space="preserve"><value>同一篇帖子还有 {0} 张</value></data>
+  <data name="Home_ThemeAuthor" xml:space="preserve"><value>{0} 特辑</value></data>
+  <data name="Home_ThemeTag" xml:space="preserve"><value>今天的标签：{0}</value></data>
+  <data name="Home_ThemeNeverPlayed" xml:space="preserve"><value>收了还没玩过的</value></data>
+  <data name="Home_ThemeDusty" xml:space="preserve"><value>很久没碰的最爱</value></data>
+  <data name="Home_ThemeSimilar" xml:space="preserve"><value>和“{0}”很像的</value></data>
+  <data name="Home_ThemesReroll" xml:space="preserve"><value>换一批主题</value></data>
+  <data name="Home_ThemeSeeAll" xml:space="preserve"><value>全部看</value></data>
+  <data name="Home_ShelfShowAll" xml:space="preserve"><value>显示全部（{0}）</value></data>
+  <data name="Home_ShelfCollapse" xml:space="preserve"><value>收起</value></data>
+  <data name="Inspector_Name" xml:space="preserve"><value>详细信息</value></data>
+  <data name="Inspector_Empty" xml:space="preserve"><value>选择一张卡片即可查看详细信息。按住 Ctrl 或 Shift 可多选。</value></data>
+  <data name="Inspector_Open" xml:space="preserve"><value>打开</value></data>
+  <data name="Inspector_SelectedMany" xml:space="preserve"><value>已选择 {0} 张卡片</value></data>
+  <data name="Inspector_Toggle" xml:space="preserve"><value>详细信息窗格（Ctrl+I）</value></data>
+  <data name="SC_SquareCorners.Header" xml:space="preserve"><value>直角</value></data>
+  <data name="SC_SquareCorners.Description" xml:space="preserve"><value>全部改用直角，不使用圆角。重新启动应用后生效。</value></data>
+  <data name="SC_ThumbnailSize.Header" xml:space="preserve"><value>缩略图大小</value></data>
+  <data name="SC_ThumbnailSize.Description" xml:space="preserve"><value>收藏库缩略图的大小。</value></data>
+  <data name="Loupe_Name" xml:space="preserve"><value>卡片检视</value></data>
+  <data name="Loupe_Previous" xml:space="preserve"><value>上一张（←）</value></data>
+  <data name="Loupe_Next" xml:space="preserve"><value>下一张（→）</value></data>
+  <data name="Loupe_Close" xml:space="preserve"><value>回到网格（Esc）</value></data>
+  <data name="Loupe_ActualSize" xml:space="preserve"><value>实际大小</value></data>
+  <data name="Loupe_Back" xml:space="preserve"><value>返回（Esc）</value></data>
+  <data name="Loupe_ZoomOut" xml:space="preserve"><value>缩小（-）</value></data>
+  <data name="Loupe_ZoomIn" xml:space="preserve"><value>放大（+）</value></data>
+  <data name="Loupe_ZoomLevelTip" xml:space="preserve"><value>适合 / 特写（双击图片；按 0 回到适合）</value></data>
+  <data name="Loupe_Fit" xml:space="preserve"><value>适合</value></data>
+  <data name="Loupe_Hint" xml:space="preserve"><value>← → 换卡 · 滚轮缩放 · 拖拽平移 · 双击特写 · Esc 返回</value></data>
+  <data name="Loupe_BackLabel" xml:space="preserve"><value>返回</value></data>
+  <data name="AuthorInspector_Empty" xml:space="preserve"><value>选择一位作者即可查看信息。双击或按 Enter 打开作者页面。</value></data>
+  <data name="AuthorInspector_Open" xml:space="preserve"><value>打开作者页面</value></data>
+  <data name="AuthorInspector_Profile" xml:space="preserve"><value>打开在线个人页面</value></data>
+  <data name="AuthorInspector_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="AuthorInspector_Counts" xml:space="preserve"><value>场景 {0} · 角色 {1} · 服装 {2}</value></data>
+  <data name="AuthorInspector_Updated" xml:space="preserve"><value>最后更新 {0}</value></data>
+  <data name="Record_TitleBarLabel.Text" xml:space="preserve"><value>记录中</value></data>
+  <data name="Browser_More" xml:space="preserve"><value>更多</value></data>
+  <data name="Authors_LocalSources" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="Authors_LocalSourcesLabel.Text" xml:space="preserve"><value>本地收藏</value></data>
+  <data name="Record_MenuToggle" xml:space="preserve"><value>记录模式</value></data>
+  <data name="Home_TileSelected" xml:space="preserve"><value>已选择</value></data>
+  <data name="TitleBar_RatingFilter" xml:space="preserve"><value>分级筛选</value></data>
+  <data name="SC_RatingFilterEnabled.Header" xml:space="preserve"><value>启用分级筛选</value></data>
+  <data name="SC_RatingFilterEnabled.Description" xml:space="preserve"><value>开启后，标题栏会出现分级筛选，首页、收藏库与探索都会依它显示或隐藏卡片。关闭则一律显示所有分级。</value></data>
+  <data name="TitleBar_RatingOn" xml:space="preserve"><value>显示 {0} 的卡片，点一下隐藏</value></data>
+  <data name="TitleBar_RatingOff" xml:space="preserve"><value>{0} 的卡片已隐藏，点一下显示</value></data>
+  <data name="TitleBar_RatingLast" xml:space="preserve"><value>至少要显示一种分级</value></data>
+  <data name="Nav_ExploreHeader.Content" xml:space="preserve"><value>探索</value></data>
+  <data name="Nav_ImportBusy" xml:space="preserve"><value>正在导入</value></data>
+  <data name="Nav_ImportAnalyzing" xml:space="preserve"><value>正在分析，剩余 {0} 个</value></data>
+  <data name="Cookie_WebViewFailed" xml:space="preserve"><value>无法启动 WebView2：{0}</value></data>
+  <data name="Import_Error_FileExists" xml:space="preserve"><value>已有同名文件</value></data>
+  <data name="Import_Error_ArtworkConflict" xml:space="preserve"><value>另一个作品已使用此文件名：{0}</value></data>
+  <data name="Format_LabelValue" xml:space="preserve"><value>{0}：{1}</value></data>
+  <data name="Home_SeeAll" xml:space="preserve"><value>查看全部</value></data>
+  <data name="Home_Featured" xml:space="preserve"><value>今日推荐</value></data>
+  <data name="Home_FeaturedEmpty" xml:space="preserve"><value>暂时没有可推荐的场景。</value></data>
+  <data name="Home_FeaturedQueue" xml:space="preserve"><value>想试</value></data>
+  <data name="Home_FeaturedNext" xml:space="preserve"><value>换一张</value></data>
+  <data name="Home_Stats" xml:space="preserve"><value>收藏库</value></data>
+  <data name="Home_StatsScenes" xml:space="preserve"><value>{0} 个场景</value></data>
+  <data name="Home_StatsNew" xml:space="preserve"><value>本周新增 {0} 张</value></data>
+  <data name="Home_StatsUnrated" xml:space="preserve"><value>{0} 张还没有你的分级</value></data>
+  <data name="Home_StatsImportIdle" xml:space="preserve"><value>导入：闲置</value></data>
+  <data name="Home_StatsImporting" xml:space="preserve"><value>正在导入…</value></data>
+  <data name="Home_StatsAnalyzing" xml:space="preserve"><value>正在分析，剩余 {0} 个</value></data>
+  <data name="Home_ShelfCount" xml:space="preserve"><value>{0} 张卡片</value></data>
+  <data name="Home_NewThisWeek" xml:space="preserve"><value>本周新增</value></data>
+  <data name="Home_ThemesRerollLabel.Text" xml:space="preserve"><value>换一批主题</value></data>
 </root>

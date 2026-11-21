@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using KoikatsuSceneGallery.Helpers;
+using KoikatsuSceneGallery.Models;
 using KoikatsuSceneGallery.Services;
 using KoikatsuSceneGallery.ViewModels;
 using Microsoft.UI.Xaml;
@@ -20,19 +21,22 @@ public sealed partial class AuthorsPage : Page
     public AuthorsPage()
     {
         ViewModel = App.Services.GetRequiredService<AuthorsViewModel>();
+        // The details pane, with its hint, as soon as the page is in the tree (wave 17).
+        Loaded += (_, _) => AuthorPane();
         // Switching between two platforms that both have authors leaves this
         // page open, so the picker has to follow rather than wait for the next
         // navigation.
         App.Services.GetRequiredService<SettingsViewModel>().BrowseOriginChanged +=
             _ => DispatcherQueue.TryEnqueue(ApplySelectedPlatform);
         InitializeComponent();
+        TitleText.Text = UiText.Get("Authors_Header.Title");
         NavigationCacheMode = NavigationCacheMode.Required;
         // The tabs arrive once the providers are known, which is after this
         // page may already be on screen.
         ((INotifyCollectionChanged)ViewModel.ProviderTabs).CollectionChanged += (_, _) =>
             DispatcherQueue.TryEnqueue(() => { RebuildPlatformBar(); ApplySelectedPlatform(); });
         _searchTimer = DispatcherQueue.CreateTimer();
-        _searchTimer.Interval = TimeSpan.FromMilliseconds(200); _searchTimer.IsRepeating = false;
+        _searchTimer.Interval = AppTiming.SearchDebounce; _searchTimer.IsRepeating = false;
         _searchTimer.Tick += (_, _) => ViewModel.SearchText = AuthorSearchBox.Text;
         var find = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F, Modifiers = Windows.System.VirtualKeyModifiers.Control };
         find.Invoked += (_, e) => { AuthorSearchBox.Focus(FocusState.Programmatic); e.Handled = true; };
@@ -49,9 +53,10 @@ public sealed partial class AuthorsPage : Page
         // startup, and folder-setting changes explicitly trigger a rebuild. Do not
         // rebuild every card here: it synchronously clears and reassigns authors
         // for the whole library and makes opening this page hitch.
-        App.Services.GetRequiredService<AuthorSourceCoordinator>()
-            .EnsureLoadedAsync()
-            .Observe(App.Services.GetRequiredService<IAppLogger>(), "Authors.EnsureLoaded");
+        var coordinator = App.Services.GetRequiredService<AuthorSourceCoordinator>();
+        var logger = App.Services.GetRequiredService<IAppLogger>();
+        coordinator.EnsureLoadedAsync().Observe(logger, "Authors.EnsureLoaded");
+        coordinator.ReloadChangedGalleriesAsync().Observe(logger, "Authors.FileCountCheck");
     }
 
     private void AuthorSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -131,22 +136,20 @@ public sealed partial class AuthorsPage : Page
         PlatformBar.Items.Clear();
         foreach (var tab in ViewModel.ProviderTabs)
         {
-            // FontSize on the bar does not reach the items — the container's
-            // template sizes its own text — so it is set per item. 24 SemiLight
-            // is what the pivot headers used to read at (PivotHeaderItemFontSize
-            // and PivotHeaderItemThemeFontWeight in WinUI's generic.xaml).
+            // Sized per item (the bar's FontSize does not reach them) by
+            // UpdatePlatformEmphasis, as the library's selector is.
             PlatformBar.Items.Add(new SelectorBarItem
             {
                 Text = LabelFor(tab),
                 Tag = tab,
-                FontSize = 24,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiLight,
+                VerticalAlignment = VerticalAlignment.Bottom,
             });
             tab.PropertyChanged += Tab_PropertyChanged;
             _watched.Add(tab);
         }
         PlatformBar.SelectedItem = PlatformBar.Items.FirstOrDefault(item => ReferenceEquals(item.Tag, _currentTab));
         _syncing = false;
+        UpdatePlatformEmphasis();
     }
 
     private bool _platformBarRebuildPending;
@@ -160,10 +163,20 @@ public sealed partial class AuthorsPage : Page
     /// spells these from the same resource, and "Fanbox" beside "FANBOX" reads
     /// as two different things.
     /// </remarks>
-    private static string LabelFor(AuthorProviderTabViewModel tab)
+    // The name only: the platform is the page's title here, as a card kind is
+    // in the library, and the count sits beside the sort as it does there.
+    private static string LabelFor(AuthorProviderTabViewModel tab) => PlatformDisplayName.For(tab.ProviderId);
+
+    /// <summary>The selected platform reads as the title, the others small and quiet (the library's selector).</summary>
+    private void UpdatePlatformEmphasis()
     {
-        var name = PlatformDisplayName.For(tab.ProviderId);
-        return tab.CountText.Length > 0 ? $"{name} {tab.CountText}" : name;
+        foreach (var item in PlatformBar.Items)
+        {
+            var selected = ReferenceEquals(item, PlatformBar.SelectedItem);
+            item.FontSize = selected ? Controls.UiMetrics.SelectorTitleFontSize : Controls.UiMetrics.SelectorOtherFontSize;
+            item.FontWeight = selected ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
+            item.Opacity = selected ? 1 : Controls.UiMetrics.SelectorOtherOpacity;
+        }
     }
 
     /// <summary>
@@ -186,9 +199,19 @@ public sealed partial class AuthorsPage : Page
                 string.Equals(candidate.ProviderId, selected.ProviderId, StringComparison.OrdinalIgnoreCase))
             : _currentTab;
 
-        PlatformBar.Visibility = !named && ViewModel.ProviderTabs.Count > 1
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // With a platform named in the title bar, the bar still offers the
+        // local authors beside it: they belong to no platform, so naming one
+        // must not hide them.
+        var offered = 0;
+        foreach (var item in PlatformBar.Items)
+        {
+            var shown = item.Tag is AuthorProviderTabViewModel candidate
+                && (!named || LocalSourceIdentity.IsLocal(candidate.ProviderId) || ReferenceEquals(candidate, tab));
+            item.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            if (shown) offered++;
+        }
+        PlatformBar.Visibility = offered > 1 ? Visibility.Visible : Visibility.Collapsed;
+        TitleText.Visibility = PlatformBar.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
         ShowTab(tab ?? ViewModel.ProviderTabs.FirstOrDefault());
         // ShowTab returns early when the platform has not changed, and the
@@ -204,9 +227,17 @@ public sealed partial class AuthorsPage : Page
             return;
         }
 
+        // A switch between platforms comes in from the side of the one picked.
+        var step = _currentTab is { } from && tab is not null
+            ? ViewModel.ProviderTabs.IndexOf(tab) - ViewModel.ProviderTabs.IndexOf(from)
+            : 0;
         _currentTab = tab;
         TabHost.Content = tab;
+        Controls.CardMotion.SwitchTab(TabHost, step);
         QuickJumpList.ItemsSource = tab?.QuickJumpItems;
+        var local = tab is not null && LocalSourceIdentity.IsLocal(tab.ProviderId);
+        AddLocalButton.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
+        RefreshAllButton.Visibility = local ? Visibility.Collapsed : Visibility.Visible;
         UpdateCount();
         SyncPlatformSelection();
     }
@@ -250,6 +281,7 @@ public sealed partial class AuthorsPage : Page
 
     private void PlatformBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
+        UpdatePlatformEmphasis();
         if (_syncing) return;
         if (sender.SelectedItem is { Tag: AuthorProviderTabViewModel tab })
             ShowTab(tab);
@@ -272,11 +304,9 @@ public sealed partial class AuthorsPage : Page
     /// did, so repeating it here would say the same number twice on one screen.
     /// </summary>
     private void UpdateCount()
-        => AuthorCount.Text = PlatformBar.Visibility == Visibility.Visible
-            ? string.Empty
-            : _currentTab is { AuthorCount: > 0 } tab
-                ? UiText.Format("Authors_TotalCount", tab.AuthorCount)
-                : string.Empty;
+        => AuthorCount.Text = _currentTab is { AuthorCount: > 0 } tab
+            ? UiText.Format("Authors_TotalCount", tab.AuthorCount)
+            : string.Empty;
 
     private void JumpButton_Click(object sender, RoutedEventArgs e)
     {
@@ -298,10 +328,41 @@ public sealed partial class AuthorsPage : Page
             AuthorTileLayout.Apply(grid);
     }
 
-    private void AuthorsGrid_ItemClick(object sender, ItemClickEventArgs e)
+    // ------------------------------------------------------------ select, then open (wave 17)
+
+    private Controls.AuthorInspector? _authorInspector;
+
+    /// <summary>The details pane beside the grid, made once the page is in the tree.</summary>
+    private Controls.AuthorInspector AuthorPane()
     {
-        if (e.ClickedItem is AuthorSummary summary)
-            OpenAuthorDetail(summary);
+        if (_authorInspector is { } made) return made;
+        // The library's spacing: the grid's own right padding holds its scroll
+        // bar, so the pane needs only the small gap past it.
+        made = new Controls.AuthorInspector { Width = Controls.UiMetrics.AuthorPaneWidth, Margin = Controls.UiMetrics.InspectorMargin(Controls.UiMetrics.PaneGapBesideGrid) };
+        Grid.SetColumn(made, 2);
+        AuthorsContent.Children.Add(made);
+        made.OpenRequested += OpenAuthorDetail;
+        made.RefreshRequested += summary => UiEventGuard.Run(
+            App.Services.GetRequiredService<IAppLogger>(), "Authors.RefreshOne", () => ViewModel.RefreshOneAsync(summary));
+        return _authorInspector = made;
+    }
+
+    private void AuthorsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => AuthorPane().Show((sender as GridView)?.SelectedItem as AuthorSummary);
+
+    private void AuthorsGrid_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is not AuthorSummary summary) return;
+        e.Handled = true;
+        OpenAuthorDetail(summary);
+    }
+
+    private void AuthorsGrid_PreviewKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter || e.KeyStatus.WasKeyDown) return;
+        if ((sender as GridView)?.SelectedItem is not AuthorSummary summary) return;
+        e.Handled = true;
+        OpenAuthorDetail(summary);
     }
 
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
@@ -318,6 +379,9 @@ public sealed partial class AuthorsPage : Page
 
     private void OpenAuthorDetail(AuthorSummary summary)
         => Frame.Navigate(typeof(AuthorDetailPage), new AuthorDetailNavigationParameter(summary));
+
+    private void LocalSources_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        => Frame.Navigate(typeof(LocalSourcesPage));
 
     private void EditLocal_Click(object sender, RoutedEventArgs e)
     {

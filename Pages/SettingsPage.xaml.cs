@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Windows.ApplicationModel.Resources;
 using SceneGallery.PluginSdk;
 using Windows.System;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -352,8 +353,154 @@ public sealed partial class SettingsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is "filters") SettingsCategories.SelectedIndex = 2;
+        EnsureCategories();
+        if (e.Parameter is "filters") SelectTab(2);
+        else if (e.Parameter is "plugins") SelectTab(4);
+        else if (e.Parameter is SettingsTarget target) ShowTarget(target);
         UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.Navigate", ViewModel.LoadAsync);
+    }
+
+    private const double NarrowWidth = UiMetrics.NarrowLayoutWidth;
+    private bool _syncingCategory;
+
+    private IReadOnlyList<KoikatsuSceneGallery.Controls.SettingsTab> Tabs =>
+        SettingsTabs.Children.OfType<KoikatsuSceneGallery.Controls.SettingsTab>().ToArray();
+
+    /// <summary>Fills the category list and drop-down from the tabs, once.</summary>
+    private void EnsureCategories()
+    {
+        if (SettingsCategories.Items.Count > 0) return;
+        foreach (var tab in Tabs)
+        {
+            SettingsCategories.Items.Add(new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 12,
+                Padding = new Thickness(0, 6, 0, 6),
+                Children =
+                {
+                    new FontIcon { Glyph = tab.Glyph, FontSize = 16 },
+                    new TextBlock { Text = tab.Header, VerticalAlignment = VerticalAlignment.Center },
+                },
+            });
+            SettingsCategoryPicker.Items.Add(tab.Header);
+        }
+        SelectTab(0);
+    }
+
+    private int _shownTab = -1;
+
+    private void SelectTab(int index)
+    {
+        var tabs = Tabs;
+        if (index < 0 || index >= tabs.Count) return;
+        _syncingCategory = true;
+        SettingsCategories.SelectedIndex = index;
+        SettingsCategoryPicker.SelectedIndex = index;
+        _syncingCategory = false;
+        if (index == _shownTab) return;
+        // The categories are a column, so the next one comes up from below, an
+        // earlier one down from above (CardMotion.SwitchTab).
+        var step = _shownTab >= 0 ? index - _shownTab : 0;
+        _shownTab = index;
+        for (var i = 0; i < tabs.Count; i++)
+            tabs[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
+        KoikatsuSceneGallery.Controls.CardMotion.SwitchTab(tabs[index], step, vertical: true);
+    }
+
+    private void SettingsCategories_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_syncingCategory && SettingsCategories.SelectedIndex >= 0) SelectTab(SettingsCategories.SelectedIndex);
+    }
+
+    private void SettingsCategoryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_syncingCategory && SettingsCategoryPicker.SelectedIndex >= 0) SelectTab(SettingsCategoryPicker.SelectedIndex);
+    }
+
+    /// <summary>Wide: the list on the left. Narrow: a drop-down above the content.</summary>
+    private void SettingsBody_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var narrow = e.NewSize.Width < NarrowWidth;
+        CategoryColumn.Width = narrow ? new GridLength(0) : new GridLength(200);
+        SettingsBody.ColumnSpacing = narrow ? 0 : 24;
+        SettingsCategories.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        SettingsCategoryPicker.Visibility = narrow ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void SettingsSearch_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
+        var candidates = SettingsSearchIndex.Entries.Select(entry =>
+        {
+            var label = UiText.Get(entry.LabelKey);
+            var description = entry.DescriptionKey is { } key ? UiText.Get(key) : "";
+            if (description == entry.DescriptionKey) description = "";
+            var suggestion = new SettingsSuggestion(label, UiText.Get(SettingsSearchIndex.TabKeys[entry.Tab]), entry.Tab);
+            return new PaletteCandidate<SettingsSuggestion>(label, [description], PaletteCategory.Setting, suggestion);
+        });
+        sender.ItemsSource = CommandPaletteRanker.Rank(sender.Text, candidates, perCategory: 10, total: 10)
+            .Select(ranked => ranked.Payload).ToList();
+    }
+
+    private void SettingsSearch_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        // Enter without picking takes the best match, which is what was typed for.
+        var chosen = args.ChosenSuggestion as SettingsSuggestion
+            ?? (sender.ItemsSource as IReadOnlyList<SettingsSuggestion>)?.FirstOrDefault();
+        if (chosen is null) return;
+        ShowTarget(new SettingsTarget(chosen.Tab, chosen.Label));
+    }
+
+    /// <summary>
+    /// Opens the tab <paramref name="target"/> is on and scrolls its card or
+    /// heading into view, briefly outlined so the eye lands on it.
+    /// </summary>
+    /// <remarks>
+    /// Found by its label, the text the user just picked in the palette: the
+    /// cards carry no names, and x:Uid does not survive compilation.
+    /// </remarks>
+    internal void ShowTarget(SettingsTarget target)
+    {
+        SelectTab(target.Tab);
+        if (string.IsNullOrEmpty(target.Label)) return;
+        if (target.Tab < 0 || target.Tab >= Tabs.Count) return;
+        var item = Tabs[target.Tab];
+
+        void Reveal()
+        {
+            var card = VisualTreeSearch.FindDescendant<CommunityToolkit.WinUI.Controls.SettingsCard>(
+                item, c => c.Header as string == target.Label);
+            FrameworkElement? found = card;
+            found ??= VisualTreeSearch.FindDescendant<TextBlock>(item, t => t.Text == target.Label);
+            if (found is null) return;
+            found.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.25, AnimationDesired = true });
+            if (card is null) return;
+            card.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+            card.BorderThickness = new Thickness(2);
+            var timer = DispatcherQueue.CreateTimer();
+            timer.Interval = AppTiming.SettingsHighlight;
+            timer.IsRepeating = false;
+            timer.Tick += (_, _) =>
+            {
+                card.ClearValue(Control.BorderBrushProperty);
+                card.ClearValue(Control.BorderThicknessProperty);
+            };
+            timer.Start();
+        }
+
+        // The tab's content is created when it is first shown, so wait for it.
+        if (item.Content is FrameworkElement { IsLoaded: true }) DispatcherQueue.TryEnqueue(Reveal);
+        else if (item.Content is FrameworkElement content)
+        {
+            void OnLoaded(object s, RoutedEventArgs e)
+            {
+                content.Loaded -= OnLoaded;
+                DispatcherQueue.TryEnqueue(Reveal);
+            }
+
+            content.Loaded += OnLoaded;
+        }
     }
 
     private void RemoveFolder_Click(object sender, RoutedEventArgs e)
@@ -482,8 +629,21 @@ public sealed partial class SettingsPage : Page
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.ClearCache", async () =>
             await ViewModel.ClearCacheCommand.ExecuteAsync(null));
 
+    private void LayoutMigration_Click(object sender, RoutedEventArgs e)
+        => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "Settings.LayoutMigration", async () =>
+            await Controls.LayoutMigrationDialog.ShowAsync(XamlRoot));
+
     private void RestartApp_Click(object sender, RoutedEventArgs e)
     {
         Microsoft.Windows.AppLifecycle.AppInstance.Restart(string.Empty);
     }
+}
+
+/// <summary>Where on the settings page to open: a tab, and optionally the label of a card or heading on it.</summary>
+public sealed record SettingsTarget(int Tab, string? Label = null);
+
+/// <summary>A row in the settings page's search suggestions.</summary>
+public sealed record SettingsSuggestion(string Label, string TabName, int Tab)
+{
+    public string Display => $"{Label}  ·  {TabName}";
 }

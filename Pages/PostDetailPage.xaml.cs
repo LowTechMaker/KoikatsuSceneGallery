@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
+using KoikatsuSceneGallery.Controls;
 
 namespace KoikatsuSceneGallery.Pages;
 
@@ -24,6 +25,7 @@ public sealed partial class PostDetailPage : Page
     public PostDetailPage()
     {
         InitializeComponent();
+        BackNavigation.EscapeGoesBack(this);
         NavigationCacheMode = NavigationCacheMode.Required;
         ContentGrid.SizeChanged += (_, _) => UpdateLayoutForWidth();
         SizeChanged += (_, _) => UpdateLayoutForWidth();
@@ -60,7 +62,6 @@ public sealed partial class PostDetailPage : Page
         _cts = null;
     }
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
     private void LocalImage_ItemClick(object sender, ItemClickEventArgs e)
     {
@@ -88,7 +89,7 @@ public sealed partial class PostDetailPage : Page
     private void UpdateLayoutForWidth()
     {
         MainImageFrame.MaxHeight = Math.Clamp(ActualHeight - 270, 200, 640);
-        bool wide = ContentGrid.ActualWidth >= 900 && ViewModel.HasLocalImages;
+        bool wide = ContentGrid.ActualWidth >= UiMetrics.WideLayoutWidth && ViewModel.HasLocalImages;
         ContentGrid.ColumnDefinitions[1].Width = wide ? new GridLength(340) : new GridLength(0);
         Grid.SetColumn(PostInfoPanel, wide ? 1 : 0);
         Grid.SetRow(PostInfoPanel, wide ? 0 : 1);

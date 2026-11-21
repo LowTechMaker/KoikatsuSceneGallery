@@ -24,7 +24,7 @@ public sealed partial class ImportItemReviewState : ObservableObject, IDisposabl
 
     public bool CanImport => Services.ImportReviewPolicy.CanExecute(Item.Status, Item.DestinationPath);
     public bool IsIdentified => Services.ImportReviewPolicy.IsIdentified(Item.Status, !string.IsNullOrWhiteSpace(Item.AuthorId));
-    public Helpers.ImportReviewSection Section => Services.ImportReviewPolicy.Section(Item.Status,
+    public Helpers.ImportReviewSection Section => Item.UserSkipped ? Helpers.ImportReviewSection.Skipped : Services.ImportReviewPolicy.Section(Item.Status,
         !string.IsNullOrWhiteSpace(Item.AuthorId), Item.ArtworkId is not null);
     public bool CanSelect => !Item.IsAlreadyInLibrary;
     public string DisplayRating => Item.Rating == SceneGallery.PluginSdk.ContentRating.AllAges ? "G" : Item.RatingText;
@@ -37,7 +37,34 @@ public sealed partial class ImportItemReviewState : ObservableObject, IDisposabl
             ? folder : Item.SourceFolder;
     public string Category => Services.ImportReviewPolicy.Category(Item.Status, Item.DestinationPath,
         !string.IsNullOrWhiteSpace(Item.AuthorId), Item.ArtworkId is not null);
-    public string StatusText => _text("Import_Status_" + Category);
+    public string StatusText => Item.UserSkipped ? _text("Import_Status_Skipped")
+        : Item.IsInLibraryElsewhere ? _text("Import_Status_ExistingElsewhere")
+        : _text("Import_Status_" + Category);
+
+    /// <summary>The colour family of the status chip.</summary>
+    public string Tone => Item.UserSkipped ? "Muted" : Category switch
+    {
+        "NeedsInfo" or "Failed" => "Attention",
+        "Ready" => "Ready",
+        "Analyzing" => "Busy",
+        _ => "Muted",
+    };
+
+    /// <summary>Author, post and card type: what is known about the card, without repeating the status.</summary>
+    public string MetaText => IsIdentified && !string.IsNullOrWhiteSpace(Item.AuthorName)
+        ? string.Join("  ·  ", new[] { Item.AuthorName, DisplayArtworkKeyOrNull, Item.CardTypeText }.Where(part => !string.IsNullOrEmpty(part)))
+        : Item.CardTypeText;
+
+    private string? DisplayArtworkKeyOrNull => Item.ArtworkId is null || string.IsNullOrWhiteSpace(Item.ArtworkId.Id)
+        ? null : $"{Item.ArtworkId.ProviderId}:{Item.ArtworkId.Id}";
+
+    /// <summary>A third line when there is something worth saying: an error, where the library has it, or the archive it came from.</summary>
+    public string NoteText => Item.ErrorMessage
+        ?? (Item.IsInLibraryElsewhere ? string.Format(_text("Import_Review_InLibraryAt"), Item.ExistingLibraryPath) : null)
+        ?? (Item.ArchivePath is { } archive ? string.Format(_text("Import_Review_FromArchive"), System.IO.Path.GetFileName(archive)) : null)
+        ?? string.Empty;
+
+    public bool HasNote => NoteText.Length > 0;
     public string DestinationText => Item.ErrorMessage ?? (!IsIdentified ? StatusText : Item.DestinationPath) ?? _text("Import_Status_NeedsInfo");
 
     public string DisplayAuthorName => string.IsNullOrWhiteSpace(Item.AuthorName)
@@ -66,6 +93,10 @@ public sealed partial class ImportItemReviewState : ObservableObject, IDisposabl
         OnPropertyChanged(nameof(Category));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(DestinationText));
+        OnPropertyChanged(nameof(Tone));
+        OnPropertyChanged(nameof(MetaText));
+        OnPropertyChanged(nameof(NoteText));
+        OnPropertyChanged(nameof(HasNote));
         switch (e.PropertyName)
         {
             case nameof(ImportItem.AuthorName):

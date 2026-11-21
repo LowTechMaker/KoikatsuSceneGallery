@@ -72,7 +72,7 @@ public sealed partial class LibraryBrowser
             if (!_updatingMetadata && _metadataGuid.SelectedItem is FilterOption option) filters.PluginGuid = option.Value as string;
         };
         _metadataOptionsTimer = DispatcherQueue.CreateTimer();
-        _metadataOptionsTimer.Interval = TimeSpan.FromMilliseconds(750);
+        _metadataOptionsTimer.Interval = AppTiming.MetadataFilterRefresh;
         _metadataOptionsTimer.IsRepeating = true;
         _metadataOptionsTimer.Tick += (_, _) => UpdateMetadataOptions();
         FilterButton.Flyout.Opened += (_, _) => { UpdateMetadataOptions(); _metadataOptionsTimer.Start(); };

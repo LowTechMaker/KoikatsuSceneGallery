@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using KoikatsuSceneGallery.Models;
 using Microsoft.UI.Dispatching;
+using KoikatsuSceneGallery.Helpers;
 
 namespace KoikatsuSceneGallery.Services;
 
 internal sealed class ImportFileExecutor(IAppLogger logger)
 {
-    private readonly int _maxConcurrency = Math.Clamp(Environment.ProcessorCount, 1, 4);
+    private readonly int _maxConcurrency = AppLimits.IoWorkers;
 
     public async Task ExecuteAsync(
         IReadOnlyList<ImportItem> items,
@@ -58,7 +59,7 @@ internal sealed class ImportFileExecutor(IAppLogger logger)
                             dispatcher.TryEnqueue(() =>
                             {
                                 item.Status = ImportItemStatus.Skipped;
-                                item.ErrorMessage = "File already exists";
+                                item.ErrorMessage = UiText.Get("Import_Error_FileExists");
                             });
                             break;
                         default:

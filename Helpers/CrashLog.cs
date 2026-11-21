@@ -12,7 +12,7 @@ public static class CrashLog
 {
     private static readonly object Gate = new();
 
-    public static string LogPath => Path.Combine(AppPaths.LocalFolder, "crash.log");
+    public static string LogPath => Path.Combine(AppPaths.LocalFolder, AppFiles.CrashLog);
 
     public static void Write(string source, Exception? ex)
     {

@@ -21,7 +21,7 @@ namespace KoikatsuSceneGallery.Helpers;
 internal static class LocalDestinationNames
 {
     /// <summary>Matches the executor's own rename ceiling.</summary>
-    private const int MaxAttempts = 1000;
+    private const int MaxAttempts = AppLimits.RenameAttempts;
 
     /// <summary>
     /// The destination for <paramref name="sourcePath"/>, and the batch's

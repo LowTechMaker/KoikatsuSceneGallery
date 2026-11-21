@@ -170,9 +170,9 @@ public partial class PostDetailViewModel : ObservableObject
 
         RatingText = post.Rating switch
         {
-            ContentRating.R18 => "R-18",
-            ContentRating.R18G => "R-18G",
-            ContentRating.AllAges => "G",
+            ContentRating.R18 => RatingLabels.R18,
+            ContentRating.R18G => RatingLabels.R18G,
+            ContentRating.AllAges => RatingLabels.General,
             _ => "",
         };
 

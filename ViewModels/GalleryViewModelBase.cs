@@ -20,7 +20,7 @@ public enum SortOption
 
 public static class ShuffleConstants
 {
-    public const int PoolSize = 20;
+    public const int PoolSize = AppLimits.ShufflePool;
 }
 
 public abstract partial class GalleryViewModelBase : ObservableObject
@@ -120,8 +120,39 @@ public abstract partial class GalleryViewModelBase : ObservableObject
 
     protected bool HasOriginFilter => !OriginFilter.IsAll;
 
+    // Also where "not for me" cards drop out: every gallery's filter and every
+    // scoped browser already ask this one question about a card, so hiding
+    // them here hides them everywhere at once.
     protected bool OriginPasses(object? card)
-        => !HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter);
+        => (!HasHiddenFilter || card is not CardBase known || !IsHiddenCard!(known.FilePath))
+           && (!HasOriginFilter || CardOriginQuery.Passes(CardOrigin.ProviderIdOf(card), OriginFilter));
+
+    /// <summary>
+    /// Whether the user marked the card at this path "not for me". Set once by
+    /// the app; null (in tests, say) means nothing is ever hidden.
+    /// </summary>
+    public Func<string, bool>? IsHiddenCard { get; set; }
+
+    /// <summary>Session-only, like the other browser filters: off shows hidden cards again.</summary>
+    [ObservableProperty]
+    public partial bool ShowHiddenCards { get; set; }
+
+    protected bool HasHiddenFilter => IsHiddenCard is not null && !ShowHiddenCards;
+
+    partial void OnShowHiddenCardsChanged(bool value)
+    {
+        if (IsShuffleMode) { BuildShuffleQueue(); ApplySort(); }
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// A card's hidden flag changed. Safe from any thread; does nothing while
+    /// hidden cards are being shown anyway.
+    /// </summary>
+    public void RefreshHiddenCards() => _dispatcherQueue.TryEnqueue(() =>
+    {
+        if (HasHiddenFilter) ApplyFilter();
+    });
 
     partial void OnOriginFilterChanged(CardOriginSelection value)
     {
@@ -401,6 +432,9 @@ public abstract partial class GalleryViewModelBase : ObservableObject
     {
         var cancellationToken = BeginLoad();
         var loadSource = _loadCts;
+        // Asynchronous, so a waiter sees IsLoading already cleared below.
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _currentLoad = completion.Task;
         cancelMetadata?.Invoke();
         ResetThumbnailState();
 
@@ -421,8 +455,68 @@ public abstract partial class GalleryViewModelBase : ObservableObject
             if (ReferenceEquals(_loadCts, loadSource))
                 IsLoading = false;
             RaiseCardsReloaded();
+            completion.TrySetResult();
         }
     }
+
+    private Task<bool>? _fileCountCheck;
+    // Completes when the latest RunLoadAsync ends, whether or not it finished.
+    private Task? _currentLoad;
+
+    /// <summary>
+    /// Rescans the folders when the number of card files on disk no longer
+    /// matches what this gallery holds, and reports whether it did.
+    /// </summary>
+    /// <remarks>
+    /// Leaving a page cancels a load that is still scanning, which leaves the
+    /// gallery with only the cards it had reached (or, for scenes, the cached
+    /// ones). The watcher can also miss files when a large import overflows
+    /// its buffer. Either way the gallery is short of what is on disk, and
+    /// nothing else would notice, because a gallery that holds any card counts
+    /// as loaded. Counting files is cheap next to a rescan, which opens every
+    /// one of them, so only a mismatch pays for that.
+    /// </remarks>
+    public Task<bool> ReloadIfFileCountChangedAsync()
+    {
+        if (_fileCountCheck is { IsCompleted: false } running)
+            return running;
+        // Never loaded: whoever shows the gallery starts its first load.
+        if (!IsLoading && _cardsSource.Count == 0)
+            return Task.FromResult(false);
+        return _fileCountCheck = CheckFileCountAsync();
+    }
+
+    private async Task<bool> CheckFileCountAsync()
+    {
+        // A load in progress changes the cards anyway, and may itself be
+        // cancelled before it finishes, so count only once it has ended.
+        var waitedForLoad = false;
+        if (IsLoading && _currentLoad is { } load)
+        {
+            await load;
+            waitedForLoad = true;
+        }
+
+        if (_cardsSource.Count == 0)
+            return waitedForLoad;
+        var onDisk = await CountCardFilesOnDiskAsync();
+        // A load that started meanwhile brings the gallery up to date itself.
+        if (onDisk is not { } count || IsLoading)
+            return waitedForLoad;
+        if (count == _cardsSource.Count + UnreadableCardFileCount)
+            return waitedForLoad;
+
+        await ReloadCardsAsync();
+        return true;
+    }
+
+    /// <summary>The number of card files in this gallery's folders, or null when unknown.</summary>
+    protected virtual Task<int?> CountCardFilesOnDiskAsync() => Task.FromResult<int?>(null);
+
+    /// <summary>Files the last scan found but could not read as cards.</summary>
+    protected virtual int UnreadableCardFileCount => 0;
+
+    protected virtual Task ReloadCardsAsync() => Task.CompletedTask;
 
     /// <summary>
     /// Holds view notifications while an initial folder scan is adding batches.
@@ -453,7 +547,11 @@ public abstract partial class GalleryViewModelBase : ObservableObject
         => AwaitedUiPublication.InvokeBlocking(
             action => _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => action()),
             () => { using (CardsView.DeferRefresh()) applyBatch(); },
-            TimeSpan.FromSeconds(10), token);
+            // 30 s, not 10: at start the UI thread is busy putting the scene
+            // cache on screen, and a character or outfit batch that gave up
+            // abandoned that whole load (crash.log, AuthorSource.InitialLoad),
+            // which then started over only when its tab was opened.
+            AppTiming.ScanBatchUiWait, token);
 
     public virtual void Activate()
     {

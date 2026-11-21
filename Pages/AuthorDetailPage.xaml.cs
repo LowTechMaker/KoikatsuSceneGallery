@@ -49,6 +49,7 @@ public sealed partial class AuthorDetailPage : Page
     private GridView CharactersGrid => CharactersBrowser.ItemsGrid;
     private GridView CoordinatesGrid => CoordinatesBrowser.ItemsGrid;
     private bool _browsersInitialized;
+    private bool _isNavigatedTo;
     private void InitializeBrowsers()
     {
         if (_browsersInitialized) return;
@@ -72,6 +73,7 @@ public sealed partial class AuthorDetailPage : Page
     public AuthorDetailPage()
     {
         InitializeComponent();
+        BackNavigation.EscapeGoesBack(this);
         // This page is parameterized by author. Reusing one required cache entry
         // for every author lets Pivot retain visual state from the previous
         // author, so keep the visual tree scoped to one navigation entry.
@@ -81,6 +83,7 @@ public sealed partial class AuthorDetailPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        _isNavigatedTo = true;
         if (TryGetNavigationParameter(e.Parameter, out var navigationParameter))
         {
             var restoringSameAuthor = e.NavigationMode == NavigationMode.Back
@@ -108,6 +111,7 @@ public sealed partial class AuthorDetailPage : Page
                 ViewModel.LoadPostsAsync(postService, _postsCts.Token)
                     .Observe(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.LoadPosts");
             }
+            ReloadChangedGalleries();
         }
 
 
@@ -120,9 +124,31 @@ public sealed partial class AuthorDetailPage : Page
         });
     }
 
+    /// <summary>
+    /// The cards above come from the galleries, which can be short of their
+    /// folders when a load was cancelled. Posts are read from disk directly, so
+    /// the gap shows up as a post whose card has no tab.
+    /// </summary>
+    private void ReloadChangedGalleries()
+    {
+        var author = ViewModel.Author?.Key;
+        UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.FileCountCheck", async () =>
+        {
+            var reloaded = await App.Services.GetRequiredService<AuthorSourceCoordinator>()
+                .ReloadChangedGalleriesAsync();
+            if (!reloaded || !_isNavigatedTo || ViewModel.Author?.Key != author)
+                return;
+
+            ViewModel.RefreshCards();
+            UpdateTabPresence();
+            RequestOverviewThumbnails();
+        });
+    }
+
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         base.OnNavigatedFrom(e);
+        _isNavigatedTo = false;
         if (_navigationParameter is not null && _browsersInitialized)
             foreach (var (browser, index) in new[] { (ScenesBrowser, ScenesTabIndex), (CharactersBrowser, CharactersTabIndex), (CoordinatesBrowser, CoordinatesTabIndex) })
                 _navigationParameter.BrowserStates[index] = browser.SaveState();
@@ -338,7 +364,6 @@ public sealed partial class AuthorDetailPage : Page
 
     public static string FormatFileCount(int count) => count == 1 ? "1 file" : $"{count} files";
 
-    private void GoBack_Click(object sender, RoutedEventArgs e) { if (Frame.CanGoBack) Frame.GoBack(); }
 
     private void OpenProfile_Click(object sender, RoutedEventArgs e)
         => UiEventGuard.Run(App.Services.GetRequiredService<IAppLogger>(), "AuthorDetail.OpenProfile", async () =>
@@ -352,19 +377,19 @@ public sealed partial class AuthorDetailPage : Page
         if (ReferenceEquals(TabPivot.SelectedItem, ScenesPivotItem) && ViewModel.Scenes.Count > 0)
         {
             SetRestoreSelectedTabOnBack(ScenesTabIndex);
-            Frame.Navigate(typeof(DetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Scenes[Random.Shared.Next(ViewModel.Scenes.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, CharactersPivotItem) && ViewModel.Characters.Count > 0)
         {
             SetRestoreSelectedTabOnBack(CharactersTabIndex);
-            Frame.Navigate(typeof(CharacterDetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Characters[Random.Shared.Next(ViewModel.Characters.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, CoordinatesPivotItem) && ViewModel.Coordinates.Count > 0)
         {
             SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-            Frame.Navigate(typeof(CoordinateDetailPage),
+            Frame.Navigate(typeof(CardViewerPage),
                 CreateScopedParameter(ViewModel.Coordinates[Random.Shared.Next(ViewModel.Coordinates.Count)]));
         }
         else if (ReferenceEquals(TabPivot.SelectedItem, PostsPivotItem) && ViewModel.Posts.Count > 0)
@@ -401,7 +426,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is SceneCard card)
         {
             SetRestoreSelectedTabOnBack(ScenesTabIndex);
-            Frame.Navigate(typeof(DetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -410,7 +435,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CharacterCard card)
         {
             SetRestoreSelectedTabOnBack(CharactersTabIndex);
-            Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -419,7 +444,7 @@ public sealed partial class AuthorDetailPage : Page
         if (e.ClickedItem is CoordinateCard card)
         {
             SetRestoreSelectedTabOnBack(CoordinatesTabIndex);
-            Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(card));
+            Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(card));
         }
     }
 
@@ -479,8 +504,7 @@ public sealed partial class AuthorDetailPage : Page
         { };
         var error = new TextBlock
         {
-            Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                Microsoft.UI.Colors.IndianRed),
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
             TextWrapping = TextWrapping.Wrap,
             Visibility = Visibility.Collapsed,
         };
@@ -585,13 +609,13 @@ public sealed partial class AuthorDetailPage : Page
 
         var path = preview.FilePath;
         var scene = App.Services.GetRequiredService<GalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(DetailPage), CreateScopedParameter(scene)); return; }
+        if (scene is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(scene)); return; }
 
         var character = App.Services.GetRequiredService<CharacterGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CharacterDetailPage), CreateScopedParameter(character)); return; }
+        if (character is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(character)); return; }
 
         var coordinate = App.Services.GetRequiredService<CoordinateGalleryViewModel>().Cards.FirstOrDefault(c => c.FilePath == path);
-        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CoordinateDetailPage), CreateScopedParameter(coordinate)); return; }
+        if (coordinate is not null) { SetRestoreSelectedTabOnBack(PostsTabIndex); Frame.Navigate(typeof(CardViewerPage), CreateScopedParameter(coordinate)); return; }
     }
 
     private void OverviewScenes_DragItemsStarting(object sender, DragItemsStartingEventArgs e)
