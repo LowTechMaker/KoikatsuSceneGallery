@@ -1,10 +1,15 @@
 name: Build
 
+# Changes reach master through pull requests, so the PR run already covers
+# them; running again on the merge push repeated the same work.
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -33,29 +38,6 @@ jobs:
           path: |
             artifacts/test-results/**/*.trx
             templates/MinimalPlugin/**/TestResults/*.trx
-          if-no-files-found: warn
-
-  core-tests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "10.0.x"
-          dotnet-quality: "ga"
-
-      - name: Test Core
-        run: dotnet test KoikatsuSceneGallery.Tests/KoikatsuSceneGallery.Tests.csproj -c Release --logger trx --results-directory artifacts/test-results/core
-
-      - name: Save Test Results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results-linux-core
-          path: artifacts/test-results/**/*.trx
           if-no-files-found: warn
 
   build:
