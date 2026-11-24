@@ -9,9 +9,20 @@ updates:
       timezone: "Asia/Taipei"
     open-pull-requests-limit: 5
     groups:
+      windows-app-runtime:
+        patterns:
+          - "Microsoft.WindowsAppSDK*"
+          - "Microsoft.Windows.SDK.BuildTools*"
+          - "Microsoft.Web.WebView2*"
+          - "CommunityToolkit.WinUI*"
       nuget-dependencies:
         patterns:
           - "*"
+        exclude-patterns:
+          - "Microsoft.WindowsAppSDK*"
+          - "Microsoft.Windows.SDK.BuildTools*"
+          - "Microsoft.Web.WebView2*"
+          - "CommunityToolkit.WinUI*"
 
   - package-ecosystem: "nuget"
     directory: "/PluginSdk"
